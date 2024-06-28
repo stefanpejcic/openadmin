@@ -1,0 +1,490 @@
+<!doctype html>
+<!--
+* Default OpenAdmin Template
+* @version 1.0.0
+* @link https://dev.openpanel.co/templates/
+* Copyright 2023-2024 Stefan Pejčić
+* Licensed under MIT (https://opensource.org/license/mit)
+-->
+
+<html lang="en" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>OpenAdmin [{% if force_domain_value %}{{ force_domain_value }}{% elif server_hostname %}{{ server_hostname }}{% else %}{{public_ip}}{% endif %}] {% if title %}{{title}}{%endif%}</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+  <link href="/static/dist/css/tabler-flags.min.css?1684106062" rel="stylesheet" />
+  <link href="/static/dist/css/tabler-vendors.min.css?1684106062" rel="stylesheet" />
+  <link href="/static/dist/css/demo.min.css?1684106062" rel="stylesheet" />
+<script src="/static/dist/js/demo-theme.min.js?1684106062"></script>
+
+    <link rel="stylesheet" type="text/css" href="https://satoshi.webpixels.io/css/main.css">
+    <link href="/static/custom/custom.css?1684106062" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="https://satoshi.webpixels.io/css/utility.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f=satoshi@900,700,500,300,401,400&amp;display=swap">
+</head>
+
+<style>
+#message {
+  //display: block;
+}
+
+@media (max-width: 767px) {
+  #message {
+    display: none;
+  }
+}
+</style>
+
+
+
+
+
+<body class="bg-body-tertiary">
+    <div class="modal fade" id="depositLiquidityModal" tabindex="-1" aria-labelledby="depositLiquidityModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content overflow-hidden">
+                <div class="modal-header pb-0 border-0">
+                    <h1 class="modal-title h4" id="depositLiquidityModalLabel">Deposit liquidity</h1><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body undefined">
+                    <form class="vstack gap-6">
+                        <div class="vstack gap-1">
+                            <div class="bg-body-secondary rounded-3 p-4">
+                                <div class="d-flex justify-content-between text-xs text-muted"><span class="fw-semibold">From</span> <span>Balance: 10,000 ADA</span></div>
+                                <div class="d-flex justify-content-between gap-2 mt-4"><input type="tel" class="form-control form-control-flush text-xl fw-bold flex-fill" placeholder="0.00"> <button class="btn btn-neutral shadow-none rounded-pill flex-none d-flex align-items-center gap-2 py-2 ps-2 pe-4"><img src="../../img/crypto/color/ada.svg" class="w-rem-6 h-rem-6" alt="..."> <span class="text-xs fw-semibold text-heading ms-1">ADA</span></button></div>
+                            </div>
+                            <div class="position-relative text-center my-n4 overlap-10">
+                                <div class="icon icon-sm icon-shape bg-body shadow-soft-3 rounded-circle text-sm text-body-tertiary"><i class="bi bi-arrow-down-up"></i></div>
+                            </div>
+                            <div class="bg-body-secondary rounded-3 p-4">
+                                <div class="d-flex justify-content-between text-xs text-muted"><span class="fw-semibold">To</span> <span>Balance: 0 SUN</span></div>
+                                <div class="d-flex justify-content-between gap-2 mt-4"><input type="tel" class="form-control form-control-flush text-xl fw-bold flex-fill" placeholder="0.00"> <button class="btn btn-neutral shadow-none rounded-pill flex-none d-flex align-items-center gap-2 py-2 ps-2 pe-4"><img src="../../img/pools/pool-1.png" class="w-rem-6 h-rem-6 rounded-circle" alt="..."> <span class="text-xs fw-semibold text-heading ms-1">SUN</span></button></div>
+                            </div>
+                        </div>
+                        <div><label class="form-label">Slippage tolerance</label>
+                            <div class="d-flex flex-wrap gap-1 gap-sm-2">
+                                <div class="w-sm-56 input-group input-group-sm input-group-inline"><input type="search" class="form-control" placeholder="1"> <span class="input-group-text">%</span></div>
+                                <div class="flex-fill"><input type="radio" class="btn-check" name="options" id="option1" checked="checked"> <label class="btn btn-sm btn-neutral w-100" for="option1">0.5%</label></div>
+                                <div class="flex-fill"><input type="radio" class="btn-check" name="options" id="option2" checked="checked"> <label class="btn btn-sm btn-neutral w-100" for="option2">1%</label></div>
+                                <div class="flex-fill"><input type="radio" class="btn-check" name="options" id="option3" checked="checked"> <label class="btn btn-sm btn-neutral w-100" for="option3">3%</label></div>
+                            </div>
+                        </div><button type="button" class="btn btn-primary w-100">Provide liquidity</button></form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="connectWalletModal" tabindex="-1" aria-labelledby="connectWalletModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content overflow-hidden">
+                <div class="modal-header pb-0 border-0">
+                    <h1 class="modal-title h4" id="connectWalletModalLabel">Connect your wallet</h1><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-body undefined">
+                    <div class="list-group list-group-flush gap-2">
+                        <div class="list-group-item border rounded d-flex gap-3 p-4 bg-body-secondary-hover">
+                            <div class="icon flex-none"><img src="../../img/wallets/metamask.png" class="w-rem-8 h-rem-8" alt="..."></div>
+                            <div class="d-flex align-items-center flex-fill">
+                                <div><a href="#" class="stretched-link text-heading text-sm fw-bold">MetaMask</a></div>
+                                <div class="ms-auto"><span class="badge badge-md text-bg-primary">Popular</span></div>
+                            </div>
+                        </div>
+                        <div class="list-group-item border rounded d-flex gap-3 p-4 bg-body-secondary-hover">
+                            <div class="icon flex-none"><img src="../../img/wallets/coinbase.webp" class="w-rem-8 h-rem-8" alt="..."></div>
+                            <div class="d-flex align-items-center flex-fill">
+                                <div><a href="#" class="stretched-link text-heading text-sm fw-bold">Coinbase Wallet</a></div>
+                            </div>
+                        </div>
+                        <div class="list-group-item border rounded d-flex gap-3 p-4 bg-body-secondary-hover">
+                            <div class="icon flex-none"><img src="../../img/wallets/walletconnect.png" class="w-rem-8 h-rem-8" alt="..."></div>
+                            <div class="d-flex align-items-center flex-fill">
+                                <div><a href="#" class="stretched-link text-heading text-sm fw-bold">WalletConnect</a></div>
+                            </div>
+                        </div>
+                        <div class="list-group-item border rounded d-flex gap-3 p-4 bg-body-secondary-hover">
+                            <div class="icon flex-none"><img src="../../img/wallets/phantom.png" class="w-rem-8 h-rem-8" alt="..."></div>
+                            <div class="d-flex align-items-center flex-fill">
+                                <div><a href="#" class="stretched-link text-heading text-sm fw-bold">Phantom</a></div>
+                                <div class="ms-auto"><span class="badge badge-md text-bg-light">Solana</span></div>
+                            </div>
+                        </div>
+                        <div class="list-group-item border rounded d-flex gap-3 p-4 bg-body-secondary-hover">
+                            <div class="icon flex-none"><img src="../../img/wallets/core.png" class="w-rem-8 h-rem-8" alt="..."></div>
+                            <div class="d-flex align-items-center flex-fill">
+                                <div><a href="#" class="stretched-link text-heading text-sm fw-bold">Core</a></div>
+                                <div class="ms-auto"><span class="badge badge-md text-bg-light">Avalanche</span></div>
+                            </div>
+                        </div>
+                        <div class="list-group-item border rounded d-flex gap-3 p-4 bg-body-secondary-hover">
+                            <div class="icon flex-none"><img src="../../img/wallets/glow.svg" class="w-rem-8 h-rem-8" alt="..."></div>
+                            <div class="d-flex align-items-center flex-fill">
+                                <div><a href="#" class="stretched-link text-heading text-sm fw-bold">Glow</a></div>
+                                <div class="ms-auto"><span class="badge badge-md text-bg-light">Solana</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-muted mt-6">By connecting wallet, you agree to Satoshi's <a href="#" class="fw-bold">Terms of Service</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex flex-column flex-lg-row h-lg-100 gap-1">
+<!-- Sidebar -->
+        <nav class="flex-none navbar navbar-vertical navbar-expand-lg show vh-lg-100 px-0 py-2 navbar-dark bg-transparent" id="sidebar">
+            <div class="container-fluid px-3 px-md-4 px-lg-6"><button class="navbar-toggler ms-n2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarCollapse" aria-controls="sidebarCollapse" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>                <a class="navbar-brand d-inline-block py-lg-1 mb-lg-5" href="/dashboard" id="hostname">{% if force_domain_value %}{{ force_domain_value }}{% else %}{{ public_ip }}{% endif %}</a>
+                <div
+                    class="navbar-user d-lg-none">
+                    <div class="dropdown">
+                        <a class="d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="false" aria-expanded="false">
+                            <div>
+                                <div class="avatar avatar-sm text-bg-secondary rounded-circle">{{ current_user.username|first|upper }}</div>
+                            </div>
+                            <div class="d-none d-md-block ms-md-2"><i class="bi bi-chevron-down text-muted text-xs"></i></div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <div class="dropdown-header"><span class="d-block text-sm text-muted mb-1">Signed in as</span> <span class="d-block text-heading fw-semibold">{{ current_user.username }}</span></div>
+                            <div class="dropdown-divider"></div><a class="dropdown-item" href="#"><i class="bi bi-house me-3"></i>Home </a><a class="dropdown-item" href="#"><i class="bi bi-pencil me-3"></i>Edit profile</a>
+                            <div class="dropdown-divider"></div><a class="dropdown-item" href="#"><i class="bi bi-gear me-3"></i>Settings </a><a class="dropdown-item" href="#"><i class="bi bi-image me-3"></i>Media </a><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-up me-3"></i>Share</a>
+                            <div
+                                class="dropdown-divider"></div><a class="dropdown-item" href="#"><i class="bi bi-person me-3"></i>Login</a></div>
+            </div>
+    </div>
+    <div class="collapse navbar-collapse overflow-x-hidden" id="sidebarCollapse">
+        <ul class="navbar-nav">
+
+
+<li class="nav-item my-1"><a class="nav-link d-flex align-items-center rounded-pill {% if request.path.startswith('/dashboard') or request.path == ('/') %}active{% endif %}" href="/dashboard"><i class="mx-2"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-layout-dashboard"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /><path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /><path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /><path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /></svg></i> <span>Dashboard</span> <span class="badge badge-sm rounded-pill me-n2 bg-success-subtle text-success ms-auto"></span></a></li>
+
+            <li class="nav-item my-1"><a class="nav-link d-flex align-items-center rounded-pill {% if request.path.startswith('/users') or request.path.startswith('/plans') %}active{% endif %}" href="#sidebar-users" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebar-users"><i class="mx-2">                      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-users" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /><path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></svg></i> <span>Users</span> <span class="badge badge-sm rounded-pill me-n2 bg-success-subtle text-success ms-auto"></span></a>
+                <div
+                    class="collapse {% if request.path.startswith('/users') or request.path.startswith('/plans') %}show{% endif %}" id="sidebar-users">
+                    <ul class="nav nav-sm flex-column mt-1">
+                        <li class="nav-item {% if request.path.startswith('/users') %}active {% endif %}"><a href="/users" class="nav-link fw-bold">Users</a></li>
+                        <li class="nav-item {% if request.path.startswith('/plans') %}active {% endif %}"><a href="/plans" class="nav-link fw-bold">Plans</a></li>
+                    </ul>
+    </div>
+    </li>
+            <li class="nav-item my-1"><a class="nav-link d-flex align-items-center rounded-pill {% if request.path.startswith('/domains') or request.path.startswith('/plans') %}active{% endif %}" href="#sidebar-domains" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebar-domains"><i class="mx-2"><svg xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-world-www"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19.5 7a9 9 0 0 0 -7.5 -4a8.991 8.991 0 0 0 -7.484 4" /><path d="M11.5 3a16.989 16.989 0 0 0 -1.826 4" /><path d="M12.5 3a16.989 16.989 0 0 1 1.828 4" /><path d="M19.5 17a9 9 0 0 1 -7.5 4a8.991 8.991 0 0 1 -7.484 -4" /><path d="M11.5 21a16.989 16.989 0 0 1 -1.826 -4" /><path d="M12.5 21a16.989 16.989 0 0 0 1.828 -4" /><path d="M2 10l1 4l1.5 -4l1.5 4l1 -4" /><path d="M17 10l1 4l1.5 -4l1.5 4l1 -4" /><path d="M9.5 10l1 4l1.5 -4l1.5 4l1 -4" /></svg></i> <span>Domains</span> <span class="badge badge-sm rounded-pill me-n2 bg-success-subtle text-success ms-auto"></span></a>
+        <div class="collapse" id="sidebar-domains">
+            <ul class="nav nav-sm flex-column mt-1">
+                <li class="nav-item {% if request.path == ('/domains') %}active{% endif %}"><a href="/domains" class="nav-link">Domain Names</a></li>
+                <li class="nav-item {% if request.path.startswith('/domains/dns') %}active{% endif %}"><a href="/domains/dns" class="nav-link">DNS Zone Editor</a></li>
+                <li class="nav-item {% if request.path.startswith('/domains/nameservers') %}active{% endif %}"><a href="/domains/nameservers" class="nav-link">Nameservers Setting</a></li>
+                <li class="nav-item {% if request.path.startswith('/domains/dns-cluster') %}active{% endif %}"><a href="/domains/dns-cluster" class="nav-link">DNS Cluster</a></li>
+            </ul>
+            </div>
+    </li>
+
+
+        <li class="nav-item my-1"><a class="nav-link d-flex align-items-center rounded-pill {% if request.path.startswith('/backup') %}active{% endif %}" href="/backups"><i class="mx-2"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-box-seam" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 3l8 4.5v9l-8 4.5l-8 -4.5v-9l8 -4.5" /><path d="M12 12l8 -4.5" /><path d="M8.2 9.8l7.6 -4.6" /><path d="M12 12v9" /><path d="M12 12l-8 -4.5" /></svg></i> <span>Backups</span> <span class="badge badge-sm rounded-pill me-n2 bg-success-subtle text-success ms-auto"></span></a></li>
+
+
+
+    <li class="nav-item my-1"><a class="nav-link d-flex align-items-center rounded-pill {% if request.path.startswith('/settings') %}active{% endif %}" href="#sidebar-settings" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebar-settings"><i class="mx-2"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-terminal-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 9l3 3l-3 3" /><path d="M13 15l3 0" /><path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /></svg></i> <span>Settings</span> <span class="badge badge-sm rounded-pill me-n2 bg-success-subtle text-success ms-auto"></span></a>
+        <div
+            class="collapse" id="sidebar-settings">
+            <ul class="nav nav-sm flex-column mt-1">
+                <li class="nav-item {% if request.path.startswith('/settings/general') %}active{% endif %}"><a href="/settings/general" class="nav-link">General Settings</a></li>
+                <li class="nav-item {% if request.path.startswith('/settings/open-panel') %}active{% endif %}"><a href="/settings/open-panel" class="nav-link">OpenPanel</a></li>
+                <li class="nav-item {% if request.path.startswith('/settings/open-admin') %}active{% endif %}"><a href="/settings/open-admin" class="nav-link">OpenAdmin</a></li>
+                <li class="nav-item {% if request.path.startswith('/settings/api') %}active{% endif %}"><a href="/settings/api" class="nav-link">API Access</a></li>
+                <li class="nav-item {% if request.path.startswith('/settings/templates') %}active{% endif %}"><a href="/settings/templates" class="nav-link">Templates</a></li>
+
+
+
+            </ul>
+            </div>
+    </li>
+
+
+
+
+    <li class="nav-item my-1"><a class="nav-link d-flex align-items-center rounded-pill {% if request.path.startswith('/services') %}active{% endif %}" href="#sidebar-services" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebar-services"><i class="mx-2"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-server-2"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z" /><path d="M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z" /><path d="M7 8l0 .01" /><path d="M7 16l0 .01" /><path d="M11 8h6" /><path d="M11 16h6" /></svg></i> <span>Services</span> <span class="badge badge-sm rounded-pill me-n2 bg-success-subtle text-success ms-auto"></span></a>
+        <div
+            class="collapse" id="sidebar-services">
+            <ul class="nav nav-sm flex-column mt-1">
+                <li class="nav-item {% if request.path.startswith('/services/status') %}active{% endif %}"><a href="/services/status" class="nav-link">Service Status</a></li>
+                <li class="nav-item {% if request.path.startswith('/services/nginx') %}active{% endif %}"><a href="/services/nginx" class="nav-link"> Nginx Configuration</a></li>
+                <li class="nav-item {% if request.path.startswith('/services/docker') %}active{% endif %}"><a href="/services/docker" class="nav-link">Docker Configuration</a></li>
+                <li class="nav-item {% if request.path.startswith('/services/ftp') %}active{% endif %}"><a href="/services/ftp" class="nav-link">FTP Server Configuration</a></li>
+                <li class="nav-item {% if request.path.startswith('/services/resources') %}active{% endif %}"><a href="/services/resources" class="nav-link">Resource Allocation</a></li>
+                <li class="nav-item {% if request.path.startswith('/services/logs') %}active{% endif %}"><a href="/services/logs" class="nav-link">View Log Files</a></li>
+            </ul>
+            </div>
+    </li>
+
+
+
+    <li class="nav-item my-1"><a class="nav-link d-flex align-items-center rounded-pill {% if request.path.startswith('/security') %}active{% endif %}" href="#sidebar-security" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebar-security"><i class="mx-2"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-spy"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 11h18" /><path d="M5 11v-4a3 3 0 0 1 3 -3h8a3 3 0 0 1 3 3v4" /><path d="M7 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M17 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M10 17h4" /></svg></i> <span>Security</span> <span class="badge badge-sm rounded-pill me-n2 bg-success-subtle text-success ms-auto"></span></a>
+        <div
+            class="collapse" id="sidebar-security">
+            <ul class="nav nav-sm flex-column mt-1">
+                <li class="nav-item {% if request.path.startswith('/security/passwords') %}active{% endif %}"><a href="/security/passwords" class="nav-link">Password Strength</a></li>
+                <li class="nav-item {% if request.path.startswith('/security/ssl') %}active{% endif %}"><a href="/security/ssl" class="nav-link">SSL Certificates</a></li>
+                <li class="nav-item {% if request.path.startswith('/security/waf') %}active{% endif %}"><a href="/security/waf" class="nav-link">ModSecurity WAF</a></li>
+                <li class="nav-item {% if request.path.startswith('/security/firewall') %}active{% endif %}"><a href="/security/firewall" class="nav-link">Firewall</a></li>
+            </ul>
+            </div>
+    </li>
+
+
+    <li class="nav-item my-1"><a class="nav-link d-flex align-items-center rounded-pill {% if request.path.startswith('/server') %}active{% endif %}" href="#sidebar-server" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebar-server"><i class="mx-2"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-settings"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg></i> <span>Server Configuration</span> <span class="badge badge-sm rounded-pill me-n2 bg-success-subtle text-success ms-auto"></span></a>
+        <div
+            class="collapse" id="sidebar-server">
+            <ul class="nav nav-sm flex-column mt-1">
+                <li class="nav-item {% if request.path.startswith('/server/root-password') %}active{% endif %}"><a href="/server/root-password" class="nav-link">Change Root Password</a></li>
+                <li class="nav-item {% if request.path.startswith('/server/terminal') %}active{% endif %}"><a href="/server/terminal" class="nav-link">Terminal</a></li>
+                <li class="nav-item {% if request.path.startswith('/server/ssh') %}active{% endif %}"><a href="/server/ssh" class="nav-link">SSH Access</a></li>
+                <li class="nav-item {% if request.path.startswith('/server/crons') %}active{% endif %}"><a href="/server/crons" class="nav-link">OpenPanel Cron Jobs</a></li>
+                <li class="nav-item {% if request.path.startswith('/server/timezone') %}active{% endif %}"><a href="/server/timezone" class="nav-link">Server Time</a></li>
+
+
+            </ul>
+            </div>
+    </li>
+    </ul>
+
+    <hr class="navbar-divider my-5 opacity-70">
+
+    <ul class="navbar-nav">
+        <li><span class="nav-link text-xs fw-semibold text-uppercase text-muted ls-wide">Help & Support</span></li>
+
+
+        <li class="nav-item my-1"><a href="https://openpanel.co/docs/admin/{% if request.path.startswith('/dashboard') %}dashboard
+{% elif request.path.startswith('/users') %}users/openpanel
+{% elif request.path.startswith('/plans') %}plans/hosting_plans
+{% elif request.path.startswith('/backups') %}settings/backups
+{% elif request.path.startswith('/settings/general') %}settings/general
+{% elif request.path.startswith('/settings/firewall') %}settings/firewall
+{% elif request.path.startswith('/settings/docker') %}settings/docker
+{% elif request.path.startswith('/settings/modsecurity') %}settings/waf
+{% elif request.path.startswith('/settings/open-panel') %}settings/openpanel
+{% elif request.path.startswith('/settings/open-admin') %}settings/adminpanel
+{% elif request.path.startswith('/settings/api') %}settings/api
+{% elif request.path.startswith('/settings/templates') %}settings/templates
+{% elif request.path.startswith('/view_notifications') %}notifications
+{% elif request.path.startswith('/notifications') %}notifications
+{% else %}intro{% endif %}" target="_blank" rel="noreferrer" class="nav-link d-flex align-items-center rounded-pill"><i class="mx-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-message-2-question"
+                  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M8 9h8" />
+                  <path d="M8 13h6" />
+                  <path d="M14.5 18.5l-2.5 2.5l-3 -3h-3a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v4.5" />
+                  <path d="M19 22v.01" />
+                  <path d="M19 19a2.003 2.003 0 0 0 .914 -3.782a1.98 1.98 0 0 0 -2.414 .483" />
+                </svg></i>
+                <span>Documentation</span></a></li>
+{% if license_type == "Enterprise" %}
+
+        <li class="nav-item my-1"><a href="https://my.openpanel.co/submitticket.php?step=2&deptid=1" target="_blank" rel="noreferrer"  class="nav-link d-flex align-items-center rounded-pill">
+<i class="mx-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-headset">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M4 14v-3a8 8 0 1 1 16 0v3" />
+  <path d="M18 19c0 1.657 -2.686 3 -6 3" />
+  <path d="M4 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3z" />
+  <path d="M15 14a2 2 0 0 1 2 -2h1a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2h-1a2 2 0 0 1 -2 -2v-3z" />
+</svg></i>
+                <span>Hands-on Support</span></a></li>
+{% elif license_type == "Community" %}
+        <li class="nav-item my-1"><a href="https://community.openpanel.co/t/openadmin" target="_blank" rel="noreferrer"  class="nav-link d-flex align-items-center rounded-pill">
+                <i class="mx-2"><svg xmlns="http://www.w3.org/2000/svg" class="icon text-pink icon-tabler icon-tabler-message-2-heart"
+                  width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M8 9h8" />
+                  <path d="M8 13h3.5" />
+                  <path d="M10.5 19.5l-1.5 -1.5h-3a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v4" />
+                  <path
+                    d="M18 22l3.35 -3.284a2.143 2.143 0 0 0 .005 -3.071a2.242 2.242 0 0 0 -3.129 -.006l-.224 .22l-.223 -.22a2.242 2.242 0 0 0 -3.128 -.006a2.143 2.143 0 0 0 -.006 3.071l3.355 3.296z" />
+                </svg></i>
+
+                <span>Community Forums</span></a></li>
+{% endif %}
+
+
+
+    </ul>
+    <div class="mt-auto"></div>
+    <div class="card bg-dark border-0 mt-5 mb-3">
+        <div class="card-body">
+            <div class="vstack gap-4"><i class="bi bi-rocket-takeoff-fill text-white text-2xl"></i>
+                <p class="text-sm text-white text-opacity-70">Upgrade to OpenPanel Enterprise for even more features.</p><a href="/upgrade" class="btn btn-sm btn-primary w-100">Upgade now<i class="bi bi-arrow-right ms-2"></i></a></div>
+        </div>
+    </div>
+    </div>
+    </div>
+    </nav>
+<!-- END Sidebar -->
+    <div class="flex-lg-fill overflow-x-auto ps-lg-1 vstack vh-lg-100 position-relative">
+        <div class="d-none d-lg-flex py-3">
+            <div class="flex-none">
+                <div class="input-group input-group-sm input-group-inline w-rem-64 rounded-pill"><span class="input-group-text rounded-start-pill"><i class="mx-2"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg></i> </span>
+                <input type="search" class="form-control search-bar ps-0 rounded-end-pill"  id="searchInput" placeholder="Search" aria-label="Search">
+<ul class="dropdown-menu scroller" style="top: 100%; width: 100%; right: 0px; overflow-x: hidden; overflow-y: overlay; max-height: 90vh;" aria-labelledby="searchInput" id="filteredDropdown"></ul>
+ 
+                
+                </div>
+            </div>
+
+
+
+<script>
+$(document).ready(function(){
+    $('#searchInput').on('input', function() {
+        var searchText = $(this).val().toLowerCase();
+        var dropdownItems = '';
+
+        $.when(
+            $.get('/core/search_filter'),
+            $.get('/core/search_users'),
+            $.get('/core/search_websites')
+        ).done(function(jsonData, usersData, websiteData) {
+            jsonData = jsonData[0];
+            usersData = usersData[0];
+            websiteData = websiteData[0];
+                
+            $.each(jsonData, function(index, item) {
+                var itemName = item.name || '';
+                var linkTarget = '';
+
+                if (itemName.toLowerCase().includes(searchText)) {
+                    if (item.link.includes('/phpmyadmin') || item.link.includes('/terminal')) {
+                        linkTarget = 'target="_blank"'; // Open in a new tab
+                    }
+
+                    dropdownItems += '<li style="border-bottom: 1px solid #e2e5ec;"><h5 class="m-0"><a class="dropdown-item" href="' + item.link + '" ' + linkTarget + '>' + item.name + '<br><p class="dropdown-item-description" style="display:contents; font-size: 0.7em;margin-bottom: 0px;">' + item.description + '</p></a></h5></li>';
+                }
+            });
+
+$.each(usersData, function(index, item) {
+    var itemName = item[0] || '';
+    var suspended = itemName.toLowerCase().includes('suspended');
+    var iconClass = suspended ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"> <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/> <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/> </svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>';
+    
+    if (itemName.toLowerCase().startsWith('suspended_')) {
+        var displayName = itemName.substring(itemName.lastIndexOf('_') + 1);
+        var itemLink = '/users/' + itemName;
+        dropdownItems += '<li><h5 class="m-0"><a class="dropdown-item bg-danger text-light" href="' + itemLink + '">' + iconClass + ' &nbsp;' + displayName + ' <b>(SUSPENDED)</b></a></h5></li>';
+    } else {
+        var itemLink = '/users/' + itemName;
+        dropdownItems += '<li><h5 class="m-0"><a class="dropdown-item" href="' + itemLink + '">' + iconClass + ' &nbsp;' + itemName + '</a></h5></li>';
+    }
+});
+
+
+            $.each(websiteData, function(index, item) {
+                var itemName = item[0] || ''; // Get the site name from the first element
+                var itemLink = '/domains/' + itemName; // Construct link using site name
+                if (itemName.toLowerCase().includes(searchText)) {
+                    dropdownItems += '<li><h5 class="m-0"><a class="dropdown-item" href="' + itemLink + '"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"> <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/> </svg> &nbsp;' + itemName + '</a></h5></li>';
+                }
+            });
+
+            if (dropdownItems) {
+                $('#filteredDropdown').html(dropdownItems).show();
+            } else {
+                $('#filteredDropdown').html('').hide();
+            }
+        });
+    });
+
+    // Hide dropdown when clicking outside
+    $(document).on('click', function(event) {
+        if (!$(event.target).closest('#searchGroup').length) {
+            $('#filteredDropdown').hide();
+        }
+    });
+
+});
+</script>
+
+
+
+
+
+
+
+
+            <div class="d-lg-none d-xxl-flex align-items-center gap-4 px-4 scrollable-x">
+                <div class="d-flex gap-2 text-xs"><span class="text-heading fw-semibold">{% if force_domain_value %}{{ force_domain_value }}{% else %}{{ server_hostname }}{% endif %}</span> <span class="text-muted">({{public_ip}})</span></div>
+                <div class="d-flex gap-2 text-xs"><span class="text-muted">Running on </span><span class="text-heading fw-semibold"><a href="https://openpanel.co/docs/changelog/{{ panel_version }}" class="text-decoration:none;" target="_blank"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg>OpenPanel {% if license_type == "Enterprise" %} Enterprise edition{% elif license_type == "Community" %}Community edition{% endif %} {{ panel_version }}</span></a></div>
+            </div>
+
+            <div class="hstack flex-fill justify-content-end flex-nowrap gap-6 ms-auto px-6 px-xxl-8"><button type="button" class="btn btn-xs btn-primary rounded-pill text-nowrap" data-bs-target="#connectWalletModal" data-bs-toggle="modal">Connect</button>
+                <div class="dropdown d-none"><a href="#" class="nav-link" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-sun-fill"></i></a>
+                    <div class="dropdown-menu"><button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light">Light</button> <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="dark">Dark</button>                        <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="auto">System</button></div>
+                </div>
+                <div class="dropdown"><a href="#" class="nav-link" id="dropdown-notifications" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-bell"></i></a>
+                    <div class="dropdown-menu dropdown-menu-end px-2" aria-labelledby="dropdown-notifications">
+                        <div class="dropdown-item d-flex align-items-center">
+                            <h6 class="dropdown-header px-0">Notifications</h6><a href="#" class="text-sm fw-semibold ms-auto">Clear all</a></div>
+                        <div class="dropdown-item py-3 d-flex">
+                            <div>
+                                <div class="avatar bg-primary text-white rounded-circle">RF</div>
+                            </div>
+                            <div class="flex-fill ms-3">
+                                <div class="text-sm lg-snug w-rem-64 text-wrap"><a href="#" class="fw-semibold text-heading text-primary-hover">Robert</a> sent a message to <a href="#" class="fw-semibold text-heading text-primary-hover">Webpixels</a></div><span class="text-muted text-xs">30 mins ago</span></div>
+                        </div>
+                        <div class="dropdown-item py-3 d-flex">
+                            <div><img src="../../img/people/img-1.jpg" class="avatar rounded-circle" alt="..."></div>
+                            <div class="flex-fill ms-3">
+                                <div class="text-sm lg-snug w-rem-64 text-wrap"><a href="#" class="fw-semibold text-heading text-primary-hover">Robert</a> sent a message to <a href="#" class="fw-semibold text-heading text-primary-hover">Webpixels</a></div><span class="text-muted text-xs">30 mins ago</span></div>
+                        </div>
+                        <div class="dropdown-item py-3 d-flex">
+                            <div><img src="../../img/people/img-2.jpg" class="avatar rounded-circle" alt="..."></div>
+                            <div class="flex-fill ms-3">
+                                <div class="text-sm lg-snug w-rem-64 text-wrap"><a href="#" class="fw-semibold text-heading text-primary-hover">Robert</a> sent a message to <a href="#" class="fw-semibold text-heading text-primary-hover">Webpixels</a></div><span class="text-muted text-xs">30 mins ago</span></div>
+                        </div>
+                        <div class="dropdown-item py-3 d-flex">
+                            <div>
+                                <div class="avatar bg-success text-white rounded-circle">KW</div>
+                            </div>
+                            <div class="flex-fill ms-3">
+                                <div class="text-sm lg-snug w-rem-64 text-wrap"><a href="#" class="fw-semibold text-heading text-primary-hover">Robert</a> sent a message to <a href="#" class="fw-semibold text-heading text-primary-hover">Webpixels</a></div><span class="text-muted text-xs">30 mins ago</span></div>
+                        </div>
+                        <div class="dropdown-item py-3 d-flex">
+                            <div><img src="../../img/people/img-4.jpg" class="avatar rounded-circle" alt="..."></div>
+                            <div class="flex-fill ms-3">
+                                <div class="text-sm lg-snug w-rem-64 text-wrap"><a href="#" class="fw-semibold text-heading text-primary-hover">Robert</a> sent a message to <a href="#" class="fw-semibold text-heading text-primary-hover">Webpixels</a></div><span class="text-muted text-xs">30 mins ago</span></div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item py-2 text-center"><a href="#" class="fw-semibold text-muted text-primary-hover">View all</a></div>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <a class="avatar avatar-sm text-bg-dark rounded-circle" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="false" aria-expanded="false">{{ current_user.username|first|upper }}</a>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <div class="dropdown-header"><span class="d-block text-sm text-muted mb-1">Signed in as</span> <span class="d-block text-heading fw-semibold">{{ current_user.username }}</span></div>
+                        <div class="dropdown-divider"></div><a class="dropdown-item" href="#"><i class="bi bi-house me-3"></i>Home </a><a class="dropdown-item" href="#"><i class="bi bi-pencil me-3"></i>Edit profile</a>
+                        <div class="dropdown-divider"></div><a class="dropdown-item" href="#"><i class="bi bi-gear me-3"></i>Settings </a><a class="dropdown-item" href="#"><i class="bi bi-image me-3"></i>Media </a><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-up me-3"></i>Share</a>
+                        <div
+                            class="dropdown-divider"></div><a class="dropdown-item" href="#"><i class="bi bi-person me-3"></i>Login</a></div>
+            </div>
+        </div>
+    </div>
+    <div class="flex-fill overflow-y-lg-auto scrollbar bg-body rounded-top-4 rounded-top-start-lg-4 rounded-top-end-lg-0 border-top border-lg shadow-2">
+
+
+        <main class="container-fluid px-3 py-5 p-lg-6 p-xxl-8">
+             {% block content %}{% endblock %}
+        </main>
+    </div>
+    </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="https://satoshi.webpixels.io/js/main.js"></script>
+  <!-- Libs JS -->
+  <script src="/static/dist/libs/list.js/dist/list.min.js?1684106062" defer></script>
+  <!-- Tabler Core -->
+  <script src="/static/dist/js/tabler.min.js?1684106062" defer></script>
+  <script src="/static/dist/js/demo.min.js?1684106062" defer></script>
+
+
+    <!--script src="https://satoshi.webpixels.io/js/switcher.js"></script-->
+</body>
+
+</html>
