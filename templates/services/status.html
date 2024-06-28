@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-warning alert-dismissible" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+
+<!-- Page header -->
+<div class="page-header mt-0 d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <!-- Page pre-title -->
+                <div class="page-pretitle">
+                    Services
+                </div>
+                <h2 class="page-title">
+                    Status
+                </h2>
+            </div>
+            <!-- Page title actions -->
+            <div class="col-auto ms-auto mt-0 d-print-none">
+                <div class="btn-list">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Page body -->
+<div class="page-body">
+{% if statuses.items() %}
+    <div class="">
+        <div class="row row-deck row-cards">
+            <div class="col-lg-12" id="statuses">
+                <div class="card">
+                    <div class="table-responsive">
+                    <table class="table card-table table-vcenter text-nowrap datatable">
+                        <thead>
+                            <tr>
+                                <th>Service Name</th>
+                                <th>Version</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for service_display_name, details in statuses.items() %}
+                            <tr>
+                                <td>{{ service_display_name }}<br>
+                                    <span class="text-secondary">
+                                    ({% if details.type == ("docker") %}<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-brand-docker"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M22 12.54c-1.804 -.345 -2.701 -1.08 -3.523 -2.94c-.487 .696 -1.102 1.568 -.92 2.4c.028 .238 -.32 1 -.557 1h-14c0 5.208 3.164 7 6.196 7c4.124 .022 7.828 -1.376 9.854 -5c1.146 -.101 2.296 -1.505 2.95 -2.46z" /><path d="M5 10h3v3h-3z" /><path d="M8 10h3v3h-3z" /><path d="M11 10h3v3h-3z" /><path d="M8 7h3v3h-3z" /><path d="M11 7h3v3h-3z" /><path d="M11 4h3v3h-3z" /><path d="M4.571 18c1.5 0 2.047 -.074 2.958 -.78" /><path d="M10 16l0 .01" /></svg> {% elif details.type == ("system") %}{% endif %}{{ details.real_name }})
+                                    </span>
+                                </td>
+                                <td><span class="text-secondary">{{ details.version }}</span></td>
+                                <td>
+                                    <span class="badge {{ 'bg-success' if details.status else 'bg-danger' }}">
+                                        {{ 'Running' if details.status else 'Stopped' }}
+                                    </span>
+
+                                </td>
+                                <td>
+                                    {% if details.status %}
+
+                                                                        <button class="btn btn-danger btn-sm" onclick="controlService('{{ details.real_name }}', 'stop')">Stop</button>
+
+                                    {% else %}
+                                    <button class="btn btn-success btn-sm" onclick="controlService('{{ details.real_name }}', 'start')">Start</button>
+                                    {% endif %}
+
+                                    <button class="btn btn-warning btn-sm" onclick="controlService('{{ details.real_name }}', 'restart')">Restart</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div></div>
+        </div>
+    </div>
+
+
+    <script>
+        async function controlService(service, action) {
+            const response = await fetch('/services/control', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ real_name: service, action: action }),
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                location.reload();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        }
+    </script>
+
+
+
+{% else %}
+<div class="page page-center">
+      <div class="container-tight py-4">
+        <div class="empty">
+          <div class="empty-header">No Services</div>
+          <p class="empty-title">Make sure that file <code>/etc/openpanel/openadmin/config/services.json</code> has valid JSON.</p>
+          <div class="empty-action">
+            <a href="https://openpanel.co/docs/admin/services/status/" target="_blank" class="btn btn-primary">
+              View Documentation
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+{% endif %}
+
+
+
+
+
+</div>
+
+
+<!--script src="{{ url_for('static', filename='pages/services_status.js') }}" defer></script-->
+
+{% endblock %}
+
