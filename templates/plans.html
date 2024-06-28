@@ -1,0 +1,1576 @@
+<!-- plans.html -->
+{% extends 'base.html' %} {% block content %}
+
+<!-- Flash messages section -->
+{% with messages = get_flashed_messages(with_categories=true) %} {% if messages
+%}
+<div class="flash-messages">
+  {% for message, category in messages %} {% if category == 'error' %}
+  <div class="alert alert-danger">{{ message }}</div>
+  {% elif category == 'success' %}
+  <div class="alert alert-success">{{ message }}</div>
+  {% endif %} {% endfor %}
+</div>
+{% endif %} {% endwith %}
+
+<!-- Page header -->
+<div class="page-header mt-0 d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">Plans</h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <span class="d-none d-sm-inline">
+            <div class="input-icon">
+              <span class="input-icon-addon">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="icon"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  stroke-width="2"
+                  stroke="currentColor"
+                  fill="none"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                  <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path>
+                  <path d="M21 21l-6 -6"></path>
+                </svg>
+              </span>
+              <input
+                type="text"
+                id="userSearchInput"
+                class="form-control"
+                placeholder="Search plans"
+                aria-label="Search in plans"
+              />
+            </div>
+          </span>
+
+          <button
+            id="addPlanButton"
+            class="btn btn-primary d-sm-inline-block"
+            type="button"
+            {%
+            if
+            images
+            %}
+            data-bs-toggle="modal"
+            data-bs-target="#modal-report"
+            {%
+            else
+            %}
+            data-bs-toggle="tooltip"
+            data-bs-placement="bottom"
+            aria-label="Please ensure that Docker images are added before creating plans."
+            data-bs-original-title="Please ensure that Docker images are added before creating plans."
+            {%
+            endif
+            %}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="icon"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+              <path d="M12 5l0 14"></path>
+              <path d="M5 12l14 0"></path></svg
+            >New Plan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal modal-blur fade"
+  id="modal-report"
+  tabindex="-1"
+  style="display: none"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">New Plan</h5>
+        <a style="display: none" href="#"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="icon icon-tabler icon-tabler-info-square-rounded-filled"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path
+              d="M12 2l.642 .005l.616 .017l.299 .013l.579 .034l.553 .046c4.687 .455 6.65 2.333 7.166 6.906l.03 .29l.046 .553l.041 .727l.006 .15l.017 .617l.005 .642l-.005 .642l-.017 .616l-.013 .299l-.034 .579l-.046 .553c-.455 4.687 -2.333 6.65 -6.906 7.166l-.29 .03l-.553 .046l-.727 .041l-.15 .006l-.617 .017l-.642 .005l-.642 -.005l-.616 -.017l-.299 -.013l-.579 -.034l-.553 -.046c-4.687 -.455 -6.65 -2.333 -7.166 -6.906l-.03 -.29l-.046 -.553l-.041 -.727l-.006 -.15l-.017 -.617l-.004 -.318v-.648l.004 -.318l.017 -.616l.013 -.299l.034 -.579l.046 -.553c.455 -4.687 2.333 -6.65 6.906 -7.166l.29 -.03l.553 -.046l.727 -.041l.15 -.006l.617 -.017c.21 -.003 .424 -.005 .642 -.005zm0 9h-1l-.117 .007a1 1 0 0 0 0 1.986l.117 .007v3l.007 .117a1 1 0 0 0 .876 .876l.117 .007h1l.117 -.007a1 1 0 0 0 .876 -.876l.007 -.117l-.007 -.117a1 1 0 0 0 -.764 -.857l-.112 -.02l-.117 -.006v-3l-.007 -.117a1 1 0 0 0 -.876 -.876l-.117 -.007zm.01 -3l-.127 .007a1 1 0 0 0 0 1.986l.117 .007l.127 -.007a1 1 0 0 0 0 -1.986l-.117 -.007z"
+              stroke-width="0"
+              fill="currentColor"
+            />
+          </svg>
+        </a>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <form id="planForm">
+        <div class="modal-body">
+          <div class="form-selectgroup-boxes row mb-3">
+            <div class="col-lg-4">
+              <label class="form-label"
+                >Name: <span class="text-danger">*</span></label
+              >
+              <div class="row g-2">
+                <div class="col">
+                  <input
+                    id="name"
+                    class="form-control"
+                    name="name"
+                    placeholder="Enter plan name"
+                    type="text"
+                    required=""
+                    data-validate
+                    value="{{ plan_template_data.get('name', '') }}"
+                  />
+                </div>
+                <div class="col-auto align-self-center">
+                  <span
+                    class="form-help"
+                    data-bs-toggle="popover"
+                    data-bs-placement="top"
+                    data-bs-content="<p class='mb-0'>Plan name is visible to the users.</p>"
+                    data-bs-html="true"
+                    >?</span
+                  >
+                </div>
+              </div>
+            </div>
+            <!-- col -->
+            <div class="col-lg-8">
+              <label class="form-label">Description:</label>
+              <div class="row g-2">
+                <div class="col">
+                  <input
+                    id="description"
+                    class="form-control"
+                    name="description"
+                    placeholder="Enter description"
+                    type="textarea"
+                    value="{{ plan_template_data.get('description', '') }}"
+                  />
+                </div>
+                <div class="col-auto align-self-center">
+                  <span
+                    class="form-help"
+                    data-bs-toggle="popover"
+                    data-bs-placement="top"
+                    data-bs-content="<p class='mb-0'>Description is only visible to Admin users.</p>"
+                    data-bs-html="true"
+                    >?</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <label class="form-label">Docker image</label>
+          <div class="form-selectgroup-boxes row mb-3">
+            <div class="col-lg-4">
+              <label class="form-selectgroup-item">
+                <input
+                  type="radio"
+                  name="docker_image"
+                  value="apache"
+                  class="form-selectgroup-input"
+                  checked=""
+                />
+                <span
+                  class="form-selectgroup-label d-flex align-items-center p-3"
+                >
+                  <span class="me-3">
+                    <span class="form-selectgroup-check"></span>
+                  </span>
+                  <span class="form-selectgroup-label-content">
+                    <span class="form-selectgroup-title strong mb-1"
+                      ><span class="me-2"
+                        ><img
+                          class="avatar"
+                          src="/static/images/apache.png" /></span
+                      >Apache</span
+                    >
+                    <!--span class="d-block text-secondary">Ubuntu 22.04 with Apache 2.4</span-->
+                  </span>
+                </span>
+              </label>
+            </div>
+            <div class="col-lg-4">
+              <label class="form-selectgroup-item">
+                <input
+                  type="radio"
+                  name="docker_image"
+                  value="nginx"
+                  class="form-selectgroup-input"
+                />
+                <span
+                  class="form-selectgroup-label d-flex align-items-center p-3"
+                >
+                  <span class="me-3">
+                    <span class="form-selectgroup-check"></span>
+                  </span>
+                  <span class="form-selectgroup-label-content">
+                    <span class="form-selectgroup-title strong mb-1"
+                      ><span class="me-2"
+                        ><img
+                          class="avatar"
+                          src="/static/images/nginx.png" /></span
+                      >Nginx</span
+                    >
+                  </span>
+                </span>
+              </label>
+            </div>
+            <div class="col-lg-4">
+              <label class="form-selectgroup-item">
+                <input
+                  type="radio"
+                  name="docker_image"
+                  value="nginx"
+                  class="form-selectgroup-input"
+                  disabled
+                />
+                <span
+                  class="form-selectgroup-label d-flex align-items-center p-3"
+                >
+                  <div class="ribbon bg-secondary" style="min-height: 1rem">
+                    coming soon
+                  </div>
+                  <span class="me-3">
+                    <span class="form-selectgroup-check"></span>
+                  </span>
+                  <span class="form-selectgroup-label-content">
+                    <span class="form-selectgroup-title strong mb-1"
+                      ><span class="me-2"
+                        ><img
+                          class="avatar"
+                          src="/static/images/litespeed.png" /></span
+                      >LiteSpeed</span
+                    >
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <hr />
+          <div class="row">
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Domains: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <input
+                      id="domains_limit"
+                      class="form-control"
+                      name="domains_limit"
+                      placeholder=""
+                      type="number"
+                      required=""
+                      min="0"
+                      data-validate
+                      value="{{ plan_template_data.get('domains', '') }}"
+                    />
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>Total number of domains users are allowed to add on this plan.</p><p class='mb-0'>Subdomains are not included in this limit.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Websites: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <input
+                      id="websites_limit"
+                      class="form-control"
+                      name="websites_limit"
+                      placeholder=""
+                      type="number"
+                      required=""
+                      min="0"
+                      data-validate
+                      value="{{ plan_template_data.get('websites', '') }}"
+                    />
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>Total number of websites users are allowed to manage on this plan.</p><p class='mb-0'>This encompasses both WordPress sites managed via the WP Manager interface and Python/NodeJS applications administered through the PM2 interface.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Databases: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <input
+                      id="db_limit"
+                      class="form-control"
+                      name="db_limit"
+                      placeholder=""
+                      type="number"
+                      required=""
+                      min="0"
+                      data-validate
+                      value="{{ plan_template_data.get('databases', '') }}"
+                    />
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p class='mb-0'>Total number of MySQL databases users are allowed to create on this plan.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Memory: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="ram"
+                        class="form-control"
+                        name="ram"
+                        placeholder=""
+                        type="number"
+                        required=""
+                        min="0"
+                        data-validate
+                        value="{{ plan_template_data.get('ram', '') }}"
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="ram-gb">GB</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p class='mb-0'>Physical Memory (RAM) limit in GB.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >CPU: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="cpu"
+                        class="form-control"
+                        name="cpu"
+                        placeholder=""
+                        type="number"
+                        required=""
+                        min="0"
+                        data-validate
+                        value="{{ plan_template_data.get('cpu', '') }}"
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="cpu-cores"
+                          >cores</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p class='mb-0'>Number of CPU cores.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Port Speed: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="port_speed"
+                        class="form-control"
+                        name="port_speed"
+                        placeholder=""
+                        type="number"
+                        name="port_speed"
+                        required=""
+                        min="1"
+                        data-validate
+                        value="{{ plan_template_data.get('port_speed', '') }}"
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="port-mbits"
+                          >mbits</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p class='mb-0'>Port Speed in mbit/s (i.e., the network speed or bandwidth available to the user for network operations).</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Docker size: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="disk_limit"
+                        class="form-control"
+                        name="disk_limit"
+                        placeholder="10GB minimum"
+                        type="number"
+                        required=""
+                        min="10"
+                        data-validate
+                        value="{{ plan_template_data.get('disk_limit_for_docker', '') }}"
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="disk-gb">GB</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>Total disk usage limit in GB for the user Docker container.</p><p class='mb-0'>This limit encompasses all user data <b>with the exception of the home directory</b>. This includes all system files, services, logs, MySQL databases, etc., Docker requires that the limit must be at least 10GB.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Inodes limit: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <input
+                      id="inodes_limit"
+                      class="form-control"
+                      name="inodes_limit"
+                      placeholder="minimum 500k"
+                      type="number"
+                      required=""
+                      min="500000"
+                      data-validate
+                      value="{{ plan_template_data.get('inodes_for_storage_file', '') }}"
+                    />
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>Total number of inodes for the users home directory.</p><p class='mb-0'>500.000 is the minimum.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Storage file: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="storage_file"
+                        class="form-control"
+                        name="storage_file"
+                        placeholder=""
+                        type="number"
+                        required=""
+                        min="0"
+                        data-validate
+                        value="{{ plan_template_data.get('disk_limit_for_storage_file', '') }}"
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="disk-gb">GB</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>The maximum disk space allocation for the user's home directory in gigabytes.</p><p class='mb-0'>Enter 0 to allow unlimited disk space (recommended only for Virtual Private Servers operated by a single user).</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <a
+            href="#"
+            class="btn btn-link link-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </a>
+
+          <button
+            type="button"
+            class="btn btn-primary ms-auto"
+            id="CreatePlanButton"
+          >
+            <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="icon"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+              <path d="M12 5l0 14"></path>
+              <path d="M5 12l14 0"></path>
+            </svg>
+            Create Plan
+          </button>
+        </div>
+      </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+        <!-- Page body -->
+        <div class="page-body">
+
+
+{% if plans %}
+
+          <div class="container-xl">
+            <div class="card">
+              <div class="card-body p-0">
+                <div id="table-default" class="table-responsive">
+                  <table class="table table-vcenter card-table table-striped">
+                    <thead>
+                      <tr>
+                        <th><button class="table-sort" data-sort="sort-id">ID</button></th>
+                        <th><button class="table-sort" data-sort="sort-name">Plan name</button></th>
+                        <th><button class="table-sort" data-sort="sort-image">Image</button></th>
+                        <th><button class="table-sort" data-sort="sort-du">Docker Size</button></th>
+                        <th><button class="table-sort" data-sort="sort-storage">Storage</button></th>
+                        <th style="display:none;"><button class="table-sort" data-sort="sort-storage-inodes">Inodes</button></th>
+                        <th><button class="table-sort" data-sort="sort-domains">Domains</button></th>
+                        <th><button class="table-sort" data-sort="sort-sites">Websites</button></th>
+                        <th><button class="table-sort" data-sort="sort-db">Databases</button></th>
+                        <th><button class="table-sort" data-sort="sort-cpu">CPU</button></th>
+                        <th><button class="table-sort" data-sort="sort-ram">RAM</button></th>
+                        <th><button class="table-sort" data-sort="sort-port">Port Speed</button></th>
+                        <th>&nbsp;</th>
+                      </tr>
+                    </thead>
+                    <tbody class="table-tbody">
+                      {% for plan in plans %}
+                      <tr data-description="{{ plan.description }}" data-name="{{ plan.name }}" data-id="{{ plan.id }}" data-image="{{ plan.docker_image }}">
+                        <td class="sort-id">{{ plan.id }}</td>
+                        <td class="sort-name">
+                          <div class="d-flex align-items-center gap-2">
+                          <div>
+                            <div>{{ plan.name }}</div>
+                            <span class="text-secondary">{{ plan.description }}</span>
+                          </div>
+                        </div>
+                        </td>
+                        <td class="sort-image">{% if plan.docker_image == 'openpanel/nginx'%}<span class="me-2"><img class="avatar" src="/static/images/nginx.png"></span>{% elif plan.docker_image == 'openpanel/apache' %}<span class="me-2"><img class="avatar" src="/static/images/apache.png"></span>{% elif plan.docker_image == 'openpanel/litespeed' %}<span class="me-2"><img class="avatar" src="/static/images/litespeed.png"></span>{% else %}{{ plan.docker_image }}{% endif %}
+                        </td>
+                        <td class="sort-du">{% if plan.disk_limit == 0 %}∞{% else %}{{ plan.disk_limit }}{% endif %}</td>
+                        <td class="sort-storage">{% if plan.storage_file == "0 GB" or plan.storage_file is none %}∞{% else %}{{ plan.storage_file }}{% endif %}</td>
+                        <td class="d-none sort-storage-inodes">{% if plan.inodes_limit == "0" or plan.inodes_limit is none %}∞{% else %}{{ plan.inodes_limit }}{% endif %}</td>
+                        <td class="sort-domains">{% if plan.domains_limit == 0 %}∞{% else %}{{ plan.domains_limit }}{% endif %}</td>
+                        <td class="sort-sites">{% if plan.websites_limit == 0 %}∞{% else %}{{ plan.websites_limit }}{% endif %}</td>
+                        <td class="sort-db">{% if plan.db_limit == 0 %}∞{% else %}{{ plan.db_limit }}{% endif %}</td>
+                        <td class="sort-cpu">{% if plan.cpu == 0 %}∞{% else %}{{ plan.cpu }}{% endif %}</td>
+                        <td class="sort-ram">{% if plan.ram == '0 g' %}∞{% else %}{{ plan.ram.rstrip('g') }}{% endif %}</td>
+                        <td class="sort-port">{% if plan.bandwidth == 0 %}∞{% else %}{{ plan.bandwidth }} mbits{% endif %}</td>
+                        <td class="">                
+                        <div class="btn-list flex-nowrap">
+
+                    <a href="#modal-edit-plan" data-bs-toggle="modal" data-bs-target="#modal-edit-plan" class="btn-edit btn">
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg> Edit
+                    </a>
+<span data-bs-toggle="tooltip" data-bs-placement="top" title="Delete account">
+<a href="/plans/delete/{{plan.name}}" class="btn btn-danger" id="deleteButton-{{plan.id}}" data-bs-toggle="modal" data-bs-target="#confirmDeleteUserModal" data-plan-name="{{plan.name}}"  data-plan-id="{{plan.id}}">
+<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+  <path d="M4 7l16 0" />
+  <path d="M10 11l0 6" />
+  <path d="M14 11l0 6" />
+  <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+  <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+</svg> Delete</a>
+</span>
+
+
+
+
+
+
+                </div>
+                </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+        </div>
+{% else %}
+<div class="page page-center">
+      <div class="container-tight py-4">
+        <div class="empty">
+          <div class="empty-header">No Plans</div>
+          <p class="empty-title">No plans or the MySQL service is not running.</p>
+          <p class="d-none empty-subtitle text-secondary">
+          </p>
+          <div class="empty-action">
+          <button
+            id="addPlanButton"
+            class="btn btn-primary"
+            type="button"
+            {%
+            if
+            images
+            %}
+            data-bs-toggle="modal"
+            data-bs-target="#modal-report"
+            {%
+            else
+            %}
+            data-bs-toggle="tooltip"
+            data-bs-placement="bottom"
+            aria-label="Please ensure that Docker images are added before creating plans."
+            data-bs-original-title="Please ensure that Docker images are added before creating plans."
+            {%
+            endif
+            %}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="icon"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+              <path d="M12 5l0 14"></path>
+              <path d="M5 12l14 0"></path></svg
+            >Create your first plan
+          </button>
+
+
+
+
+
+
+
+
+          </div>
+        </div>
+      </div>
+    </div>
+{% endif %}
+
+      </div>
+
+
+<!-- Delete Modal -->
+    <div class="modal modal-blur fade" id="confirmDeleteUserModal" aria-labelledby="confirmDeleteUserModalLabel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <button type="button" id="deleteModalxClose" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <div class="modal-status bg-danger"></div>
+          <div class="modal-body text-center py-4">
+            <!-- Download SVG icon from http://tabler-icons.io/i/alert-triangle -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.24 3.957l-8.422 14.06a1.989 1.989 0 0 0 1.7 2.983h16.845a1.989 1.989 0 0 0 1.7 -2.983l-8.423 -14.06a1.989 1.989 0 0 0 -3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+            <h3 id="confirmDeleteUserModalLabel">Are you sure you want to delete plan with the name: <b><span id="nameofplan"></span></b>?</h3>
+            <div class="text-muted">        <small>Deleting a plan will remove the network, delete docker image and all settings associated with the plan. Plan can not be deleted if it has active users.            
+            </small></div>
+        <!-- Input field for confirmation -->
+        <div class="mt-3 mb-3">
+          <label for="deleteConfirmation" class="form-label">Type "DELETE" to confirm:</label>
+          <input type="text" class="form-control" id="deleteConfirmation">
+        </div>
+          </div>
+
+          <div class="modal-footer">
+            <div class="w-100">
+              <div class="row">
+                <div class="col"><a href="#" id="confirmDelete" class="btn btn-danger w-100" style="display: none;">
+                    Terminate
+                  </a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+<div
+  class="modal modal-blur fade"
+  id="modal-edit-plan"
+  tabindex="-1"
+  style="display: none"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Plan</h5>
+        <a style="display: none" href="#"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="icon icon-tabler icon-tabler-info-square-rounded-filled"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path
+              d="M12 2l.642 .005l.616 .017l.299 .013l.579 .034l.553 .046c4.687 .455 6.65 2.333 7.166 6.906l.03 .29l.046 .553l.041 .727l.006 .15l.017 .617l.005 .642l-.005 .642l-.017 .616l-.013 .299l-.034 .579l-.046 .553c-.455 4.687 -2.333 6.65 -6.906 7.166l-.29 .03l-.553 .046l-.727 .041l-.15 .006l-.617 .017l-.642 .005l-.642 -.005l-.616 -.017l-.299 -.013l-.579 -.034l-.553 -.046c-4.687 -.455 -6.65 -2.333 -7.166 -6.906l-.03 -.29l-.046 -.553l-.041 -.727l-.006 -.15l-.017 -.617l-.004 -.318v-.648l.004 -.318l.017 -.616l.013 -.299l.034 -.579l.046 -.553c.455 -4.687 2.333 -6.65 6.906 -7.166l.29 -.03l.553 -.046l.727 -.041l.15 -.006l.617 -.017c.21 -.003 .424 -.005 .642 -.005zm0 9h-1l-.117 .007a1 1 0 0 0 0 1.986l.117 .007v3l.007 .117a1 1 0 0 0 .876 .876l.117 .007h1l.117 -.007a1 1 0 0 0 .876 -.876l.007 -.117l-.007 -.117a1 1 0 0 0 -.764 -.857l-.112 -.02l-.117 -.006v-3l-.007 -.117a1 1 0 0 0 -.876 -.876l-.117 -.007zm.01 -3l-.127 .007a1 1 0 0 0 0 1.986l.117 .007l.127 -.007a1 1 0 0 0 0 -1.986l-.117 -.007z"
+              stroke-width="0"
+              fill="currentColor"
+            />
+          </svg>
+        </a>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <form id="EditplanForm">
+        <input id="edit_id" class="form-control d-none" name="id" type="number" required="" data-validate value="" />
+        <div class="modal-body">
+          <div class="form-selectgroup-boxes row mb-3">
+            <div class="col-lg-4">
+              <label class="form-label"
+                >Name: <span class="text-danger">*</span></label
+              >
+              <div class="row g-2">
+                <div class="col">
+                  <input
+                    id="edit_name"
+                    class="form-control"
+                    name="name"
+                    placeholder="Enter plan name"
+                    type="text"
+                    required=""
+                    data-validate
+                    value=""
+                  />
+                </div>
+                <div class="col-auto align-self-center">
+                  <span
+                    class="form-help"
+                    data-bs-toggle="popover"
+                    data-bs-placement="top"
+                    data-bs-content="<p class='mb-0'>Plan name is visible to the users.</p>"
+                    data-bs-html="true"
+                    >?</span
+                  >
+                </div>
+              </div>
+            </div>
+            <!-- col -->
+            <div class="col-lg-8">
+              <label class="form-label">Description:</label>
+              <div class="row g-2">
+                <div class="col">
+                  <input
+                    id="edit_description"
+                    class="form-control"
+                    name="description"
+                    placeholder="Enter description"
+                    type="textarea"
+                  />
+                </div>
+                <div class="col-auto align-self-center">
+                  <span
+                    class="form-help"
+                    data-bs-toggle="popover"
+                    data-bs-placement="top"
+                    data-bs-content="<p class='mb-0'>Description is only visible to Admin users.</p>"
+                    data-bs-html="true"
+                    >?</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <label class="form-label">Docker image</label>
+          <div class="form-selectgroup-boxes row mb-3">
+            <div class="col-lg-4">
+              <label class="form-selectgroup-item">
+                <input
+                  type="radio"
+                  name="edit_docker_image"
+                  value="apache"
+                  class="form-selectgroup-input"
+                  checked=""
+                />
+                <span
+                  class="form-selectgroup-label d-flex align-items-center p-3"
+                >
+                  <span class="me-3">
+                    <span class="form-selectgroup-check"></span>
+                  </span>
+                  <span class="form-selectgroup-label-content">
+                    <span class="form-selectgroup-title strong mb-1"
+                      ><span class="me-2"
+                        ><img
+                          class="avatar"
+                          src="/static/images/apache.png" /></span
+                      >Apache</span
+                    >
+                    <!--span class="d-block text-secondary">Ubuntu 22.04 with Apache 2.4</span-->
+                  </span>
+                </span>
+              </label>
+            </div>
+            <div class="col-lg-4">
+              <label class="form-selectgroup-item">
+                <input
+                  type="radio"
+                  name="edit_docker_image"
+                  value="nginx"
+                  class="form-selectgroup-input"
+                />
+                <span
+                  class="form-selectgroup-label d-flex align-items-center p-3"
+                >
+                  <span class="me-3">
+                    <span class="form-selectgroup-check"></span>
+                  </span>
+                  <span class="form-selectgroup-label-content">
+                    <span class="form-selectgroup-title strong mb-1"
+                      ><span class="me-2"
+                        ><img
+                          class="avatar"
+                          src="/static/images/nginx.png" /></span
+                      >Nginx</span
+                    >
+                  </span>
+                </span>
+              </label>
+            </div>
+            <div class="col-lg-4">
+              <label class="form-selectgroup-item">
+                <input
+                  type="radio"
+                  name="edit_docker_image"
+                  value="custom_image"
+                  class="form-selectgroup-input"
+                  disabled
+                />
+                <span
+                  class="form-selectgroup-label d-flex align-items-center p-3"
+                >
+                  <div class="ribbon bg-secondary" style="min-height: 1rem">
+                    coming soon
+                  </div>
+                  <span class="me-3">
+                    <span class="form-selectgroup-check"></span>
+                  </span>
+                  <span class="form-selectgroup-label-content">
+                    <span class="form-selectgroup-title strong mb-1"
+                      ><span class="me-2"
+                        ><img
+                          class="avatar"
+                          src="/static/images/litespeed.png" /></span
+                      >LiteSpeed</span
+                    >
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <hr />
+          <div class="row">
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Domains: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <input
+                      id="edit_domains_limit"
+                      class="form-control"
+                      name="domains_limit"
+                      placeholder=""
+                      type="number"
+                      required=""
+                      min="0"
+                      data-validate
+                    />
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>Total number of domains users are allowed to add on this plan.</p><p class='mb-0'>Subdomains are not included in this limit.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Websites: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <input
+                      id="edit_websites_limit"
+                      class="form-control"
+                      name="websites_limit"
+                      placeholder=""
+                      type="number"
+                      required=""
+                      min="0"
+                      data-validate
+                    />
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>Total number of websites users are allowed to manage on this plan.</p><p class='mb-0'>This encompasses both WordPress sites managed via the WP Manager interface and Python/NodeJS applications administered through the PM2 interface.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Databases: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <input
+                      id="edit_db_limit"
+                      class="form-control"
+                      name="edit_db_limit"
+                      placeholder=""
+                      type="number"
+                      required=""
+                      min="0"
+                      data-validate
+                    />
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p class='mb-0'>Total number of MySQL databases users are allowed to create on this plan.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Memory: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="edit_ram"
+                        class="form-control"
+                        name="edit_ram"
+                        placeholder=""
+                        type="number"
+                        required=""
+                        min="0"
+                        data-validate
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="ram-gb">GB</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p class='mb-0'>Physical Memory (RAM) limit in GB.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >CPU: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="edit_cpu"
+                        class="form-control"
+                        name="edit_cpu"
+                        placeholder=""
+                        type="number"
+                        required=""
+                        min="0"
+                        data-validate
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="cpu-cores"
+                          >cores</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p class='mb-0'>Number of CPU cores.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Port Speed: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="edit_port_speed"
+                        class="form-control"
+                        name="edit_port_speed"
+                        placeholder=""
+                        type="number"
+                        name="port_speed"
+                        required=""
+                        min="1"
+                        data-validate
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="port-mbits"
+                          >mbits</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p class='mb-0'>Port Speed in mbit/s (i.e., the network speed or bandwidth available to the user for network operations).</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Docker size: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="edit_disk_limit"
+                        class="form-control"
+                        name="edit_disk_limit"
+                        placeholder="10GB minimum"
+                        type="number"
+                        required=""
+                        min="10"
+                        data-validate
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="disk-gb">GB</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>Total disk usage limit in GB for the user Docker container.</p><p class='mb-0'>This limit encompasses all user data <b>with the exception of the home directory</b>. This includes all system files, services, logs, MySQL databases, etc., Docker requires that the limit must be at least 10GB.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Inodes limit: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <input
+                      id="edit_storage_file_inodes"
+                      class="form-control"
+                      name="edit_storage_file_inodes"
+                      placeholder="minimum 500k"
+                      type="number"
+                      required=""
+                      min="500000"
+                      data-validate
+                    />
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>Total number of inodes for the users home directory.</p><p class='mb-0'>500.000 is the minimum.</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="mb-3">
+                <label class="form-label"
+                  >Storage file: <span class="text-danger">*</span></label
+                >
+                <div class="row g-2">
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="edit_storage_file"
+                        class="form-control"
+                        name="edit_storage_file"
+                        placeholder=""
+                        type="number"
+                        required=""
+                        min="0"
+                        data-validate
+                      />
+                      <div class="input-group-append">
+                        <span class="input-group-text" id="disk-gb">GB</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-auto align-self-center">
+                    <span
+                      class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-content="<p>The maximum disk space allocation for the user's home directory in gigabytes.</p><p class='mb-0'>Enter 0 to allow unlimited disk space (recommended only for Virtual Private Servers operated by a single user).</p>"
+                      data-bs-html="true"
+                      >?</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <a
+            href="#"
+            class="btn btn-link link-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </a>
+
+          <button
+            type="button"
+            class="btn btn-primary ms-auto"
+            id="SavePlanButton"
+          >
+            Save Plan
+          </button>
+        </div>
+      </form>
+      </div>
+    </div>
+  </div>
+
+
+
+
+<script>
+$(document).ready(function() {
+    // Attach click event listener to "Edit" buttons
+    $('.btn-edit').click(function() {
+        // Get the row corresponding to the clicked "Edit" button
+        var row = $(this).closest('tr');
+        
+        // Extract data from the row
+        var id = row.data('id');
+        var name = row.data('name');
+        var description = row.data('description');
+        var dockerImage = row.data('image');
+        var diskLimitReal = row.find('.sort-du').text();
+        var diskLimit = (diskLimitReal.trim() === '∞') ? '0' : diskLimitReal.replace(' GB', '');
+        var storageFileText = row.find('.sort-storage').text();
+        var storageFileInodesText = row.find('.sort-storage-inodes').text();
+        var storageFile = (storageFileText.trim() === '∞') ? '0' : storageFileText.replace(' GB', '');
+        var domainsLimitReal = row.find('.sort-domains').text();
+        var domainsLimit = (domainsLimitReal.trim() === '∞') ? '0' : domainsLimitReal;
+        var websitesLimitReal = row.find('.sort-sites').text();
+        var websitesLimit = (websitesLimitReal.trim() === '∞') ? '0' : websitesLimitReal;
+        var dbLimitReal = row.find('.sort-db').text();
+        var dbLimit = (dbLimitReal.trim() === '∞') ? '0' : dbLimitReal;
+        var cpuReal = row.find('.sort-cpu').text();
+        var cpu = (cpuReal.trim() === '∞') ? '0' : cpuReal;
+        var ramReal = row.find('.sort-ram').text();
+        var ram = (ramReal.trim() === '∞') ? '0' : ramReal;
+        var portSpeedReal = row.find('.sort-port').text();
+        var portSpeed = (portSpeedReal.trim() === '∞') ? '10000' : portSpeedReal.replace(' mbits', '');
+
+
+        // checkbox
+        if (dockerImage === 'openpanel/nginx') {
+            dockerImage = 'nginx';
+        } else if (dockerImage === 'openpanel/apache') {
+            dockerImage = 'apache';
+        } else {
+            dockerImage = 'custom_image';
+        }
+        //console.log("Docker Image:", dockerImage);
+
+
+
+        // Populate modal fields with extracted data
+        $('#edit_id').val(id);
+        $('#edit_name').val(name);
+        $('#edit_description').val(description);
+        $('input[name="edit_docker_image"][value="' + dockerImage + '"]').prop('checked', true);
+        $('input[name="edit_docker_image"]').not('[value="' + dockerImage + '"]').prop('disabled', true);
+        $('#edit_disk_limit').val(diskLimit);
+        $('#edit_storage_file').val(storageFile);
+        $('#edit_storage_file_inodes').val(storageFileInodesText);
+        $('#edit_domains_limit').val(domainsLimit);
+        $('#edit_websites_limit').val(websitesLimit);
+        $('#edit_db_limit').val(dbLimit);
+        $('#edit_cpu').val(cpu);
+        $('#edit_ram').val(ram);
+        $('#edit_port_speed').val(portSpeed);
+
+        // Show the modal
+        //$('#modal-edit-plan').modal('show');
+    });
+});
+
+</script>  
+
+
+
+<script>
+// Function to handle edit plan form submission
+function submitForm() {
+    // Serialize form data
+    const formData = new FormData(document.getElementById('EditplanForm'));
+    const url = '/plan/edit';
+
+    // Make POST request
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // Extract success message
+            response.json().then(data => {
+                const success = data.success || false;
+                let responseMessage = success ? data.response.message : '';
+                responseMessage = responseMessage.replace(/\n/g, '<br>');
+                const modalBody = document.querySelector('#modal-edit-plan .modal-body');
+                //const modalHeader = document.querySelector('#modal-edit-plan .modal-header');
+                const modalFooter = document.querySelector('#modal-edit-plan .modal-footer');
+                const modalContent = document.querySelector('#modal-edit-plan .modal-content');
+
+    // Extract filename if "opencli_plan_apply_" is present
+    const filenameMatch = responseMessage.match(/opencli_plan_apply_\d{8}_\d{6}\.log/);
+    if (filenameMatch) {
+        const filename = filenameMatch[0];
+        const preTag = document.createElement('pre');
+        preTag.style.height = '30em';
+
+        const successParagraph = document.createElement('p');
+        successParagraph.innerHTML = responseMessage;
+        successParagraph.innerHTML = successParagraph.innerHTML.replace(/(tail -f \/tmp\/opencli_plan_apply_\d{8}_\d{6}\.log)/g, '<code>$1</code>');
+
+
+        // Function to fetch data from /plan/apply/<filename> and update pre tag
+        const fetchDataAndUpdatePreTag = () => {
+            fetch(`/plan/apply/${filename}`)
+            .then(response => response.text())
+            .then(data => {
+                preTag.textContent = data;
+                modalFooter.innerHTML = '';
+                modalBody.innerHTML = '';
+                modalBody.appendChild(successParagraph);
+                modalBody.appendChild(preTag); 
+
+                if (data.includes('COMPLETED')) {
+                    clearInterval(intervalId);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+        };
+        
+        // Fetch data initially
+        fetchDataAndUpdatePreTag();
+        
+        // Refresh every 1 second
+        const intervalId = setInterval(fetchDataAndUpdatePreTag, 1000);
+        } else {
+                // If filenameMatch is not found, display success alert
+                const alertDiv = document.createElement('div');
+                if (responseMessage.includes('ERROR')) {
+                alertDiv.className = 'alert alert-danger';
+                } else {
+                alertDiv.className = 'alert alert-success';
+                }
+
+                alertDiv.innerHTML = responseMessage;
+                modalContent.insertBefore(alertDiv, modalContent.children[1]);
+
+                // Hide alerts after 5 seconds
+                setTimeout(() => {
+                    alertDiv.style.display = 'none';
+                }, 5000);
+
+
+            }
+
+
+            });
+        } else {
+            // Handle error response
+            response.json().then(data => {
+                const errorMessage = data.error || 'An error occurred while processing your request.';
+
+                // Create a new div for alert
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.innerHTML = errorMessage;
+
+                // Insert the new div after modal header
+                modalContent.insertBefore(alertDiv, modalContent.children[1]); // Assuming the second child is modal-body
+                
+                // Hide alerts after 5 seconds
+                setTimeout(() => {
+                    alertDiv.style.display = 'none';
+                }, 5000);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const modalContent = document.querySelector('#modal-edit-plan .modal-content'); // Targeting modal content
+
+        // Create a new div for alert
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger';
+        alertDiv.innerHTML = 'An error occurred while processing your request.';
+
+        // Insert the new div after modal header
+        modalContent.insertBefore(alertDiv, modalContent.children[1]); // Assuming the second child is modal-body
+        
+        // Hide alerts after 5 seconds
+        setTimeout(() => {
+            alertDiv.style.display = 'none';
+        }, 5000);
+    });
+}
+
+
+
+
+
+
+$(document).ready(function() {
+    $('#SavePlanButton').click(function() {
+        submitForm();
+    });
+});
+
+
+</script>
+
+
+
+
+<script src="{{ url_for('static', filename='pages/plans.js') }}" defer></script>
+
+
+{% endblock %}
