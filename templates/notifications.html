@@ -97,7 +97,7 @@ html {
                     <div class="card timeline-event-card">
                       <div class="card-body">
                         <div class="text-secondary float-end">{{time}}</div>
-                        {% if "REBOOT" not in title and "accessed from new IP address" not in title %}<h4 id="{{loop.index}}">{{ title }}</h4>{% endif %}
+                        {% if "REBOOT" not in title and "accessed from new IP address" not in title and "SSH login" not in title %}<h4 id="{{loop.index}}">{{ title }}</h4>{% endif %}
 
 {% if "Backup Job" in title %}
 <div class="row g-3 align-items-center">
@@ -134,6 +134,44 @@ html {
               </div>
               
 </div>
+
+
+{% elif "SSH login" in title %}
+
+    
+    {% set ip_addresses_start_index = message.find("IP addresses:") %}
+    
+    {% if ip_addresses_start_index != -1 %}
+        {% set message_text = message[:ip_addresses_start_index].strip() %}
+        {% set ip_addresses_str = message[ip_addresses_start_index + 13:].strip() %}
+        
+        {% set ip_addresses_list = ip_addresses_str.split() %}
+    {% else %}
+        {% set message_text = message %}
+        {% set ip_addresses_list = [] %}
+    {% endif %}
+
+
+<div class="row g-3 align-items-center">
+    <div class="col">
+        <h4 id="{{loop.index}}" class="page-title">
+            {{ title }}
+        </h4>
+        <div class="text-secondary">
+            <ul class="list-inline list-inline-dots mb-0">
+                <li class="list-inline-item">
+                    <span class="">{{ message_text }}<br>
+                    {% for ip_address in ip_addresses_list %}
+                        <br><strong class="ip-address" data-ip="{{ ip_address }}">{{ ip_address }}</strong><br>
+                    {% endfor %}
+                    </span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
 
 {% elif "accessed from new IP address" in title %}
 
