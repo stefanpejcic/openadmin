@@ -1,39 +1,4 @@
-        $(document).ready(function() {
-            function fetchData() {
-                $.ajax({
-                    url: '/json/cpu-usage',
-                    type: 'GET',
-                    dataType: 'json',
-                    async: true,
-                    success: function(data) {
-                        var container = $('.container2');
-                        container.empty();
-
-                        $.each(data, function(core, usage) {
-
-                            var coreInfo = '<div><span>' + usage + '%</span></div>';
-                            var coreDiv = $(coreInfo);
-
-                            if (usage >= 90) {
-                                coreDiv.css('background-color', 'crimson');
-                            } else if (usage >= 80) {
-                                coreDiv.css('background-color', 'antiquewhite');
-                            }
-
-                            container.append(coreDiv);
-                        });
-                    },
-                    error: function() {
-                        // Handle any errors here
-                        console.log('Error fetching CPU usage data.');
-                    }
-                });
-            }
-
-            fetchData();
-            setInterval(fetchData, 1000);
-
-
+$(document).ready(function() {
 
 // SERVICES STATUS
 function fetchServices() {
