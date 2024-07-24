@@ -111,7 +111,7 @@ UPDATE=${UPDATE:-yes}
 [[ "$UPDATE" =~ ^(yes|no)$ ]] || UPDATE=yes
 
 SERVICES=$(awk -F'=' '/^services/ {print $2}' "$INI_FILE")
-SERVICES=${SERVICES:-"admin,docker,mysql,ufw,panel"}
+SERVICES=${SERVICES:-"admin,docker,mysql,csf,ufw,panel"}
 
 LOAD_THRESHOLD=$(awk -F'=' '/^load/ {print $2}' "$INI_FILE")
 LOAD_THRESHOLD=${LOAD_THRESHOLD:-20}
@@ -941,8 +941,10 @@ check_nginx_service() {
 }
 
 
-check_ufw_service() {
-  if echo "$SERVICES" | grep -q "ufw"; then
+check_firewall_service() {
+  if echo "$SERVICES" | grep -q "csf"; then
+    check_service_status "csf" "ConfigService Firewall (CSF) is not active. Server and websites are not protected!"
+  elif echo "$SERVICES" | grep -q "ufw"; then
     check_service_status "ufw" "Firewall (UFW) service is not active. Server and websites are not protected!"
   fi
 }
@@ -1068,7 +1070,7 @@ source "$PROGRESS_BAR_FILE"
 FUNCTIONS=(
   # SERVICES
   check_nginx_service
-  check_ufw_service
+  check_firewall_service
   check_admin_service
   check_panel_service
   check_docker_service
