@@ -10,6 +10,15 @@ if [ "$EUID" -ne 0 ]
 fi
 
 
+DEBUG=false  # Default value for DEBUG
+if [ "$1" = "--debug" ]; then
+    DEBUG=true
+fi
+
+
+
+
+
 # counters
 STATUS=0
 PASS=0
@@ -21,9 +30,24 @@ CONF_FILE="/etc/openpanel/openpanel/conf/openpanel.config"
 # swap lock file to not repeat cleanup
 LOCK_FILE="/tmp/swap_cleanup.lock"
 TIME=$(date +%s%3N)
-# main conf file
 INI_FILE="/etc/openpanel/openadmin/config/notifications.ini"
+HOSTNAME=$(hostname)
+LOG_FILE="/var/log/openpanel/admin/notifications.log"
+LOG_DIR=$(dirname "$LOG_FILE")
 
+# Function to create folder and file if they do not exist
+create_folder_and_file() {
+  if [ ! -d "$LOG_DIR" ]; then
+    mkdir -p "$LOG_DIR"
+  fi
+
+  if [ ! -f "$LOG_FILE" ]; then
+    touch "$LOG_FILE"
+  fi
+}
+
+
+create_folder_and_file
 
 show_execution_time() {
     end_time=$(date +%s%3N)
@@ -134,11 +158,7 @@ SWAP_THRESHOLD=${SWAP_THRESHOLD:-40}
 is_valid_number "$SWAP_THRESHOLD" || SWAP_THRESHOLD=40
 
 
-# hostname
-HOSTNAME=$(hostname)
 
-# Path to the log file
-LOG_FILE="/var/log/openpanel/admin/notifications.log"
 
 
 # Function to get the last message content from the log file
@@ -185,6 +205,15 @@ fi
 curl -k -X POST "$PROTOCOL://127.0.0.1:2087/send_email" -F "transient=$TRANSIENT" -F "recipient=$EMAIL" -F "subject=$title" -F "body=$message"  > /dev/null 2>&1
 
 }
+
+
+
+
+# Check if DEBUG is true before printing debug messages
+
+
+
+
 
 
 
@@ -444,6 +473,21 @@ mysql_docker_containers_status() {
         # Check the last 100 lines of the MySQL error log for the specified condition
         error_log=$(tail -100 /var/log/mysql/error.log | grep -m 1 "No space left on device")
         title="MySQL service is not active. Users are unable to log into OpenPanel!"
+
+
+       #QUERY_RESULT=$(mysql -e "SELECT * FROM PLANS;" 2>&1)
+      # Check if the query was successful
+      # if [[ $? -eq 0 ]]; then
+      #    echo "MySQL is working and the query was executed successfully."
+      #    echo "$QUERY_RESULT"
+      #else
+      #    echo "Failed to execute the query. MySQL might not be running or there is an issue with the query/database."
+      #    echo "$QUERY_RESULT"
+      #fi
+
+
+
+
         # Check if there's an error log and include it in the message
         if [ -n "$error_log" ]; then
           message="$error_log"
@@ -628,7 +672,7 @@ function check_cpu_usage() {
 if [ "$cpu_percentage" -gt "$CPU_THRESHOLD" ]; then
             ((FAIL++))
             STATUS=2
-  echo -e "\e[31m[✘]\e[0m CPU usage ($cpu_percentage) is higher than treshold ($CPU_TRESHOLD). Writing notification."
+  echo -e "\e[31m[✘]\e[0m CPU usage ($cpu_percentage) is higher than treshold ($CPU_THRESHOLD). Writing notification."
   top_processes=$(ps aux --sort -%cpu | head -10 | sed ':a;N;$!ba;s/\n/\\n/g')
   write_notification "$title" "CPU Usage: $cpu_percentage% | Top Processes: $top_processes"
 else
@@ -904,15 +948,54 @@ print_header() {
 }
 
 
+check_for_debug_and_print_info(){
+  if [ "$DEBUG" = true ]; then
+      echo ""
+      echo "----------------- DEBUG INFORMATION ------------------"
+      echo "HOSTNAME:       $HOSTNAME"
+      echo "VERSION:        $VERSION"
+      echo "PID:            $PID"
+      echo "TIME:           $TIME"
+      echo "CONF_FILE:      $CONF_FILE"
+      echo "LOCK_FILE:      $LOCK_FILE"
+      echo "INI_FILE:       $INI_FILE"
+      echo "LOG_FILE:       $LOG_FILE"
+      echo "LOG_DIR:        $LOG_DIR"
+      echo ""
+      echo "----------------- CONFIGURATIONS ------------------"
+      echo ""
+      echo "EMAIL_ALERT:     $EMAIL_ALERT"
+      echo "EMAIL:           $EMAIL"
+      echo "REBOOT:          $REBOOT"
+      echo "LOGIN:           $LOGIN"
+      echo "ATTACK:          $ATTACK"
+      echo "LIMIT:           $LIMIT"
+      echo "BACKUP:          $BACKUP"
+      echo "UPDATE:          $UPDATE"
+      echo "SERVICES:        $SERVICES"
+      echo "LOAD_THRESHOLD:  $LOAD_THRESHOLD"
+      echo "CPU_THRESHOLD:   $CPU_THRESHOLD"
+      echo "RAM_THRESHOLD:   $RAM_THRESHOLD"
+      echo "DISK_THRESHOLD:  $DISK_THRESHOLD"
+      echo "SWAP_THRESHOLD:  $SWAP_THRESHOLD"
+      echo "------------------------------------------------------"
+      echo ""
+  fi
+}
+
+
+
+
+
+
 # Check for flags
 if [ "$1" == "--startup" ]; then
   perform_startup_action
 elif [ "$1" == "--report" ]; then
   email_daily_report
 else
-
-
   print_header
+  check_for_debug_and_print_info
 
   # Check service statuses and write notifications if needed
 
