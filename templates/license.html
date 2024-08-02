@@ -113,84 +113,82 @@
 </div>
 
 
-    <script>
-        $(document).ready(function() {
-            // Function to perform AJAX GET request to /license/key
-            function fetchLicenseKey() {
-                $.ajax({
-                    url: '/license/key',
-                    method: 'GET',
-                    success: function(response) {
-                        if (response.key && response.key.startsWith('enterprise')) {
-                            $('#license-key').val(response.key);
-                            verifyLicense(); // After fetching key, verify the license
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error fetching license key:', error);
-                    }
-                });
+<script>
+$(document).ready(function() {
+    // Function to perform AJAX GET request to /license/key
+    function fetchLicenseKey() {
+        $.ajax({
+            url: '/license/key',
+            method: 'GET',
+            success: function(response) {
+                if (response.key && response.key.startsWith('enterprise')) {
+                    $('#license-key').val(response.key);
+                    verifyLicense(); // After fetching key, verify the license
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching license key:', error);
             }
-
-
-            // Perform initial fetch of license key on page load
-            fetchLicenseKey();
-
-            // Handle form submission with AJAX
-            $('#license-form').on('submit', function(event) {
-                event.preventDefault(); // Prevent default form submission
-
-                var key = $('#license-key').val();
-
-                $.ajax({
-                    url: '/license/key',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ key: key }),
-                    success: function(response) {
-                        alert('License key saved successfully!');
-                        fetchLicenseKey(); // After saving key, fetch it again to trigger verify process
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error saving license key:', error);
-                        alert('Failed to save license key.');
-                    }
-                });
-            });
         });
-        
+    }
 
+    // Perform initial fetch of license key on page load
+    fetchLicenseKey();
 
+    // Handle form submission with AJAX
+    $('#license-form').on('submit', function(event) {
+        event.preventDefault(); // Prevent default form submission
 
+        var key = $('#license-key').val();
 
-// Function to perform AJAX GET request to /license/info
-function verifyLicense() {
-    var key = $('#license-key').val(); // Get the value of the license key input field
-
-    $.ajax({
-        url: '/license/info',
-        method: 'GET',
-        contentType: 'application/json',
-        success: function(response) {
-            var infoString = response.info;
-            var infoObject = JSON.parse(infoString); // Parse the 'info' string into a JavaScript object
-
-            var itemsHtml = Object.keys(infoObject).map(function(key) {
-                return "<li><strong>" + key + ":</strong> " + infoObject[key] + "</li>";
-            }).join("");
-
-            var listHtml = "<ul>" + itemsHtml + "</ul>";
-
-            $('#license_data').html(listHtml);
-            $('#license_info').removeClass('d-none');
-        },
-        error: function(xhr, status, error) {
-            console.error('Error verifying license:', error);
-        }
+        $.ajax({
+            url: '/license/key',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ key: key }),
+            success: function(response) {
+                alert('License key saved successfully!');
+                fetchLicenseKey(); // After saving key, fetch it again to trigger verify process
+            },
+            error: function(xhr, status, error) {
+                console.error('Error saving license key:', error);
+                alert('Failed to save license key.');
+            }
+        });
     });
-}
 
+    // Function to perform AJAX GET request to /license/info
+    function verifyLicense() {
+        var key = $('#license-key').val(); // Get the value of the license key input field
 
+        $.ajax({
+            url: '/license/info',
+            method: 'GET',
+            contentType: 'application/json',
+            success: function(response) {
+                try {
+                    var infoString = response.info;
+                    var infoObject = JSON.parse(infoString); // Parse the 'info' string into a JavaScript object
+
+                    var itemsHtml = Object.keys(infoObject).map(function(key) {
+                        return "<li><strong>" + key + ":</strong> " + infoObject[key] + "</li>";
+                    }).join("");
+
+                    var listHtml = "<ul>" + itemsHtml + "</ul>";
+
+                    $('#license_data').html(listHtml);
+                    $('#license_info').removeClass('d-none');
+                } catch (e) {
+                    // If JSON parsing fails, handle it here
+                    $('#license_data').html("<p>" + response.info + "</p>");
+                    $('#license_info').removeClass('d-none');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error verifying license:', error);
+            }
+        });
+    }
 
     document.addEventListener("DOMContentLoaded", function() {
         const verifyButton = document.querySelector('.btn-verify');
@@ -221,8 +219,8 @@ function verifyLicense() {
             });
         });
     });
+});
 </script>
-
 
 
 

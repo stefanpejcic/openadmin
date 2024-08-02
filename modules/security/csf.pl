@@ -5,6 +5,10 @@
 # Email: sales@waytotheweb.com
 ###############################################################################
 # start main
+use utf8;
+binmode STDIN, ':encoding(UTF-8)';
+binmode STDOUT, ':encoding(UTF-8)';
+binmode STDERR, ':encoding(UTF-8)';
 use strict;
 use File::Find;
 use Fcntl qw(:DEFAULT :flock);
