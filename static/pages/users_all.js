@@ -1,3 +1,31 @@
+
+// IMPORT CP ACCOUNTS
+        $(document).ready(function() {
+            $('#userimportForm').on('submit', function(event) {
+                event.preventDefault(); // Prevent the default form submission
+
+                const formData = $(this).serialize(); // Serialize form data
+
+                $.ajax({
+                    type: 'POST',
+                    url: $(this).attr('action'),
+                    data: formData,
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            window.location.href = '/import/cpanel'; // Redirect on success
+                        } else {
+                            alert(response.message); // Show error message
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('An error occurred: ' + error);
+                    }
+                });
+            });
+        });
+
+
+
 // FILTER USERS TABLE
 
 function updateTableRows(searchTerm) {
