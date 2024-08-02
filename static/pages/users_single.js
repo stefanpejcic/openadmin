@@ -111,7 +111,7 @@ $(document).ready(function() {
                     var avatar = $('<div style="font-size: x-large;">').addClass('avatar');
                     avatar.append(portIcon);
                     var peopleBody = $('<div>').addClass('people-body');
-                    peopleBody.append($('<h6>').append($('<a>').attr('href', '/settings/firewall?search=' + hostPort).html(':' + hostPort)));
+                    peopleBody.append($('<h6>').append($('<a>').attr('href', '/security/firewall?search=' + hostPort).html(':' + hostPort)));
                     listItem.append(avatar).append(peopleBody);
                     portsContainer.append(listItem);
                 }
@@ -796,7 +796,7 @@ function loadData() {
             const input = document.createElement('input');
             input.type = 'radio';
             input.name = 'plan-type';
-            input.value = plan.id;
+            input.value = plan.name;
             input.classList.add('form-selectgroup-input');
             if (plan.name === currentUserPlanName) {
                 input.checked = true;
