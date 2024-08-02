@@ -1,5 +1,5 @@
     document.addEventListener("DOMContentLoaded", function () {
-        var form = document.querySelector('form');
+        var form = document.getElementById('changePanelSettings');
         var toastContainer = document.createElement('div');
         toastContainer.classList.add('toast-container', 'position-fixed', 'bottom-0', 'end-0', 'p-3');
         document.body.appendChild(toastContainer);
