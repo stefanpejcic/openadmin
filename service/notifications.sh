@@ -135,7 +135,7 @@ UPDATE=${UPDATE:-yes}
 [[ "$UPDATE" =~ ^(yes|no)$ ]] || UPDATE=yes
 
 SERVICES=$(awk -F'=' '/^services/ {print $2}' "$INI_FILE")
-SERVICES=${SERVICES:-"admin,docker,mysql,csf,ufw,panel"}
+SERVICES=${SERVICES:-"admin,docker,mysql,csf,ufw,panel,certbot"}
 
 LOAD_THRESHOLD=$(awk -F'=' '/^load/ {print $2}' "$INI_FILE")
 LOAD_THRESHOLD=${LOAD_THRESHOLD:-20}
@@ -438,24 +438,6 @@ check_new_logins() {
 
 
 
-panel_docker_containers_status() {
-
-      # Check if the OpenPanel Docker container is running
-      if docker ps --format "{{.Names}}" | grep -q "openpanel"; then
-        ((PASS++))
-        echo -e "\e[32m[✔]\e[0m OpenPanel Docker container is active."
-      else
-                  ((FAIL++))
-            STATUS=2
-        echo -e "\e[31m[✘]\e[0m OpenPanel Docker container is not active." #Writing notification to log file."
-
-        title="OpenPanel docker container is not running. Users are unable to access the OpenPanel interface!"
-          error_log=$(docker logs --tail 20 openpanel)
-          message="$error_log"
-          write_notification "$title" "$message"
-      fi
-}
-
 
 mysql_docker_containers_status() {
 
@@ -499,6 +481,40 @@ mysql_docker_containers_status() {
         fi
       fi
 }
+
+
+docker_containers_status() {
+    service_name="$1"
+    title="$2"
+
+    if docker ps --format "{{.Names}}" | grep -wq "$service_name"; then
+        ((PASS++))
+        echo -e "\e[32m[✔]\e[0m $service_name docker container is active."
+    else 
+        ((WARN++))
+        echo -e "\e[38;5;214m[!]\e[0m $service_name docker container is not active. Attempting restart..."
+
+        # Attempt to restart the container
+        docker restart "$service_name"  > /dev/null 2>&1
+        
+        # Check if the restart was successful
+        if docker ps --format "{{.Names}}" | grep -wq "$service_name"; then
+            echo -e "\e[32m[✔]\e[0m $service_name docker container successfully restarted."
+        else
+            echo -e "\e[31m[✘]\e[0m $service_name docker container failed to restart."
+            
+          ((FAIL++))
+          STATUS=2
+
+            # Log the error and write notification
+            error_log=$(docker logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
+            message="$error_log"
+            write_notification "$title" "$message"
+        fi
+    fi
+}
+
+
 
 
 # Function to check service status and write notification if not active
@@ -1016,53 +1032,39 @@ else
 
 
 
-check_nginx_service() {
+check_services() {
   if echo "$SERVICES" | grep -q "nginx"; then
-    check_service_status "nginx" "Nginx service is not active. Users' websites are not working!"
+    docker_containers_status "nginx" "Nginx service is not active. Users' websites are not working!"
   fi
 
-}
-
-
-check_firewall_service() {
   if echo "$SERVICES" | grep -q "csf"; then
     check_service_status "csf" "ConfigService Firewall (CSF) is not active. Server and websites are not protected!"
   elif echo "$SERVICES" | grep -q "ufw"; then
     check_service_status "ufw" "Firewall (UFW) service is not active. Server and websites are not protected!"
   fi
-}
 
-
-check_admin_service() {
   if echo "$SERVICES" | grep -q "admin"; then
     check_service_status "admin" "Admin service is not active. OpenAdmin service is not accessible!"
   fi
-}
 
-
-check_panel_service() {
-  if echo "$SERVICES" | grep -q "panel"; then
-    panel_docker_containers_status
-  fi
-}
-
-check_docker_service() {
   if echo "$SERVICES" | grep -q "docker"; then
     check_service_status "docker" "Docker service is not active. User websites are down!"
   fi
-}
 
-check_sqlservice() {
+  if echo "$SERVICES" | grep -q "panel"; then
+    docker_containers_status "openpanel" "OpenPanel docker container is not running. Users are unable to access the OpenPanel interface!"
+  fi
+
   if echo "$SERVICES" | grep -q "mysql"; then
     mysql_docker_containers_status
-    #check_service_status "mysql" "MySQL service is not active. Users are unable to log into OpenPanel!"
   fi
-}
 
+  if echo "$SERVICES" | grep -q "certbot"; then
+    docker_containers_status "certbot" "Certbot service is not running. SSL certificates will noet renew automatically!"
+  fi
 
-check_bindservice() {
   if echo "$SERVICES" | grep -q "named"; then
-    check_service_status "named" "Named (BIND9) service is not active. DNS resolving of domains is not working!"
+    docker_containers_status "openpanel_dns" "Named (BIND9) service is not active. DNS resolving of domains is not working!"
   fi
 }
 
@@ -1152,13 +1154,7 @@ source "$PROGRESS_BAR_FILE"
 # Dsiplay progress bar
 FUNCTIONS=(
   # SERVICES
-  check_nginx_service
-  check_firewall_service
-  check_admin_service
-  check_panel_service
-  check_docker_service
-  check_sqlservice
-  check_bindservice
+  check_services
 
   #LOGINS
   start_login_section
