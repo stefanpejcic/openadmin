@@ -1060,7 +1060,7 @@ check_services() {
   fi
 
   if echo "$SERVICES" | grep -q "certbot"; then
-    docker_containers_status "certbot" "Certbot service is not running. SSL certificates will noet renew automatically!"
+    docker_containers_status "certbot" "Certbot service is not running. SSL certificates will not renew automatically!"
   fi
 
   if echo "$SERVICES" | grep -q "named"; then
