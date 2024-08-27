@@ -16,6 +16,9 @@
     <title>OpenAdmin [{% if force_domain_value %}{{ force_domain_value }}{% elif server_hostname %}{{ server_hostname }}{% else %}{{public_ip}}{% endif %}] {% if title %}{{title}}{%endif%}</title>
   <link rel="icon" type="image/x-icon" href="/static/images/favicon.svg">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+
+  <meta name="robots" content="noindex,nofollow">
+
   <!-- CSS files -->
   <link href="/static/dist/css/tabler.min.css?1684106062" rel="stylesheet" />
   <link href="/static/custom/custom.css?1684106062" rel="stylesheet" />
@@ -137,20 +140,6 @@
                 </a>
               </li>
 
-
-
-
-
-
-
-
-          </ul>
-          <h5 class="sidebar-heading d-flex align-items-center px-3 mt-4 mb-1 text-body-secondary text-uppercase">
-            <span>Server Management</span>
-          </h5>
-          <ul class="navbar-nav pt-lg-3" style="flex-grow:0;">
-
-
 {% if license_type == "EnterpriseTODO" %}
 
               <li
@@ -186,7 +175,7 @@
                 </a>
 
                 <a class="dropdown-item {% if request.path.startswith('/emails/settings') %}active{% endif %}" href="/emails/settings">
-                  <span class="nav-link-title"> Email Settings
+                  <span class="nav-link-title"> Server Settings
                     </span>
                 </a>               
 
@@ -196,6 +185,13 @@
               </li>
 {% endif %}
 
+
+
+          </ul>
+          <h5 class="sidebar-heading d-flex align-items-center px-3 mt-4 mb-1 text-body-secondary text-uppercase">
+            <span>Server Management</span>
+          </h5>
+          <ul class="navbar-nav pt-lg-3" style="flex-grow:0;">
 
               <li class="nav-item {% if request.path.startswith('/backups') %}active{% endif %}">
                 <a class="nav-link" href="/backups">
@@ -240,6 +236,13 @@
                     </span>
                 </a>           
                 
+                {% if license_type == "Enterprise" %}
+                <a class="dropdown-item {% if request.path.startswith('/settings/cluster') %}active{% endif %}" href="/settings/cluster">
+                  <span class="nav-link-title"> Cluster
+                    </span>
+                </a>  
+                {% endif %}
+
                 {% if license_type == "Enterprise" %}
                 <a class="dropdown-item {% if request.path.startswith('/settings/api') %}active{% endif %}" href="/settings/api">
                   <span class="nav-link-title"> API Access
@@ -551,7 +554,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
             <div class="docs_links btn-list m-2">
-              <a href="https://openpanel.co/docs/admin/{% if request.path.startswith('/dashboard') %}dashboard
+              <a href="https://openpanel.com/docs/admin/{% if request.path.startswith('/dashboard') %}dashboard
 {% elif request.path.startswith('/users') %}users/openpanel
 {% elif request.path.startswith('/plans') %}plans/hosting_plans
 {% elif request.path.startswith('/backups') %}settings/backups
@@ -581,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 {% if license_type == "Enterprise" %}
-              <a href="https://my.openpanel.co/submitticket.php?step=2&deptid=1" class="btn w-100" target="_blank" rel="noreferrer">
+              <a href="https://my.openpanel.com/submitticket.php?step=2&deptid=1" class="btn w-100" target="_blank" rel="noreferrer">
 <svg xmlns="http://www.w3.org/2000/svg" width="25" height="24" class="icon icon-tabler" viewBox="0 0 25 24">
     <path fill="currentColor" fill-rule="nonzero" d="M10.537 13.201c0 .693-.575 1.255-1.284 1.255-.709 0-1.284-.561-1.284-1.255 0-.693.575-1.255 1.284-1.255.709 0 1.284.562 1.284 1.255zm5.21-1.255c-.709 0-1.284.562-1.284 1.255 0 .694.575 1.255 1.284 1.255.709 0 1.284-.561 1.284-1.255 0-.693-.575-1.255-1.284-1.255zm9.253.556v2.385c0 1.198-.993 2.169-2.218 2.169h-1.609C19.58 21.385 15.507 24 12.5 24c-3.007 0-7.079-2.615-8.673-6.944h-1.61C.994 17.056 0 16.085 0 14.887v-2.385c0-.825.47-1.541 1.163-1.908.023-3.387 1.032-6.032 3.004-7.86C6.123.92 8.927 0 12.5 0c3.573 0 6.377.92 8.333 2.733 1.972 1.829 2.981 4.474 3.004 7.86A2.162 2.162 0 0 1 25 12.503zm-4.694.707c0-.558-.029-1.082-.072-1.59-.984-.88-2.77-1.549-5.026-1.797.296.326.552.754.707 1.318-1.381-1.065-4.092-.811-6.143-3.192a6.372 6.372 0 0 1-.307-.376l-.003-.004c-.365-.483-.49-.77-.496-.452-.06 2.737-2.044 4.87-4.247 5.171-.014.301-.025.605-.025.922 0 1.157.193 2.211.521 3.161 1.238 1.46 3.281 1.872 5.09 1.981.335-.522 1.089-.887 1.966-.887 1.19 0 2.154.67 2.154 1.495 0 .826-.965 1.495-2.154 1.495-.915 0-1.695-.397-2.007-.955-1.264-.072-2.653-.283-3.892-.855 1.742 2.51 4.442 3.838 6.128 3.838 2.65 0 7.806-3.273 7.806-9.273zm2.196-2.876c-.14-5.91-3.59-9.032-10.002-9.032-6.411 0-9.861 3.122-10.002 9.032h.853c.312-1.992.971-3.63 1.972-4.89C6.92 3.436 9.333 2.418 12.5 2.418s5.581 1.018 7.177 3.025c1 1.26 1.66 2.898 1.972 4.89h.853z"></path>
 </svg>
@@ -593,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 {% elif license_type == "Community" %}
-              <a href="https://community.openpanel.co/t/openadmin" class="btn w-100" target="_blank" rel="noreferrer">
+              <a href="https://community.openpanel.com/t/openadmin" class="btn w-100" target="_blank" rel="noreferrer">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon text-pink icon-tabler icon-tabler-message-2-heart"
                   width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
                   stroke-linecap="round" stroke-linejoin="round">
@@ -631,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="container-xl">
 
         <h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal d-lg-flex d-none pe-0 pe-md-3">
-          <a href="https://openpanel.co" target="_blank" style="text-decoration:none;"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg></a>
+          <a href="https://openpanel.com" target="_blank" style="text-decoration:none;"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg></a>
         </h1>
 
 
@@ -841,7 +844,7 @@ $.each(usersData, function(index, item) {
           <div class="row text-center align-items-center flex-row-reverse">
             <div class="col-lg-auto ms-lg-auto">
               <ul class="list-inline list-inline-dots mb-0">
-                <li class="list-inline-item"><a href="https://openpanel.co/docs/admin/{% if request.path.startswith('/dashboard') %}dashboard
+                <li class="list-inline-item"><a href="https://openpanel.com/docs/admin/{% if request.path.startswith('/dashboard') %}dashboard
 {% elif request.path.startswith('/users') %}users/openpanel
 {% elif request.path.startswith('/plans') %}plans/hosting_plans
 {% elif request.path.startswith('/domains') %}settings/domains
@@ -857,10 +860,10 @@ $.each(usersData, function(index, item) {
 {% elif request.path.startswith('/notifications') %}notifications
 {% else %}intro{% endif %}" target="_blank" class="link-secondary" rel="noopener"  {% if title %}title="Read about the {{title}} page in the documentation" data-bs-toggle="tooltip" data-bs-placement="top" {%endif%}>Documentation</a></li>
 {% if license_type == "Enterprise" %}
-                <li class="list-inline-item"><a href="https://my.openpanel.co/supporttickets.php"
+                <li class="list-inline-item"><a href="https://my.openpanel.com/supporttickets.php"
                     target="_blank" class="link-secondary" rel="noopener">Ticketing System</a></li>
 {% elif license_type == "Community" %}
-                <li class="list-inline-item"><a href="https://community.openpanel.co/t/openadmin"
+                <li class="list-inline-item"><a href="https://community.openpanel.com/t/openadmin"
                     target="_blank" class="link-secondary" rel="noopener">Support Forums</a></li>
 {% endif %}
               </ul>
@@ -868,7 +871,7 @@ $.each(usersData, function(index, item) {
             <div class="col-12 col-lg-auto mt-3 mt-lg-0">
               <ul class="list-inline list-inline-dots mb-0">
                 <li class="list-inline-item">
-                  <a href="https://openpanel.co/docs/changelog/{{ panel_version }}"
+                  <a href="https://openpanel.com/docs/changelog/{{ panel_version }}"
                     target="_blank" class="link-secondary" rel="noopener">Running on <svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> <b>OpenPanel     {% if license_type == "Enterprise" %} Enterprise edition{% elif license_type == "Community" %}Community edition{% endif %} {{ panel_version }}</b></a>
                 </li>
                 <li class="list-inline-item">
