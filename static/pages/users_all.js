@@ -1,4 +1,3 @@
-
 // IMPORT CP ACCOUNTS
         $(document).ready(function() {
             $('#userimportForm').on('submit', function(event) {
@@ -96,51 +95,123 @@ document.getElementById("togglePassword").addEventListener("click", function() {
 document.getElementById("CreateUserButton").addEventListener("click", function() {
 
     var form = document.getElementById("userForm");
-        // Validate the form
-        if (form.checkValidity() === false) {
-            form.reportValidity(); // This will show the validation errors
-            return; // Stop the execution if the form is not valid
-        }
 
+    // Validate the form
+    if (form.checkValidity() === false) {
+        form.reportValidity(); // This will show the validation errors
+        return; // Stop the execution if the form is not valid
+    }
 
     var createUserButton = document.getElementById("CreateUserButton");
     createUserButton.disabled = true;
-    createUserButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span> Creating user...';
+    createUserButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp; Creating user...';
 
-    var formData = new FormData(document.getElementById("userForm"));
+    var userCreatedSuccessfully = false; // flag to reload after creating user and closing modal
 
-    var xhr = new XMLHttpRequest();
-    xhr.open("POST", "/user/new", true);
-    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    submitForm(form, false); // Initial form submission without debugging
 
-    xhr.onload = function() {
-        createUserButton.disabled = false;
-        createUserButton.innerHTML = 'Create User';
-
-        if (xhr.status === 200) {
-            var response = JSON.parse(xhr.responseText);
-            displayResponseModal(response.success, response.success ? response.response.message : response.error);
-            // Check if the response message contains "Successfully"
-            if (response.success && response.response.message.includes("Successfully")) {
-                document.getElementById("userForm").reset();
+    function submitForm(form, debug) {
+        if (debug) {
+            // Add debug flag if not already present
+            if (!form.querySelector('input[name="debug"]')) {
+                var debugInput = document.createElement('input');
+                debugInput.type = 'hidden';
+                debugInput.name = 'debug';
+                debugInput.value = '1';
+                form.appendChild(debugInput);
             }
-        } else {
-            alert("Error: " + xhr.statusText);
         }
-    };
 
-    xhr.send(new URLSearchParams(formData));
+        var formData = new FormData(form);
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/user/new", true);
 
-    function displayResponseModal(success, message) {
+        xhr.onload = function() {
+            createUserButton.disabled = false;
+            createUserButton.innerHTML = 'Create User';
+
+            var response = JSON.parse(xhr.responseText);
+
+            if (xhr.status === 200 && response.success) {
+                userCreatedSuccessfully = true; // reload page after modal is closed
+                displayResponseModal(true, response.response.message);
+                if (response.response.message.includes("Successfully")) {
+                    form.reset();
+                }
+            } else {
+                if (debug) {
+                    displayResponseModal(false, response.error, true);
+                } else {
+                    displayResponseModal(false, response.error, false);
+                }
+            }
+        };
+
+        xhr.send(formData);
+    }
+
+    function displayResponseModal(success, message, isDebug) {
         var modal = document.getElementById("responseModal");
         var modalTitle = modal.querySelector(".modal-title");
         var modalBody = document.getElementById("responseModalBody");
+        var modalFooter = modal.querySelector(".modal-footer");
 
         modalTitle.innerHTML = success ? "New user created successfully" : "Error: Creating user failed!";
-        modalBody.textContent = message;
+        
+        // link to enterprise if limit of 3 users is reached
+        if (message.includes("consider purchasing the Enterprise version")) {
+            message = message.replace(
+                "consider purchasing the Enterprise version",
+                '<a href="https://openpanel.com/product/openpanel-premium-control-panel/?utm=upsell_3users_limit_on_free" target="_blank">consider purchasing the Enterprise version</a>'
+            );
+            modalBody.innerHTML = message; // html to display link to enterprise
+        } else if (isDebug) {
+            modalBody.innerHTML = "<pre>" + message + "</pre>"; // pre tag to not break html 
+        } else {
+            modalBody.textContent = message; // standard text is default
+        }
+
+       if (!success && !isDebug && !message.includes("limit of 3 user account")) {
+            var retryButton = document.createElement("button");
+            retryButton.className = "btn btn-warning";
+            retryButton.innerHTML = "Retry with debugging";
+            retryButton.addEventListener("click", function() {
+                submitForm(form, true);
+                $(modal).modal('hide');
+            });
+            modalFooter.innerHTML = ""; // Clear previous footer content
+            modalFooter.appendChild(retryButton);
+        } else {
+            modalFooter.innerHTML = ""; // Clear the footer if successful or if retry is not allowed
+        }
 
         $(modal).modal("show");
     }
+
+    $('#responseModal').on('hide.bs.modal', function () {
+        // Remove the debug input field if the modal is closed
+        var debugInput = form.querySelector('input[name="debug"]');
+        if (debugInput) {
+            debugInput.remove();
+        }
+
+        // Hide the retry button if it's still visible
+        var modalFooter = document.getElementById("responseModal").querySelector(".modal-footer");
+        modalFooter.innerHTML = ""; // Clear the footer content
+    });
+});
+
+
+
+// RELOAD USERS PAGE IF MODAL IS CLOSED AFTER CREATING A USER
+document.addEventListener('DOMContentLoaded', function() {
+    var modal = document.getElementById("responseModal");
+
+    modal.addEventListener('hidden.bs.modal', function (e) {
+        if (userCreatedSuccessfully) {
+            location.reload();
+        }
+    });
 });
 
 
