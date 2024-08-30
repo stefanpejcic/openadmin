@@ -2,6 +2,21 @@
 
 {% block content %}
 
+<style>
+.suspended-user-row {
+  //background-color: #f4c6cb;
+  background-color: rgba(var(--tblr-secondary-rgb),.08);
+  border-left: .25rem var(--tblr-border-style) red;
+}
+
+/* Styles specific to dark theme */
+body[data-bs-theme="dark"] .suspended-user-row {
+  background-color: rgb(68, 55, 57);
+}
+
+</style>  
+
+
 <div>
     {% with messages = get_flashed_messages() %}
         {% if messages %}
@@ -60,10 +75,12 @@
                         </thead>
                         <tbody class="table-tbody">
                         {% for domain in domains %}
-                        <tr>
+
+                        <tr {% if "SUSPENDED_" in domain.username %} class="suspended-user-row" {% endif %}>
                         <td class="text-secondary sort-url">{{ domain.domain_id }}</td>
                         <td class="sort-id"><a href="http://{{ domain.domain_url }}" target="_blank">{{ domain.domain_url }}</a></td>
-                        <td class="sort-username"><a href="/users/{{ domain.username }}">{{ domain.username }}</a></td>
+                        <td class="sort-username"><a href="/users/{{ domain.username }}">{{ domain.username.split('_')[-1] }} {% if "SUSPENDED_" in domain.username %}<span class="badge bg-red-lt">SUSPENDED</span>{% endif %}
+</a></td>
                         <td><a href="#" class="btn edit_dns_link" data-domain="{{ domain.domain_url }}" data-bs-toggle="offcanvas" data-bs-target="#dnsOffcanvas">
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path><path d="M16 5l3 3"></path></svg> DNS Zone</a> <a href="#" class="btn edit_nginx_link" data-domain="{{ domain.domain_url }}" data-bs-toggle="offcanvas" data-bs-target="#nginxOffcanvas">
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path><path d="M16 5l3 3"></path></svg> VirtualHosts</a></td>
@@ -253,7 +270,7 @@ $(document).ready(function() {
       <div class="container-tight py-4">
         <div class="empty">
           <div class="empty-header">No Domains</div>
-          <p class="empty-title">No domains or the MySQL service is not running.</p>
+          <p class="empty-title">No domains yet.</p>
         </div>
       </div>
     </div>
