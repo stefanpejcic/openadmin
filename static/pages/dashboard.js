@@ -16,22 +16,30 @@ function fetchServices() {
 
                 if (status === 'Inactive') {
                     actionsHtml = '<a href="/service/start/' + service.real_name + '" data-bs-toggle="tooltip" data-bs-placement="top" title="Start ' + service.name + ' service"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-player-play" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 4v16l13 -8z" /></svg></a>';
+                } else if (status === 'NotStarted') {
+                    actionsHtml = '<a href="/service/start/' + service.real_name + '" data-bs-toggle="tooltip" data-bs-placement="top" title="Start ' + service.name + ' service"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-player-play" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 4v16l13 -8z" /></svg></a>';
                 } else {
                     actionsHtml = '<a href="/service/restart/' + service.real_name + '" data-bs-toggle="tooltip" data-bs-placement="top" title="Restart ' + service.name + ' service"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-rotate-clockwise-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 4.55a8 8 0 0 1 6 14.9m0 -4.45v5h5" /><path d="M5.63 7.16l0 .01" /><path d="M4.06 11l0 .01" /><path d="M4.63 15.1l0 .01" /><path d="M7.16 18.37l0 .01" /><path d="M11 19.94l0 .01" /></svg></a>' +
                         '<a href="/service/stop/' + service.real_name + '" data-bs-toggle="tooltip" data-bs-placement="top" title="Stop ' + service.name + ' service"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-player-stop" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 5m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" /></svg></a>';
                 }
 
-                // Define CSS class based on status
+                // Define CSS class and tooltip attributes based on status
                 var statusClass = '';
+                var tooltipAttributes = '';
                 if (status === 'Active') {
                     statusClass = 'success';
                 } else if (status === 'Inactive') {
                     statusClass = 'danger';
+                } else if (status === 'NotStarted') {
+                    statusClass = 'primary';
+                    status = 'Not started';
+                    tooltipAttributes = 'data-bs-toggle="tooltip" data-bs-placement="right" title="Service will start automatically when user/domains are created"';
+
                 } else {
                     statusClass = 'warning';
                 }
 
-                var rowHtml = '<tr><td>' + displayName + '</td><td><span class="badge bg-' + statusClass + ' me-1"></span>' + status + '</td><td>' + actionsHtml + '</td></tr>';
+                var rowHtml = '<tr'+ tooltipAttributes +'><td>' + displayName + '</td><td><span class="badge bg-' + statusClass + ' me-1"></span>' + status + '</td><td>' + actionsHtml + '</td></tr>';
 
                 table += rowHtml;
             });
