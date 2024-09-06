@@ -103,6 +103,61 @@ document.getElementById("generate_server_report").addEventListener("click", func
 
 
 
+// DELETE ADMIN USER
+
+  
+  // Function to handle click event on delete button
+  document.addEventListener('DOMContentLoaded', function() {
+    var deleteButtons = document.querySelectorAll('a.btn.btn-danger');
+    deleteButtons.forEach(function(button) {
+      button.addEventListener('click', function(event) {
+        event.preventDefault();
+        var username = this.closest('tr').querySelector('.font-weight-medium').textContent.trim();
+        document.getElementById('admin_user_to_delete').textContent = username;
+        document.getElementById('deleteAdminUserConfirmation').value = '';
+        document.getElementById('confirmUserDelete').style.display = 'none';
+        $('#confirmAdminDeleteModal').modal('show');
+      });
+    });
+    
+    // Function to handle input in delete confirmation field
+    document.getElementById('deleteAdminUserConfirmation').addEventListener('input', function() {
+      var confirmationInput = this.value.trim().toUpperCase(); // Convert input to uppercase
+      if (confirmationInput === 'DELETE') { // Check if input matches "DELETE"
+        document.getElementById('confirmUserDelete').style.display = 'block';
+      } else {
+        document.getElementById('confirmUserDelete').style.display = 'none';
+      }
+    });
+    
+    // Function to handle click event on confirm delete button
+    document.getElementById('confirmUserDelete').addEventListener('click', function() {
+      var username = document.getElementById('admin_user_to_delete').textContent.trim();
+      fetch('/settings/open-admin/users', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username: username })
+      })
+      .then(function(response) {
+        if (response.ok) {
+          window.location.reload(); // Reload page on success
+        } else {
+          throw new Error('Failed to delete user');
+        }
+      })
+      .catch(function(error) {
+        console.error('Error:', error);
+        // Handle error here, e.g., display an error message to the user
+      });
+    });
+  });
+
+
+
+
+
 
 
 
