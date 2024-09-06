@@ -103,7 +103,7 @@
               <div class="col-lg-12">
                 <div>
                   <label class="form-label">Personalized message to appear on the user's dashboard</label>
-                  <textarea class="form-control" rows="3"></textarea>
+                  <textarea id="custom_message_for_this_user" class="form-control" rows="3"></textarea>
                 </div>
               </div>
             </div>
@@ -172,6 +172,23 @@
                     showMessageModal('Error', xhr.responseJSON.error);
                 }
             });
+            
+            $.ajax({
+                url: `/get_custom_message_for_user/${containerName}`,
+                type: 'GET',
+                success: function(response) {
+                    if (response.custom_message) {
+                        $('#custom_message_for_this_user').val(response.custom_message);
+                    } else {
+                        $('#custom_message_for_this_user').val('');  // Clear the textarea if no custom message
+                        showMessageModal('Info', 'No custom message found for this user.');
+                    }
+                },
+                error: function(xhr) {
+                    showMessageModal('Error', xhr.responseJSON.error || 'An error occurred while retrieving the custom message.');
+                }
+            });
+
         });
 
         // Toggle sudo status on switch change
