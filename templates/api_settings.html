@@ -32,11 +32,60 @@
                 <a href="#" id="post_to_disable_api_access" class="btn btn-primary">
 <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-api"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 13h5" /><path d="M12 16v-8h3a2 2 0 0 1 2 2v1a2 2 0 0 1 -2 2h-3" /><path d="M20 8v8" /><path d="M9 16v-5.5a2.5 2.5 0 0 0 -5 0v5.5" /></svg>Disable API access
                 </a>
+                <button class="btn btn-transparent" type="button" onclick="getDockerInfo()">Examples</button>
+
+
+<script>
+    function getDockerInfo() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "/settings/api/endpoints", true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var dockerInfo = xhr.responseText;
+                displayDockerInfo(dockerInfo);
+            }
+        };
+        xhr.send();
+    }
+
+    function displayDockerInfo(info) {
+        var dockerInfoContent = document.getElementById("dockerInfoContent");
+        dockerInfoContent.textContent = info;
+
+        // Show modal
+        var dockerInfoModal = new bootstrap.Modal(document.getElementById('dockerInfoModal'));
+        dockerInfoModal.show();
+    }
+</script>
+
+    <!-- modal for available endpoints -->
+    <div class="modal fade" id="dockerInfoModal" tabindex="-1" aria-labelledby="dockerInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dockerInfoModalLabel">API Endpoints with examples</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <pre id="dockerInfoContent"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
                 {% endif %}
               </div>
             </div>
           </div>
         </div>
+
+
+
+
+
+        
         <!-- Page body -->
         <div class="page-body">
 
@@ -115,7 +164,7 @@
                 <div class="row g-2">
                 <div class="col"><label class="form-label required">URL</label></div>
                 <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p>Please refer to the API documentation for the specific URL to send the request to.</p><p class='mb-0'>You can find the complete list of API endpoints here: <a href='https://dev.openpanel.com/api/' target='_blank'>API documentation</a>.</p>" data-bs-html="true">?</span>
+                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p>Please refer to the API documentation for the specific URL to send the request to.</p><p class='mb-0'>You can find the complete list of API endpoints by clicking on 'Examples' button above.</p>" data-bs-html="true">?</span>
                 </div>
                 </div>
 

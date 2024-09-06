@@ -251,7 +251,7 @@ if (data.success_messages && data.success_messages.length > 0) {
 
 
 // CHEKC FOR UPDATES
-const versionUrl = 'https://update.openpanel.co/';
+const versionUrl = 'https://update.openpanel.com/';
 
 fetch(versionUrl)
   .then(response => {
