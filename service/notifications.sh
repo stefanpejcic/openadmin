@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.240.707"
+VERSION="20.240.828"
 # Record the process ID of the script
 PID=$$
 
@@ -212,8 +212,29 @@ curl -k -X POST "$PROTOCOL://127.0.0.1:2087/send_email" -F "transient=$TRANSIENT
 # Check if DEBUG is true before printing debug messages
 
 
+# helper: make sure dig is available
+ensure_dig_installed() {
+    if ! command -v dig &> /dev/null; then
+        # Detect the package manager and install bind-utils
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update > /dev/null 2>&1
+            sudo apt-get install -y -qq bind-utils > /dev/null 2>&1
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y -q bind-utils > /dev/null 2>&1
+        elif command -v dnf &> /dev/null; then
+            sudo dnf install -y -q bind-utils > /dev/null 2>&1
+        else
+            echo "Error: No compatible package manager found. Please install dig command (bind-utils) manually and try again."
+            exit 1
+        fi
 
-
+        # Check if installation was successful
+        if ! command -v dig &> /dev/null; then
+            echo "Error: dig command installation failed. Please install bind-utils manually and try again."
+            exit 1
+        fi
+    fi
+}
 
 
 
@@ -583,7 +604,7 @@ check_swap_usage() {
     # Check if swap_total is greater than 0 to avoid division by zero
     if [ "$swap_total" -gt 0 ]; then
         # Calculate swap usage percentage
-        SWAP_USAGE=$(echo "scale=2; $swap_used / $swap_total * 100" | bc)
+        SWAP_USAGE=$(awk "BEGIN {print ($swap_used / $swap_total) * 100}")
     else
         # If swap_total is 0, set SWAP_USAGE to 0 or handle it as appropriate
         SWAP_USAGE=0
@@ -747,15 +768,16 @@ update_check() {
         exit 1
     fi
 
-    # Fetch the remote version from https://update.openpanel.co/
-    remote_version=$(curl -s "https://update.openpanel.co/")
+    # Fetch the remote version
+    UPDATE_SERVER="https://update.openpanel.com/"
+    remote_version=$(curl -s "$UPDATE_SERVER")
 
     if [ -z "$remote_version" ]; then
       ((WARN++))
-       echo -e "\e[38;5;214m[!]\e[0m Error fetching latest OpenPanel version from https://update.openpanel.co, skip checking for updates."
+       echo -e "\e[38;5;214m[!]\e[0m Error fetching latest OpenPanel version from $UPDATE_SERVER, skip checking for updates."
         #echo '{"error": "Error fetching remote version"}' >&2
         if [ "$UPDATE" != "yes" ]; then
-          write_notification "Update check failed" "Failed connecting to https://update.openpanel.co/"
+          write_notification "Update check failed" "Failed connecting to $UPDATE_SERVER"
         fi
         exit 1
     fi
@@ -865,8 +887,18 @@ else
   # Google's DNS servers
   GOOGLE_DNS_SERVER="8.8.8.8"
 
-  # Get server ipv4 from ip.openpanel.co
-  SERVER_IP=$(curl -s https://ip.openpanel.co || wget -qO- https://ip.openpanel.co)
+  # Get server ipv4
+
+  # IP SERVERS
+  SCRIPT_PATH="/usr/local/admin/core/scripts/ip_servers.sh"
+  if [ -f "$SCRIPT_PATH" ]; then
+      source "$SCRIPT_PATH"
+  else
+      IP_SERVER_1=IP_SERVER_2=IP_SERVER_3="https://ip.openpanel.com"
+  fi
+
+
+  SERVER_IP=$(curl --silent --max-time 2 -4 $IP_SERVER_1 || wget --timeout=2 -qO- $IP_SERVER_2 || curl --silent --max-time 2 -4 $IP_SERVER_3)
 
   # If server IP is not available from external service, use local IP
   if [ -z "$SERVER_IP" ]; then
@@ -882,6 +914,9 @@ else
       else
           if [ -n "$FORCED_DOMAIN" ]; then
               #echo "Checking if $FORCED_DOMAIN resolves to this server IP ($SERVER_IP).."
+
+              ensure_dig_installed
+              
               domain_ip=$(dig +short @"$GOOGLE_DNS_SERVER" "$FORCED_DOMAIN")
               
 
