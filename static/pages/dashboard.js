@@ -219,8 +219,8 @@ function updateDiskUsageTable(data) {
         // Create a table row ('<tr>') with information from the 'disk_info' object
         var row = '<tr>' +
             '<td ' + (disk_info.device.length > 18 ? 'data-bs-toggle="tooltip" data-placement="top" title="' + disk_info.device + '"' : '') + '>' + truncatedDevice + '</td>' +
+            '<td>' + disk_info.fstype + '</td>' +
             '<td ' + (disk_info.mountpoint.length > 40 ? 'data-bs-toggle="tooltip" data-placement="top" title="' + disk_info.mountpoint + '"' : '') + '><div class="progressbg"><div class="progress progressbg-progress"><div class="progress-bar bg-primary-lt" style="width: ' + disk_info.percent + '%" role="progressbar" aria-valuenow="' + disk_info.percent + '" aria-valuemin="0" aria-valuemax="100" aria-label="' + disk_info.percent + '% Used"><span class="visually-hidden">' + disk_info.percent + '% Complete</span></div></div><div class="progressbg-text">' + truncatedMountpoint + '</div></div></td>' +
-            '<!--td>' + disk_info.fstype + '</td-->' +
             '<td class="text-secondary">' + formatDiskSize(disk_info.used) + '</td>' +
             '<td class="text-secondary">' + formatDiskSize(disk_info.total) + '</td>' +
             '<td class="text-secondary">' + formatDiskSize(disk_info.free) + '</td>' +
