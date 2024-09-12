@@ -83,10 +83,24 @@
                             {% endif %}
                                     <td>
 {% if details.port %}
-    <span class="text-secondary">{{ details.port }}</span>
+    {% set ports = details.port %}
+    {% if ports is string %}
+        <!-- Handle single port as a string -->
+        <span class="text-secondary">{{ ports }}</span>
+    {% elif ports is iterable and ports|length > 0 %}
+        {% if ports|length > 1 %}
+            {% set port_list = ports|join(', ') %}
+            <span class="text-secondary">{{ port_list }}</span>
+        {% else %}
+            <span class="text-secondary">{{ ports[0] }}</span>
+        {% endif %}
+    {% else %}
+        <span class="text-secondary"> </span>
+    {% endif %}
 {% else %}
     <span class="text-secondary"> </span>
 {% endif %}
+
 
                                     </td>
 
