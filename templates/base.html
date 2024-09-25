@@ -14,17 +14,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>OpenAdmin [{% if force_domain_value %}{{ force_domain_value }}{% elif server_hostname %}{{ server_hostname }}{% else %}{{public_ip}}{% endif %}] {% if title %}{{title}}{%endif%}</title>
-  <link rel="icon" type="image/x-icon" href="/static/images/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 
   <meta name="robots" content="noindex,nofollow">
 
   <!-- CSS files -->
-  <link href="/static/dist/css/tabler.min.css?1684106062" rel="stylesheet" />
-  <link href="/static/custom/custom.css?1684106062" rel="stylesheet" />
-  <link href="/static/dist/css/tabler-flags.min.css?1684106062" rel="stylesheet" />
-  <link href="/static/dist/css/tabler-vendors.min.css?1684106062" rel="stylesheet" />
-  <link href="/static/dist/css/demo.min.css?1684106062" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='dist/css/tabler.min.css') }}?1684106062" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='custom/custom.css') }}?1684106062" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='dist/css/tabler-vendors.min.css') }}?1684106062" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='dist/css/demo.min.css') }}?1684106062" rel="stylesheet" />
   <style>
     @import url('https://rsms.me/inter/inter.css');
 
@@ -53,7 +52,7 @@
 </head>
 
 <body class="layout-fluid">
-  <script src="/static/dist/js/demo-theme.min.js?1684106062"></script>
+  <script src="{{ url_for('static', filename='dist/js/demo-theme.min.js') }}?1684106062"></script>
   <div class="page">
       <!-- Sidebar -->
       <aside class="navbar navbar-vertical navbar-expand-lg" style="background:#0c0c0e" id="main-menu-container" data-bs-theme="dark">
@@ -61,7 +60,7 @@
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
           </button>
-          <h1 class="navbar-brand navbar-brand-autodark" style="overflow-y: hidden; background: url(/static/images/honeycomb.png) no-repeat;">
+          <h1 class="navbar-brand navbar-brand-autodark" style="overflow-y: hidden; background: url('{{ url_for('static', filename='images/honeycomb.png') }}') no-repeat;">
             <a href="/" id="hostname" style="text-decoration:none;">{% if force_domain_value %}{{ force_domain_value }}{% else %}{{ public_ip }}{% endif %}</a>
           </h1>
 
@@ -838,7 +837,32 @@ $.each(usersData, function(index, item) {
       <!-- Page body -->
       <div class="page-body">
         <div id="no_margin_for_iframe" class="container-xl d-flex flex-column justify-content-center">
+         <!-- flash messages -->
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+    {% for message in messages %}
+        {% if 'success' in message.lower() %}
+            {% set alert_class = 'alert-success' %}
+        {% elif 'error' in message.lower() %}
+            {% set alert_class = 'alert-danger' %}
+        {% else %}
+            {% set alert_class = 'alert-primary' %}
+        {% endif %}
+
+<div class="alert {{ alert_class }} alert-dismissible" role="alert">
+{{ message }}
+<a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+</div>
+    {% endfor %}
+{% endif %}
+{% endwith %}
+
+
+
+          <!-- START individual template file -->
           {% block content %}{% endblock %}
+          <!-- END individual template file -->
         </div>
       </div>
       <footer class="footer footer-transparent d-print-none">
@@ -886,11 +910,11 @@ $.each(usersData, function(index, item) {
       </footer>
     </div>
   </div>
-  <!-- Libs JS -->
-  <script src="/static/dist/libs/list.js/dist/list.min.js?1684106062" defer></script>
-  <!-- Tabler Core -->
-  <script src="/static/dist/js/tabler.min.js?1684106062" defer></script>
-  <script src="/static/dist/js/demo.min.js?1684106062" defer></script>
+<!-- Libs JS -->
+<script src="{{ url_for('static', filename='dist/libs/list.js/dist/list.min.js') }}?1684106062" defer></script>
+<!-- Tabler Core -->
+<script src="{{ url_for('static', filename='dist/js/tabler.min.js') }}?1684106062" defer></script>
+<script src="{{ url_for('static', filename='dist/js/demo.min.js') }}?1684106062" defer></script>
 </body>
 
 <style>
@@ -917,9 +941,8 @@ $.each(usersData, function(index, item) {
 
 
 .unl-toggler.default {
-  background-image: url('/static/images/left-arrow.png');
+  background-image: url('{{ url_for('static', filename='images/left-arrow.png') }}');
 }
-
 
 .unl-toggler {
   appearance: none;
@@ -927,7 +950,7 @@ $.each(usersData, function(index, item) {
   border: none;
   border-radius: 0px 5px 6px 0px;
   bottom: 0;
-  background-image: url('/static/images/left-arrow.png');
+  background-image: url('{{ url_for('static', filename='images/left-arrow.png') }}');
   background-repeat: no-repeat;
   background-position: center;
   background-size: 8px;
@@ -946,7 +969,7 @@ $.each(usersData, function(index, item) {
 
 
 .unl-toggler.rotated {
-    background-image: url(/static/images/right-arrow.png);
+    background-image: url('{{ url_for('static', filename='images/right-arrow.png') }}');
     left: 0rem;
 }
 
@@ -1028,8 +1051,8 @@ toggleButton.addEventListener('click', function() {
 
   // Toggle the 'rotated' class on the toggle button
   toggleButton.classList.toggle('rotated');
-    toggleButton.style.transform = 'background-image: url(/static/images/right-arrow.png';
-
+    //toggleButton.style.transform = 'background-image: url(/static/images/right-arrow.png';
+    toggleButton.style.backgroundImage = 'url("{{ url_for('static', filename='images/right-arrow.png') }}")';
 
   // Apply the additional CSS code and update the cookie
   if (mainMenuContainer.classList.contains('d-none')) {
