@@ -1,15 +1,5 @@
 {% extends 'base.html' %} {% block content %}
 
-<div>
-  {% with messages = get_flashed_messages() %} {% if messages %} {% for message
-  in messages %}
-  <div class="alert alert-warning alert-dismissible" role="alert">
-    {{ message }}
-    <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
-  </div>
-  {% endfor %} {% endif %} {% endwith %}
-</div>
-
         <form method="post" id="changePanelSettings">
         <!-- Page header -->
         <div class="page-header mt-0 d-print-none">
@@ -70,6 +60,12 @@
     <label class="form-label">Enabled Features</label>
 <div class="form-selectgroup">
     <input type="hidden" id="selectedModules" name="enabled_modules" value="">
+{% if license_type == "Enterprise" %}
+        <label class="form-selectgroup-item">
+            <input type="checkbox" value="emails" class="form-selectgroup-input" {% if 'emails' in config_data['DEFAULT']['enabled_modules'].split(',') %}checked{% endif %}>
+            <span class="form-selectgroup-label">emails</span>
+        </label>
+{% endif %}
     {% for feature in ['favorites', 'ftp', 'phpmyadmin', 'ssh', 'crons', 'backups', 'wordpress', 'mautic', 'flarum', 'pm2', 'disk_usage', 'inodes', 'usage', 'terminal', 'services', 'webserver', 'fix_permissions', 'dns','malware_scan', 'domains_visitors','process_manager', 'ip_blocker', 'redis', 'memcached', 'elasticsearch', 'login_history', 'twofa', 'activity'] %}
         {% set display_name = feature.replace('_', ' ') %}
         <label class="form-selectgroup-item">
