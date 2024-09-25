@@ -143,16 +143,6 @@ body[data-bs-theme="dark"] .suspended-user-row {
 
 {% if users %}
 
-    {% with messages = get_flashed_messages() %}
-        {% for message in messages %}
-            <div class="message {% if message.success %}success{% else %}error{% endif %}">
-                {{ message.message }}
-            </div>
-        {% endfor %}
-    {% endwith %}
-
-
-
 <div class="modal" id="responseModal" tabindex="-1" role="dialog" aria-labelledby="responseModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
@@ -291,6 +281,9 @@ body[data-bs-theme="dark"] .suspended-user-row {
                           <th>Name</th>
                           <th>IP Address</th>
                           <th>Plan</th>
+                          {% if license_type == "Enterprise" %}
+                          <th>Server</th>
+                          {% endif %}
                           <th>Setup Date</th>
                           <th class="w-1"></th>
                         </tr>
@@ -324,12 +317,20 @@ body[data-bs-theme="dark"] .suspended-user-row {
                               </div>
                             </div>
                           </td>
-                          <td data-label="IP Address" >
+                          <td data-label="IP Address"  data-label="Server" data-bs-toggle="tooltip" data-bs-placement="top" title="IPv4 that can be used by account to access services and domains.">
                             <div class="public-ip">{{ public_ip }}</div>
                           </td>
                           <td class="text-muted" data-label="Plan" >
-                            <a href="/plans#{{ user[11] }}">{{ user[11] }}</a>
+                            <a href="/plans#{{ user[12] }}">{{ user[12] }}</a>
                           </td>
+
+                          {% if license_type == "Enterprise" %}
+                          <td class="text-muted" data-label="Server" data-bs-toggle="tooltip" data-bs-placement="top" title="Cluster member that the account container is located on.">
+                            <a href="/settings/cluster#{{ user[11] }}">{{ user[11] }}</a>
+                          </td>
+                          {% endif %}
+
+
                         <td data-label="Date" >
                             <div class="text-muted">{{ user[9].strftime('%d.%m.%Y %H:%M') }}</div>
                           </td>

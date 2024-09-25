@@ -27,19 +27,19 @@ if ! command -v inotifywait &> /dev/null; then
         # Detect the package manager and install inotifywait-tools
         if command -v apt-get &> /dev/null; then
             sudo apt-get update > /dev/null 2>&1
-            sudo apt-get install -y -qq inotifywait-tools > /dev/null 2>&1
+            sudo apt-get install -y -qq inotify-tools > /dev/null 2>&1
         elif command -v yum &> /dev/null; then
-            sudo yum install -y -q inotifywait-tools > /dev/null 2>&1
+            sudo yum install -y -q inotify-tools > /dev/null 2>&1
         elif command -v dnf &> /dev/null; then
-            sudo dnf install -y -q inotifywait-tools > /dev/null 2>&1
+            sudo dnf install -y -q inotify-tools > /dev/null 2>&1
         else
-            echo "Error: No compatible package manager found. Please install inotifywait-tools manually and try again."
+            echo "Error: No compatible package manager found. Please install inotify-tools manually and try again."
             exit 1
         fi
 
         # Check if installation was successful
         if ! command -v inotifywait &> /dev/null; then
-            echo "Error: inotifywait installation failed. Please install inotifywait-tools manually and try again."
+            echo "Error: inotifywait installation failed. Please install inotify-tools manually and try again."
             exit 1
         fi
 fi
