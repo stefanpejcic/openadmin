@@ -53,6 +53,7 @@ $(document).ready(function() {
             const exposedPorts = Object.keys(data[0].Config.ExposedPorts).map(port => port.replace('/tcp', ''));
             $('#env').text("Env: " + data[0].Config.Env.join(", "));
             $('#exposedPorts').text("" + exposedPorts.join(", "));
+            $('#docker-context').text("" + data[0].Config.Hostname);
             $('#docker-hostname').text("" + data[0].Config.Hostname);
             $('#image').text("" + data[0].Config.Image);
             $('#id').text("" + data[0].Id);
