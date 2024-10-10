@@ -7,6 +7,32 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
+
+// GENERATE RANDOM USERNAME AND PASSWORD
+
+function generateRandomUsername(length) {
+    const charset = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * charset.length);
+        result += charset.charAt(randomIndex);
+    }
+    return result;
+}
+
+function generateRandomStrongPassword(length) {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * charset.length);
+        result += charset.charAt(randomIndex);
+    }
+    return result;
+}
+
+
+
+
 $(document).ready(function() {
     var pathSegments = window.location.pathname.split('/');
     var containerName = pathSegments.pop();
@@ -265,9 +291,7 @@ $('#nav-resource-tab').on('click', function() {
                 item.timestamp = new Date(item.timestamp.replace(/(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})/, '$2/$3/$1 $4:$5'));
             });
 
-            data.sort(function(a, b) {
-                return b.timestamp - a.timestamp;
-            });
+            data.sort((a, b) => a.timestamp - b.timestamp);
 
             var tableHTML = '<table class="table table-striped table-hover">';
             tableHTML += '<thead><tr><th><i class="bi bi-calendar-month"></i> Date</th><th><i class="bi bi-cpu"></i> CPU %</th><th><i class="bi bi-memory"></i> Memory %</th><th><i class="bi bi-ethernet"></i> Network I/O</th><th><i class="bi bi-device-ssd"></i> Block I/O</th></tr></thead>';
@@ -374,13 +398,12 @@ $('#nav-manage-tab').on('click', loadServices);
 
 
 // SHOW USER BACKUPS
-
 $(document).ready(function() {
     $("#nav-backups-tab").click(function() {
         var containerName = $("#username_for_functions").text().trim();
 
         $.ajax({
-            url: "/backup_info/" + containerName,
+            url: "/backups/restore/dates/" + containerName,
             type: "GET",
             dataType: "json",
             success: function(response) {
@@ -399,18 +422,25 @@ $(document).ready(function() {
         backupsInfoDiv.empty();
         backupsDiv.empty();
 
-        $('#backups2_info').html('Total: ' + backupInfo.total_backups + ' (' + formatSize(backupInfo.total_disk_size) + ') ' + '<a data-bs-toggle="collapse" style="display: inline;" class="nav-link collapsed" href="#backups_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a>');
+        backupsInfoDiv.html('Total: ' + backupInfo.backups.length + ' <a data-bs-toggle="collapse" style="display: inline;" class="nav-link collapsed" href="#backups_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a>');
 
-        var tableHtml = "<table class='table'><thead><tr><th>Backup Date</th><th>Contents</th><th>Size</th></tr></thead><tbody>";
 
-        $.each(backupInfo.backups, function(timestamp, backup) {
-            var formattedTimestamp = formatTimestamp(timestamp);
-            tableHtml += "<tr><td class='text-nowrap text-secondary'>" + formattedTimestamp + "</td><td>" + getContentList(backup) + "</td><td>" + formatSize(backup.directory_size) + "</td></tr>";
+
+        var tableHtml = "<table class='table table-striped table-hover'><thead><tr><th>Created</th><th>Contains</th><th>Status</th><th class='d-none'>Duration (s)</th></tr></thead><tbody>";
+
+        $.each(backupInfo.backups, function(_, backup) {
+            var formattedTimestamp = formatTimestamp(backup.backup_date);
+            var statusHtml = getStatusHtml(backup.content.status);
+            var totalExecTime = backup.content.total_exec_time;
+
+            tableHtml += "<tr><td class='text-nowrap text-secondary'>" + formattedTimestamp + "</td><td>" + getContentIcons(backup) + "</td><td>" + statusHtml + "</td><td class='d-none'>" + totalExecTime + "</td></tr>";
         });
 
         tableHtml += "</tbody></table>";
-
         backupsDiv.html(tableHtml);
+
+        // Initialize Bootstrap tooltips
+        $('[data-bs-toggle="tooltip"]').tooltip();
     }
 
     function formatTimestamp(timestamp) {
@@ -421,52 +451,76 @@ $(document).ready(function() {
         var minutes = timestamp.substring(10, 12);
 
         var date = new Date(year, month - 1, day, hours, minutes);
-
         return formatDate(date);
     }
 
-    function getContentList(backup) {
-        var contentList = "<ul>";
+    function getContentIcons(backup) {
+        const iconMap = {
+            'FILES': 'bi-file-earmark', // Bootstrap icon for files
+            'ENTRYPOINT': 'bi-play', // Bootstrap icon for entrypoint
+            'WEBSERVER_CONF': 'bi-server', // Bootstrap icon for web server
+            'MYSQL_CONF': 'bi-database', // Bootstrap icon for MySQL
+            'TIMEZONE': 'bi-clock', // Bootstrap icon for timezone
+            'PHP_VERSIONS': 'bi-code-slash', // Bootstrap icon for PHP versions
+            'CRONTAB': 'bi-calendar', // Bootstrap icon for crontab
+            'MYSQL_DATA': 'bi-database', // Bootstrap icon for MySQL data
+            'USER_DATA': 'bi-people', // Bootstrap icon for user data
+            'CORE_USERS': 'bi-shield-lock', // Bootstrap icon for core users
+            'STATS_USERS': 'bi-graph-up', // Bootstrap icon for stats users
+            'APACHE_SSL_CONF': 'bi-lock', // Bootstrap icon for SSL configuration
+            'DOMAIN_ACCESS_REPORTS': 'bi-file-earmark-text', // Bootstrap icon for domain access reports
+            'SSH_PASS': 'bi-key', // Bootstrap icon for SSH password
+            'IMAGE': 'bi-ubuntu' // Bootstrap icon for images
+        };
 
-        $.each(backup.contents, function(index, file) {
-            var displayName = getDisplayName(file);
-
-            contentList += "<li>" + displayName + " (" + formatSize(backup.file_sizes[file]) + ")</li>";
+        var iconsHtml = '';
+        const containsArray = backup.content.contains.split(',');
+        containsArray.forEach(item => {
+            if (iconMap[item]) {
+                const icon = `<i class="bi ${iconMap[item]} me-2" title="${item}" data-bs-toggle="tooltip"></i>`;
+                iconsHtml += icon;
+            }
         });
 
-        contentList += "</ul>";
-
-        return contentList;
-    }
-
-    function getDisplayName(file) {
-        if (file.startsWith("files_") && file.endsWith(".tar.gz")) {
-            return "Files";
-        } else if (file === "user_data_dump.sql") {
-            return "Panel Data";
-        } else if (file === "mysql") {
-            return "Databases";
-        } else {
-            return file;
-        }
-    }
-
-    function isDirectory(entry) {
-        return entry && entry.length > 0 && entry[entry.length - 1] === "/";
-    }
-
-    function formatSize(sizeInBytes) {
-        var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-
-        var i = 0;
-        while (sizeInBytes >= 1024 && i < sizes.length - 1) {
-            sizeInBytes /= 1024;
-            i++;
+        if (iconsHtml.length === 0) {
+            iconsHtml = '-';
         }
 
-        return sizeInBytes.toFixed(2) + ' ' + sizes[i];
+        return iconsHtml;
+    }
+
+    function getStatusHtml(status) {
+        let iconClass;
+        let textClass;
+
+        switch (status) {
+            case 'Completed':
+                iconClass = 'bi-check-circle';
+                textClass = 'text-success';
+                break;
+            case 'Partial':
+                iconClass = 'bi-exclamation-circle';
+                textClass = 'text-warning';
+                break;
+            case 'In Progress':
+                iconClass = 'bi-spinner';
+                textClass = 'text-primary';
+                break;
+            default:
+                iconClass = 'bi-question-circle';
+                textClass = 'text-danger';
+                status = 'Unknown';
+        }
+
+        return `<i class="bi ${iconClass} me-2 ${textClass}" title="${status}" data-bs-toggle="tooltip"></i>`;
+    }
+    
+    function formatDate(date) {
+        return date.toLocaleString();
     }
 });
+
+
 
 
 
@@ -956,19 +1010,12 @@ function updateStorageUsage() {
 
 // Calculate total disk space
 const totalDiskSpace = parseInt(data.devicemapper_total) + parseInt(data.home_total);
-console.log("Total Disk Space:", totalDiskSpace);
 
 // Calculate percentages
 const systemFreePercentage = ((data.devicemapper_total - data.devicemapper_used) / totalDiskSpace) * 100;
 const freeSpaceTotalPercentage = ((data.home_total - data.home_used) / totalDiskSpace) * 100;
 const systemUsedPercentage = (data.devicemapper_used / totalDiskSpace) * 100;
 const homeUsedPercentage = (data.home_used / totalDiskSpace) * 100;
-
-console.log("System Free Percentage:", systemFreePercentage);
-console.log("Free Space Total Percentage:", freeSpaceTotalPercentage);
-console.log("System Used Percentage:", systemUsedPercentage);
-console.log("Home Used Percentage:", homeUsedPercentage);
-
 
 // Update width of progress bars
 document.getElementById('system_free_percentage').style.width = systemFreePercentage.toFixed(2) + "%";
