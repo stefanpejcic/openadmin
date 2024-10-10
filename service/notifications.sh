@@ -508,29 +508,80 @@ docker_containers_status() {
     service_name="$1"
     title="$2"
 
+
+
+    check_status_after_restart(){
+                if docker ps --format "{{.Names}}" | grep -wq "$service_name"; then
+                    echo -e "\e[32m[✔]\e[0m $service_name docker container successfully restarted."
+                    ((WARN--))
+                else
+                    echo -e "\e[31m[✘]\e[0m $service_name docker container failed to restart."
+                    
+                  ((FAIL++))
+                  STATUS=2
+
+                    # Log the error and write notification
+                    error_log=$(docker logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
+                    message="$error_log"
+                    write_notification "$title" "$message"
+                fi
+    }
+
+
+
     if docker ps --format "{{.Names}}" | grep -wq "$service_name"; then
         ((PASS++))
         echo -e "\e[32m[✔]\e[0m $service_name docker container is active."
     else 
+
         ((WARN++))
-        echo -e "\e[38;5;214m[!]\e[0m $service_name docker container is not active. Attempting restart..."
-
-        # Attempt to restart the container
-        docker restart "$service_name"  > /dev/null 2>&1
-        
-        # Check if the restart was successful
-        if docker ps --format "{{.Names}}" | grep -wq "$service_name"; then
-            echo -e "\e[32m[✔]\e[0m $service_name docker container successfully restarted."
+        echo -e "\e[38;5;214m[!]\e[0m $service_name docker container is not running."
+      
+        if [ "$service_name" == "nginx" ]; then
+            echo "  - Checking if domains exist and if nginx service should be started..."
+            if ls /etc/nginx/sites-available/*.conf > /dev/null 2>&1; then
+                echo "  - Domains are hosted on this server, starting nginx service.."
+                cd /root && docker compose up -d nginx > /dev/null 2>&1
+                check_status_after_restart
+            else
+                ((WARN--))
+                echo "  - No domains detected. Nginx is not yet needed."
+            fi
+        elif [ "$service_name" == "openpanel" ]; then
+            echo "  - Checking if users exist and if openpanel service should be started..."
+            users=$(opencli user-list --json | grep -v 'SUSPENDED' | awk -F'"' '/username/ {print $4}')
+            if [[ -z "$users" || "$users" == "No users." ]]; then
+              ((WARN--))
+              echo "  - No users found in the database."
+            else
+                echo "  - User accounts are hosted on this server, starting openpanel service.."
+                cd /root && docker compose up -d openpanel > /dev/null 2>&1
+                check_status_after_restart
+            fi         
+        elif [ "$service_name" == "openpanel_dns" ]; then
+            echo "  - Checking if DNS zones exist and if BIND9 service should be started..."
+            if ls /etc/bind/zones/*.zone > /dev/null 2>&1; then
+                echo "  - DNS zones are hosted on this server, starting BIND9 service.."
+                cd /root && docker compose up -d bind9 > /dev/null 2>&1
+                check_status_after_restart
+            else
+                ((WARN--))
+                echo "  - No domains detected. Certbot is not yet needed."
+            fi
+        elif [ "$service_name" == "certbot" ]; then
+            echo "  - Checking if domains exist and if certbot service should be started..."
+            if ls /etc/nginx/sites-available/*.conf > /dev/null 2>&1; then
+                echo "  - Domains are hosted on this server, starting certbot service.."
+                cd /root && docker compose up -d certbot > /dev/null 2>&1
+                check_status_after_restart
+            else
+                ((WARN--))
+                echo "  - No domains detected. Certbot is not yet needed."
+            fi
         else
-            echo -e "\e[31m[✘]\e[0m $service_name docker container failed to restart."
-            
-          ((FAIL++))
-          STATUS=2
 
-            # Log the error and write notification
-            error_log=$(docker logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
-            message="$error_log"
-            write_notification "$title" "$message"
+            docker restart "$service_name"  > /dev/null 2>&1
+            check_status_after_restart
         fi
     fi
 }
