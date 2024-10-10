@@ -58,12 +58,12 @@ initialModalTitleContent = document.querySelector(".modal-header").innerHTML;
 document.getElementById("CreatePlanButton").addEventListener("click", function () {
 
 
-    // Set custom iamge name from field
-    const customRadioButton = document.querySelector('input[name="docker_image"][value="custom"]');
-    if (customRadioButton.checked) {
-        const customImageName = document.getElementById("custom_image_name").value;
-        customRadioButton.value = customImageName;
-    }
+    // Set custom image name
+  const customRadioButton = document.querySelector('input[name="docker_image"][value="custom"]');
+  if (customRadioButton !== null && customRadioButton.checked) {
+      const customImageName = document.getElementById("custom_image_name").value;
+      customRadioButton.value = customImageName;
+  }
 
 
 
