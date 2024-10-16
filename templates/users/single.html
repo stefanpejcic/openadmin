@@ -173,12 +173,19 @@
                     if (response.custom_message) {
                         $('#custom_message_for_this_user').val(response.custom_message);
                     } else {
-                        $('#custom_message_for_this_user').val('');  // Clear the textarea if no custom message
-                        showMessageModal('Info', 'No custom message found for this user.');
+                        $('#custom_message_for_this_user').val('');
                     }
                 },
                 error: function(xhr) {
-                    showMessageModal('Error', xhr.responseJSON.error || 'An error occurred while retrieving the custom message.');
+                    // Check if the status code is 404
+                    if (xhr.status === 404) {
+                        // 404 when no user!
+                        const response = xhr.responseJSON;
+                        $('#custom_message_for_this_user').val('');
+                    } else {
+                        // For other errors, show the error message
+                        showMessageModal('Error', xhr.responseJSON.error || 'An error occurred while retrieving the custom message.');
+                    }
                 }
             });
 
