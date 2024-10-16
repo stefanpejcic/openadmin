@@ -62,7 +62,8 @@
                                 </td>
                                 <td>{{ service_display_name }}<br>
                                     <span class="text-secondary">
-                                    ({% if details.type == ("docker") %}<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-brand-docker"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M22 12.54c-1.804 -.345 -2.701 -1.08 -3.523 -2.94c-.487 .696 -1.102 1.568 -.92 2.4c.028 .238 -.32 1 -.557 1h-14c0 5.208 3.164 7 6.196 7c4.124 .022 7.828 -1.376 9.854 -5c1.146 -.101 2.296 -1.505 2.95 -2.46z" /><path d="M5 10h3v3h-3z" /><path d="M8 10h3v3h-3z" /><path d="M11 10h3v3h-3z" /><path d="M8 7h3v3h-3z" /><path d="M11 7h3v3h-3z" /><path d="M11 4h3v3h-3z" /><path d="M4.571 18c1.5 0 2.047 -.074 2.958 -.78" /><path d="M10 16l0 .01" /></svg> {% elif details.type == ("system") %}{% endif %}{{ details.real_name }})
+                                    ({% if details.type == ("docker") %}
+<svg height="auto" title="Service is running inside a docker container" data-bs-toggle="tooltip" data-bs-placement="bottom" preserveAspectRatio="xMidYMid" viewBox="0 0 256 185" width="24" xmlns="http://www.w3.org/2000/svg"><path d="m250.715745 70.4971666c-5.764643-3.9998389-18.975281-5.4997786-29.303599-3.4998595-1.200967-9.9995979-6.725416-18.7492462-16.333153-26.4989347l-5.524449-3.9998393-3.843095 5.7497689c-4.803869 7.4996986-7.205803 17.9992766-6.485223 27.9988749.240194 3.4998595 1.441161 9.7496078 5.044063 15.2493871-3.362709 1.9999198-10.328318 4.499819-19.455668 4.499819h-173.65985102l-.48038688 1.9999198c-1.68135403 9.9995972-1.68135403 41.2483422 18.0145073 65.2473782 14.8919927 18.249266 36.9897884 27.498894 66.0531938 27.498894 62.9306788 0 109.5282048-30.248784 131.3858068-84.9965841 8.646963.2499904 27.141857 0 36.509401-18.7492459.240194-.4999801.72058-1.4999404 2.401935-5.2497896l.960773-1.999919zm-110.729172-70.4971666h-26.421278v24.9989952h26.421278zm0 29.9987943h-26.421278v24.9989953h26.421278zm-31.225146 0h-26.4212775v24.9989953h26.4212775zm-31.2251456 0h-26.4212777v24.9989953h26.4212777zm-31.2251464 29.9987943h-26.4212774v24.9989953h26.4212774zm31.2251464 0h-26.4212777v24.9989953h26.4212777zm31.2251456 0h-26.4212775v24.9989953h26.4212775zm31.225146 0h-26.421278v24.9989953h26.421278zm31.225146 0h-26.421278v24.9989953h26.421278z" fill="#2396ed"/></svg> {% elif details.type == ("system") %}{% endif %}{{ details.real_name }})
                                     </span>
                                 </td>
                             {% if details.version %}
@@ -94,17 +95,48 @@
                                     </td>
 
 
-                                <td>
-                                    {% if details.status %}
+                <td>
 
-                                                                        <button class="btn btn-danger btn-sm" onclick="controlService('{{ details.real_name }}', 'stop')">Stop</button>
+                    {% if details.status %}
 
-                                    {% else %}
-                                    <button class="btn btn-success btn-sm" onclick="controlService('{{ details.real_name }}', 'start')">Start</button>
-                                    {% endif %}
 
-                                    &nbsp;<button class="btn btn-warning btn-sm" onclick="controlService('{{ details.real_name }}', 'restart')">Restart</button>
-                                </td>
+{% if details.real_name == 'admin' %}
+                        <button class="btn btn-outline-danger disabled" style="pointer-events: auto;"  title="To disable admin panel use Settings > OpenAdmin" data-bs-toggle="tooltip" data-bs-placement="left"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" /></svg>Stop</button>
+{% else %}
+                        <button
+{% if details.real_name == 'docker' %}
+title="Stopping Docker service will disrupt user websites" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'openpanel' %}
+title="Stopping OpenPanel will disable the interface for users, however all their services remain active" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'nginx' %}
+title="Stopping Nginx will terminate active connections to websites" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'openadmin_mailserver' %}
+title="Stopping MailServer will disable all email traffic immediately" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'openadmin_roundcube' %}
+title="Stopping Roundcube will disable webmail access for all users" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'openpanel_mysql' %}
+title="Stopping Database will permit all users from login to OpenPanel" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'openadmin_ftp' %}
+title="Stopping FTP will terminate all active ftp connections" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'openpanel_dns' %}
+title="Stopping DNS will break resolving dns records for domains" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'certbot' %}
+title="Stopping Certbot will not stop new SSL generation and renewals" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'csf' %}
+title="Stopping ConfigServer Firewall will expose your server to everyone on all ports" data-bs-toggle="tooltip" data-bs-placement="left"
+{% elif details.real_name == 'ufw' %}
+title="Stopping UncomplicatedFirewall will expose your server to everyone on all ports" data-bs-toggle="tooltip" data-bs-placement="left"
+{% endif %}                
+                        
+                         class="btn btn-outline-danger" onclick="controlService('{{ details.real_name }}', 'stop', this, '{{ service_display_name }}', '{{ details.type }}')"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" /></svg>Stop</button>
+{% endif %}
+
+                    {% else %}
+                        <button class="btn btn-outline-success" onclick="controlService('{{ details.real_name }}', 'start', this, '{{ service_display_name }}', '{{ details.type }}')"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" /></svg>Start</button>
+                    {% endif %}
+                    &nbsp;
+                    <button class="btn btn-outline-warning" onclick="controlService('{{ details.real_name }}', 'restart', this, '{{ service_display_name }}', '{{ details.type }}')"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg>Restart</button>
+                </td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -115,25 +147,105 @@
     </div>
 
 
-    <script>
-        async function controlService(service, action) {
-            const response = await fetch('/services/control', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ real_name: service, action: action }),
-            });
+<script>
+async function controlService(serviceName, action, button, displayName, serviceType) {
+    // Disable the button and update its text
+    button.disabled = true;
+    button.innerHTML = 'Running...';
 
-            const result = await response.json();
-            if (result.status === 'success') {
-                location.reload();
-            } else {
-                alert('Error: ' + result.message);
-            }
+    // Create a new toast element for each notification
+    const toastElement = document.createElement('div');
+    toastElement.className = 'toast';
+    toastElement.role = 'alert';
+    toastElement.ariaLive = 'assertive';
+    toastElement.ariaAtomic = 'true';
+    toastElement.setAttribute('data-bs-autohide', 'false');
+
+    // Create the header
+    const toastHeader = document.createElement('div');
+    toastHeader.className = 'toast-header';
+    const strong = document.createElement('strong');
+    strong.className = 'me-auto';
+    strong.innerText = `${action.charAt(0).toUpperCase() + action.slice(1)}ing ${displayName}`;
+    const small = document.createElement('small');
+    small.innerText = new Date().toLocaleTimeString();
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'ms-2 btn-close';
+    closeButton.setAttribute('data-bs-dismiss', 'toast');
+    closeButton.setAttribute('aria-label', 'Close');
+
+    // Append elements to the header
+    toastHeader.appendChild(strong);
+    toastHeader.appendChild(small);
+    toastHeader.appendChild(closeButton);
+    
+    // Create the body
+    const toastBody = document.createElement('div');
+    toastBody.className = 'toast-body';
+    toastBody.innerText = 'Processing your request... Please wait.';
+
+    // Append header and body to the toast
+    toastElement.appendChild(toastHeader);
+    toastElement.appendChild(toastBody);
+
+    // Append the toast to the toast container
+    document.querySelector('.toast-container').appendChild(toastElement);
+
+    // Show the toast
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+
+    try {
+        // Make the fetch request to control the service
+        const response = await fetch('/services/control', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ real_name: serviceName, action: action }),
+        });
+
+        // Parse the JSON response
+        const result = await response.json();
+
+        // Check the result status
+        if (result.status === 'success') {
+            // Show success message
+            toastBody.innerHTML = `${displayName} action completed successfully!<br>Page will refresh to display update information.`;
+            toast.show();
+            location.reload();
+        } else {
+            // Show error message
+            toastBody.innerText = 'Error: ' + result.message;
+            toast.show();
         }
-    </script>
+    } catch (error) {
+        // Handle any network errors
+        console.error('Error:', error);
+        toastBody.innerHTML = 'An error occurred processing the request. Error message:<br><pre>' + error + '</pre>';
+        toast.show();
+    } finally {
+        // Re-enable the button and revert text in case of success or error
+        button.disabled = false;
 
+        // Define action to icon mapping
+        const actionIcons = {
+            start: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" /></svg>Start`,
+            stop: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" /></svg>Stop`,
+            restart: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg>Restart`
+        };
+
+        // Set the button's inner HTML with the corresponding icon
+        button.innerHTML = actionIcons[action];
+    }
+}
+</script>
+
+
+
+<div class="toast-container position-fixed bottom-0 end-0 p-2">
+</div>
 
 
 {% else %}
