@@ -58,15 +58,6 @@ initialModalTitleContent = document.querySelector(".modal-header").innerHTML;
 document.getElementById("CreatePlanButton").addEventListener("click", function () {
 
 
-    // Set custom image name
-  const customRadioButton = document.querySelector('input[name="docker_image"][value="custom"]');
-  if (customRadioButton !== null && customRadioButton.checked) {
-      const customImageName = document.getElementById("custom_image_name").value;
-      customRadioButton.value = customImageName;
-  }
-
-
-
     // Disable the button and show loading spinner
     var CreatePlanButton = document.getElementById("CreatePlanButton");
     CreatePlanButton.disabled = true;
@@ -262,7 +253,6 @@ $(document).ready(function() {
         var id = row.data('id');
         var name = row.data('name');
         var description = row.data('description');
-        var dockerImage = row.data('image');
         var diskLimitReal = row.find('.sort-du').text();
         var diskLimit = (diskLimitReal.trim() === '∞') ? '0' : diskLimitReal.replace(' GB', '');
         var storageFileInodesText = row.find('.sort-inodes').text();
@@ -291,7 +281,6 @@ $(document).ready(function() {
         $('#edit_id').val(id);
         $('#edit_name').val(name);
         $('#edit_description').val(description);
-        $('#edit_docker_image').val(dockerImage);
         $('#edit_disk_limit').val(diskLimit);
         $('#edit_storage_file_inodes').val(storageFileInodesText);
         $('#edit_domains_limit').val(domainsLimit);
