@@ -265,7 +265,7 @@ $(document).ready(function() {
         var dockerImage = row.data('image');
         var diskLimitReal = row.find('.sort-du').text();
         var diskLimit = (diskLimitReal.trim() === '∞') ? '0' : diskLimitReal.replace(' GB', '');
-        var storageFileInodesText = row.find('.sort-storage-inodes').text();
+        var storageFileInodesText = row.find('.sort-inodes').text();
         var domainsLimitReal = row.find('.sort-domains').text();
         var domainsLimit = (domainsLimitReal.trim() === '∞') ? '0' : domainsLimitReal;
         var websitesLimitReal = row.find('.sort-sites').text();
