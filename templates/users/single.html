@@ -197,171 +197,6 @@
 
 
 
-
-
-
-
-
-
-
-        /*
-        const containerName = $('#containerName').val();
-        function loadServices() {
-            $.getJSON(`/json/services/${containerName}`, function(data) {
-                const tbody = $('#services-table');
-                tbody.empty(); // Clear existing rows
-                $.each(data, function(service, status) {
-                    // Format service name: remove _STATUS, make lowercase, capitalize first letter
-                    const formattedService = service.replace('_STATUS', '').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
-                    const action = status === "on" ? "off" : "on";
-                    const row = `<tr>
-                        <td>${formattedService}</td>
-                        <td class="${status === 'on' ? 'text-success' : 'text-danger'}">${status}</td>
-                        <td>
-                            <button class="btn btn-${status === 'on' ? 'danger' : 'success'} btn-sm change-status" data-service="${service}" data-action="${action}">
-                                Turn ${action}
-                            </button>
-                        </td>
-                    </tr>`;
-                    tbody.append(row);
-                });
-            });
-        }
-        */
-
-
-        // Get current sudo status when the modal is shown
-        $('#modal-openpanel-settings-for-user').on('shown.bs.modal', function() {
-            var containerName = $('#containerName').val();
-
-
-            //loadServices();
-
-
-
-
-            $.ajax({
-                url: `/json/user/sudo/${containerName}`,
-                type: 'GET',
-                success: function(response) {
-                    if (response.sudo === "YES") {
-                        $('#sudoSwitch').prop('checked', true);
-                    } else {
-                        $('#sudoSwitch').prop('checked', false);
-                    }
-                },
-                error: function(xhr) {
-                    showMessageModal('Error', xhr.responseJSON.error);
-                }
-            });
-            
-
-// Fetch installed versions first
-$.ajax({
-    url: `/json/php/installed_versions/${containerName}`,
-    type: 'GET',
-    success: function(response) {
-        // Get the select element
-        var selectElement = document.getElementById('php_default_version_select');
-
-        // Clear existing options
-        selectElement.innerHTML = '';
-
-        // Create options based on the installed versions
-        response.versions.forEach(function(version) {
-            var option = document.createElement('option');
-            option.value = version; // Set the value of the option
-            option.textContent = version; // Set the text for the option
-            selectElement.appendChild(option); // Append the option to the select element
-        });
-
-        // Now fetch the default version
-        $.ajax({
-            url: `/json/php/default_version/${containerName}`,
-            type: 'GET',
-            success: function(response) {
-                // Check if the response contains the default_version
-                if (response.default_version) {
-                    // Set the selected option based on the default_version
-                    selectElement.value = response.default_version; // Set the value to the default_version
-                }
-            },
-            error: function(xhr) {
-                showMessageModal('Error', xhr.responseJSON.error);
-            }
-        });
-    },
-    error: function(xhr) {
-        showMessageModal('Error', xhr.responseJSON.error);
-    }
-});
-
-        });
-
-        // Toggle sudo status on switch change
-        $('#sudoSwitch').change(function() {
-            var containerName = $('#containerName').val();
-            console.log('Username:', containerName); 
-            const action = $(this).is(':checked') ? 'enable' : 'disable';
-            $.ajax({
-                url: `/json/user/sudo/${containerName}`,
-                type: 'POST',
-                headers: {
-                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Add CSRF token to the headers
-                },
-                contentType: 'application/json',
-                data: JSON.stringify({ action: action }),
-                success: function(response) {
-                    showMessageModal('Success', response.message);
-                },
-                error: function(xhr) {
-                    showMessageModal('Error', xhr.responseJSON.error);
-                }
-            });
-        });
-
-
-
-
-    $('#php_default_version_select').change(function() {
-        var selectedVersion = $(this).val();  // Get selected PHP version
-        var usernameToUse = $('#containerName').val();  // Get username from another element
-        
-        // Check if a version is selected
-        if (selectedVersion) {
-            $.ajax({
-                type: 'POST',
-                headers: {
-                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Add CSRF token to the headers
-                },
-                url: '/json/php/default_version/' + usernameToUse,
-                contentType: 'application/json',  // Set content type to JSON
-                data: JSON.stringify({ version: selectedVersion }),  // Convert data to JSON
-                success: function(response) {
-                    showMessageModal('Success', response.message);
-                },
-                error: function(xhr, status, error) {
-                    // Handle error response
-                    showMessageModal('Error', error);
-                }
-            });
-        } else {
-            alert('Please select a PHP version.');
-        }
-    });
-
-
-
-
-
-
-
-
-
-
-
-
-
         // Change service status on button click
         $(document).on('click', '.change-status', function() {
             const service = $(this).data('service');
@@ -636,37 +471,19 @@ User is suspended
             <div class="row row-cards">
               <div class="col-md-3">
                 <div class="card">
-    {% set cpu_value = stats.stats.CPUPerc[:-1]|float %}
-    {% if cpu_value < 10 %}
                   <div id="cpuIndicator" class="card-status-top bg-primary"></div>
-    {% elif cpu_value < 60 %}
-                  <div id="cpuIndicator" class="card-status-top bg-success"></div>
-    {% elif cpu_value < 80 %}
-                  <div id="cpuIndicator" class="card-status-top bg-warning"></div>
-    {% else %}
-                  <div id="cpuIndicator" class="card-status-top bg-red"></div>
-    {% endif %}
                   <div class="card-body">
                     <h3 class="subheader m-0">CPU usage</h3>
-                    <div class="h3 m-0" id="cpu-usage">{{ stats.stats.CPUPerc }}</div>
+                    <div class="h3 m-0" id="cpu-usage">{{env_data.TOTAL_CPU}}</div>
                   </div>
                 </div>
               </div>
               <div class="col-md-3">
                 <div class="card">
                   <div class="card-body">
-    {% set mem_value = stats.stats.MemPerc[:-1]|float %}
-    {% if mem_value < 50 %}
                   <div id="ramIndicator" class="card-status-top bg-primary"></div>
-    {% elif mem_value < 60 %}
-                  <div id="ramIndicator" class="card-status-top bg-success"></div>
-    {% elif mem_value < 90 %}
-                  <div id="ramIndicator" class="card-status-top bg-warning"></div>
-    {% else %}
-                  <div id="ramIndicator" class="card-status-top bg-red"></div>
-    {% endif %}
                     <h3 class="subheader m-0">Memory Usage</h3>
-                    <div class="h3 m-0" id="mem-usage">{{ stats.stats.MemUsage }}</div>
+                    <div class="h3 m-0" id="mem-usage">{{env_data.TOTAL_RAM}}</div>
                   </div>
                 </div>
               </div>
@@ -720,7 +537,7 @@ User is suspended
 
 <ul class="nav nav-tabs card-header-tabs nav-fill" data-bs-toggle="tabs" role="tablist">
                       <li class="nav-item" role="presentation" style="">
-                        <a href="#nav-info" id="nav-info-tab" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab" style="border-radius: 0px;">Docker</a>
+                        <a href="#nav-info" id="nav-info-tab" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab" style="border-radius: 0px;">Containers</a>
                       </li>
                       <li class="nav-item" role="presentation">
                         <a href="#nav-user-data" id="nav-user-data-tab" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab" style="border-radius: 0px;">Websites</a>
@@ -754,7 +571,7 @@ User is suspended
             <div class="card-header">
 <div class="row g-2 align-items-center" style="width:100%;">
 <div class="col">
-<h6 class="card-title">Docker container</h6>
+<h6 class="card-title">Docker containers</h6>
 </div>
 <div class="col-auto text-muted">
 <a data-bs-toggle="collapse" class="nav-link collapsed" href="#container_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a>
@@ -764,96 +581,67 @@ User is suspended
             </div><!-- card-header -->
             <div class="card-body">
 <div class="collapse" id="container_info" style="">
-<p>Current Docker container information for the user:</p>
+<p>Current Docker containers for the user</p>
 <p>
    </p><ul>
-<li><b>Server:</b> Indicates the node on which the account Docker container is running.</li>
-<li><b>ID:</b> Is the unique Docker container's ID.</li>
-<li><b>Docker Image:</b> Shows the name of the Docker image that the main user container is running.</li>
-<li><b>Hostname:</b> Represents the hostname that the user sees inside their terminal environment.</li>
-<li><b>Container Created:</b> Represents the time and date when the Docker container was created for the user.</li>
-
-<li><b>Private IP:</b> the current private IP address that the Docker container is assigned, used only for networking and proxying requests to users' websites.</li>
-<li><b>Memory Allocated:</b> Is the RAM allocated to the Docker container. This value is a hard limit and cannot be exceeded by users' processes.</li>
-<li><b>CPU:</b> Is the number of CPU cores that are allocated to the user's container. This value is also a hard limit.</li>
-<li><b>Exposed Ports:</b> Displays all published ports on the container, meaning that the container is listening on these ports, however, they might be disabled on the firewall.</li>
-<li><b>MacAddress:</b> Is the MAC Address of a Docker container.</li>
-
-
 </ul>
 <p></p>
 
    </div>
-<div class="row mx-auto w-100 my-1">
-				<div class="col-6 p-0">
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">Server</label>
-							<br><span class="text-muted" id="docker-context">{{ server_name }}</span>
-							<input type="hidden" name="serid" value="1">
-						</div>
-					</div>
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">ID</label><br>
-							<span class="text-muted"><small id="id"></small></span>
-						</div>
-					</div>
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">Docker image</label><br>
-							<span class="text-muted"><span id="image"></span> (<span id="labels"></span>)</span>
-						</div>
-					</div>
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">Hostname</label><br>
-							<span class="text-muted" id="docker-hostname"></span>
-						</div>
-					</div>
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">Container Created</label><br>
-							<span class="text-muted" id="created"></span>
-						</div>
-					</div>
-				</div>
-				<div class="col-6 p-0">
-					<div class="row mx-auto w-100 my-3" id="primary_ip">
-						<div class="col-12">
-							<label class="control-label">Private IP</label><br>
-							<span class="text-muted" id="ipAddress"></span>
-						</div>
-					</div>
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">Memory allocated</label><br>
-							<span class="text-muted" id="memory"></span>
-						</div>
-					</div>
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">CPU</label><br>
-							<span class="text-muted" id="nanoCpus"></span>
-						</div>
-					</div>
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">Exposed Ports</label><br>
-							<span class="text-muted" id="exposedPorts"></span>
-						</div>
-					</div>
-					<div class="row mx-auto w-100 my-3">
-						<div class="col-12">
-							<label class="control-label">MacAddress</label><br>
-							<div class="w-auto d-flex align-items-center">
-								<span class="text-muted">    <span id="macAddress"></span><br></span>
-								</div>
-						</div>
-					</div>
-			
-				</div>
-			</div>
+
+
+            <div id="containers-status">
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Container</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr style="vertical-align: middle;">
+            <td><span class="placeholder col-9 mb-0"></span></td>
+            <td><span class="placeholder placeholder-xs col-11"></span></td>
+            <td style="font-size: x-large;">
+<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
+            </td>
+        </tr>
+        <tr style="vertical-align: middle;">
+            <td><span class="placeholder col-9 mb-0"></span></td>
+            <td><span class="placeholder placeholder-xs col-11"></span></td>
+            <td style="font-size: x-large;">
+<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
+            </td>
+        </tr>
+        <tr style="vertical-align: middle;">
+            <td><span class="placeholder col-9 mb-0"></span></td>
+            <td><span class="placeholder placeholder-xs col-11"></span></td>
+            <td style="font-size: x-large;">
+<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
+            </td>
+        </tr>
+        <tr style="vertical-align: middle;">
+            <td><span class="placeholder col-9 mb-0"></span></td>
+            <td><span class="placeholder placeholder-xs col-11"></span></td>
+            <td style="font-size: x-large;">
+<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
+            </td>
+        </tr>
+        <tr style="vertical-align: middle;">
+            <td><span class="placeholder col-9 mb-0"></span></td>
+            <td><span class="placeholder placeholder-xs col-11"></span></td>
+            <td style="font-size: x-large;">
+<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+
+            </div>
+
+
 
             </div><!-- card-body -->
           </div><!-- card -->
@@ -1383,7 +1171,8 @@ Explore all the backups available for user {{ user.username }}, including detail
 </table>
 
 
-            </div></div><!-- card-body -->
+            </div>
+            </div><!-- card-body -->
           </div><!-- card -->
 
   </div>
@@ -1469,10 +1258,6 @@ General<span class="d-none d-sm-inline-block">&nbsp;information</span>
 {% if country_code and country_name %}
 <dt class="col-5"><span class="d-none d-sm-inline-block">Server</span> Location:</dt>
 <dd class="col-7"><span class="flag flag-country-{{country_code.lower()}}"></span> {{country_name}}</dd>
-{% endif %}
-{% if "SUSPENDED_" not in user.username %}
-<dt class="col-5">Private IP:</dt>
-<dd class="col-7"><span id="ipAddress2"></span></dd>
 {% endif %}
 <dt class="col-5">Setup Date:</dt>
 <dd class="col-7">{{ user.registered_date.strftime('%d.%m.%Y %H:%M:%S') }}</dd>

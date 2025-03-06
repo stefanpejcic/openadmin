@@ -84,11 +84,19 @@ document.getElementById("togglePassword").addEventListener("click", function() {
 // Create a New User
 document.getElementById("CreateUserButton").addEventListener("click", function() {
     var form = document.getElementById("userForm");
+
     // Validate the form
     if (form.checkValidity() === false) {
         form.reportValidity(); // This will show the validation errors
         return; // Stop the execution if the form is not valid
     }
+
+    var collapseElement = document.getElementById("advanced");
+    var bootstrapCollapse = new bootstrap.Collapse(collapseElement, {
+        toggle: false
+    });
+    bootstrapCollapse.hide();
+
 
     var createUserButton = document.getElementById("CreateUserButton");
     createUserButton.disabled = true;
@@ -138,6 +146,7 @@ document.getElementById("CreateUserButton").addEventListener("click", function()
 
             return new Response(stream).text();
         }).then(text => {
+            //bootstrapCollapse.show();
             createUserButton.disabled = false;
             createUserButton.innerHTML = 'Create User';
             const response = JSON.parse(text);
