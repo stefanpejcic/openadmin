@@ -1,36 +1,31 @@
-<!-- Content of custom_message.html -->
+<!-- Content of custom_message.html using TailwindCSS -->
 
-    <style>
-        .dismiss-custom_message-button {
-            display: none;
-        }
-        #custom_message:hover .dismiss-custom_message-button {
-            display: inline-block;
-        }
-    </style>
+<style>
+    .dismiss-custom_message-button {
+        display: none;
+    }
+    #custom_message:hover .dismiss-custom_message-button {
+        display: inline-block;
+    }
+</style>
 
-
-
-
-    <div class="col-md-4 g-3">
-        <div id="custom_message" class="card card-one" style="height:28rem">
-            <div class="card-header">
-                <div>
-                    <form action="{{ url_for('dismiss_dashboard_widget', template_name='openpanel_news') }}" method="post">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                    <h6 class="card-title">Latest News <button data-bs-toggle="tooltip" data-bs-placement="top" aria-label="Hide and never show news from openpanel.com/blog again" data-bs-original-title="Hide and never show news from openpanel.com/blog again" class="dismiss-custom_message-button btn btn-sm" type="submit">Dismiss</button></h6>
-                    <p class="card-subtitle">from the openpanel.co blog</p>
-                    </form>
-                </div>
-                <div class="ribbon bg-primary">news</div>
+<div class="w-full md:w-1/3 p-3">
+    <div id="custom_message" class="bg-white shadow-lg rounded-lg h-72 p-4">
+        <div class="flex justify-between items-center border-b pb-2">
+            <div>
+                <form action="{{ url_for('dismiss_dashboard_widget', template_name='openpanel_news') }}" method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <h6 class="text-lg font-semibold">Latest News 
+                        <button class="dismiss-custom_message-button text-sm text-gray-500 hover:text-gray-700" type="submit" aria-label="Hide and never show news from openpanel.com/blog again">Dismiss</button>
+                    </h6>
+                    <p class="text-sm text-gray-500">from the openpanel.co blog</p>
+                </form>
             </div>
-            <div class="card-body card-body-scrollable card-body-scrollable-shadow">
-                <div class="divide-y"  id="news-content">
-                </div>
-                </div>   
+            <div class="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded">news</div>
         </div>
+        <div class="overflow-auto mt-2 h-48" id="news-content"></div>
     </div>
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
@@ -39,18 +34,11 @@ document.addEventListener("DOMContentLoaded", function() {
     fetch('https://api.github.com/repos/stefanpejcic/OpenPanel/contents/website/blog')
         .then(response => response.json())
         .then(data => {
-            // Filter out non-markdown files and sort by date
             const markdownFiles = data
                 .filter(file => file.name.endsWith('.md'))
-                .sort((a, b) => {
-                    // Extract dates from file names (yyyy-mm-dd)
-                    const dateA = new Date(a.name.split('-').slice(0, 3).join('-'));
-                    const dateB = new Date(b.name.split('-').slice(0, 3).join('-'));
-                    return dateB - dateA; // Sort descending (latest date first)
-                })
-                .slice(0, 5); // Get only the latest 5 files
+                .sort((a, b) => new Date(b.name.split('-').slice(0, 3).join('-')) - new Date(a.name.split('-').slice(0, 3).join('-')))
+                .slice(0, 5);
 
-            // Function to fetch specific lines (title, description, slug, image)
             const fetchRequiredLines = async (fileUrl) => {
                 const response = await fetch(fileUrl);
                 const text = await response.text();
@@ -59,75 +47,57 @@ document.addEventListener("DOMContentLoaded", function() {
                 const description = lines.find(line => line.startsWith('description:'))?.replace('description:', '').trim() || '';
                 const slug = lines.find(line => line.startsWith('slug:'))?.replace('slug:', '').trim() || '';
                 const image = lines.find(line => line.startsWith('image:'))?.replace('image:', '').trim() || '';
-
                 return { title, description, slug, image };
             };
 
-            // Fetch and display file content
             const fetchAndDisplayContent = async (file) => {
                 const fileUrl = `https://raw.githubusercontent.com/stefanpejcic/OpenPanel/main/website/blog/${file.name}`;
                 const { title, description, slug, image } = await fetchRequiredLines(fileUrl);
 
                 const newsItemDiv = document.createElement('div');
-                newsItemDiv.classList.add('row', 'align-items-center');
-
-                // Column for image (linked)
-                const imageDiv = document.createElement('div');
-                imageDiv.classList.add('col-3');
+                newsItemDiv.classList.add('flex', 'items-center', 'py-2', 'border-b');
 
                 if (image) {
+                    const imageDiv = document.createElement('div');
+                    imageDiv.classList.add('w-1/4', 'pr-3');
                     const imgLink = document.createElement('a');
                     imgLink.href = `https://openpanel.com/blog/${slug}`;
                     imgLink.target = '_blank';
-
                     const img = document.createElement('img');
                     img.src = image;
                     img.alt = title;
-                    img.classList.add('rounded');
-                    img.style.maxWidth = '100%';
-
+                    img.classList.add('rounded-lg', 'w-full');
                     imgLink.appendChild(img);
                     imageDiv.appendChild(imgLink);
+                    newsItemDiv.appendChild(imageDiv);
                 }
 
-                // Column for title and description
                 const contentDiv = document.createElement('div');
-                contentDiv.classList.add('col');
-
+                contentDiv.classList.add('flex-1');
                 const titleElement = document.createElement('h3');
-                titleElement.classList.add('card-title', 'mb-1');
-
+                titleElement.classList.add('text-lg', 'font-semibold');
                 const titleLink = document.createElement('a');
                 titleLink.href = `https://openpanel.com/blog/${slug}`;
                 titleLink.target = '_blank';
-                titleLink.classList.add('text-reset');
+                titleLink.classList.add('text-blue-600', 'hover:underline');
                 titleLink.textContent = title;
-
                 titleElement.appendChild(titleLink);
-
-                const descriptionElement = document.createElement('div');
-                descriptionElement.classList.add('text-secondary');
+                const descriptionElement = document.createElement('p');
+                descriptionElement.classList.add('text-sm', 'text-gray-500');
                 descriptionElement.textContent = description;
-
                 contentDiv.appendChild(titleElement);
                 contentDiv.appendChild(descriptionElement);
-
-                // Append image and content to newsItemDiv
-                newsItemDiv.appendChild(imageDiv);
                 newsItemDiv.appendChild(contentDiv);
-
-                // Append newsItemDiv to newsContent
                 newsContent.appendChild(newsItemDiv);
             };
 
-            // Loop through each markdown file and fetch/display content
             markdownFiles.forEach(file => {
                 fetchAndDisplayContent(file);
             });
         })
         .catch(error => {
             console.error('Error fetching the GitHub API:', error);
-            newsContent.innerHTML = '<p>Error loading news</p>';
+            newsContent.innerHTML = '<p class="text-red-500">Error loading news</p>';
         });
 });
 </script>

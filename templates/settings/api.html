@@ -2,73 +2,61 @@
 
 {% block content %}
 
-        <!-- Page header -->
-        <div class="page-header mt-0 d-print-none">
-          <div class="container-xl">
-            <div class="row g-2 align-items-center">
-              <div class="col">
-                <!-- Page pre-title -->
-                <div class="page-pretitle">
-                  Settings
-                </div>
-                <h2 class="page-title">
-                  API
-                </h2>
-              </div>
-              <!-- Page title actions -->
-              <div class="col-auto ms-auto d-print-none">
+
+<!-- Page header -->
+<div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <header>
+        <div  class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">API Access</h1>
+                <h2 class="text-sm font-medium text-slate-500">Test API calls, view examples, follow logs, etc.</h2>
+            </div>
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
                 {% if api_status_current_value == 'on' %}
-                <a href="#" id="post_to_disable_api_access" class="btn btn-primary">
-<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-api"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 13h5" /><path d="M12 16v-8h3a2 2 0 0 1 2 2v1a2 2 0 0 1 -2 2h-3" /><path d="M20 8v8" /><path d="M9 16v-5.5a2.5 2.5 0 0 0 -5 0v5.5" /></svg>Disable API access
-                </a>
-                <button class="btn btn-transparent" type="button" onclick="getDockerInfo()">Examples</button>
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="off">
+<button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Disable API access</button>
+</form>
+<a type="button" @click="showSection = !showSection; loadApiExamples()" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"> View Examples </a>
+
+{% endif %}
+            </div>
+        </div>
 
 
-<script>
-    function getDockerInfo() {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", "/settings/api/endpoints", true);
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState == 4 && xhr.status == 200) {
-                var dockerInfo = xhr.responseText;
-                displayDockerInfo(dockerInfo);
+
+        <!-- Initially Hidden, Show on Click -->
+        <div :class="{ 'md:flex': showSection }" class="hidden mt-8 w-full md:items-stretch md:space-x-4">
+            <div class="sm:mx-auto sm:max-w-6xl">
+                <pre id="api_examples" class="relative overflow-auto p-2 bg-gray-800 text-sm"></pre>
+            </div>
+
+
+        <script>
+            function loadApiExamples() {
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", "/settings/api/endpoints", true);
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        var examples = xhr.responseText;
+                        displayExamples(examples);
+                    }
+                };
+                xhr.send();
             }
-        };
-        xhr.send();
-    }
 
-    function displayDockerInfo(info) {
-        var dockerInfoContent = document.getElementById("dockerInfoContent");
-        dockerInfoContent.textContent = info;
+            function displayExamples(example) {
+                var examplesDiv = document.getElementById("api_examples");
+                examplesDiv.textContent = example;
+            }
+        </script>
 
-        // Show modal
-        var dockerInfoModal = new bootstrap.Modal(document.getElementById('dockerInfoModal'));
-        dockerInfoModal.show();
-    }
-</script>
-
-    <!-- modal for available endpoints -->
-    <div class="modal fade" id="dockerInfoModal" tabindex="-1" aria-labelledby="dockerInfoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="dockerInfoModalLabel">API Endpoints with examples</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <pre id="dockerInfoContent"></pre>
-                </div>
-            </div>
         </div>
-    </div>
+    </header>
 
-
-
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </div>
+</div>
 
 
 
@@ -104,8 +92,6 @@
             </div>
           </div>
 
-<script src="{{ url_for('static', filename='pages/api_off.js') }}" defer></script>
-
 </div>
 
 
@@ -113,192 +99,203 @@
 
 {% elif api_status_current_value == 'on' %}
 
-            <div class="row row-cards">
 
+<div id="collapseAddNewUser">
 
-
-
-
-
-<div class="col-12">
-    <form id="httpRequestForm">
-                  <div class="card">
-                    <div class="card-header">
-                      <h3 class="card-title">HTTP Request</h3>
-                    </div>
-                    <div class="card-body">
-                      <div class="row row-cards">
-                        <div class="mb-3 col-sm-4 col-md-2">
-
-                <div class="row g-2">
-                <div class="col"><label class="form-label required">Method</label></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p>Different methods should be used depending on the action.</p><p class='mb-0'>Please check the <a href='https://dev.openpanel.com/api/#Complete-list-of-API-Endpoints' target='_blank'>API documentation</a>.</p>" data-bs-html="true">?</span>
-                </div>
-                </div>
-
-
-
-
-                          <select name='method' class="form-select">
+    <div class="sm:mx-auto sm:max-w-2xl" style="display:block;">
+        <form id="httpRequestForm" method="POST" class="mt-8">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Method<span class="text-red-500 dark:text-red-500">*</span></label>
+                    <div class="relative w-full mt-2">
+                          <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name='method'>
                             <option value="GET">GET</option>
                             <option value="POST">POST</option>
                             <option value="PUT">PUT</option>
                             <option value="DELETE">DELETE</option>
                             <option value="PATCH">PATCH</option>
                           </select>
-                        </div>
-                        <div class="mb-3 col-sm-8 col-md-10">
-
-                <div class="row g-2">
-                <div class="col"><label class="form-label required">URL</label></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p>Please refer to the API documentation for the specific URL to send the request to.</p><p class='mb-0'>You can find the complete list of API endpoints by clicking on 'Examples' button above.</p>" data-bs-html="true">?</span>
-                </div>
-                </div>
-
-                            <div class="input-group input-group-flat">
-                              <span class="input-group-text">
-                                /api/
-                              </span>
-                              <input type="text" name="url" class="form-control ps-0" autocomplete="off">
-                            </div>
-                        </div>
-
-                        <div id="username" class="mb-3 col-sm-6 col-md-6" style="display:none;">
-                <div class="row g-2">
-                <div class="col"><label class="form-label">Username</label></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p class='mb-0'>A username is necessary for authentication and the creation of a JWT token.</p>" data-bs-html="true">?</span>
-                </div>
-                </div>
-                              <input type="text" name="username" class="form-control" autocomplete="off" value="{{ current_user.username }}">
-                        </div>
-                        <div id="password" class="mb-3 col-sm-6 col-md-6" style="display:none;">
-                <div class="row g-2">
-                <div class="col"><label class="form-label">Password</label></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p class='mb-0'>A password is required for authentication and to generate a JWT token.</p>" data-bs-html="true">?</span>
-                </div>
-                </div>
-                              <input type="password" name="password" class="form-control" autocomplete="off">
-                        </div>
-                        <div id="token" class="mb-3 col-sm-12 col-md-12" style="display:none;">
-                <div class="row g-2">
-                <div class="col"><label class="form-label">Token</label></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p class='mb-0'>A token is required for authentication when making API requests.</p>" data-bs-html="true">?</span>
-                </div>
-                </div>
-                              <input type="text" name="token" class="form-control" autocomplete="off">
-                        </div>
-                      </div>
-                <div class="row g-2">
-                <div class="col"><label class="form-label">Data</label></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p class='mb-0'>For POST, PUT, DELETE, and PATCH methods, add <b>key:value</b> pairs.</p>" data-bs-html="true">?</span>
-                </div>
-                </div>
-                      <textarea class="form-control json_data" rows="5"></textarea>
                     </div>
-                    <div class="card-footer text-end">
-<button type="submit" id="submit_button" class="btn btn-primary">Send request</button>
+                </div>
 
-<button id="working" style="display:none;" class="btn btn-primary" disabled><span class="spinner-border spinner-border-sm" role="status"></span> Working</button>
-
-
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">URL<span class="text-red-500 dark:text-red-500">*</span></label>
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="text"
+                            class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="url" placeholder="/api/" autocomplete="off"/>
                     </div>
-                  </div>
-    </form>
                 </div>
 
-          </div>
-</div>
-
-
-<div class="container-xl mt-4">
-            <div class="card">
-              <div class="card-body">
-                <div class="row g-2">
-                <div class="col"><h4>Curl command</h4></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p class='mb-0'>Execute this command from a remote server to carry out operations on OpenAdmin.</p>" data-bs-html="true">?</span>
-                </div>
-                </div>
-                    <pre id="requestDetails">GET /api/</pre>
-              </div>
             </div>
-</div>
+
+            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
 
-<div class="container-xl mt-4">
-            <div class="card">
-              <div class="card-body">
-                <div class="row g-2">
-                <div class="col"><h4>Response</h4></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p class='mb-0'>The actual output from an API call on this server.</p>" data-bs-html="true">?</span>
+           <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+
+                <div id="username" class="col-span-full sm:col-span-3" style="display:none;">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="text"
+                            class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="username" value="{{ current_user.username }}" />
+                    </div>
                 </div>
+
+                <div id="password" class="col-span-full sm:col-span-3" style="display:none;">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Password<span class="text-red-500 dark:text-red-500">*</span></label>
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="text"
+                            class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="password" autocomplete="off"/>
+                    </div>
                 </div>
-                    <pre id="responseDisplay">
+
+                <div id="token" class="col-span-full sm:col-span-6" style="display:none;">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Token<span class="text-red-500 dark:text-red-500">*</span></label>
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="text" name="token"
+                            class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" autocomplete="off" />
+                    </div>
+                </div>
+
+
+                <div class="col-span-full sm:col-span-6">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Data</label>
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="textarea"
+                            class="flex min-h-[4rem] w-full rounded-md border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 json_data" name="json_data" />
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+<button type="submit" id="submit_button" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Send request</button>
+
+<button id="working" style="display:none;" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" disabled><span class="spinner-border spinner-border-sm" role="status"></span> Working</button>
+
+
+
+
+           <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+
+                <div class="col-span-full sm:col-span-6">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Curl command</label>
+                    <div class="relative w-full mt-2">
+                        <pre id="requestDetails" class="relative overflow-auto p-2 bg-gray-800 text-sm">GET /api/</pre>
+                    </div>
+                </div>
+
+
+                <div class="col-span-full sm:col-span-6">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Response</label>
+                    <div class="relative w-full mt-2">
+                    <pre id="responseDisplay" class="relative overflow-auto p-2 bg-gray-800 text-sm">
 {
   "message": "API is working!"
 }
 </pre>
-              </div>
-            </div>
-</div>
-
-
-<div class="container-xl mt-4">
-            <div class="card" style="height: 30rem">
-                    <div class="card-header" style="display: block;">
-                <div class="row g-2">
-                <div class="col"><h3 class="card-title">API logs</h3></div>
-                <div class="col-auto align-self-center">
-                <span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p class='mb-0'>Each interaction with the API, including both requests and responses, is documented in a log file.</p>" data-bs-html="true">?</span>
-                </div>
-                </div>
-
-
                     </div>
-              <div class="card-body card-body-scrollable card-body-scrollable-shadow">
-
-                <div class="divide-y">
-                    <pre id="log_content"></pre>
                 </div>
-              </div>
+
             </div>
+
+
+
+            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+
+            <div class="flex items-center justify-end space-x-4">
+
+            </div>
+        </form>
+
+
+API logs
+<pre id="log_content" class="relative overflow-auto p-2 bg-gray-800 text-sm"></pre>
+
+
+    </div>
 </div>
+
+
+
+
 
 <script src="{{ url_for('static', filename='pages/api_on.js') }}" defer></script>
 
 {% else %}
 
 
-<div class="container-xl d-flex flex-column justify-content-center">
-            <div class="empty">
-              <div class="empty-img"><svg  xmlns="http://www.w3.org/2000/svg"  width="128"  height="128"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon-tabler icons-tabler-outline icon-tabler-api-off"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 13h5" /><path d="M12 16v-4m0 -4h3a2 2 0 0 1 2 2v1c0 .554 -.225 1.055 -.589 1.417m-3.411 .583h-1" /><path d="M20 8v8" /><path d="M9 16v-5.5a2.5 2.5 0 0 0 -5 0v5.5" /><path d="M3 3l18 18" /></svg>
+
+<div
+    style="
+        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        height: 90vh;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    "
+>
+    <div>
+        <style>
+            body {
+                color: #000;
+                background: #fff;
+                margin: 0;
+            }
+            .next-error-h1 {
+                border-right: 1px solid rgba(0, 0, 0, 0.3);
+            }
+            @media (prefers-color-scheme: dark) {
+                body {
+                    color: #fff;
+                    background: #000;
+                }
+                .next-error-h1 {
+                    border-right: 1px solid rgba(255, 255, 255, 0.3);
+                }
+            }
+        </style>
+        <div style="display: inline-block;">
+
+<h1 style="display: inline-block; margin: 0; padding: 0; font-size: 24px; font-weight: 500; vertical-align: top; line-height: 49px;"><svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler icons-tabler-outline icon-tabler-api-off"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M4 13h5"></path><path d="M12 16v-4m0 -4h3a2 2 0 0 1 2 2v1c0 .554 -.225 1.055 -.589 1.417m-3.411 .583h-1"></path><path d="M20 8v8"></path><path d="M9 16v-5.5a2.5 2.5 0 0 0 -5 0v5.5"></path><path d="M3 3l18 18"></path></svg></h1>
+
+          <h2 style="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">API Access Disabled</h2>
+          <p class="mt-1 text-sm leading-6 text-gray-500">Enable API access to create and manage users and plans.</p>
+          <p class="mt-1 text-sm leading-6 text-gray-500">Be sure to consult the <a href="https://dev.openpanel.co/api/#troubleshooting" target="_blank" class="inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400">Documentation<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a> before proceeding.</p>
+              <div class="mt-4">
+
+
+<form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="on">
+
+                <button type="submit" id="post_to_enable_api_access" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Enable API access</button>
+</form>
               </div>
-                <p class="empty-title">API Access Disabled</p>
-                <p class="empty-subtitle text-secondary">
-                  Enable API access to create and manage users and plans.
-                </p>
-                <p class="empty-subtitle text-secondary">
-                  Be sure to consult the <a href="https://dev.openpanel.com/api/" target="_blank">API Documentation</a> before proceeding.
-                </p>
-              <div class="empty-action">
-                <a href="#" id="post_to_enable_api_access" class="btn btn-primary">
-                  <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-toggle-right"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M16 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M2 6m0 6a6 6 0 0 1 6 -6h8a6 6 0 0 1 6 6v0a6 6 0 0 1 -6 6h-8a6 6 0 0 1 -6 -6z" /></svg>
-                  Enable API access
-                </a>
-              </div>
-            </div>
+          
+          
           </div>
-
-<script src="{{ url_for('static', filename='pages/api_off.js') }}" defer></script>
-
+    </div>
 </div>
+
+
+
 
 {% endif %}        
 </div>

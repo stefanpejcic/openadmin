@@ -262,64 +262,13 @@ write_notification() {
 
 
 
-
-# added in 0.3.6
-get_title_and_message_for_section() {
-
-# TESTING: cat /etc/openpanel/services/sentinel/messages.yaml | yq '.DAILY_REPORT'
-
-  local config_file="/etc/openpanel/services/sentinel/messages.yaml"
-  local remote_url="https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/services/sentinel/messages.yaml" # to be removed in op 0.5.+
-  local section="$1"
-  local title
-  local message
-
-  if [[ ! -f "$config_file" ]]; then
-    mkdir -p /etc/openpanel/services/sentinel
-    wget -q -O "$config_file" "$remote_url" || {
-      echo "Failed to download the configuration file from https://github.com/stefanpejcic/openpanel-configuration/blob/main/services/sentinel/messages.yaml"
-      return 1
-    }
-  fi
-
-  if ! command -v yq &> /dev/null; then
-    BINARY=yq_linux_amd64
-    LATEST=$(wget -qO- https://api.github.com/repos/mikefarah/yq/releases/latest 2>/dev/null | grep browser_download_url | grep $BINARY | awk -F '"' '{print $4}')
-    wget -q $LATEST -O /usr/bin/yq && chmod +x /usr/bin/yq
-  fi
-
-  # Extract title and message using yq
-  title=$(yq eval ".${section}.title" "$config_file")
-  message=$(yq eval ".${section}.message" "$config_file")
-
-  echo "$title"
-  echo "$message"
-}
-
-
-# email daily report
-email_daily_report() {
-  section="DAILY_REPORT"
-  result=($(get_title_and_message_for_section "$section"))
-
-    if [ "$EMAIL_ALERT" != "no" ]; then
-    echo "Generating daily usage report.."
-      email_notification "${result[0]}" "${result[1]}"
-    else
-      echo "Email alerts are disabled - daily usage report will not be generated."
-    fi
-}
-
-
-
 # Function to perform startup action (system reboot notification)
 perform_startup_action() {
   if [ "$REBOOT" != "no" ]; then
-    section="REBOOT"
-    result=($(get_title_and_message_for_section "$section"))
+    local title="SYSTEM REBOOT!"
     local uptime=$(uptime)
-    local message="${result[1]} $uptime"
-    write_notification "${result[0]}" "$message"
+    local message="System was rebooted. $uptime"
+    write_notification "$title" "$message"
   else
     ((WARN++))
     echo -e "\e[38;5;214m[!]\e[0m Reboot is explicitly set to 'no' in the INI file. Skipping logging.."
@@ -331,10 +280,8 @@ perform_startup_action() {
 
 
 check_ssh_logins() {
-    section="SSH_LOGIN"
-    result=($(get_title_and_message_for_section "$section"))
-    local title="${result[0]}"
-    local message_to_check_in_file="${result[0]}"
+    local title="Suspicious SSH login detected"
+    local message_to_check_in_file="Suspicious SSH login detected"
 
     # Check if there is an unread notification
     if is_unread_message_present "$message_to_check_in_file"; then
@@ -473,12 +420,9 @@ check_new_logins() {
         echo -e "\e[31m[✘]\e[0m Admin account $username accessed from new IP address $ip_address"
         ((FAIL++))
         STATUS=2
-
-        section="ADMIN_LOGIN"
-        result=($(get_title_and_message_for_section "$section"))
-        local title="${result[0]}"
-        local message="${result[1]} $ip_address"
-        write_notification "${result[0]}" "$message"
+        local title="Admin account $username accessed from new IP address"
+        local message="Admin account $username was accessed from a new IP address: $ip_address"
+        write_notification "$title" "$message"
       else
         ((PASS++))
         echo -e "\e[32m[✔]\e[0m Admin account $username accessed from previously logged IP address: $ip_address"
@@ -503,7 +447,7 @@ mysql_docker_containers_status() {
 #### only mysql so far..
 
       # Check if the MySQL Docker container is running
-      if docker ps --format "{{.Names}}" | grep -q "openpanel_mysql"; then
+      if docker --context default ps --format "{{.Names}}" | grep -q "openpanel_mysql"; then
       ((PASS++))
         echo -e "\e[32m[✔]\e[0m MySQL Docker container is active."
       else
@@ -514,19 +458,17 @@ mysql_docker_containers_status() {
         # Check the last 100 lines of the MySQL error log for the specified condition
         error_log=$(tail -100 /var/log/mysql/error.log | grep -m 1 "No space left on device")
 
-        section="MYSQL_DOWN"
-        result=($(get_title_and_message_for_section "$section"))
-        local title="${result[0]}"
+        title="MySQL service is not active. Users are unable to log into OpenPanel!"
 
 
 
         # Check if there's an error log and include it in the message
         if [ -n "$error_log" ]; then
-          message="${result[1]} $error_log"
+          message="$error_log"
           write_notification "$title" "$message"
         else
           error_log=$(journalctl -n 5 -u "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
-          message="${result[1]} $error_log"
+          message="$error_log"
           write_notification "$title" "$message"
         fi
       fi
@@ -540,7 +482,7 @@ docker_containers_status() {
 
 
     check_status_after_restart(){
-                if docker ps --format "{{.Names}}" | grep -wq "$service_name"; then
+                if docker --context default ps --format "{{.Names}}" | grep -wq "$service_name"; then
                     echo -e "\e[32m[✔]\e[0m $service_name docker container successfully restarted."
                     ((WARN--))
                 else
@@ -550,7 +492,7 @@ docker_containers_status() {
                   STATUS=2
 
                     # Log the error and write notification
-                    error_log=$(docker logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
+                    error_log=$(docker --context default logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
                     message="$error_log"
                     write_notification "$title" "$message"
                 fi
@@ -558,7 +500,7 @@ docker_containers_status() {
 
 
 
-    if docker ps --format "{{.Names}}" | grep -wq "$service_name"; then
+    if docker --context default ps --format "{{.Names}}" | grep -wq "$service_name"; then
         ((PASS++))
         echo -e "\e[32m[✔]\e[0m $service_name docker container is active."
     else 
@@ -570,7 +512,7 @@ docker_containers_status() {
             echo "  - Checking if domains exist and if caddy service should be started..."
             if ls /etc/openpanel/openpanel/core/users/*/domains > /dev/null 2>&1; then
                 echo "  - Domains are hosted on this server, starting caddy service.."
-                cd /root && docker compose up -d caddy > /dev/null 2>&1
+                cd /root && docker --context default compose up -d caddy > /dev/null 2>&1
                 check_status_after_restart
             else
                 ((WARN--))
@@ -586,14 +528,14 @@ docker_containers_status() {
               echo "  - No users found in the database."
             else
                 echo "  - User accounts are hosted on this server, starting openpanel service.."
-                cd /root && docker compose up -d openpanel > /dev/null 2>&1
+                cd /root && docker --context default compose up -d openpanel > /dev/null 2>&1
                 check_status_after_restart
             fi 
         elif [ "$service_name" == "openpanel_dns" ]; then
             echo "  - Checking if DNS zones exist and if BIND9 service should be started..."
             if ls /etc/bind/zones/*.zone > /dev/null 2>&1; then
                 echo "  - DNS zones are hosted on this server, starting BIND9 service.."
-                cd /root && docker compose up -d bind9 > /dev/null 2>&1
+                cd /root && docker --context default compose up -d bind9 > /dev/null 2>&1
                 check_status_after_restart
             else
                 ((WARN--))
@@ -601,7 +543,7 @@ docker_containers_status() {
             fi
         else
 
-            docker restart "$service_name"  > /dev/null 2>&1
+            docker --context default restart "$service_name"  > /dev/null 2>&1
             check_status_after_restart
         fi
     fi
@@ -619,16 +561,17 @@ check_service_status() {
   ((PASS++))
     echo -e "\e[32m[✔]\e[0m $service_name is active."
   else
-              ((FAIL++))
-            STATUS=2
+
+    if [[ "$service_name" == "admin" && ! -f /root/openadmin_is_disabled ]]; then
+      ((PASS++))
+      echo -e "\e[32m[✔]\e[0m $service_name is disabled by Administrator."
+    else
+
+      ((FAIL++))
+      STATUS=2
     echo -e "\e[31m[✘]\e[0m $service_name is not active." #Writing notification to log file."
     local error_log=""
 
-    # example check
-    if [ "$service_name" = "example" ]; then
-      :
-    else
-      # For other services, use the existing journalctl command
       error_log=$(journalctl -n 5 -u "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
 
       # Check if there's an error log and include it in the message
@@ -637,7 +580,11 @@ check_service_status() {
       else
         echo "no logs."
       fi
+
+
     fi
+    
+
   fi
 }
 
@@ -719,9 +666,7 @@ EOF
 
 # Function to check system load and write notification if it exceeds the threshold
 check_system_load() {
-  section="LOAD_USAGE"
-  result=($(get_title_and_message_for_section "$section"))
-  local title="${result[0]}"
+  local title="High System Load!"
 
   local current_load=$(uptime | awk -F'average:' '{print $2}' | awk -F', ' '{print $1}')
   local load_int=${current_load%.*}  # Extract the integer part
@@ -745,9 +690,7 @@ check_system_load() {
 
 
 check_swap_usage() {
-  section="SWAP_USAGE"
-  result=($(get_title_and_message_for_section "$section"))
-  local title="${result[0]}"
+    local title="High System Load!"
 
     # Run the 'free' command and capture the output
     free_output=$(free -t)
@@ -828,9 +771,7 @@ check_swap_usage() {
 
 # Function to check RAM usage and write notification if it exceeds the threshold
 check_ram_usage() {
-  section="RAM_USAGE"
-  result=($(get_title_and_message_for_section "$section"))
-  local title="${result[0]}"
+  local title="High Memory Usage!"
   local total_ram=$(free -m | awk '/^Mem:/{print $2}')
   local used_ram=$(free -m | awk '/^Mem:/{print $3}')
   local ram_percentage=$((used_ram * 100 / total_ram))
@@ -858,9 +799,7 @@ check_ram_usage() {
 }
 
 function check_cpu_usage() {
-  section="CPU_USAGE"
-  result=($(get_title_and_message_for_section "$section"))
-  local title="${result[0]}"
+  local title="High CPU Usage!"
 
   local cpu_percentage=$(top -bn1 | awk '/^%Cpu/{print $2}' | awk -F'.' '{print $1}')
   
@@ -877,10 +816,7 @@ fi
 }
 
 function check_disk_usage() {
-  section="DISK_USAGE"
-  result=($(get_title_and_message_for_section "$section"))
-  local title="${result[0]}"
-
+  local title="Running out of Disk Space!"
 
   local disk_percentage=$(df -h --output=pcent / | tail -n 1 | tr -d '%')
 
@@ -912,20 +848,14 @@ function check_disk_usage() {
 check_if_panel_domain_and_ns_resolve_to_server (){
 
 # Extract force domain address from the configuration file
-FORCE_DOMAIN=$(awk -F'=' '/^force_domain/ {print $2}' "$CONF_FILE")
+RESULT=$(opencli domain)
 
-# Check if FORCE_DOMAIN is not empty and is a valid domain
-if [ -n "$FORCE_DOMAIN" ]; then
-    if [[ "$FORCE_DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-        #echo "FORCE_DOMAIN is a valid domain: $FORCE_DOMAIN"
-        FORCED_DOMAIN=$FORCE_DOMAIN
-        CHECK_DOMAIN_ALSO="yes"
-    else
-        #echo "FORCE_DOMAIN '$FORCE_DOMAIN' is not a valid domain."
-        CHECK_DOMAIN_ALSO="no"
-    fi
+if [[ "$RESULT" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+    # If it's a valid domain, use it
+    FORCED_DOMAIN=$RESULT
+    CHECK_DOMAIN_ALSO="yes"
 else
-    #echo "FORCE_DOMAIN is empty or not found in $CONF_FILE."
+    # If it's not a valid domain (could be an IP or invalid), do not proceed
     CHECK_DOMAIN_ALSO="no"
 fi
 
@@ -1143,38 +1073,25 @@ else
 
 check_services() {
   if echo "$SERVICES" | grep -q "caddy"; then
-    section="CADDY_DOWN"
-    result=($(get_title_and_message_for_section "$section"))
-    docker_containers_status "caddy" "${result[0]}"
+    docker_containers_status "caddy" "Caddy container is not active. Users' websites are not working!"
   fi
 
   if echo "$SERVICES" | grep -q "csf"; then
-    section="CSF_DOWN"
-    result=($(get_title_and_message_for_section "$section"))
-
-    check_service_status "csf" "${result[0]}"
+    check_service_status "csf" "ConfigService Firewall (CSF) is not active. Server and websites are not protected!"
   elif echo "$SERVICES" | grep -q "ufw"; then
-    section="UFW_DOWN"
-    result=($(get_title_and_message_for_section "$section"))
-    check_service_status "ufw" "${result[0]}"
+    check_service_status "ufw" "Firewall (UFW) service is not active. Server and websites are not protected!"
   fi
-
+  
   if echo "$SERVICES" | grep -q "admin"; then
-    section="ADMIN_DOWN"
-    result=($(get_title_and_message_for_section "$section"))
-    check_service_status "admin" "${result[0]}"
+      check_service_status "admin" "Admin service is not active. OpenAdmin service is not accessible!"
   fi
 
   if echo "$SERVICES" | grep -q "docker"; then
-    section="DOCKER_DOWN"
-    result=($(get_title_and_message_for_section "$section"))
-    check_service_status "docker" "${result[0]}"
+    check_service_status "docker" "Docker service is not active. User websites are down!"
   fi
 
   if echo "$SERVICES" | grep -q "panel"; then
-    section="PANEL_DOWN"
-    result=($(get_title_and_message_for_section "$section"))
-    docker_containers_status "openpanel" "${result[0]}"
+    docker_containers_status "openpanel" "OpenPanel docker container is not running. Users are unable to access the OpenPanel interface!"
   fi
 
   if echo "$SERVICES" | grep -q "mysql"; then
@@ -1182,9 +1099,7 @@ check_services() {
   fi
 
   if echo "$SERVICES" | grep -q "named"; then
-    section="BIND_DOWN"
-    result=($(get_title_and_message_for_section "$section"))
-    docker_containers_status "openpanel_dns" "${result[0]}"
+    docker_containers_status "openpanel_dns" "Named (BIND9) service is not active. DNS resolving of domains is not working!"
   fi
 }
 

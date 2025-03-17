@@ -1,26 +1,3 @@
-    document.addEventListener("DOMContentLoaded", function () {
-        var searchInput = document.getElementById("userSearchInput");
-        var timelineEvents = document.querySelectorAll(".timeline-event");
-
-        searchInput.addEventListener("input", function () {
-            var searchTerm = searchInput.value.toLowerCase();
-
-            timelineEvents.forEach(function (event) {
-                var eventTitle = event.querySelector("h4");
-                if (eventTitle) {
-                    var titleText = eventTitle.textContent.toLowerCase();
-
-                    if (titleText.includes(searchTerm)) {
-                        event.style.display = "block";
-                    } else {
-                        event.style.display = "none";
-                    }
-                }
-            });
-        });
-    });
-
-
 
     document.addEventListener("DOMContentLoaded", function () {
         var form = document.querySelector('#edit_settings'); 

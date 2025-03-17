@@ -1,77 +1,213 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<!-- Page header -->
-<div class="page-header mt-0 d-print-none">
-    <div class="container-xl">
-        <div class="row g-2 align-items-center">
-            <div class="col">
-                <!-- Page pre-title -->
-                <div class="page-pretitle">
-                    Services
+
+
+<div x-data="{ searchQuery: '', filters: { active: false, suspended: false } }">
+    <div x-data="{ showSection: false, fileContent: '' }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Services</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Manage system services and containers.</h2>
                 </div>
-                <h2 class="page-title">
-                    Status
-                </h2>
-            </div>
-            <!-- Page title actions -->
-            <div class="col-auto ms-auto mt-0 d-print-none">
-                <div class="btn-list">
-                </div>
-            </div>
-        </div>
-    </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                
+                <div class="toast-container position-fixed bottom-0 end-0 p-2">
 </div>
+                
+                <a @click="showSection = !showSection" class="hidden relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Edit services</a>
+                </div>
+            </div>
+
+        <!-- Initially Hidden, Show on Click -->
+        <div :class="{ 'md:flex': showSection }" class="hidden mt-8 w-full md:items-stretch md:space-x-4">
+    
+        <textarea x-model="fileContent" class="w-full p-4 border-2 rounded-md border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-50" rows="10" readonly></textarea>
+
+        <button @click="saveContent" class="mt-4 inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            Save
+        </button>
+
+        </div>
 
 
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('servicesEditor', () => ({
+            showSection: false,
+            fileContent: '',
+
+            // Fetch content from the backend when section is shown
+            async loadContent() {
+                try {
+                    const response = await fetch('/services/edit');
+                    const data = await response.json();
+                    if (response.ok) {
+                        this.fileContent = JSON.stringify(data, null, 4); // Format JSON for textarea
+                    } else {
+                        alert('Failed to load content');
+                    }
+                } catch (error) {
+                    console.error('Error fetching content:', error);
+                }
+            },
+
+            // Save the updated content to the backend
+            async saveContent() {
+                try {
+                    const response = await fetch('/services/edit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: this.fileContent, // Send the updated content
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert('Configuration saved successfully!');
+                    } else {
+                        alert(`Error: ${result.error}`);
+                    }
+                } catch (error) {
+                    console.error('Error saving content:', error);
+                    alert('An error occurred while saving the content.');
+                }
+            },
+        }));
+    });
+</script>
 
 
-<!-- Page body -->
-<div class="page-body">
-{% if statuses.items() %}
+        </header>
+    </div>
+
     <div class="">
-        <div class="row row-deck row-cards">
-            <div class="col-lg-12" id="statuses">
-                <div class="card">
-                    <div class="table-responsive">
-                    <table class="table card-table table-vcenter text-nowrap datatable">
-                        <thead>
-                            <tr>
-                                <th class="w-1">Status</th>
-                                <th>Service Name</th>
-                                <th>Version</th>
-                                <th>Port</th>
-                                <th class="w-1">Actions</th>
-                            </tr>
-                        </thead>
+        <div class="space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
 
-                        <tbody>
-                            {% for service_display_name, details in statuses.items() %}
-                            <tr>
-                                <td>
+                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search services..." type="search">
 
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden flex items-center gap-2">
+                    <div>
+                        <div class="flex justify-center">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="relative">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
+                    <thead class="">
+                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                <th class="hidden border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">
+
+                            </th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Service</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>                         
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Status</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Version</div></th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Real Name</div></th>
+
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Type</div></th>
+
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Port</div></th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Monitoring</div></th>
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800" x-data="{ monitoredServices: [] }" x-init="
+                        fetch('/services/monitored')
+                            .then(response => response.json())
+                            .then(data => monitoredServices = data.monitored_services)
+                    ">
+
+{% if statuses.items() %}
+
+                {% for service_display_name, details in statuses.items() %}
+                        <tr x-show="searchQuery === '' || '{{ service_display_name }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
+
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                            {{ service_display_name }}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
 {% if details.status == True %}
-<img  title="Running" data-bs-toggle="tooltip" data-bs-placement="right" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+Cjxzdmcgd2lkdGg9IjI2cHgiIGhlaWdodD0iMjZweCIgdmlld0JveD0iMCAwIDI2IDI2IiB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPgogICAgPCEtLSBHZW5lcmF0b3I6IFNrZXRjaCA0My4yICgzOTA2OSkgLSBodHRwOi8vd3d3LmJvaGVtaWFuY29kaW5nLmNvbS9za2V0Y2ggLS0+CiAgICA8dGl0bGU+Y2hlY2s8L3RpdGxlPgogICAgPGRlc2M+Q3JlYXRlZCB3aXRoIFNrZXRjaC48L2Rlc2M+CiAgICA8ZGVmcz48L2RlZnM+CiAgICA8ZyBpZD0iUGFnZS0xIiBzdHJva2U9Im5vbmUiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj4KICAgICAgICA8ZyBpZD0iY2hlY2siPgogICAgICAgICAgICA8Y2lyY2xlIGlkPSJPdmFsIiBzdHJva2U9IiM1MUJEMjIiIHN0cm9rZS13aWR0aD0iMiIgY3g9IjEzIiBjeT0iMTMiIHI9IjEyIj48L2NpcmNsZT4KICAgICAgICAgICAgPHBhdGggZD0iTTEyLjIyNjc5OTgsMTUuOTA4MjgzMSBMOS41ODQwNjI4MywxMi44ODkxMDAzIEM5LjA2NTc3NDY1LDEyLjI5Njk4NDMgOC4xNzQ2NTQ0NCwxMi4yMzI4NTM0IDcuNTgwODExNTMsMTIuNzMxMTQ2NyBMNy42NzcwNzI0MywxMi42NTAzNzQyIEM3LjA3ODI3MDcyLDEzLjE1MjgyODUgNy4wMTczMDYxLDE0LjAyNzI3OSA3LjUyOTgyODM0LDE0LjYxMjgwNzcgTDExLjM3MDgzODMsMTkuMDAwOTUyIEMxMS40NzQ0NDk2LDE5LjExOTMyMjQgMTEuNTkyOTYxLDE5LjIxNjU5MjEgMTEuNzIxMDE4NiwxOS4yOTI0ODYyIEMxMS42ODQ3MTYzLDE5LjI3NDM0MDcgMTEuNjQ4ODM4LDE5LjI1NDY1MTIgMTEuNjEzNDY0NiwxOS4yMzMzOTY3IEwxMS44MzcyNzcsMTkuMzY3ODc2OCBDMTEuODAxNzMzOSwxOS4zNDY1MjAzIDExLjc2NzQxMjcsMTkuMzIzOTU5MiAxMS43MzQzMzI1LDE5LjMwMDI4IEMxMi4yNDUwMTU1LDE5LjU5NTUzNzYgMTIuOTAzMDY1OSwxOS41NTQxNDEzIDEzLjM3NDA4OTYsMTkuMTU4OTA1NiBMMTMuMjc3ODI4NywxOS4yMzk2NzgxIEMxMy4zMzk4MjEzLDE5LjE4NzY2MDEgMTMuMzk2MDQ5NCwxOS4xMzE2NTUgMTMuNDQ2NDczNCwxOS4wNzIzOTYzIEMxMy41NTU0NTQ5LDE4Ljk3NzE1MTIgMTMuNjUyNTI0OCwxOC44NjUxNTg3IDEzLjczMzUyNjMsMTguNzM3NDg3NSBMMTkuMzE2NTA0NCw5LjkzNzgyODc1IEMxOS43NjIwMzksOS4yMzU1OTU1NCAxOS41NDQyMTYsOC4zMDQ4ODA5MSAxOC44MjIzMDg4LDcuODcxMTE1MjkgTDE5LjA0NjEyMTIsOC4wMDU1OTUzNSBDMTguMzE3NjUyNiw3LjU2Nzg4NzI1IDE3LjM3NTAzLDcuNzkzODU1ODYgMTYuOTI2MDU5NSw4LjUwMTUwNDU3IEwxMi4yMjY3OTk4LDE1LjkwODI4MzEgWiIgaWQ9IkNvbWJpbmVkLVNoYXBlIiBmaWxsPSIjNTFCRDIyIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=">
+          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
 {% elif details.status == False %}
-<img  title="Stopped" data-bs-toggle="tooltip" data-bs-placement="right" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+Cjxzdmcgd2lkdGg9IjI2cHgiIGhlaWdodD0iMjZweCIgdmlld0JveD0iMCAwIDI2IDI2IiB2ZXJzaW9uPSIxLjEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPgogICAgPCEtLSBHZW5lcmF0b3I6IFNrZXRjaCA0My4yICgzOTA2OSkgLSBodHRwOi8vd3d3LmJvaGVtaWFuY29kaW5nLmNvbS9za2V0Y2ggLS0+CiAgICA8dGl0bGU+ZGFuZ2VyPC90aXRsZT4KICAgIDxkZXNjPkNyZWF0ZWQgd2l0aCBTa2V0Y2guPC9kZXNjPgogICAgPGRlZnM+PC9kZWZzPgogICAgPGcgaWQ9IlBhZ2UtMSIgc3Ryb2tlPSJub25lIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCI+CiAgICAgICAgPGcgaWQ9ImRhbmdlciI+CiAgICAgICAgICAgIDxjaXJjbGUgaWQ9Ik92YWwiIHN0cm9rZT0iI0UxNTY0QiIgc3Ryb2tlLXdpZHRoPSIyIiBjeD0iMTMiIGN5PSIxMyIgcj0iMTIiPjwvY2lyY2xlPgogICAgICAgICAgICA8cGF0aCBkPSJNMTMsMTAuOTAwMjE2NSBMOS44MjQ1NDI1NSw3LjcyNDc1OSBDOS40MzU1ODMwMiw3LjMzNTc5OTQ4IDguODA1MDY4MTksNy4zMzc3ODg5NSA4LjQxNDk1MTM5LDcuNzI3OTA1NzYgTDcuNzA2MzY4OTYsOC40MzY0ODgxOCBDNy4zMTMwMDgxMiw4LjgyOTg0OTAyIDcuMzE0ODQzMyw5LjQ1NzcwMDQ1IDcuNzAzMjIyMiw5Ljg0NjA3OTM1IEwxMC44Nzg2Nzk3LDEzLjAyMTUzNjggTDcuODAzNzI3MjcsMTYuMDk2NDg5MiBDNy40MTUzNDgzNywxNi40ODQ4NjgxIDcuNDEzNTEzMTksMTcuMTEyNzE5NSA3LjgwNjg3NDAyLDE3LjUwNjA4MDQgTDguNTE1NDU2NDUsMTguMjE0NjYyOCBDOC45MDU1NzMyNSwxOC42MDQ3Nzk2IDkuNTM2MDg4MDksMTguNjA2NzY5MSA5LjkyNTA0NzYxLDE4LjIxNzgwOTUgTDEzLDE1LjE0Mjg1NzEgTDE2LjA3NDk1MjQsMTguMjE3ODA5NSBDMTYuNDYzOTExOSwxOC42MDY3NjkxIDE3LjA5NDQyNjcsMTguNjA0Nzc5NiAxNy40ODQ1NDM2LDE4LjIxNDY2MjggTDE4LjE5MzEyNiwxNy41MDYwODA0IEMxOC41ODY0ODY4LDE3LjExMjcxOTUgMTguNTg0NjUxNiwxNi40ODQ4NjgxIDE4LjE5NjI3MjcsMTYuMDk2NDg5MiBMMTUuMTIxMzIwMywxMy4wMjE1MzY4IEwxOC4yOTY3Nzc4LDkuODQ2MDc5MzUgQzE4LjY4NTE1NjcsOS40NTc3MDA0NSAxOC42ODY5OTE5LDguODI5ODQ5MDIgMTguMjkzNjMxLDguNDM2NDg4MTggTDE3LjU4NTA0ODYsNy43Mjc5MDU3NiBDMTcuMTk0OTMxOCw3LjMzNzc4ODk1IDE2LjU2NDQxNyw3LjMzNTc5OTQ4IDE2LjE3NTQ1NzUsNy43MjQ3NTkgTDEzLDEwLjkwMDIxNjUgWiIgaWQ9IkNvbWJpbmVkLVNoYXBlIiBmaWxsPSIjRTE1NjRCIj48L3BhdGg+CiAgICAgICAgPC9nPgogICAgPC9nPgo8L3N2Zz4=">
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>
 {% elif details.status is none %}
-
-<span class="form-help" data-bs-toggle="popover" data-bs-placement="top" data-bs-content="<p class='mb-2'>This service will start automatically when needed.</p><a href='https://openpanel.com/docs/articles/dev-experience/autostart-services#auto-start-services-in-openadmin' target='_blank'>More information</a><p class='mb-2'></p>" data-bs-html="true">?</span>
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-grey-50 text-grey-800 ring-grey-600/30 dark:bg-grey-400/10 dark:text-grey-500 dark:ring-grey-400/20">Unknown</span>
 {% endif %}
+                                </td>
 
-                                </td>
-                                <td>{{ service_display_name }}<br>
-                                    <span class="text-secondary">
-                                    ({% if details.type == ("docker") %}
-<svg height="auto" title="Service is running inside a docker container" data-bs-toggle="tooltip" data-bs-placement="bottom" preserveAspectRatio="xMidYMid" viewBox="0 0 256 185" width="24" xmlns="http://www.w3.org/2000/svg"><path d="m250.715745 70.4971666c-5.764643-3.9998389-18.975281-5.4997786-29.303599-3.4998595-1.200967-9.9995979-6.725416-18.7492462-16.333153-26.4989347l-5.524449-3.9998393-3.843095 5.7497689c-4.803869 7.4996986-7.205803 17.9992766-6.485223 27.9988749.240194 3.4998595 1.441161 9.7496078 5.044063 15.2493871-3.362709 1.9999198-10.328318 4.499819-19.455668 4.499819h-173.65985102l-.48038688 1.9999198c-1.68135403 9.9995972-1.68135403 41.2483422 18.0145073 65.2473782 14.8919927 18.249266 36.9897884 27.498894 66.0531938 27.498894 62.9306788 0 109.5282048-30.248784 131.3858068-84.9965841 8.646963.2499904 27.141857 0 36.509401-18.7492459.240194-.4999801.72058-1.4999404 2.401935-5.2497896l.960773-1.999919zm-110.729172-70.4971666h-26.421278v24.9989952h26.421278zm0 29.9987943h-26.421278v24.9989953h26.421278zm-31.225146 0h-26.4212775v24.9989953h26.4212775zm-31.2251456 0h-26.4212777v24.9989953h26.4212777zm-31.2251464 29.9987943h-26.4212774v24.9989953h26.4212774zm31.2251464 0h-26.4212777v24.9989953h26.4212777zm31.2251456 0h-26.4212775v24.9989953h26.4212775zm31.225146 0h-26.421278v24.9989953h26.421278zm31.225146 0h-26.421278v24.9989953h26.421278z" fill="#2396ed"/></svg> {% elif details.type == ("system") %}{% endif %}{{ details.real_name }})
-                                    </span>
-                                </td>
-                            {% if details.version %}
-                                <td><span class="text-secondary">{{ details.version }}</span></td>
-                            {% else %}
-                                <td></td>
-                            {% endif %}
-                                    <td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                {% if details.version %}{{ details.version }}{% endif %}
+                            </td>
+
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                            {{ details.real_name }}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                           {% if details.type == 'docker' %}container{% else %}{{ details.type }}{% endif %}
+                            </td>
+
+
+
+
+
+
+
+
+
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
 {% if details.port %}
     {% set ports = details.port %}
     {% if ports is string %}
@@ -95,184 +231,88 @@
                                     </td>
 
 
-                <td>
 
+<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-left"
+    x-text="(realName => {
+        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return 'Monitored';
+        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return 'Monitored';
+        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return 'Monitored';
+        return monitoredServices.includes(realName) ? 'Monitored' : '';
+    })('{{ details.real_name }}')"
+    x-bind:title="(realName => {
+        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
+        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
+        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
+        return monitoredServices.includes(realName) ? 'This service is being monitored and will be restarted by OpenPanel on failure.' : '';
+    })('{{ details.real_name }}')">
+    <a href="/notifications/settings" x-show="(realName => {
+        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return true;
+        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return true;
+        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return true;
+        return monitoredServices.includes(realName);
+    })('{{ details.real_name }}')" class="text-blue-500 hover:underline">
+        Monitored
+    </a>
+</td>
+
+
+
+
+
+                            <td class="flex p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right justify-end">
+
+<form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="real_name" value="{{ details.real_name }}">
+<input type="hidden" name="container" value="{{ details.type }}">
                     {% if details.status %}
 
-
-{% if details.real_name == 'admin' %}
-                        <button class="btn btn-outline-danger disabled" style="pointer-events: auto;"  title="To disable admin panel use Settings > OpenAdmin" data-bs-toggle="tooltip" data-bs-placement="left"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" /></svg>Stop</button>
-{% else %}
-                        <button
-{% if details.real_name == 'docker' %}
-title="Stopping Docker service will disrupt user websites" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'openpanel' %}
-title="Stopping OpenPanel will disable the interface for users, however all their services remain active" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'caddy' %}
-title="Stopping Caddy will terminate active connections to websites" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'openadmin_mailserver' %}
-title="Stopping MailServer will disable all email traffic immediately" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'openadmin_roundcube' %}
-title="Stopping Roundcube will disable webmail access for all users" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'openpanel_mysql' %}
-title="Stopping Database will permit all users from login to OpenPanel" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'openadmin_ftp' %}
-title="Stopping FTP will terminate all active ftp connections" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'openpanel_dns' %}
-title="Stopping DNS will break resolving dns records for domains" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'certbot' %}
-title="Stopping Certbot will not stop new SSL generation and renewals" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'csf' %}
-title="Stopping ConfigServer Firewall will expose your server to everyone on all ports" data-bs-toggle="tooltip" data-bs-placement="left"
-{% elif details.real_name == 'ufw' %}
-title="Stopping UncomplicatedFirewall will expose your server to everyone on all ports" data-bs-toggle="tooltip" data-bs-placement="left"
-{% endif %}                
-                        
-                         class="btn btn-outline-danger" onclick="controlService('{{ details.real_name }}', 'stop', this, '{{ service_display_name }}', '{{ details.type }}')"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" /></svg>Stop</button>
-{% endif %}
-
+<button type="submit" class="btn btn-outline-danger"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" /></svg></button>
+<input type="hidden" name="action" value="stop">
                     {% else %}
-                        <button class="btn btn-outline-success" onclick="controlService('{{ details.real_name }}', 'start', this, '{{ service_display_name }}', '{{ details.type }}')"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" /></svg>Start</button>
+<input type="hidden" name="action" value="start">
+<button class="btn btn-outline-success" type="submit"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" /></svg></button>
                     {% endif %}
+</form>
+
+
                     &nbsp;
-                    <button class="btn btn-outline-warning" onclick="controlService('{{ details.real_name }}', 'restart', this, '{{ service_display_name }}', '{{ details.type }}')"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg>Restart</button>
+<form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="real_name" value="{{ details.real_name }}">
+<input type="hidden" name="container" value="{{ details.type }}">
+<input type="hidden" name="action" value="restart">
+
+                    <button class="btn btn-outline-warning" type="submit"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg></button>
+                    </form>
                 </td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div></div>
-        </div>
-    </div>
-
-
-<script>
-async function controlService(serviceName, action, button, displayName, serviceType) {
-    // Disable the button and update its text
-    button.disabled = true;
-    button.innerHTML = 'Running...';
-
-    // Create a new toast element for each notification
-    const toastElement = document.createElement('div');
-    toastElement.className = 'toast';
-    toastElement.role = 'alert';
-    toastElement.ariaLive = 'assertive';
-    toastElement.ariaAtomic = 'true';
-    toastElement.setAttribute('data-bs-autohide', 'false');
-
-    // Create the header
-    const toastHeader = document.createElement('div');
-    toastHeader.className = 'toast-header bg-dark text-light';
-    const strong = document.createElement('strong');
-    strong.className = 'me-auto';
-    strong.innerText = `${action.charAt(0).toUpperCase() + action.slice(1)}ing ${displayName}`;
-    const small = document.createElement('small');
-    small.innerText = new Date().toLocaleTimeString();
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.className = 'ms-2 btn-close';
-    closeButton.setAttribute('data-bs-dismiss', 'toast');
-    closeButton.setAttribute('aria-label', 'Close');
-
-    // Append elements to the header
-    toastHeader.appendChild(strong);
-    toastHeader.appendChild(small);
-    toastHeader.appendChild(closeButton);
-    
-    // Create the body
-    const toastBody = document.createElement('div');
-    toastBody.className = 'toast-body bg-light text-dark';
-    toastBody.innerText = 'Processing your request... Please wait.';
-
-    // Append header and body to the toast
-    toastElement.appendChild(toastHeader);
-    toastElement.appendChild(toastBody);
-
-    // Append the toast to the toast container
-    document.querySelector('.toast-container').appendChild(toastElement);
-
-    // Show the toast
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
-
-    try {
-        // Make the fetch request to control the service
-        const response = await fetch('/services/control', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
-            },
-            body: JSON.stringify({ real_name: serviceName, action: action }),
-        });
-
-        // Parse the JSON response
-        const result = await response.json();
-
-        // Check the result status
-        if (result.status === 'success') {
-            // Show success message
-            toastBody.innerHTML = `${displayName} action completed successfully!<br>Page will refresh to display update information.`;
-            toast.show();
-            location.reload();
-        } else {
-            // Show error message
-            toastBody.innerText = 'Error: ' + result.message;
-            toast.show();
-        }
-    } catch (error) {
-        // Handle any network errors
-        console.error('Error:', error);
-        toastBody.innerHTML = 'An error occurred processing the request. Error message:<br><pre>' + error + '</pre>';
-        toast.show();
-    } finally {
-        // Re-enable the button and revert text in case of success or error
-        button.disabled = false;
-
-        // Define action to icon mapping
-        const actionIcons = {
-            start: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" /></svg>Start`,
-            stop: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" /></svg>Stop`,
-            restart: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg>Restart`
-        };
-
-        // Set the button's inner HTML with the corresponding icon
-        button.innerHTML = actionIcons[action];
-    }
-}
-</script>
 
 
 
-<div class="toast-container position-fixed bottom-0 end-0 p-2">
-</div>
+
+
+
+                        </tr>
+                {% endfor %}
+
+
 
 
 {% else %}
-<div class="page page-center">
-      <div class="container-tight py-4">
-        <div class="empty">
-          <div class="empty-header">No Services</div>
-          <p class="empty-title">Make sure that file <code>/etc/openpanel/openadmin/config/services.json</code> has valid JSON.</p>
-          <div class="empty-action">
-            <a href="https://openpanel.com/docs/admin/services/status/" target="_blank" class="btn btn-primary">
-              View Documentation
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+<tr>
+    <td colspan="6" class="p-6 text-center">
+        No services or the <code>/etc/openpanel/openadmin/config/services.json</code> file is invalid.
+    </td>
+</tr>
 {% endif %}
+                    </tbody>
+                </table>
+                
 
-
-
-
-
+                <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
+            </div>
+        </div>
+    </div>
 </div>
-
-
-<!--script src="{{ url_for('static', filename='pages/services_status.js') }}" defer></script-->
 
 {% endblock %}
-

@@ -1,62 +1,142 @@
 <!-- notifications.html -->
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
 
-<style>
-  html { scroll-padding-top: 5rem; }
-</style>
+{% block content %}
 
-        <!-- Page header -->
-        <div class="page-header mt-0 d-print-none">
-          <div class="container-xl">
-            <div class="row g-2 align-items-center">
-              <div class="col">
-                <h2 class="page-title">
-                  Notifications
-                </h2>
-              </div>
-<div class="col-auto ms-auto d-print-none">
-                <div class="btn-list">
-                  <span class="d-none d-sm-inline">
-                    
-                      <div class="input-icon">
-                        <span class="input-icon-addon">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg>
-                        </span>
-                        <input type="text" id="userSearchInput" class="form-control" placeholder="Search notifications" aria-label="Search in notifications">
-
-                      </div>
-                  </span>
-
-<form method="POST" action="{{ url_for('mark_notification_as_read', line_number=99999) }}">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="hidden" name="command" value="mark_all_as_read">
-  <button class="btn btn-primary d-none d-sm-inline-block" type="submit">    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-      <path d="M5 12l5 5l10 -10"></path>
-    </svg>Mark all as read</button>
-</form>
-
-
-
-                </div>
-              </div>
-
-
+<div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">Notifications</h1>
+                <h2 class="text-sm font-medium text-slate-500">Important notifications and system alerts.</h2>
             </div>
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+              <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">
+                  Settings
+              </a>
+            </div>
+        </div>
+        <div :class="{ 'md:flex': showSection }" class="hidden mt-8 w-full md:items-stretch md:space-x-4">
+
+          <!-- settings -->
+          <div class="w-full">
+              <div class="space-y-4">
+                  <div class="bg-white-50 h-full antialiased dark:bg-gray-950 shadow-md rounded-lg p-6">
+                      <form method="post" id="edit_settings">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          
+                          <div class="mb-4">
+                              <label class="block text-sm font-medium">Send alert when:</label>
+                              <div class="space-y-2 mt-2">
+                                  {% for key, label in {'reboot': 'Server is rebooted', 'attack': 'Website is under attack', 'limit': 'Users hit their plan limits', 'login': 'Admin account is accessed from a new IP address', 'backup': 'Backup job failed or partially complete', 'update': 'New OpenPanel version is available for update'}.items() %}
+                                      <label class="flex items-center space-x-2">
+                                          <input type="checkbox" name="{{ key }}" id="{{ key }}" class="toggle-checkbox" {% if config_data['DEFAULT'][key] == 'yes' %}checked{% endif %}>
+                                          <span>{{ label }}</span>
+                                      </label>
+                                  {% endfor %}
+                              </div>
+                          </div>
+                          
+                          <div class="mb-4">
+                              <label class="block text-sm font-medium">Email for notifications:</label>
+                              <input type="email" class="w-full p-2 border rounded" name="email" id="email" value="{{ email_address }}" autocomplete="off" placeholder="Leave empty to disable">
+                          </div>
+                          
+                          <hr class="my-4">
+                          
+                          <div class="mb-4">
+                              <label class="block text-sm font-medium">Send alert when service is down:</label>
+                              <input type="hidden" id="selectedServices" name="services" value="">
+                              <div class="grid grid-cols-2 gap-2 mt-2">
+                                  {% for service in ['panel', 'admin', 'caddy', 'mysql', 'docker', 'named', 'csf', 'ufw'] %}
+                                      {% set display_name = {'panel': 'OpenPanel', 'admin': 'OpenAdmin', 'caddy': 'Caddy', 'mysql': 'MySQL', 'docker': 'Docker', 'named': 'BIND9', 'csf': 'ConfigServer Firewall', 'ufw': 'UFW'}[service] %}
+                                      <label class="flex items-center space-x-2">
+                                          <input type="checkbox" value="{{ service }}" class="toggle-checkbox" {% if service in config_data['DEFAULT']['services'].split(',') %}checked{% endif %}>
+                                          <span>{{ display_name }}</span>
+                                      </label>
+                                  {% endfor %}
+                              </div>
+                          </div>
+                          
+                          <hr class="my-4">
+                          
+                          <label class="block text-sm font-medium mb-2">Send alert when thresholds is reached:</label>
+                          
+                          <div class="space-y-4">
+                              {% for key, label in {'averageLoadThreshold': 'Load Avg.', 'cpuThreshold': 'CPU', 'ramThreshold': 'RAM', 'diskUsageThreshold': 'Disk Usage', 'swapUsageThreshold': 'SWAP'}.items() %}
+                                  <div class="flex items-center space-x-4">
+                                      <label class="w-1/3 text-sm font-medium" for="{{ key }}">{{ label }}</label>
+                                      <div class="flex-grow flex items-center border rounded p-2">
+                                          <input type="number" id="{{ key }}" name="{{ key }}" class="w-full outline-none" autocomplete="off" min="10" max="100" value="{{ config_data['DEFAULT'][key[:-9] if 'Threshold' in key else key] }}">
+                                          <span class="ml-2">%</span>
+                                      </div>
+                                  </div>
+                              {% endfor %}
+                          </div>
+                          
+                          <button type="submit" class="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Save</button>
+                      </form>
+                  </div>
+              </div>
+          </div>
+          <!-- END settings -->
+
+
+        </div>
+    </header>
+</div>
+
+
+
+
+<!-- notifications table -->
+<section x-data="{ searchQuery: '' }" aria-label="Notifications Table">
+
+
+  		<form method="POST" action="{{ url_for('mark_notification_as_read', line_number=99999) }}">
+    <div class="flex flex-col border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950 p-4 sm:p-6 lg:p-8 sm:flex-row sm:items-center sm:justify-between">
+      <div class="mt-2 gap-2 sm:mt-0 sm:flex">
+          <div class="relative w-full sm:w-64">
+              <input
+                  x-model="searchQuery"
+                  class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8"
+                  placeholder="Search notifications..."
+                  type="search"
+              />
+              <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                      <path
+                          d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                      ></path>
+                  </svg>
+              </div>
           </div>
 
-
+      </div>
+      									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="command" value="mark_all_as_read">
+      <button type="submit" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Acknowledge All</button>
     </div>
 
+      </form>
 
+		<div class="">
+			<div class="border-t border-gray-200 dark:border-gray-800">
+				<table tremor-id="tremor-raw" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+					<thead class="">
+						<tr class="sm:[&amp;_td:last-child]:pr-6 sm:[&amp;_th:last-child]:pr-6 sm:[&amp;_td:first-child]:pl-6 sm:[&amp;_th:first-child]:pl-6">
+							<th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Status</th>
+							<th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Time</th>
+							<th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Type</th>
+							<th class="border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Message</th>
+							<th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Action</th>
 
-<div class="page-body">
-          <div class="container-xl">
-            <div class="row g-3">
-              <div class="col">
-                
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 {% if notifications %}
-<ul class="timeline">
+
+
         {% for notification in notifications %}
 
             {% set parts = notification.split(' MESSAGE: ', 1) %}
@@ -66,627 +146,65 @@
             {% set title = time_and_status_and_title[3:]|join(' ') %}
             {% set message = parts[1] if parts|length > 1 else '' %}
 
+                    <tr x-show="searchQuery === '' || '{{ notification }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="sm:[&amp;_td:last-child]:pr-6 sm:[&amp;_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
 
-                  <li class="timeline-event">
-{% if status == "UNREAD" %}
-<div class="timeline-event-icon bg-primary-lt">
-                <form method="post" id="notification_{{loop.index}}" action="{{ url_for('mark_notification_as_read', line_number=loop.index) }}"  style="display:inline;">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-	<a style="cursor: pointer;" onclick="document.getElementById('notification_{{loop.index}}').submit();"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M5 12l5 5l10 -10"></path></svg></a>
-                </form>
-
-
-{% elif status == "READ" %}
-<div class="timeline-event-icon">
-{% endif %}
-</div>
-                    <div class="card timeline-event-card">
-                      <div class="card-body">
-                        <div class="text-secondary float-end">{{time}}</div>
-                        {% if "REBOOT" not in title and "accessed from new IP address" not in title and "SSH login" not in title %}<h4 id="{{loop.index}}">{{ title }}</h4>{% endif %}
-
-{% if "Backup Job" in title %}
-<div class="row g-3 align-items-center">
-              <div class="col">
-{% set message_parts = message.split("-") %}
-{% set accounts_count = message_parts[0]|trim|replace('Accounts:', '')|trim %}
-{% set execute_seconds = message_parts[1]|trim|replace('Total execution time:', '')|trim %}
-
-{% set seconds = execute_seconds|float %}
-{% set minutes = seconds // 60 %}
-{% set hours = minutes // 60 %}
-{% set days = hours // 24 %}
-
-                <div class="text-secondary">
-                  <ul class="list-inline list-inline-dots mb-0">
-                    <li class="list-inline-item">Total accounts: <b>{{ accounts_count }}</b></li>
-                    <li class="list-inline-item">Total execution time: 
-                      <b>
-{% if days >= 1 %}
-    {{ days|int }} days, {{ hours|round|int % 24 }} hours
-{% elif hours >= 1 %}
-    {{ hours|int }} hours, {{ minutes|round|int % 60 }} minutes
-{% elif minutes >= 1 %}
-    {{ minutes|int }} minutes, {{ seconds|round|int % 60 }} seconds
-{% else %}
-    {{ seconds|round|int }} seconds
-{% endif %}
-                      </b>
-
-                    </li>
-                    <li class="list-inline-item"><a href="/backups#logs">View Backup Logs</a></li>
-                  </ul>
-                </div>
-              </div>
-              
-</div>
+							<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+              {% if status == "UNREAD" %}
+              <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full" tremor-id="tremor-raw"><span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>New</span>
+              {% elif status == "READ" %}
+              <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full" tremor-id="tremor-raw"><span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Acknowledged</span>
+              {% else %}
+              <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full" tremor-id="tremor-raw"><span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Unknown</span>
+              {% endif %}
+              </td> 
 
 
-{% elif "SSH login" in title %}
-
-    
-    {% set ip_addresses_start_index = message.find("IP addresses:") %}
-    
-    {% if ip_addresses_start_index != -1 %}
-        {% set message_text = message[:ip_addresses_start_index].strip() %}
-        {% set ip_addresses_str = message[ip_addresses_start_index + 13:].strip() %}
-        
-        {% set ip_addresses_list = ip_addresses_str.split() %}
-    {% else %}
-        {% set message_text = message %}
-        {% set ip_addresses_list = [] %}
-    {% endif %}
+								<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{time}}</td>
+								<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{title}}</td>
+								<td class="max-w-[25%] break-words p-4 text-sm text-gray-600 dark:text-gray-400">{{message}}</td>
 
 
-<div class="row g-3 align-items-center">
-    <div class="col">
-        <h4 id="{{loop.index}}" class="page-title">
-            {{ title }}
-        </h4>
-        <div class="text-secondary">
-            <ul class="list-inline list-inline-dots mb-0">
-                <li class="list-inline-item">
-                    <span class="">{{ message_text }}<br>
-                    {% for ip_address in ip_addresses_list %}
-                        <br><strong class="ip-address" data-ip="{{ ip_address }}">{{ ip_address }}</strong><br>
-                    {% endfor %}
-                    </span>
-                </li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-
-{% elif "High System Load!" in title %}
-    {% set parts = message.split(' | ') %}
-    {% set load_number = parts[0].split(': ')[1] %}
-    {% set report_log = parts[1].split(': ')[1] %}
-    
-<div class="row g-3 align-items-center">
-    <div class="col">
-        <h4 id="{{loop.index}}" class="page-title">
-            {{ title }}
-        </h4>
-        <div class="text-secondary">
-          <p class="">Server load: <b>{{ load_number }}</b></p>
-          <p>Sentinel service generated a crash-log of all the processes active at the time of the high server load. Report file: <code>{{ report_log }}</code></p>
-        </div>
-    </div>
-</div>
-
-{% elif "accessed from new IP address" in title %}
-
-{% set message_parts = message.split("Admin account") %}
-{% set username_and_ip = message_parts[1]|trim %}
-{% set username_parts = username_and_ip.split("was accessed from a new IP address:") %}
-{% set username = username_parts[0]|trim %}
-{% set ip = username_parts[1]|trim %}
-
-<div class="row g-3 align-items-center">
-    <div class="col">
-        <h4 id="{{loop.index}}" class="page-title">
-            {{ title }}
-        </h4>
-        <div class="text-secondary">
-            <ul class="list-inline list-inline-dots mb-0">
-                <li class="list-inline-item">
-                    <span class="">Admin account <b>{{ username }}</b> was accessed from a new IP address: <strong class="ip-address" data-ip="{{ ip }}">{{ ip }}</strong></span>
-                </li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-
-
-
-{% elif "REBOOT" in title %}
-
-{% set message_parts = message.split("System was rebooted.") %}
-{% set uptime = message_parts[1]|trim %}
-
-<div class="row g-3 align-items-center">
-              <div class="col-auto">
-                <span class="status-indicator status-red status-indicator-animated">
-                  <span class="status-indicator-circle"></span>
-                  <span class="status-indicator-circle"></span>
-                  <span class="status-indicator-circle"></span>
-                </span>
-              </div>
-              <div class="col">
-                <h4 id="{{loop.index}}" class="page-title">
-                  {{title}}
-                </h4>
-                <div class="text-secondary">
-                  <ul class="list-inline list-inline-dots mb-0">
-                    <li class="list-inline-item"><span class="text-red">Server reboot detected!</span></li>
-                    <li class="list-inline-item">Time: {{uptime}}</li>
-                  </ul>
-                </div>
-              </div>
-              
-            </div>
-
-
-
-{% elif "Disk Space" in title %}
-
-
-
-
-{% set message_parts = message.split("| Partitions:") %}
-{% set before_disk = message_parts[0]|trim %}
-{% set after_disks = message_parts[1]|trim %}
-
-<div>
-
-<div class="d-flex mb-2">
-                      <div>Disk:</div>
-                      <div class="ms-auto">
-                        <span class="text-red d-inline-flex align-items-center lh-1">
-                          {{ before_disk.split(':')[1].strip() }}
-                          <svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M3 17l6 -6l4 4l8 -8"></path><path d="M14 7l7 0l0 7"></path></svg>
-                        </span>
-                      </div>
-                    </div>
-<div class="progress progress-sm">
-                      <div class="progress-bar bg-primary" style="width: {{ before_disk.split(':')[1].strip() }}" role="progressbar" aria-valuenow="{{ before_disk.split(':')[1].strip() }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ before_disk.split(':')[1].strip() }} Complete">
-                        <span class="visually-hidden">{{ before_disk.split(':')[1].strip() }} Complete</span>
-                      </div>
-                    </div>
-
-
-
-<p class="text-secondary mt-2">Disk usage per partitions:</p>
-<pre style="width:100%;">
-{{ after_disks|replace('\\n', '<br>')|safe }}
-</pre>
-</div>
-
-
-
-
-{% elif "RAM" in message %}
-    {% set ram_info = message.split(', ') %}
-    {% set used_ram = ram_info[0]|replace("Used RAM: ", "")|replace(" MB", "") %}
-    {% set total_ram = ram_info[1]|replace("Total RAM: ", "")|replace(" MB", "") %}
-    {% set usage_percentage = ram_info[2]|replace("Usage: ", "")|replace("%", "")|trim ~ "%" %}
-
-   
-    <div class="row">
-        <div class="col-auto d-flex align-items-center pe-2">
-            <span class="legend me-2 bg-danger"></span>
-            <span>Used</span>
-            <span class="d-none d-md-inline d-lg-none d-xxl-inline ms-2 text-secondary">{{ used_ram }} MB ({{ usage_percentage }})</span>
-        </div>
-        <div class="col-auto d-flex align-items-center px-2">
-            <span class="legend me-2 bg-info"></span>
-            <span>Total</span>
-            <span class="d-none d-md-inline d-lg-none d-xxl-inline ms-2 text-secondary">{{ total_ram }} MB</span>
-        </div>
-        <div class="col-auto d-flex align-items-center ps-2">
-            <span class="legend me-2"></span>
-            <span>Free</span>
-            <span class="d-none d-md-inline d-lg-none d-xxl-inline ms-2 text-secondary">{{ (total_ram|int - used_ram|int) }} MB</span>
-        </div>
-    </div>
-
-    <div class="progress progress-separated mt-3">
-        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ usage_percentage }}" aria-label="Regular"></div>
-    </div>
-
-{% elif "service is not active" in title %}
-
-{% if "Deactivated successfully" in message  or "Processing signal" in message %}
-<div class="alert alert-warning" style="overflow: scroll;" role="alert">
-                      <div class="d-flex">
-                        <div>
-<svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 9v4"></path><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"></path><path d="M12 16h.01"></path></svg>
-{% else %}
-<div class="alert alert-danger"  style="overflow: scroll;" role="alert">
-                      <div class="d-flex">
-                        <div>
-<svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
-{% endif %}
-                        </div>
-                        <div>
-{% if "Deactivated successfully" in message %}
-<h4 class="alert-title" id="{{loop.index}}">Service was disabled by the <b>root</b> user. Last log entries for service:</h4>
-{% elif "No space left on device" in message %}
-<h4 class="alert-title" id="{{loop.index}}">Service failed because the disk is full! Error message:</h4>
-
-{% else %}
-<h4 class="alert-title" id="{{loop.index}}">Service is stopped. Last log entries for service:</h4>
-{% endif %}
-                        <div class="text-secondary">
-<pre>
-{{ message|replace('\\n', '<br>')|safe }}
-</pre>
-                        </div></div>
-                      </div>
-                    </div>
-
-
-
-{% elif "CPU" in title %}
-
-
-{% set message_parts = message.split("| Top Processes:") %}
-{% set before_top_processes = message_parts[0]|trim %}
-{% set after_top_processes = message_parts[1]|trim %}
-
-
-<div>
-
-<div class="d-flex mb-2">
-                      <div>CPU usage:</div>
-                      <div class="ms-auto">
-                        <span class="text-red d-inline-flex align-items-center lh-1">
-                          {{ before_top_processes.split(':')[1].strip() }}
-                          <svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M3 17l6 -6l4 4l8 -8"></path><path d="M14 7l7 0l0 7"></path></svg>
-                        </span>
-                      </div>
-                    </div>
-<div class="progress progress-sm">
-                      <div class="progress-bar bg-warning" style="width: {{ before_top_processes.split(':')[1].strip() }}" role="progressbar" aria-valuenow="{{ before_top_processes.split(':')[1].strip() }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ before_top_processes.split(':')[1].strip() }} Complete">
-                        <span class="visually-hidden">{{ before_top_processes.split(':')[1].strip() }} Complete</span>
-                      </div>
-                    </div>
-
-<p class="text-secondary mt-2">Processes with the highest CPU usage:</p>
-<pre style="width:100%;">
-{{ after_top_processes|replace('\\n', '<br>')|safe }}
-</pre>
-</div>
-{% elif "update is available" in title %}
-<p class="text-secondary mt-2">New version of Openpanel is available. Check the <a href="https://openpanel.com/docs/changelog/intro" target="_blank">changelog</a> to get familiar with the new features, and update when ready from <b>OpenAdmin > General Settings</b> or from terminal by running: <code>opencli update --force</code></p>
-<p class="text-secondary">{{message}}</p>
-{% elif "successfully updated" in title %}
-<p class="text-secondary">{{message}}</p>
+							<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                          {% if status == "UNREAD" %}
+                
+								<form method="post" id="notification_{{loop.index}}" action="{{ url_for('mark_notification_as_read', line_number=loop.index) }}"  style="display:inline;">
+									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+										<a style="cursor: pointer;" onclick="document.getElementById('notification_{{loop.index}}').submit();">
+											<svg
+												xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+												<path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+												<path d="M5 12l5 5l10 -10"></path>
+											</svg>
+										</a>
+									</form>
+                            {% elif status == "READ" %}
+                            {% endif %}
+                        
+								</td>
+						</tr>
+{% endfor %}
 {% else %}
 
-
-
-                        <p class="text-secondary">{{message}}</p>
-
-{% endif %}
-
-
-{% if "Deactivated successfully" in message %}
-{% else %}
-
-
-{% if "Named" in title %}
-<p><b>TIP:</b> Use command <code>named-checkconf /etc/bind/named.conf</code> to check if the main configuration file contains any syntax errors. If it does, edit the file manually, then restart the service from the Dashboard page. If the issue persists, contact support at <a href="https://community.openpanel.org" target="_blank">community.openpanel.org</a></p>
-{% elif "No space left on device" in message %}
-<p><b>TIP:</b> Disk is full! Use command <code>df -h</code> to view which partition is full. Then for that partition, do <code>ncdu /partition</code> to find what is occupying disk space. Delete log files or old backups to free disk space for the service to function properly. After freeing disk space, restart the service from the Dashboard page.</p>
-{% elif "CPU" in title %}
-<p class="mt-2"><b>TIP:</b> <a href="/server/cpu_usage">View active CPU processes </a> to identify services that are using the most %CPU. For each process you can click on the "Trace" link to view what the process is doing. To terminate a process click on the "Kill" link next to the PID.</p>
-
-{% elif "Memory" in title %}
-<p class="mt-2"><b>TIP:</b> Monitor memory usage from the terminal with <a href="https://htop.dev/" target="_blank">htop</a> to identify services that may require optimization; additionally, execute <code>sync && echo 1 > /proc/sys/vm/drop_caches</code> to clear RAM cache.</p>
-
+<tr>
+    <td colspan="5" class="p-6 text-center">
+        No notifications yet.
+    </td>
+</tr>
 
 {% endif %}
-{% endif %}
+                
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</section>
+<!-- END notifications table -->
 
 
 
-
-
-
-
-                      </div>
-                    </div>
-{% if "update is available" in title %}
-<div class="ribbon bg-primary" style="bottom: 0.75rem;top: auto;">update available</div>
-{% elif "successfully updated" in title %}
-<div class="ribbon bg-success" style="bottom: 0.75rem;top: auto;">updated successfully!</div>
-{% endif %}
-                  </li>
-
-        {% endfor %}
-
-
-
-
-
-
-                </ul>
-
-{% else %}
-    <p>No notifications available.</p>
-{% endif %}
-
-
-
-              </div>
-              
-
-<div class="col-lg-4">
-                <div class="row row-cards">
-                  
-                  <div class="col-12">
-                    <div class="card">
-                      <div class="card-body">
-<div class="row">
-
-                        <h2 class="col card-title">Settings</h2>
-
-                <div class="col-auto align-self-center">
-                  <span
-                    class="form-help"
-                    data-bs-toggle="popover"
-                    data-bs-placement="top"
-                    data-bs-content="<p class='mb-0'>Receive notifications for specific events, such as failed services or detection of high resource usage.</p>"
-                    data-bs-html="true"
-                    >?</span
-                  >
-                </div>
-</div>
-
-
-                        <div>
-        <form method="post" id="edit_settings">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-<div class="mb-3">
-  <div class="form-label">Notification Preferences:</div>
-  <label class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" name="reboot" id="reboot" {%if config_data['DEFAULT']['reboot'] == 'yes' %}checked=""{% endif %}>
-    <span class="form-check-label">Server reboot</span>
-  </label>
-  <label class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" name="attack" id="attack" {%if config_data['DEFAULT']['attack'] == 'yes' %}checked=""{% endif %}>
-    <span class="form-check-label">Website under attack</span>
-  </label>
-  <label class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" name="limit" id="limit" {%if config_data['DEFAULT']['limit'] == 'yes' %}checked=""{% endif %}>
-    <span class="form-check-label">User plan limits reached</span>
-  </label>
-  <label class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" name="login" id="login" {%if config_data['DEFAULT']['login'] == 'yes' %}checked=""{% endif %}>
-    <span class="form-check-label">Admin account login from new IP address</span>
-  </label>
-  <label class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" name="backup" id="backup" {%if config_data['DEFAULT']['backup'] == 'yes' %}checked=""{% endif %}>
-    <span class="form-check-label">Backup job failed or partially complete</span>
-  </label>
-  <label class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" name="update" id="update" {%if config_data['DEFAULT']['update'] == 'yes' %}checked=""{% endif %}>
-    <span class="form-check-label">New OpenPanel version available for update</span>
-  </label>
-</div>
-
-<div class="mb-3">
-  <div class="form-label">Email for notifications:</div>
-<div class="form-floating">
-                              <input type="email" class="form-control" name="email" id="email" value="{{ email_address }}" autocomplete="off">
-                              <label for="floating-input">Leave empty to disable</label>
-                            </div>
-</div>
-
-<hr>
-<div class="mb-3">
-  <label class="form-label">Inactive Services:</label>
-<div class="form-selectgroup">
-    <input type="hidden" id="selectedServices" name="services" value="">
-
-    {% for service in ['panel', 'admin', 'nginx', 'mysql', 'docker', 'named', 'csf', 'ufw', 'certbot'] %}
-
-       {% set display_name = service %}
-        
-        {% if service == 'panel' %}
-            {% set display_name = 'OpenPanel' %}
-        {% elif service == 'admin' %}
-            {% set display_name = 'OpenAdmin' %}
-        {% elif service == 'nginx' %}
-            {% set display_name = 'Nginx' %}
-        {% elif service == 'mysql' %}
-            {% set display_name = 'MySQL' %}
-        {% elif service == 'docker' %}
-            {% set display_name = 'Docker' %}
-        {% elif service == 'named' %}
-            {% set display_name = 'BIND9' %}
-        {% elif service == 'csf' %}
-            {% set display_name = 'ConfigServer Firewall' %}
-        {% elif service == 'ufw' %}
-            {% set display_name = 'UFW' %}
-        {% elif service == 'certbot' %}
-            {% set display_name = 'Certbot' %}
-        {% endif %}
-
-
-        <label class="form-selectgroup-item">
-            <input type="checkbox" value="{{ service }}" class="form-selectgroup-input" {% if service in config_data['DEFAULT']['services'].split(',') %}checked{% endif %}>
-            <span class="form-selectgroup-label">{{ display_name }}</span>
-        </label>
-    {% endfor %}
-
-</div>
-
-
-
-
-
-</div>
-
-<hr>
-
-<label class="form-label mb-2">Thresholds for Percentage Usages:</label>
-
-<div class="row">
-
-<div class="mb-3 col-12 row">
-  <label class="col col-form-check-label required" for="averageLoadThreshold">Load Avg.</label>
-  <div class="col-7">
-    <div class="input-group">
-      <input type="number" id="averageLoadThreshold" name="averageLoadThreshold" class="form-control" autocomplete="off" min="1" max="100" value="{{ config_data['DEFAULT']['load'] }}">
-      <span class="input-group-text">%</span>
-    </div>
-  </div>
-</div>
-
-<div class="mb-3 col-12  row">
-  <label class="col col-form-check-label required" for="cpuThreshold">CPU</label>
-  <div class="col-7">
-    <div class="input-group">
-      <input type="number" id="cpuThreshold" name="cpuThreshold" class="form-control" autocomplete="off" min="10" max="100"  value="{{ config_data['DEFAULT']['cpu'] }}">
-      <span class="input-group-text">%</span>
-    </div>
-  </div>
-</div>
-
-<div class="mb-3 col-12  row">
-  <label class="col col-form-check-label required" for="ramThreshold">RAM</label>
-  <div class="col-7">
-    <div class="input-group">
-      <input type="number" id="ramThreshold" name="ramThreshold" class="form-control" autocomplete="off" min="10" max="100"  value="{{ config_data['DEFAULT']['ram'] }}">
-      <span class="input-group-text">%</span>
-    </div>
-  </div>
-</div>
-
-<div class="mb-3 col-12  row">
-  <label class="col col-form-check-label required" for="diskUsageThreshold">Disk Usage</label>
-  <div class="col-7">
-    <div class="input-group">
-      <input type="number" id="diskUsageThreshold" name="diskUsageThreshold" class="form-control" autocomplete="off" min="10" max="100"  value="{{ config_data['DEFAULT']['du'] }}">
-      <span class="input-group-text">%</span>
-    </div>
-  </div>
-</div>
-
-<div class="mb-3 col-12  row">
-  <label class="col col-form-check-label required" for="swapUsageThreshold">SWAP</label>
-  <div class="col-7">
-    <div class="input-group">
-      <input type="number" id="swapUsageThreshold" name="swapUsageThreshold" class="form-control" autocomplete="off" min="10" max="100"  value="{{ config_data['DEFAULT']['swap'] }}">
-      <span class="input-group-text">%</span>
-    </div>
-  </div>
-</div>
-
-
-</div>
-
-                  <button type="submit" class="btn btn-primary">Save</button>
-</form></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-
-
-
-            </div>
-          </div>
-        </div>
-
-
-        </div>
-</div>
 
 
 <script src="{{ url_for('static', filename='pages/notifications.js') }}" defer></script>
-
-
-
-<script>
-
-detect_flags_now();
-
-function detect_flags_now() {
-    // Select all IP address elements
-    const ipElements = document.querySelectorAll('.ip-address');
-
-    // Create an object to store country codes for each IP address to avoid redundant API calls
-    const countryCodes = {};
-
-    // Create a queue to track IP addresses that need to be checked
-    const ipQueue = [];
-
-    ipElements.forEach((element) => {
-        const ipAddress = element.getAttribute('data-ip'); // Get the IP address from data-ip attribute
-
-        // Check if country code for the current IP address is already fetched
-        if (countryCodes[ipAddress]) {
-            // If country code is already fetched, prepend the flag icon to the IP address
-            prependFlagIcon(element, countryCodes[ipAddress], ipAddress);
-        } else if (!ipQueue.includes(ipAddress)) {
-            // If country code is not fetched and IP address is not in the queue, add it to the queue
-            ipQueue.push(ipAddress);
-        }
-    });
-
-    // Process the IP address queue
-    processQueue(ipQueue, countryCodes);
-}
-
-function processQueue(ipQueue, countryCodes) {
-    // Iterate through the IP address queue
-    ipQueue.forEach(ipAddress => {
-        // Make a GET request to the API for each IP address in the queue
-        fetch(`https://api.country.is/${ipAddress}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.country) {
-                    // Extract the country code from the API response
-                    const countryCode = data.country.toLowerCase();
-
-                    // Store the country code in the countryCodes object
-                    countryCodes[ipAddress] = countryCode;
-
-                    // Select IP address elements with the current IP address
-                    const ipElements = document.querySelectorAll(`.ip-address[data-ip="${ipAddress}"]`);
-
-                    // Prepend the flag icon to each IP address element
-                    ipElements.forEach(element => {
-                        prependFlagIcon(element, countryCode, ipAddress);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching country info:', error);
-            });
-    });
-}
-
-function prependFlagIcon(element, countryCode, ipAddress) {
-    // Prepend the flag icon to the IP address
-    element.innerHTML = `<span class="flag flag-xs flag-country-${countryCode} me-2"></span><a href="https://www.abuseipdb.com/check/${ipAddress}" target="_blank" class="source-link">${ipAddress}</a>`;
-}
-</script>
-
-
-
-
-
-
 
 
 {% endblock %}

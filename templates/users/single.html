@@ -1,1612 +1,1636 @@
 <!-- single_user.html -->
 {% extends 'base.html' %}
 
-
-
 {% block content %}
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
-
-<link href="/static/dist/css/tabler-flags.min.css?1684106062" rel="stylesheet" />
 
 
-<style>
-
-.people-item {
-  padding:1em;
-}
-
-</style>  
 
 
 {% if user %}
 
 
+<div>
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">{{ user.username.split('_')[-1] }} {% if "SUSPENDED_" in user.username %} <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-300 dark:ring-gray-400/20 ml-1">Suspended</span>{% endif %}
+</h1>
+                    <h2 class="text-sm flex font-medium text-slate-500">
+{% if country_code and country_name %}<img  class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_name}}"></img>{{server_ip}} / {% endif %} {{env_data.TOTAL_CPU}} Cores / {{ env_data.TOTAL_RAM[:-1] + ' GB' if env_data.TOTAL_RAM.endswith('g') else '∞' }} Memory  <!----> / {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}{% else %}∞{% endif %} GB Disk <!----></div><!---->
+                    </h2>
+                
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    <a @click="showSection = !showSection" class="hidden relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">
+                        Need Help?
+                    </a>
+
+                    {% if "SUSPENDED_" in user.username %}
+                    {% else %}
+<a href="/login/token?username={{ user.username.split('_')[-1] }}" 
+   target="_blank" 
+   class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+   x-data="{ spinning: false }"
+   @click="spinning = true; setTimeout(() => spinning = false, 500)">
+    
+    <svg version="1.0" 
+         style="vertical-align:middle; margin-right:5px;" 
+         xmlns="http://www.w3.org/2000/svg" 
+         width="24" height="24" 
+         viewBox="0 0 213.000000 215.000000" 
+         preserveAspectRatio="xMidYMid meet" 
+         :class="{'animate-spin': spinning}">
+        <g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none">
+            <path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path>
+        </g>
+    </svg> 
+    OpenPanel
+</a>
 
 
-    <div class="modal modal-blur fade" id="modal-openpanel-settings-for-user" tabindex="-1" role="dialog" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Edit user preferences</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <div class="row">
-
-              <!--div class="col-lg-12">
-                <div class="mb-3">
-<div class="card">
-                <div class="card-body">
-                  <h3 class="card-title">Services</h3>
-                  <p class="card-subtitle">Services that auto-start when user contianer is restarted or after server reboot. Please note that services will still auto-start automatically when needed, for example MySQL when databases exist, PHP verisons when they are sued on domains, Cron when cronjobs exist, etc.</p>
-
-    <table class="table table-bordered table-hover">
-        <thead class="">
-            <tr>
-                <th>Service</th>
-                <th>Auto-Start</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="services-table">
-        </tbody>
-    </table>
-
-                </div>
-                <div class="card-footer">
-                  Learn more about <a href="#">Auto-starting services in OpenPanel</a>
-                </div>
-              </div>
-                </div>
-              </div-->
 
 
 
-              <div class="d-none col-lg-6">
-                <div class="mb-3">
-<div class="card">
-                <div class="card-body">
-                  <h3 class="card-title">Node.js Version</h3>
-                  <p class="card-subtitle">The version of Node.js that is used in the Build Step for all user's applications.</p>
-                  <select class="form-select">
-                    <option>14.x</option>
-                    <option>12.x</option>
-                  </select>
-                </div>
-                <div class="card-footer">
-                  Learn more about <a href="#">Node.js Version</a>
-                </div>
-              </div>
-                </div>
-              </div>
-              <div class="col-lg-6">
-                <div class="mb-3">
-<div class="card">
-                <div class="card-body">
-                  <h3 class="card-title">PHP Version</h3>
-                  <p class="card-subtitle">The default PHP version that is used for all future domains added by user.</p>
-                  <select id="php_default_version_select" class="form-select">
-                    <option></option>
-                    <option></option>
-                  </select>
-                </div>
-                <div class="card-footer">
-                  Learn more about <a href="https://openpanel.com/docs/panel/advanced/server_settings/#set-default-php-version"  target="_blank">default PHP version</a>
-                </div>
-              </div>
-                </div>
-              </div>
 
 
-              <div class="col-lg-6">
-                <div class="mb-3">
-<div class="card">
-                <div class="card-body">
-                  <h3 class="card-title">Root Privileges</h3>
-                  <p class="card-subtitle">The default PHP version that is used for all future domains added by user.</p>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" id="sudoSwitch">
-                        <label class="form-check-label" for="sudoSwitch">Sudo access</label>
-                    </div>
+
+                    {% endif %}
+
                 </div>
-                <div class="card-footer">
-                  Learn more about <a href="https://openpanel.com/docs/admin/users/openpanel/#grant-sudo-access" target="_blank">sudo access</a>
-                </div>
-              </div>
-                </div>
-              </div>
             </div>
-          </div>
-          <div class="modal-body">
-            <div class="row">
-              <div class="col-lg-12">
-              </div>
+        <!-- Initially Hidden, Show on Click -->
+        <div :class="{ 'md:flex': showSection }" class="hidden mt-8 w-full md:max-w-3xl md:items-stretch md:space-x-4">
+
+            <div class="relative rounded-lg border p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 w-full md:w-7/12">
+                <div class="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 dark:border-gray-800">
+                    📄
+                </div>
+                <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-gray-50">
+                    <a href="https://openpanel.com/docs/admin/users/openpanel/#create-users" target="_blank" class="focus:outline-none">
+                        <span class="absolute inset-0" aria-hidden="true"></span>Documentation
+                    </a>
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-500">View documentation for User accounts</p>
             </div>
-          </div>
+
+            <div class="hidden relative rounded-lg border p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 mt-4 w-full md:mt-0 md:w-5/12">
+                <div class="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 dark:border-gray-800">
+                    📦
+                </div>
+                <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-gray-50">
+                    <a href="#" class="focus:outline-none">
+                        <span class="absolute inset-0" aria-hidden="true"></span>Models
+                    </a>
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-500">Lorem ipsum dolor sit amet.</p>
+            </div>
         </div>
-      </div>
+    </header>
     </div>
 
 
-
-
-
-
-
-    <!-- Modal for Success/Error Messages -->
-    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="messageModalLabel">Message</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="messageModalBody">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-<script>
-    $(document).ready(function() {
-        // Function to show modal with message
-        function showMessageModal(title, message) {
-            $('#messageModalLabel').text(title);
-            $('#messageModalBody').text(message);
-            var messageModal = new bootstrap.Modal(document.getElementById('messageModal'));
-            messageModal.show();
-        }
-
-
-
-    $('#save_custom_msg_for_user').on('click', function() {
-        // Get the custom message from the textarea
-        const customMessage = $('#custom_message_for_this_user').val();
-        const containerName = $('#containerName').val();
-
-        // Prepare the data to send
-        const data = {
-            custom_message: customMessage
-        };
-
-        // Send AJAX POST request
-        $.ajax({
-            url: `/get_custom_message_for_user/${containerName}`,
-            type: 'POST',
-            contentType: 'application/json',
-            headers: {
-                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Add CSRF token to the headers
-            },
-            data: JSON.stringify(data),
-            success: function(response) {
-                showMessageModal('Success', response.message);
-            },
-            error: function(xhr) {
-                const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred while saving the message.';
-                showMessageModal('Error', errorMessage);
-            }
-        });
-    });
-
-
-
-
-
-        // Change service status on button click
-        $(document).on('click', '.change-status', function() {
-            const service = $(this).data('service');
-            const action = $(this).data('action');
-
+<main class="mx-8 my-4" x-data="{
+        activeTab: 'stats',
+        containerName: '{{ user.username.split('_')[-1] }}', 
+        fetchCustomMessage() {
             $.ajax({
-                url: `/json/services/${username}/${service}`,
-                method: 'POST',
-                headers: {
-                  'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+                url: `/get_custom_message_for_user/${this.containerName}`,
+                type: 'GET',
+                success: (response) => {
+                    if (response.custom_message) {
+                        $('#custom_message_for_this_user').val(response.custom_message);
+                    } else {
+                        $('#custom_message_for_this_user').val('');
+                    }
                 },
-                contentType: 'application/json',
-                data: JSON.stringify({ action: action }),
-                success: function(response) {
-                    alert(response.message);
-                    loadServices(); // Reload the service statuses
-                },
-                error: function(xhr) {
-                    alert(`Error: ${xhr.responseJSON.error}`);
+                error: (xhr) => {
+                    if (xhr.status === 404) {
+                        const response = xhr.responseJSON;
+                        $('#custom_message_for_this_user').val('');
+                    } else {
+                        showMessageModal('Error', xhr.responseJSON.error || 'An error occurred while retrieving the custom message.');
+                    }
                 }
             });
-        });
+        }
+    }"
+>
+    <div class="relative w-full rounded-lg border p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0">
+        <div class="grid-cols-12 divide-y divide-gray-200 dark:divide-gray-800 md:grid md:divide-x md:divide-y-0">
+            <!-- Sidebar Navigation -->
+            <div class="m-4 divide-y divide-gray-200 px-2 dark:divide-gray-800 md:col-span-2">
+                <nav aria-label="core navigation links" class="flex flex-1 flex-col space-y-10">
+                    <div>
+                        <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Docker</span>
+                        <ul class="mt-1 space-y-2">
+                            <li>
+                                <a @click="activeTab = 'stats'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'stats'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-column-big size-5 shrink-0" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><rect x="15" y="5" width="4" height="12" rx="1"></rect><rect x="7" y="8" width="4" height="9" rx="1"></rect></svg> Statistics
+                                </a>
+                            </li>
+
+                            <li>
+                                <a @click="activeTab = 'services'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'services'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-compass size-5 shrink-0" aria-hidden="true"><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"></path><circle cx="12" cy="12" r="10"></circle></svg>  Services
+                                </a>
+                            </li>
+
+                            <li>
+                                <a @click="activeTab = 'volumes'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'volumes'}" class="hidden cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-table2 size-5 shrink-0" aria-hidden="true"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"></path></svg> Volumes
+                                </a>
+                            </li>
+
+                            <li class="hidden">
+                                <a @click="activeTab = 'settings'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'settings'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings2 size-5 shrink-0" aria-hidden="true"><path d="M20 7h-9"></path><path d="M14 17H5"></path><circle cx="17" cy="17" r="3"></circle><circle cx="7" cy="7" r="3"></circle></svg> Settings
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="hidden">
+                        <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">User Data</span>
+                        <ul class="mt-1 space-y-2">
+
+                            <li>
+                                <a @click="activeTab = 'domains'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'domains'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Domains & DNS</a>
+                            </li>
+                            <li>
+                                <a @click="activeTab = 'websites'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'websites'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Websites</a>
+                            </li>
+                            <li>
+                                <a @click="activeTab = 'emails'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'emails'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Email accounts</a>
+                            </li>
+
+                            <li>
+                                <a @click="activeTab = 'ftp'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'ftp'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> FTP accounts</a>
+                            </li>
+
+                            <li>
+                                <a @click="activeTab = 'backups'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'backups'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Backups</a>
+                            </li>
+
+                        </ul>
+                    </div>
+
+                    <div>
+                        <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Account</span>
+                        <ul class="mt-1 space-y-2">
+                            <li class="hidden">
+                              <a @click="activeTab = 'info'; fetchCustomMessage()" 
+                                :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}" 
+                                class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                                  Overview
+                              </a>
+                            </li>
+
+                            <li>
+                                <a @click="$store.activityStore.fetchLogs(); activeTab = 'activity'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'activity'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Activity
+                                </a>
+                            </li>
+
+                           {% if "SUSPENDED_" in user.username %} 
+                            <li>
+                                <a href="/user/unsuspend/{{ user.username.split('_')[-1] }}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Unsuspend</a>
+                            </li>
+                            {% else %}
+                            <li>
+                                <a @click="$store.ipStore.fetchIPs(); activeTab = 'edit'" 
+                                :class="{'text-blue-600 dark:text-blue-500': activeTab === 'edit'}" 
+                                class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                                Edit
+                                </a>
+                            </li>
+                            <li>
+                                <a @click="activeTab = 'suspend'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'suspend'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Suspend
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li>
+                                <a @click="activeTab = 'delete'" :class="{'text-red-600 dark:text-red-500': activeTab === 'delete'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Delete
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+
+
+
+                </nav>
+            </div>
+            
+            <!-- Content Area -->
+            <div class="h-56 p-2 md:col-span-10 md:h-auto">
+                <div class="relative h-full overflow-hidden rounded p-4">
+
+
+                  <!-- DOCKER STATS -->
+                    <div x-show="activeTab === 'stats'">
+                      
+<div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden !p-0 sm:mx-auto" tremor-id="tremor-raw">
+    <div class="p-6">
+        <h3 class="hidden text-sm font-medium text-gray-900 dark:text-gray-50">Resource usage</h3>
+        <p class="hidden text-sm text-gray-500 dark:text-gray-500">No activity measured yet.</p>
+        <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <!-- DISK -->
+            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+              <div class="relative">
+                  {% set disk_usage = ((disk.disk_used / disk.disk_hard) * 100) if disk.disk_hard != 0 else 0 %}
+                  
+                  {% if disk_usage > 90 %}
+                      {% set disk_graph_class = 'stroke-red-200 dark:stroke-red-500/40' %}
+                  {% elif disk_usage > 80 %}
+                      {% set disk_graph_class = 'stroke-orange-200 dark:stroke-orange-500/40' %}
+                  {% elif disk_usage > 60 %}
+                      {% set disk_graph_class = 'stroke-blue-200 dark:stroke-blue-500/40' %}
+                  {% else %}
+                      {% set disk_graph_class = 'stroke-gray-200 dark:stroke-gray-500/40' %}
+                  {% endif %}
+                  
+                  {% set disk_usage_rounded = disk_usage | round(2) %}
+                  
+                  <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{ disk_usage_rounded }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ disk_usage_rounded }}">
+                      <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{ disk_graph_class }}"></circle>
+                      
+                      <!-- Dynamic Circle for Progress -->
+                      <circle
+                          r="29"
+                          cx="32"
+                          cy="32"
+                          stroke-width="6"
+                          stroke-dasharray="182.212373908208 182.212373908208"
+                          stroke-dashoffset="{{ 182.212373908208 - (182.212373908208 * disk_usage_rounded / 100) }}"
+                          fill="transparent"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
+                      ></circle>
+                  </svg>
+
+                  <div class="absolute inset-0 flex items-center justify-center">
+                      <span class="text-sm font-medium text-gray-500 dark:text-gray-500">{{ disk_usage_rounded }}%</span>
+                  </div>
+              </div>
+                <div class="mt-0 text-left sm:mt-2 sm:text-center">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
+                      {% if disk.disk_hard != 0 %}
+                      {{ (disk.disk_used / 1024000) | round(2) }} / {{ (disk.disk_hard / 1024000) | round(2) }} 
+                      {% else %}
+                      {{disk.disk_used}}/∞ 
+                      {% endif %}
+                      GB</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Storage used</p>
+                </div>
+            </div>
+          <!-- END DISK -->
+
+          <!-- INODES -->
+            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+              <div class="relative">
+                  {% set inodes_usage = ((disk.inodes_used / disk.inodes_hard) * 100) if disk.inodes_hard != 0 else 0 %}
+                  
+                  {% if inodes_usage > 90 %}
+                      {% set inodes_graph_class = 'stroke-red-200 dark:stroke-red-500/40' %}
+                  {% elif inodes_usage > 80 %}
+                      {% set inodes_graph_class = 'stroke-orange-200 dark:stroke-orange-500/40' %}
+                  {% elif inodes_usage > 60 %}
+                      {% set inodes_graph_class = 'stroke-blue-200 dark:stroke-blue-500/40' %}
+                  {% else %}
+                      {% set inodes_graph_class = 'stroke-gray-200 dark:stroke-gray-500/40' %}
+                  {% endif %}
+                  
+                  {% set inodes_usage_rounded = inodes_usage | round(2) %}
+                  
+                  <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{ inodes_usage_rounded }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ inodes_usage_rounded }}">
+                      <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{ inodes_graph_class }}"></circle>
+                      
+                      <!-- Dynamic Circle for Progress -->
+                      <circle
+                          r="29"
+                          cx="32"
+                          cy="32"
+                          stroke-width="6"
+                          stroke-dasharray="182.212373908208 182.212373908208"
+                          stroke-dashoffset="{{ 182.212373908208 - (182.212373908208 * inodes_usage_rounded / 100) }}"
+                          fill="transparent"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
+                      ></circle>
+                  </svg>
+
+                  <div class="absolute inset-0 flex items-center justify-center">
+                      <span class="text-sm font-medium text-gray-500 dark:text-gray-500">{{ inodes_usage_rounded }}%</span>
+                  </div>
+              </div>
+                <div class="mt-0 text-left sm:mt-2 sm:text-center">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
+                      {% if disk.inodes_hard != 0 %}
+                      {{ (disk.inodes_used / 1000000) | round(2) }} / {{ (disk.inodes_hard / 1000000) | round(2) }} 
+                      {% else %}
+                      {{disk.inodes_used}}/∞ 
+                      {% endif %}
+                      M</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Inodes used</p>
+                </div>
+            </div>
+          <!-- END INODES -->
+
+          <!-- CPU -->
+            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+                <div class="relative" tremor-id="tremor-raw">
+                    <svg id="cpu_graph" width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
+                        <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-200 dark:stroke-gray-500/40"></circle>
+                        <circle
+                            r="29"
+                            cx="32"
+                            cy="32"
+                            stroke-width="6"
+                            stroke-dasharray="182.212373908208 182.212373908208"
+                            stroke-dashoffset="182.212373908208"
+                            fill="transparent"
+                            stroke=""
+                            stroke-linecap="round"
+                            class="stroke-gray-500 dark:stroke-gray-500 transform-gpu transition-all duration-300 ease-in-out"
+                        ></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-sm font-medium text-gray-500 dark:text-gray-500"><span id="cpu_percentage">0%</span></span>
+                    </div>
+                </div>
+                <div class="mt-0 text-left sm:mt-2 sm:text-center">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="global_cpu_usage">0</span> / {{ (env_data.TOTAL_CPU|int * 100) | round(2) if env_data.TOTAL_CPU != 0 else '∞' }}%</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">CPU usage</p>
+
+
+
+
+
+                </div>
+            </div>
+          <!-- END CPU -->
+
+          <!-- RAM -->
+            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+                <div class="relative" tremor-id="tremor-raw">
+                    <svg id="ram_graph" width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
+                        <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-200 dark:stroke-gray-500/40"></circle>
+                        <circle
+                            r="29"
+                            cx="32"
+                            cy="32"
+                            stroke-width="6"
+                            stroke-dasharray="182.212373908208 182.212373908208"
+                            stroke-dashoffset="182.212373908208"
+                            fill="transparent"
+                            stroke=""
+                            stroke-linecap="round"
+                            class="stroke-gray-500 dark:stroke-gray-500 transform-gpu transition-all duration-300 ease-in-out"
+                        ></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-sm font-medium text-gray-500 dark:text-gray-500"><span id="ram_percentage">0%</span></span>
+                    </div>
+                </div>
+                <div class="mt-0 text-left sm:mt-2 sm:text-center">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="global_ram_usage">0 / {{ (env_data.TOTAL_RAM[:-1]|int * 1024 if env_data.TOTAL_RAM.endswith('g') else '∞') }} MiB
+</span>
+                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Memory usage</p>
+                </div>
+            </div>
+          <!-- END RAM -->
+
+        </div>
+    </div>
+    <div class="hidden mt-2 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-900 dark:bg-gray-950">
+        <h4 class="text-sm font-medium text-gray-900 dark:text-gray-50">Usage updated hourly</h4>
+        <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-500">
+            Monthly usage resets in 4 days.<!-- -->
+            <a href="#" class="inline-flex items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">
+                Manage plan
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4">
+                    <path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path>
+                </svg>
+            </a>
+        </p>
+    </div>
+</div>
+
+
+                    </div>
+                  <!-- END DOCKER STATS -->
+
+
+                  <!-- DOCKER SERVICES -->
+                    <div x-show="activeTab === 'services'" x-cloak x-data="{ searchQuery: '' }">
+
+                    <div class="flex flex-col justify-between gap-2 px-4 py-6 sm:flex-row sm:items-center sm:p-6">
+        <div class="relative w-full sm:w-64 [&amp;>input]:py-1.5">
+            <input
+                x-model="searchQuery"
+                class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8"
+                placeholder="Search containers..."
+                type="search"
+            />
+            <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                    <path
+                        d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                    ></path>
+                </svg>
+            </div>
+        </div>
+
+
+
+        <div class="flex flex-col items-center gap-2 sm:flex-row">
+
+        </div>
+
+    </div>
+
+    
+
+   <div class="overflow-x-auto">
+        <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+            <table id="databases-table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                <thead class="">
+                    <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                            Name
+                        </th>
+                        <th scope="col"  class="hidden w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                            Ports
+                        </th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                            CPU Usage
+                        </th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                            Memory Usage
+                        </th>
+                        <th scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                            Status
+                        </th>
+                    </tr>
+                </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+        {% if docker_data.services %}
+
+            {% for service, details in docker_data.services.items() %}
+<tr x-show="searchQuery === '' || '{{ details.container_name }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ service }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ details.image }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
+                    <td>
+                        <div class="flex flex-col gap-1">
+                            <span class="font-medium text-gray-900 dark:text-gray-50">{{ details.container_name if details.container_name else service }}</span>
+                            <div class="flex items-center gap-1 text-xs">
+                                <span class="text-gray-500 dark:text-gray-500">Image:</span>
+                                <span class="font-mono font-medium uppercase tabular-nums text-gray-900 dark:text-gray-50">{{ details.image }}</span>
+
+{% if 'httpd' in details.image or 'busybox' in details.image or 'elasticsearch' in details.image or 'mariadb' in details.image or 'memcached' in details.image or 'mysql' in details.image or 'redis' in details.image or 'nginx' in details.image or '-fpm' in details.image or 'openpanel' in details.image or 'phpmyadmin' in details.image or 'varnish' in details.image %}
+
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="remixicon size-3 shrink-0 text-emerald-600 dark:text-emerald-400"><path d="M12 1L20.2169 2.82598C20.6745 2.92766 21 3.33347 21 3.80217V13.7889C21 15.795 19.9974 17.6684 18.3282 18.7812L12 23L5.6718 18.7812C4.00261 17.6684 3 15.795 3 13.7889V3.80217C3 3.33347 3.32553 2.92766 3.78307 2.82598L12 1ZM16.4524 8.22183L11.5019 13.1709L8.67421 10.3431L7.25999 11.7574L11.5026 16L17.8666 9.63604L16.4524 8.22183Z"></path></svg>
+{% else %}
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="remixicon size-3 shrink-0 text-gray-400 dark:text-gray-600"><path d="M12 1L20.2169 2.82598C20.6745 2.92766 21 3.33347 21 3.80217V13.7889C21 15.795 19.9974 17.6684 18.3282 18.7812L12 23L5.6718 18.7812C4.00261 17.6684 3 15.795 3 13.7889V3.80217C3 3.33347 3.32553 2.92766 3.78307 2.82598L12 1ZM16.4524 8.22183L11.5019 13.1709L8.67421 10.3431L7.25999 11.7574L11.5026 16L17.8666 9.63604L16.4524 8.22183Z"></path></svg>
+{% endif %}
+
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="hidden">PORTS: {{ details.ports if details.ports }}</td>
+
+                    <td class="hidden">ENV: {{ details.environment if details.environment }}</td>   
+                    
+<td x-data="{ editing: false, value: '{{ details.deploy.resources.limits.cpus if details.deploy.resources.limits.cpus else "0" }}' }"
+    class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+    
+    <div class="flex gap-2">
+        <!-- CPU Usage -->
+        <div id="cpu-{{ service }}">
+            <div class="flex items-center gap-x-2.5">
+                <div class="relative" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 dark:stroke-blue-500 transition-all duration-300"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-[11px] font-semibold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text and Edit Icon Section -->
+        <div class="flex flex-col gap-0">
+            <span class="text-gray-900 dark:text-gray-50">
+                <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
+                <span class="font-medium" id="cpu-usage-{{ service }}"></span>
+            </span>
+            <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
+                Allocated: &nbsp;
+                <span x-show="!editing"><span class="font-medium" x-text="value"></span> cores <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><i class="bi bi-pencil-fill"></i></a></span>
+            <!-- Editable Input and Save Button -->
+            <form action="/containers/cpu/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+
+                <input x-model="value" name="value" type="number" min="0.10" max="{{ total_cpu }}" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+                <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
+            </form>
+            </span>
+        </div>
+    </div>
+</td>
 
 
 
 
 
 
+<td x-data="{ editing: false, value: '{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }}{% else %}0{% endif %}' }"
+    class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+    
+    <div class="flex gap-2">
+        <!-- CPU Usage -->
+        <div id="ram-{{ service }}">
+            <div class="flex items-center gap-x-2.5">
+                <div class="relative" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 dark:stroke-blue-500 transition-all duration-300"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-[11px] font-semibold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    });
+        <!-- Text and Edit Icon Section -->
+        <div class="flex flex-col gap-0">
+            <span class="text-gray-900 dark:text-gray-50">
+                <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
+                <span class="font-medium" id="ram-usage-{{ service }}"></span>
+            </span>
+            <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
+                Allocated: &nbsp;
+                <span x-show="!editing"><span class="font-medium">{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }} GB{% else %}∞{% endif %} </span> <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><i class="bi bi-pencil-fill"></i></a></span>
+            <!-- Editable Input and Save Button -->
+            <form action="/containers/ram/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+                <input x-model="value" name="value" type="number" min="0.10" max="{{ total_ram }}" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+                <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
+            </form>
+            </span>
+
+            
+            </a>
+        </div>
+    </div>
+</td>
+
+
+
+
+
+
+                    
+
+
+                    <td id="actions-{{ service }}">
+                        <form method="POST" action="/containers/start/{{ details.container_name if details.container_name else service }}">
+                            <button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600" tremor-id="tremor-raw"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path></svg>Disabled</button>
+                        </form>
+                    </td>
+
+
+                </tr>
+            {% endfor %}
+
+        {% else %}
+
+        <tr>
+    <td colspan="6" class="p-6 text-center">
+        docker-compose.yml file is invalid or missing.
+    </td>
+</tr>
+
+
+        {% endif %}
+
+        </tbody>
+            </table>
+        </div>
+    </div>      
+
+                    </div>
+
+
+<!-- JS for stats -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+
+
+
+
+// Helper function to update the circle graph based on percentage
+function updateProgressBar(elementId, percentage) {
+    const circle = document.querySelector(`#${elementId} circle:nth-of-type(2)`);
+    const radius = circle.getAttribute('r');
+    const circumference = 2 * Math.PI * radius;
+    
+    // Calculate the stroke-dashoffset based on the percentage
+    const offset = circumference - (percentage / 100) * circumference;
+    
+    // Update the stroke-dashoffset to visually represent the progress
+    circle.style.strokeDashoffset = offset;
+}
+
+// Update CPU usage graph
+function updateCpuUsage(cpuPercentage) {
+
+    let totalCpuStr = "{{ env_data.TOTAL_CPU }}";
+
+    if (totalCpuStr !== "0") {
+        const totalCpu= parseFloat(totalCpuStr);
+        const result = cpuPercentage / totalCpu;
+        document.getElementById('cpu_percentage').textContent = `${result}%`;
+        updateProgressBar('cpu_graph', result);
+    } else {
+        document.getElementById('cpu_percentage').textContent = `${cpuPercentage}%`;
+        updateProgressBar('cpu_graph', cpuPercentage);
+    }
+
+
+
+
+}
+
+// Update RAM usage graph
+function updateRamUsage(ramPercentage) {
+
+    let totalRamStr = "{{ env_data.TOTAL_RAM }}";
+
+    if (totalRamStr.toUpperCase().endsWith('G')) {
+        totalRamStr = totalRamStr.slice(0, -1);
+        const totalRam = parseFloat(totalRamStr);
+        const result = ramPercentage / totalRam;
+        document.getElementById('ram_percentage').textContent = `${result}%`;
+        updateProgressBar('ram_graph', result);
+    } else {
+        document.getElementById('ram_percentage').textContent = `${ramPercentage}%`;
+        updateProgressBar('ram_graph', ramPercentage);
+    }
+
+
+}
+
+
+
+
+$.ajax({
+    url: '/containers/stats/{{ user.username.split('_')[-1] }}',
+    method: 'GET',
+    success: function(response) {
+        let totalCpuUsage = 0;  // Initialize totalCpuUsage
+        let totalMemUsage = 0;  // Initialize totalMemUsage
+
+        var currentRamUsage = 0; // Total current RAM usage
+        var totalRamAllocated = 0; // Total RAM allocated across all containers
+        
+        if (response.container_stats) {
+            if (response.container_stats.length === 0) {
+                // Case when container stats are available but empty
+            } else {
+                response.container_stats.forEach(function(container) {
+                    var containerName = container.Name;
+                    var containerId = containerName.replace(/\./g, '\\.');
+                    var ramCell = $('#ram-' + containerId);
+                    var actionsCell = $('#actions-' + containerId);
+                    var cpuCell = $('#cpu-' + containerId);
+
+                    var ramText = $('#ram-usage-' + containerId);
+                    var cpuText = $('#cpu-usage-' + containerId);
+
+                    // cpu
+                    var cpuUsage = parseFloat(container.CPUPerc.replace('%', '')) || 0;
+                    var memUsage = parseFloat(container.MemPerc.replace('%', '')) || 0;
+                    totalMemUsage += memUsage;
+                    totalCpuUsage += cpuUsage;
+
+                    // ram
+                    var memUsageSingle = container.MemUsage.split(' / '); // Splits "1.68MiB / 102.4MiB"
+                    var currentMemUsage = parseFloat(memUsageSingle[0].replace(/[A-Za-z]/g, '')) || 0; // Convert to number
+                    var totalMemAllocated = parseFloat(memUsageSingle[1].replace(/[A-Za-z]/g, '')) || 0; // Convert to number
+                    currentRamUsage += currentMemUsage;
+                    totalRamAllocated += totalMemAllocated;
+                    
+                    // Calculate stroke-dashoffset (Max circumference of the circle is 78.54)
+                    var cpuDashOffset = 78.54 * (1 - cpuUsage / 100);
+                    var memDashOffset = 78.54 * (1 - memUsage / 100);
+
+                    var cpuTextInfo = `${container.CPUPerc}`;
+                    cpuText.html(cpuTextInfo);
+
+                    var memUsageOnly = container.MemUsage.split('/')[0].trim(); 
+                    var ramTextInfo = `${memUsageOnly}`;
+                    ramText.html(ramTextInfo);
+
+                    // Generate stats display with circular progress bars
+                    var cpuInfo = `
+                        <div class="flex gap-2">
+                            <!-- CPU Usage -->
+                            <div class="flex items-center gap-x-2.5">
+                                <div class="relative" role="progressbar" aria-valuenow="${cpuUsage}" aria-valuemin="0" aria-valuemax="100">
+                                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="${cpuDashOffset}" fill="transparent" 
+                                        class="${cpuUsage < 50 ? 'stroke-blue-500' : cpuUsage < 80 ? 'stroke-green-500' : cpuUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500'} dark:${cpuUsage < 50 ? 'stroke-blue-500' : cpuUsage < 80 ? 'stroke-green-500' : cpuUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500'} transition-all duration-300">
+                                        </circle>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <span class="text-[11px] font-semibold">${Math.round(cpuUsage)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    cpuCell.html(cpuInfo);
+
+                    var ramInfo = `
+                        <div class="flex gap-2">
+                            <!-- Memory Usage -->
+                            <div class="flex items-center gap-x-2.5">
+                                <div class="relative" role="progressbar" aria-valuenow="${memUsage}" aria-valuemin="0" aria-valuemax="100">
+                                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="${memDashOffset}" fill="transparent" 
+                                        class="${memUsage < 50 ? 'stroke-blue-500' : memUsage < 80 ? 'stroke-green-500' : memUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500'} dark:${memUsage < 50 ? 'stroke-blue-500' : memUsage < 80 ? 'stroke-green-500' : memUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500'} transition-all duration-300">                                        
+                                        </circle>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <span class="text-[11px] font-semibold">${Math.round(memUsage)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    ramCell.html(ramInfo);
+
+                    var actionsInfo = `
+                        <form method="POST" action="/containers/stop/${containerId}"><button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600" tremor-id="tremor-raw"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</button></form>`;
+                    actionsCell.html(actionsInfo);
+
+                });
+                $('#total_records_count').text(response.container_stats.length);
+                
+                // Update the global stats
+                const cpuPercentage = Math.round(totalCpuUsage); // total CPU percentage across all containers
+                const ramPercentage = Math.round(totalMemUsage); // total RAM percentage across all containers
+
+                // Update the global CPU and RAM usage
+                $('#global_cpu_usage').text(`${Math.round(totalCpuUsage)}`);
+                $('#global_ram_usage').text(`${Math.round(currentRamUsage)}MiB / ${Math.round(totalRamAllocated)}MiB`);
+
+                updateCpuUsage(cpuPercentage);
+                updateRamUsage(ramPercentage);
+            }
+        }
+    },
+    error: function(error) {
+        console.error("Error fetching container stats:", error);
+    }
+});
+
+
+
+});
+
+</script>
+<!-- END JS for stats -->
+
+
+
+                  <!-- END DOCKER SERVICES -->
+
+
+
+                    <!-- VOLUMES -->
+                    <div x-show="activeTab === 'volumes'" x-cloak>
+                      <ul role="list" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
+                          <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800">
+                              <div class="flex items-center space-x-2">
+                                  <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
+                                      <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>
+                                  </h4>
+                                  <span class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-400">active</span>
+                              </div>
+                              <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
+                                  <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">Test workspace</span></li>
+                                  <li class="flex items-center space-x-2 py-1">
+                                      <span>Database:</span>
+                                      <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
+                                          <span class="size-2 shrink-0 rounded-sm bg-blue-500 dark:bg-blue-500" aria-hidden="true"></span>live_data
+                                      </span>
+                                  </li>
+                              </ul>
+                              <div class="mt-5 flex flex-wrap gap-4">
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">34</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">5/10GB</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">1d ago</span>
+                                  </div>
+                              </div>
+                          </li>
+
+
+                          <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
+                              <div class="flex items-center space-x-2">
+                                  <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
+                                      <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>sales_by_day_api</a>
+                                  </h4>
+                                  <span class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-400">active</span>
+                              </div>
+                              <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
+                                  <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">Test workspace</span></li>
+                                  <li class="flex items-center space-x-2 py-1">
+                                      <span>Database:</span>
+                                      <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
+                                          <span class="size-2 shrink-0 rounded-sm bg-blue-500 dark:bg-blue-500" aria-hidden="true"></span>live_data
+                                      </span>
+                                  </li>
+                              </ul>
+                              <div class="mt-5 flex flex-wrap gap-4">
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">34</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">5/10GB</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">1d ago</span>
+                                  </div>
+                              </div>
+                          </li>
+
+
+
+                          <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
+                              <div class="flex items-center space-x-2">
+                                  <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
+                                      <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>testing_environment_2</a>
+                                  </h4>
+                              </div>
+                              <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
+                                  <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">API</span></li>
+                                  <li class="flex items-center space-x-2 py-1">
+                                      <span>Database:</span>
+                                      <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
+                                          <span class="size-2 shrink-0 rounded-sm bg-gray-400 dark:bg-gray-600" aria-hidden="true"></span>test_data
+                                      </span>
+                                  </li>
+                              </ul>
+                              <div class="mt-5 flex flex-wrap gap-4">
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">28</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">7.4/10GB</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">2d ago</span>
+                                  </div>
+                              </div>
+                          </li>
+                          <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
+                              <div class="flex items-center space-x-2">
+                                  <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
+                                      <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>training_environment</a>
+                                  </h4>
+                                  <span class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-400">active</span>
+                              </div>
+                              <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
+                                  <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">Test workspace</span></li>
+                                  <li class="flex items-center space-x-2 py-1">
+                                      <span>Database:</span>
+                                      <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
+                                          <span class="size-2 shrink-0 rounded-sm bg-blue-500 dark:bg-blue-500" aria-hidden="true"></span>live_data
+                                      </span>
+                                  </li>
+                              </ul>
+                              <div class="mt-5 flex flex-wrap gap-4">
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">38</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">3.2/10GB</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">4h ago</span>
+                                  </div>
+                              </div>
+                          </li>
+                          <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
+                              <div class="flex items-center space-x-2">
+                                  <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
+                                      <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>analytics_dashboard</a>
+                                  </h4>
+                              </div>
+                              <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
+                                  <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">API</span></li>
+                                  <li class="flex items-center space-x-2 py-1">
+                                      <span>Database:</span>
+                                      <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
+                                          <span class="size-2 shrink-0 rounded-sm bg-gray-400 dark:bg-gray-600" aria-hidden="true"></span>test_data
+                                      </span>
+                                  </li>
+                              </ul>
+                              <div class="mt-5 flex flex-wrap gap-4">
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">34</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">5/10GB</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">1d ago</span>
+                                  </div>
+                              </div>
+                          </li>
+                          <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
+                              <div class="flex items-center space-x-2">
+                                  <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
+                                      <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>managed_database_test</a>
+                                  </h4>
+                                  <span class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-400">active</span>
+                              </div>
+                              <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
+                                  <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">Test workspace</span></li>
+                                  <li class="flex items-center space-x-2 py-1">
+                                      <span>Database:</span>
+                                      <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
+                                          <span class="size-2 shrink-0 rounded-sm bg-blue-500 dark:bg-blue-500" aria-hidden="true"></span>live_data
+                                      </span>
+                                  </li>
+                              </ul>
+                              <div class="mt-5 flex flex-wrap gap-4">
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">39</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">5.9/10GB</span>
+                                  </div>
+                                  <div class="flex items-center space-x-1.5">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
+                                          <path
+                                              d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
+                                          ></path>
+                                      </svg>
+                                      <span class="text-xs font-medium text-gray-500 dark:text-gray-500">7d ago</span>
+                                  </div>
+                              </div>
+                          </li>
+                      </ul>
+
+                    </div>
+                    <!-- END VOLUMES -->
+                    <div x-show="activeTab === 'settings'" x-cloak>Settings</div>
+
+
+                  <!-- INFO -->
+                    <div x-show="activeTab === 'info'" x-cloak>
+                      Custom message for user: <textarea id="custom_message_for_this_user" class="form-control" rows="5"></textarea>
+                      <br>
+                      ID: {{user.id}}
+                      <br>
+                      Server ip: {{server_ip}}
+                      <br>
+                      Docker Context: {{server_name}}
+                      <br>
+                      2fa status: {{user.twofa_enabled}}
+                      <br>
+                      Reseller: {{user.owner}}
+                      <br>
+                      Setup time: {{ user.registered_date.strftime('%d.%m.%Y %H:%M:%S') }}
+                      <br>
+                      Country: {{country_name}} ({{country_code}})
+                      
+                    </div>
+                  <!-- INFO -->
+
+
+
+
+
+
+                  <!-- EDIT -->
+                    <div x-show="activeTab === 'edit'" x-cloak>
+<form action="/user/edit/{{ user.username.split('_')[-1] }}" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div id="collapseAddNewUser">
+    <div id="create_user_form" class="sm:mx-auto sm:max-w-4xl">
+        <form id="userForm" class="mt-8">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="admin_username">Username</label>
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="text"
+                            class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" min="5" max="16"  minlength="5" maxlength="16" pattern="[a-zA-Z0-9]{3,16}" title="Can only contain letters and numbers. 3 characters min. - 16 max." name="new_username" placeholder="Username" value="{{ user.username.split('_')[-1] }}"/>
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="admin_email">Email address</label>
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="email" 
+                            class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" autocomplete="email" name="new_email" placeholder="some-email@example.com" autocomplete="off" value="{{ user.email }}"
+                    </div>
+                  </div>
+                </div>
+
+<div x-data="passwordManager()" class="col-span-full">
+    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="admin_password">Password
+    </label>
+    <div class="relative w-full flex mt-2">
+        <input 
+            x-ref="passwordInput" 
+            x-bind:type="passwordVisible ? 'text' : 'password'" 
+            x-model="password" 
+            class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+            autocomplete="password" 
+            name="new_password" 
+            minlength="6" 
+            maxlength="30" 
+            pattern="[^']{6,30}" 
+            title="Can not contain apostrophe. 6 characters min. - 30 max." 
+            placeholder="unchanged if empty"
+        />
+        <div class="flex">
+            <button 
+                @click="generatePassword()" 
+                class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" 
+                type="button" 
+                id="generatePassword" 
+                tabindex="-1"
+            >
+                Generate
+            </button>
+            <button 
+                @click="togglePasswordVisibility()" 
+                class="relative inline-flex items-center justify-center rounded-r border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" 
+                tabindex="-1" 
+                type="button" 
+                id="togglePassword"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" style="margin:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-eye">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                    <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function passwordManager() {
+        return {
+            password: '',
+            passwordVisible: false,
+            generatePassword() {
+                const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                let result = "";
+                for (let i = 0; i < 16; i++) {
+                    const randomIndex = Math.floor(Math.random() * charset.length);
+                    result += charset.charAt(randomIndex);
+                }
+                this.password = result;
+                this.passwordVisible = true;  // Make password visible immediately after generating
+                this.$nextTick(() => {
+                    this.$refs.passwordInput.focus();
+                });
+            },
+            togglePasswordVisibility() {
+                this.passwordVisible = !this.passwordVisible;
+            }
+        };
+    }
 </script>
 
 
 
-
-
-    <div class="modal modal-blur fade" id="modal-edit-user" tabindex="-1" role="dialog" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Edit user {{user.username}}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <form action="/user/edit/{{user.username}}" method="POST">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                    <div id="ipList"></div>
-        <div id="planList"></div>
-            <div class="row">
-              <div class="col-lg-6">
-                <div class="mb-3">
-              <label class="form-label">Username</label>
-              <input type="text" class="form-control" name="new_username" placeholder="Username" value="{{user.username}}">
-                </div>
-              </div>
-              <div class="col-lg-6">
-                <div class="mb-3">
-                  <label class="form-label">Email address</label>
-                    <input type="email" class="form-control" name="new_email" placeholder="some-email@example.com" autocomplete="off" value="{{ user.email }}">
-                </div>
-              </div>
-            </div>
-    <div class="col-lg-12">
-      <label class="form-label">Plan</label>
-      <div class="form-selectgroup-boxes row mb-3" id="planSelectGroup"></div>
-    </div>
-            <div class="row">
-              <div class="col-lg-6">
-                <div class="mb-3">
-                  <label class="form-label">Password</label>
-                    <input type="password" name="new_password" class="form-control" placeholder="unchanged if empty" autocomplete="off" value="">
-                </div>
-              </div>
-              <!--div class="col-lg-1">
-                <div class="mb-3">
-                  <label class="form-label">2FA</label>
-                  <label class="form-check form-switch">
-                   <input class="form-check-input" name="new_2fa" type="checkbox">
-                   </label>
-                </div>
-              </div-->
-              <div class="col-lg-6">
-                <div class="mb-3">
-                  <label class="form-label">IP address</label>
-                  <select id="ipSelect" name="new_ip" class="form-select"></select>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
-              Cancel
-            </a>
-            <button type="submit" class="btn btn-primary ms-auto">
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
-              Save changes
-            </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-
-
-
-
-
-
-
-      <div class="page-wrapper">
-        <div class="d-print-none">
-          <div class="container">
-            <div class="row g-3 align-items-center">
-              <div class="col-auto">
-                <span id="docker_color_status_indicator" class="status-indicator status-primary status-indicator-animated">
-                  <span class="status-indicator-circle"></span>
-                  <span class="status-indicator-circle"></span>
-                  <span class="status-indicator-circle"></span>
-                </span>
-              </div>
-              <div class="col">
-                <h2 class="page-title">
-                  {{ user.username.split('_')[-1] }}{% if "SUSPENDED_" in user.username %} &nbsp;<span class="badge bg-red-lt">SUSPENDED</span>{% endif %}
-                </h2>
-
-
-
-
-
-                <span style="display:none;" id="username_for_functions">{{ user.username.split('_')[-1] }}</span>
-                <span style="display:none;" id="plan_name_for_functions">{{ get_hosting_plan_name_by_id(user.plan_id) }}</span>
-                
-                <div class="text-muted">
-                  <ul class="list-inline list-inline-dots mb-0">
-                    <li class="list-inline-item">Docker container: <span id="statusColorTextdocker" class=""><span id="stateStatus">loading..</span></span></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="col-md-auto ms-auto d-print-none">
-                <div class="btn-list">
-
-{% if "SUSPENDED_" in user.username %}
-
-<span data-bs-toggle="tooltip" data-bs-placement="top" title="Unsuspend account">
-<a href="/user/unsuspend/{{ user.username }}" class="btn" id="unsuspendButton">
-<svg xmlns="http://www.w3.org/2000/svg" style="margin:0px;" class="icon icon-tabler icon-tabler-player-play-filled" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" stroke-width="0" fill="currentColor" /></svg></a></span>
-
-
-{% else %}
-<span data-bs-toggle="tooltip" data-bs-placement="top" title="Suspend account">
-<a href="/user/suspend/{{ user.username }}" class="btn" id="suspendButton" data-bs-toggle="modal" data-bs-target="#confirmSuspendUserModal">
-<svg xmlns="http://www.w3.org/2000/svg" style="margin:0px;" class="icon icon-tabler icon-tabler-player-pause-filled" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 4h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h2a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2z" stroke-width="0" fill="currentColor" /><path d="M17 4h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h2a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2z" stroke-width="0" fill="currentColor" /></svg></a></span>
-
-<!-- Suspend Confirmation Modal -->
-    <div class="modal modal-blur fade" id="confirmSuspendUserModal" aria-labelledby="confirmSuspendUserModalLabel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-      <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-          <button type="button" id="suspendModalxClose" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          <div class="modal-status bg-warning"></div>
-          <div class="modal-body text-center py-4">
-            <!-- Download SVG icon from http://tabler-icons.io/i/alert-triangle -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-warning icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.24 3.957l-8.422 14.06a1.989 1.989 0 0 0 1.7 2.983h16.845a1.989 1.989 0 0 0 1.7 -2.983l-8.423 -14.06a1.989 1.989 0 0 0 -3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
-            <h3 id="confirmSuspendUserModallLabel">Are you sure you want to suspend the user <b>{{user.username}}</b>?</h3>
-            <div class="text-muted"><small>Suspending an account will immediately disable the user's access to the OpenPanel. This action involves pausing the user's Docker container and revoking access to their email, website, and other associated services. Please be aware of the immediate impact before proceeding.</small></div>
-          </div>
-
-          <div class="modal-footer">
-            <div class="w-100">
-              <div class="row">
-                <div class="col"><a href="#" class="btn w-100" data-bs-dismiss="modal">
-                    Cancel
-                  </a></div>
-                <div class="col"><a href="#" id="confirmSuspend" class="btn btn-warning w-100">
-                    Suspend
-                  </a></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-
-
-
-{% endif %}
-
-
-<!-- Delete Modal -->
-    <div class="modal modal-blur fade" id="confirmDeleteUserModal" aria-labelledby="confirmDeleteUserModalLabel" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
-      <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-          <button type="button" id="deleteModalxClose" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          <div class="modal-status bg-danger"></div>
-          <div class="modal-body text-center py-4">
-            <!-- Download SVG icon from http://tabler-icons.io/i/alert-triangle -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.24 3.957l-8.422 14.06a1.989 1.989 0 0 0 1.7 2.983h16.845a1.989 1.989 0 0 0 1.7 -2.983l-8.423 -14.06a1.989 1.989 0 0 0 -3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
-            <h3 id="confirmDeleteUserModalLabel">Are you sure you want to delete the user <b>{{ user.username.split('_')[-1] }}</b>?</h3>
-            <div class="text-muted">        <small>Terminating an account will permanently remove the user's access to the OpenPanel. This action includes stopping and removing the user's Docker container, as well as permanently revoking access to their email, website, and other associated services. Exercise caution and fully understand the irreversible consequences before proceeding.</small></div>
-        <!-- Input field for confirmation -->
-        <div class="mt-3 mb-3">
-          <label for="deleteConfirmation" class="form-label">Type "DELETE" to confirm:</label>
-          <input type="text" class="form-control" id="deleteConfirmation">
-        </div>
-          </div>
-
-          <div class="modal-footer">
-            <div class="w-100">
-              <div class="row">
-                <!--div class="col"><a href="#" class="btn w-100" data-bs-dismiss="modal">
-                    Cancel
-                  </a></div-->
-                <div class="col"><a href="#" id="confirmDelete" class="btn btn-danger w-100" style="display: none;">
-                    Terminate
-                  </a></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-
-<span data-bs-toggle="tooltip" data-bs-placement="top" title="Delete account">
-<a href="/user/delete/{{ user.username.split('_')[-1] }}" class="btn" id="deleteButton" data-bs-toggle="modal" data-bs-target="#confirmDeleteUserModal">
-<svg xmlns="http://www.w3.org/2000/svg" style="margin:0px; color:red;" class="icon icon-tabler icon-tabler-trash-filled" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20 6a1 1 0 0 1 .117 1.993l-.117 .007h-.081l-.919 11a3 3 0 0 1 -2.824 2.995l-.176 .005h-8c-1.598 0 -2.904 -1.249 -2.992 -2.75l-.005 -.167l-.923 -11.083h-.08a1 1 0 0 1 -.117 -1.993l.117 -.007h16z" stroke-width="0" fill="currentColor" /><path d="M14 2a2 2 0 0 1 2 2a1 1 0 0 1 -1.993 .117l-.007 -.117h-4l-.007 .117a1 1 0 0 1 -1.993 -.117a2 2 0 0 1 1.85 -1.995l.15 -.005h4z" stroke-width="0" fill="currentColor" /></svg></a></span>
-
-
-
-
-
-    {% if "SUSPENDED_" in user.username %}
-                  <a href="#" class="btn" style="pointer-events: auto! important; cursor: not-allowed! important;" disabled>
-                    <!-- Download SVG icon from http://tabler-icons.io/i/settings -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>
-                    Configure
-                  </a>
-
-
-
-    {% else %}
-                  <a href="#" class="btn" data-bs-toggle="modal" data-bs-target="#modal-openpanel-settings-for-user">
-                    <!-- Download SVG icon from http://tabler-icons.io/i/settings -->
-                    <svg xmlns="http://www.w3.org/2000/svg" style="margin:0" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>
-                    <span class="d-none d-sm-inline-block" style="margin-left:2px">Configure</span>
-                  </a>
-                          <input type="hidden" id="containerName" value="{{ user.username }}">
-    {% endif %}
-
-
-    {% if "SUSPENDED_" in user.username %}
-<a href="#" class="btn btn-secondary" style="pointer-events: auto! important; cursor: not-allowed! important;" disabled>
-User is suspended
-</a>
-    {% else %}
-<a href="#" class="btn btn-primary loginLink" user="{{ user.username }}" target="_blank">
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-login-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 8v-2a2 2 0 0 1 2 -2h7a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-7a2 2 0 0 1 -2 -2v-2" /><path d="M3 12h13l-3 -3" /><path d="M13 15l3 -3" /></svg>
-                    Login<span class="d-none d-sm-inline-block">&nbsp;as user</span>
-</a>
-    {% endif %}
-
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- Page body -->
-        <div class="page-body">
-          <div class="container-xl">
-            <div class="row row-cards">
-              <div class="col-md-3">
-                <div class="card">
-                  <div id="cpuIndicator" class="card-status-top bg-primary"></div>
-                  <div class="card-body">
-                    <h3 class="subheader m-0">CPU usage</h3>
-                    <div class="h3 m-0" id="cpu-usage">{{env_data.TOTAL_CPU}}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="card">
-                  <div class="card-body">
-                  <div id="ramIndicator" class="card-status-top bg-primary"></div>
-                    <h3 class="subheader m-0">Memory Usage</h3>
-                    <div class="h3 m-0" id="mem-usage">{{env_data.TOTAL_RAM}}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="card">
-                  <a class="ribbon bg-danger d-none" style="text-decoration:none;padding:0;" id="unlimited_storage_indicator" title="The Docker container can use all the space allocated to docker (/var/lib/docker)." data-bs-toggle="tooltip" data-bs-placement="top"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-exclamation-mark"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 19v.01" /><path d="M12 15v-10" /></svg></a>
-                  <div class="card-body">
-
-                    
-
-{% set disk_usage = ((disk.disk_used / disk.disk_hard) * 100) if disk.disk_hard != 0 else 0 %}
-{% if disk_usage > 90 %}
-                    <div id="diskIndicator" class="card-status-top bg-danger"></div>
-{% elif disk_usage > 80 %}
-                    <div id="diskIndicator" class="card-status-top bg-warning"></div>
-{% elif disk_usage > 60 %}
-                    <div id="diskIndicator" class="card-status-top bg-success"></div>
-{% else %}
-                    <div id="diskIndicator" class="card-status-top bg-primary"></div>
-
-{% endif %}
-
-{% set disk_usage_rounded = disk_usage | round(2) %}
-
-                    <h3 class="subheader m-0">Disk Usage</h3>
-                    <div class="h3 m-0" id="disk-usage">{{ disk_usage_rounded }}%
-</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="card">
-                  {% if server_ip != public_ip %}
-                    {% if ip_type == 'IPv4' %}
-                      <div class="ribbon bg-success">Dedicated IP</div>
-                    {% elif ip_type == 'IPv6' %}
-                      <div class="ribbon bg-primary">IPv6</div>
-                    {% endif %}
-                  {% endif %}
-                  <div class="card-body">
-                    <h3 class="subheader m-0">IP address</h3>
-                    <div class="h3 m-0">{{ server_ip }}</div>
-                  </div>
-                </div>
-              </div>
-
-
-
-
-              <div class="col-md-8">
-
-<ul class="nav nav-tabs card-header-tabs nav-fill" data-bs-toggle="tabs" role="tablist">
-                      <li class="nav-item" role="presentation" style="">
-                        <a href="#nav-info" id="nav-info-tab" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab" style="border-radius: 0px;">Containers</a>
-                      </li>
-                      <li class="nav-item" role="presentation">
-                        <a href="#nav-user-data" id="nav-user-data-tab" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab" style="border-radius: 0px;">Websites</a>
-                      </li>
-    {% if "SUSPENDED_" in user.username %}
-                      <li class="nav-item" role="presentation">
-                        <a href="#nav-manage" class="nav-link disabled" style="pointer-events: auto! important; cursor: not-allowed! important;" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab" style="border-radius: 0px;">Services</a>
-                      </li>
-    {% else %}
-                      <li class="nav-item" role="presentation">
-                        <a href="#nav-manage" id="nav-manage-tab" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab" style="border-radius: 0px;">Services</a>
-                      </li>
-    {% endif %}
-                      <li class="nav-item" role="presentation">
-                        <a href="#nav-backups" id="nav-backups-tab" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab">Backups</a>
-                      </li>
-                      <li class="nav-item" role="presentation">
-                        <a href="#nav-resource" id="nav-resource-tab" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab" style="border-radius: 0px;">Usage</a>
-                      </li>
-                      <li class="nav-item" role="presentation">
-                        <a href="#nav-activity" id="nav-activity-tab" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab" style="border-radius: 0px;">Activity</a>
-                      </li>
-                    </ul>
-
-
-<div class="tab-content" id="nav-tabContent">
-  <div class="tab-pane fade show active" id="nav-info" role="tabpanel" aria-labelledby="nav-info-tab">
-    
-
-          <div class="card card-post mt-4">
-            <div class="card-header">
-<div class="row g-2 align-items-center" style="width:100%;">
-<div class="col">
-<h6 class="card-title">Docker containers</h6>
-</div>
-<div class="col-auto text-muted">
-<a data-bs-toggle="collapse" class="nav-link collapsed" href="#container_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a>
-</div>
-</div>
-
-            </div><!-- card-header -->
-            <div class="card-body">
-<div class="collapse" id="container_info" style="">
-<p>Current Docker containers for the user</p>
-<p>
-   </p><ul>
-</ul>
-<p></p>
-
-   </div>
-
-
-            <div id="containers-status">
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Container</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-    </tbody>
-</table>
-
-
-            </div>
-
-
-
-            </div><!-- card-body -->
-          </div><!-- card -->
-
-
-          <div class="card card-post mt-4">
-            <div class="card-header">
-<div class="row g-2 align-items-center" style="width:100%;">
-<div class="col">
-<h6 class="card-title">Disk Usage</h6>
-</div>
-<div class="col-auto text-muted">
-<a data-bs-toggle="collapse" class="nav-link collapsed" href="#paths_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a>
-</div>
-</div>
-            </div><!-- card-header -->
-
-
-{% if "SUSPENDED_" not in user.username %}
-
-<div class="card-body">
-
-
-                        <div class="progress progress-separated mb-3">
-                          <div class="progress-bar bg-info" role="progressbar" id="system_used_percentage" style="width: 10%" aria-label="System & Databases"></div>
-                          <div class="progress-bar bg-success" role="progressbar" id="system_free_percentage" style="width: 20%" aria-label="Free system space"></div>
-                          <div class="progress-bar bg-primary" role="progressbar" id="home_used_percentage" style="width: 50%" aria-label="Home directory"></div>
-
-                        </div>
-
-                        <div class="row">
-                          <div class="col-auto d-flex align-items-center px-2">
-                            <span class="legend me-2 bg-info"></span>
-                            <span>Used by system</span>
-                            <span class="d-none d-md-inline d-lg-none d-xxl-inline ms-2 text-secondary" id="system_used"></span>
-                          </div>
-                          <div class="col-auto d-flex align-items-center px-2">
-                            <span class="legend me-2 bg-success"></span>
-                            <span>Free for databases</span>
-                            <span class="d-none d-md-inline d-lg-none d-xxl-inline ms-2 text-secondary" id="system_free">415MB</span>
-                          </div>
-                          <div class="col-auto d-flex align-items-center pe-2">
-                            <span class="legend me-2 bg-primary"></span>
-                            <span>Used by websites</span>
-                            <span class="d-none d-md-inline d-lg-none d-xxl-inline ms-2 text-secondary" id="home_used">915MB</span>
-                          </div>
-
-                          <div class="col-auto d-flex align-items-center ps-2">
-                            <span class="legend me-2"></span>
-                            <span>Free space for websites</span>
-                            <span class="d-none d-md-inline d-lg-none d-xxl-inline ms-2 text-secondary" id="free_space_total">612MB</span>
-                          </div>
-                        </div>
-
-
-
-  <!-- Volume Info Display -->
-  <div id="volume-info"></div>
-
-  <script>
-    // Function to send the request and update the progress bar
-    function updateDiskUsage(username) {
-      // Send the request to the server
-      fetch(`/client/disk/${username}`)
-        .then(response => response.json()) // Parse the JSON response
-        .then(data => {
-          // Extract the volume information
-          const volumes = data[0].Volumes;
-          
-          // Calculate total and used space for different categories
-          let totalSystemSpace = 0;
-          let usedSystemSpace = 0;
-          let totalHomeSpace = 0;
-          let usedHomeSpace = 0;
-
-          // Loop through the volumes to calculate total and used space
-          volumes.forEach(volume => {
-            const sizeInMB = convertToMB(volume.Size); // Convert volume size to MB
-            if (volume.Name.includes('webserver')) {
-              usedHomeSpace += sizeInMB;  // Assuming webserver is part of websites
-            } else if (volume.Name.includes('mysql')) {
-              usedSystemSpace += sizeInMB; // Assuming mysql is part of system
-            }
-            totalSystemSpace += sizeInMB;  // Accumulate total space for system
-          });
-
-          // Update the progress bars based on usage
-          updateProgressBar('system_used_percentage', usedSystemSpace, totalSystemSpace);
-          updateProgressBar('system_free_percentage', totalSystemSpace - usedSystemSpace, totalSystemSpace);
-          updateProgressBar('home_used_percentage', usedHomeSpace, totalHomeSpace); // Free home space can be calculated if needed
-
-          // Update the volume names and sizes
-          document.getElementById('system_used').textContent = `${usedSystemSpace}MB`;
-          document.getElementById('system_free').textContent = `${totalSystemSpace - usedSystemSpace}MB`;
-          document.getElementById('home_used').textContent = `${usedHomeSpace}MB`;
-
-          volumes.forEach(volume => {
-            // Display the volume names and sizes dynamically
-            const volumeNameElement = document.createElement('div');
-            volumeNameElement.textContent = `${volume.Name}: ${volume.Size}`;
-            document.getElementById('volume-info').appendChild(volumeNameElement);
-          });
-        })
-        .catch(error => {
-          console.error('Error fetching disk usage data:', error);
-        });
-    }
-
-    // Helper function to convert sizes to MB
-    function convertToMB(size) {
-      if (size.endsWith('MB')) {
-        return parseFloat(size.replace('MB', ''));
-      } else if (size.endsWith('GB')) {
-        return parseFloat(size.replace('GB', '')) * 1024;
-      } else if (size.endsWith('kB')) {
-        return parseFloat(size.replace('kB', '')) / 1024;
-      }
-      return 0;
-    }
-
-    // Helper function to update the progress bar
-    function updateProgressBar(barId, used, total) {
-      const percentage = (used / total) * 100;
-      document.getElementById(barId).style.width = `${percentage}%`;
-    }
-
-    // Call updateDiskUsage when the page loads
-    window.onload = function() {
-      const username = '{{ user.username }}'; 
-      updateDiskUsage(username);
-    };
-  </script>
-
-
-
-
-
-                      </div>
-
-{% endif %}
-
-
-
-
-            <div class="card-body" style="padding: 0; overflow: scroll;">
-<div class="p-2 collapse" id="paths_info" style="">
-<p>
-  Since Docker does not yet support resizing docker containers, OpenPanel uses storage files that can be extended or shrunk on the fly.
-</p>
-<ul>
-  <li>
-  <code>/var/www/html/</code> is used for all website files that user uploads.
-</li>
-<li>
-  <code>/var/lib/docker/devicemapper/mnt/..</code> is the total file system that the user's Docker container is limited to; this includes the OS itself, system services, databases, logs, etc.
-</li>
-</ul>
-
-</div>
-
-
-
-
-
-<div class="row mx-auto w-100 my-1">
-				<div class="col-12 p-0">
-						<div class="col-12">
-<table id="mounts-table" class="table table-striped table-hover">
-    <thead>
-        <tr>
-            <th>Path</th>
-            <th>Inodes Used</th>
-            <th>Inodes Total</th>
-            <th>Disk Used</th>
-            <th>Disk Total</th>
-        </tr>
-    </thead>
-    <tbody>
-    </tbody>
-</table>						</div>
-
-				</div>
-			</div>
-
-            </div><!-- card-body -->
-          </div><!-- card -->
-
-  </div>
-  <div class="tab-pane fade" id="nav-user-data" role="tabpanel" aria-labelledby="nav-user-data-tab">
-
-           <div class="card card-post mt-4">
-            <div class="card-header">
-<div class="row g-2 align-items-center" style="width:100%;">
-<div class="col">
-<h6 class="card-title">Domains</h6>
-</div>
-<div class="col-auto text-muted">Total: 
-{% if user.user_domains %}
-{% set domain_count = user.user_domains|length %}
-{{domain_count}}
-{% else %}0{% endif %} <a data-bs-toggle="collapse" class="nav-link collapsed" href="#domains_info" style="display:inline;" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a></span>
-</div>
-</div>
-
-            </div><!-- card-header -->
-            <div class="card-body" style="padding:0px;">
-<div class="p-2 collapse" id="domains_info" style="">
-<p>These are the domain names currently in use on the user's openpanel. From this interface, you can view the access log for each domain, modify its DNS zone file, and edit the Caddy vhosts file.</p>
-
-<p>Upon saving modifications to the DNS zone file or the Caddy vHosts file, the corresponding service, BIND or Caddy, will undergo a reload process to ensure that the changes take effect immediately.</p>
-</div>
-<table id="domains-table" class="table table-striped table-hover">
-    <thead>
-        <tr>
-            <th>Domain</th>
-            <th>Root Directory</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-{% if user.user_domains %}
-{% for domain, domain_info in user.user_domains.items() %}
-
-        {% if domain_info %}
-<tr>
-<td>  
-<a class="domain_link" href="http://{{ domain }}" target="_blank">{{ domain }} <i class="bi bi-box-arrow-up-right"></i></a>
-<td>{{ domain_info.docroot }}</td>
-</td>
-<td>
-<a href="#" class="view_log_link" data-domain="{{ domain }}" data-bs-toggle="offcanvas" data-bs-target="#logOffcanvas">
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-zoom-code" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /><path d="M8 8l-2 2l2 2" /><path d="M12 8l2 2l-2 2" /></svg><span class="d-none d-sm-inline-block"> View Access Log</span></a> | 
-<a href="#" class="edit_dns_link" data-domain="{{ domain }}" data-bs-toggle="offcanvas" data-bs-target="#dnsOffcanvas">
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg><span class="d-none d-sm-inline-block"> DNS Zone</span></a> | <a href="#" class="edit_caddy_link" data-domain="{{ domain }}" data-bs-toggle="offcanvas" data-bs-target="#caddyOffcanvas">
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg><span class="d-none d-sm-inline-block"> VirtualHosts</span></a></td>
-</tr>
-        {% else %}
-            <tr>
-                <td colspan="4">None</td>
-            </tr>
-        {% endif %}
-
-{% endfor %}
-{% else %}
-            <tr>
-                <td colspan="4">None</td>
-            </tr>
-                {% endif %}
-
-
-    </tbody>
-</table>
-            </div><!-- card-body -->
-          </div><!-- card -->
-
-          <div class="card card-post mt-4">
-            <div class="card-header">
-<div class="row g-2 align-items-center" style="width:100%;">
-<div class="col">
-<h6 class="card-title">Websites</h6>
-</div>
-<div class="col-auto text-muted">
-<span>Total: {{ get_user_websites(user.id)|length }} <a data-bs-toggle="collapse" class="nav-link collapsed" href="#websites_info" style="display:inline;" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a></span>
-</div>
-</div>
-            </div><!-- card-header -->
-            <div class="card-body" style="padding:0px;">
-<div class="p-2 collapse" id="websites_info" style="">
-<p>These are the websites that are currently available in the user's openpanel. The user could have additional websites not displayed here, especially if those websites haven't been created or imported through the Applications interface of their openpanel.</p>
-<p>For every website, you have the option to review the website URL, platform type, version, and the timestamp indicating when the user added it to the Applications interface. </p>
-</div>
-<table id="websites-table" class="table table-striped table-hover">
-    <thead>
-        <tr>
-            <th>Website</th>
-            <th>Type</th>
-            <th>Version</th>
-            <th>Installed on</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% if get_user_websites(user.id) %}
-            {% for site_info in get_user_websites(user.id) %}
-                <tr>
-<td><a class="domain_link" href="http://{{ site_info[0] }}" target="_blank">{{ site_info[0] }} <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    <td>
-                        {% if site_info[3]|lower == 'wordpress' %}
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-wordpress" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9.5 9h3" /><path d="M4 9h2.5" /><path d="M11 9l3 11l4 -9" /><path d="M5.5 9l3.5 11l3 -7" /><path d="M18 11c.177 -.528 1 -1.364 1 -2.5c0 -1.78 -.776 -2.5 -1.875 -2.5c-.898 0 -1.125 .812 -1.125 1.429c0 1.83 2 2.058 2 3.571z" /><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /></svg><span class="d-none d-sm-inline-block"> WordPress CMS</span>
-                        {% elif site_info[3]|lower == 'websitebuilder' %}
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-app-window" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 5m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M6 8h.01" /><path d="M9 8h.01" /></svg><span class="d-none d-sm-inline-block"> Website Builder</span>
-                        {% elif 'nodejs' in site_info[3]|lower %}
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-nodejs" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 9v8.044a2 2 0 0 1 -2.996 1.734l-1.568 -.9a3 3 0 0 1 -1.436 -2.561v-6.635a3 3 0 0 1 1.436 -2.56l6 -3.667a3 3 0 0 1 3.128 0l6 3.667a3 3 0 0 1 1.436 2.561v6.634a3 3 0 0 1 -1.436 2.56l-6 3.667a3 3 0 0 1 -3.128 0" /><path d="M17 9h-3.5a1.5 1.5 0 0 0 0 3h2a1.5 1.5 0 0 1 0 3h-3.5" /></svg><span class="d-none d-sm-inline-block"> {{ site_info[3] }} Application</span>
-                        {% elif 'python' in site_info[3]|lower %}
-<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-python" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9h-7a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h3" /><path d="M12 15h7a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-3" /><path d="M8 9v-4a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v5a2 2 0 0 1 -2 2h-4a2 2 0 0 0 -2 2v5a2 2 0 0 0 2 2h4a2 2 0 0 0 2 -2v-4" /><path d="M11 6l0 .01" /><path d="M13 18l0 .01" /></svg><span class="d-none d-sm-inline-block"> {{ site_info[3] }} Application</span>
-                        {% elif 'java' in site_info[3]|lower %}
-<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-code"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 8l-4 4l4 4" /><path d="M17 8l4 4l-4 4" /><path d="M14 4l-4 16" /></svg><span class="d-none d-sm-inline-block"> {{ site_info[3] }} Application</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ site_info[1] }}</td>
-                   
-                    <td>{{ site_info[2].strftime('%d.%m.%Y %H:%M:%S') }}</td>
-
-                </tr>
-            {% endfor %}
-        {% else %}
-            <tr>
-                <td colspan="4">None</td>
-            </tr>
-        {% endif %}
-    </tbody>
-</table>
-
-
-            </div><!-- card-body -->
-          </div><!-- card -->
-
-
-
-
-
-  </div>
-
-
-<div class="tab-pane fade" id="nav-resource" role="tabpanel" aria-labelledby="nav-resource-tab">
-
-  <div class="card card-post mt-4">
-    <div class="card-header">
-<div class="row g-2 align-items-center" style="width:100%;">
-<div class="col">
-<h6 class="card-title"><span class="d-none d-sm-inline-block">Docker Container&nbsp;</span> Stats</h6>
-</div>
-<div class="col-auto text-muted">
-<span id="info">Click the button to load data <a data-bs-toggle="collapse" class="nav-link collapsed" href="#stats_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a></span>
-</div>
-</div>
-
-    </div><!-- card-header -->
-    <div class="card-body" style="padding:0px;">
-<div class="collapse p-2" id="stats_info" style="">
-<p>Explore the Docker container resource usage for the user.</p>
-<p>
-
-Color indicators show summary of the data in the table bellow.
-   <ul>
-<li class="my-2"><span class="badge">&nbsp;</span> - both CPU and RAM usage is bellow 1%</li>
-<li class="my-2"><span class="badge bg-success">&nbsp;</span> - CPU usage is between 1-35% and RAM usage is between 1-50%</li>
-<li class="my-2"><span class="badge bg-warning">&nbsp;</span> - CPU usage is above 35% or RAM usage is above 50%</li>
-<li class="my-2"><span class="badge bg-danger">&nbsp;</span> - both CPU and RAM usage are above 75%</li>
-</ul>
-
-
-   <ul>
-<li><b>CPU %</b> indicates the portion of the CPU's processing power utilized by the Docker container.</li>
-<li><b>RAM %</b> usage illustrates the amount of RAM used relative to the total available RAM.</li>
-<li><b>Network I/O</b> showcases the amount of data sent or received by the container over the network at that specific moment.</li>
-<li><b>Block I/O</b> signifies the volume of data in bytes written or read from the container to the disk.</li>
-</ul>
-</p>
-
-   </div> 
-
-   <div id="tracking" class="tracking m-4"></div>
-
-
-
-
-
-
-           <div id="resource-usage-data">
-
- </div> 
-   
-   </div><!-- card-body -->
-  </div><!-- card -->
-
-
-
-</div>
-
-
-  <div class="tab-pane fade" id="nav-backups" role="tabpanel" aria-labelledby="nav-backups-tab">
-    
-
-          <div class="card card-post mt-4">
-            <div class="card-header">
-<div class="row g-2 align-items-center" style="width:100%;">
-<div class="col">
-<h6 class="card-title">Backups</h6>
-</div>
-<div class="col-auto text-muted">
-<span id="backups2_info"><a data-bs-toggle="collapse" class="nav-link collapsed" href="#backups_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a></span>
-</div>
-</div>
-
-              
-
-
-
-            </div><!-- card-header -->
-<div class="card-body" style="padding:0px;">
-<div class="collapse p-2" id="backups_info" style="">
-Explore all the backups available for user {{ user.username }}, including details such as the backup date, status and content.
- </div> 
-            <div id="backups">
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Created</th>
-            <th>Contains</th>
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-    </tbody>
-</table>
-            </div></div><!-- card-body -->
-          </div><!-- card -->
-
-  </div>
-
-
-  <div class="tab-pane fade" id="nav-manage" role="tabpanel" aria-labelledby="nav-manage-tab">
-    
-
-          <div class="card card-post mt-4">
-            <div class="card-header">
-<div class="row g-2 align-items-center" style="width:100%;">
-<div class="col">
-<h6 class="card-title">Services</h6>
-</div>
-<div class="col-auto text-muted">
-<a data-bs-toggle="collapse" class="nav-link collapsed" href="#services_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a>
-</div>
-</div>
-              
-
-
-
-            </div><!-- card-header -->
-<div class="card-body" style="padding:0px;">
-<div class="collapse p-2" id="services_info" style="">
-<p>Here you can check the status of services installed inside user Docker container. You can <b>start</b>, <b>stop</b>, or <b>restart</b> services as needed. Keep in mind that any changes that users made through the OpenPanel are automatically saved in the configuration. This ensures that their service settings stay consistent during activities like account migration or backup restoration.</p>
-<p>For setting permanent service status, it's recommended to use the OpenPanel. Changes made here are effective, but using the OpenPanel ensures that user preferences are saved for the long term.</p>
- </div> 
-            <div id="services-status">
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Status</th>
-            <th>Service Name</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-        <tr style="vertical-align: middle;">
-            <td><span class="placeholder col-9 mb-0"></span></td>
-            <td><span class="placeholder placeholder-xs col-11"></span></td>
-            <td style="font-size: x-large;">
-<a href="#" tabindex="-1" class="btn btn-primary disabled placeholder col-8" aria-hidden="true"></a>
-            </td>
-        </tr>
-    </tbody>
-</table>
-
-
-            </div>
-            </div><!-- card-body -->
-          </div><!-- card -->
-
-  </div>
-    <div class="tab-pane fade" id="nav-edit" role="tabpanel" aria-labelledby="nav-edit-tab">.edit..</div>
-
-
-
-<div class="tab-pane fade" id="nav-activity" role="tabpanel" aria-labelledby="nav-activity-tab">
-          <div class="card card-post mt-4">
-            <div class="card-header">
-<div class="row g-2 align-items-center" style="width:100%;">
-<div class="col">
-<h6 class="card-title">Activity</h6>
-</div>
-<div class="col-auto text-muted">
-<a data-bs-toggle="collapse" class="nav-link collapsed" href="#activity_log_info" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a>
-</div>
-</div>
-              
-
-            </div><!-- card-header -->
-<div class="card-body" style="padding:0px;">
-<div class="collapse p-2" id="activity_log_info" style="">
-<p>Users activity log: <code>/etc/openpanel/openpanel/core/users/{{ user.username.split('_')[-1] }}/activity.log</code></p>
- </div> 
-            <div id="activity_log" style="overflow: scroll;">
-    <table class="table table-hover" id="activity-table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th style="width:50%;">Activity</th>
-                <th>IP Address</th>
-
-            </tr>
-        </thead>
-        <tbody>
-
-        </tbody>
-    </table>
-
-
-
-            </div></div><!-- card-body -->
-          </div><!-- card -->
-
-  </div>
-
-</div>
-
-              </div>
-
-
-
-
-<div class="col-md-4">
-
-<div class="card">
-<div class="card-header">
-<h3 class="card-title">
-General<span class="d-none d-sm-inline-block">&nbsp;information</span>
-</h3>
-<div class="card-actions">
-
-{% if "SUSPENDED_" not in user.username %}
-
-<a href="#" data-bs-toggle="modal" id="edit_user_info_modal" data-bs-target="#modal-edit-user" onclick="loadData()">Edit<svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path><path d="M16 5l3 3"></path></svg>
-</a>
-{% endif %}
-</div>
-</div>
-<div class="card-body">
-<dl class="row">
-<dt class="col-5">User ID:</dt>
-<dd class="col-7">{{ user.id }}</dd>
-<dt class="col-5">Email address:</dt>
-<dd class="col-7">{{ user.email }}</dd>
-<dt class="col-5">Two Factor:</dt>
-<dd class="col-7">{% if user.twofa_enabled == 1 %}2FA is enabled{% else %}2FA is not enabled{% endif %}</dd>
-<dt class="col-5">Hosting Plan:</dt>
-<dd class="col-7"><a href="/plans#{{ get_hosting_plan_name_by_id(user.plan_id) }}" data-plan_id="{{user.plan_id}}">{{ get_hosting_plan_name_by_id(user.plan_id) }}</a></dd>
-<dt class="col-5">IP Address:</dt>
-<dd class="col-7">{{ server_ip }}</dd>
-{% if country_code and country_name %}
-<dt class="col-5"><span class="d-none d-sm-inline-block">Server</span> Location:</dt>
-<dd class="col-7"><span class="flag flag-country-{{country_code.lower()}}"></span> {{country_name}}</dd>
-{% endif %}
-<dt class="col-5">Setup Date:</dt>
-<dd class="col-7">{{ user.registered_date.strftime('%d.%m.%Y %H:%M:%S') }}</dd>
-</dl>
-
-
-
-
-
-
-
-
-
-</div>
-
-
-
-
-<div class="d-flex">
-                    <a href="#nav-user-data" class="card-btn">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-world-www m-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19.5 7a9 9 0 0 0 -7.5 -4a8.991 8.991 0 0 0 -7.484 4" /><path d="M11.5 3a16.989 16.989 0 0 0 -1.826 4" /><path d="M12.5 3a16.989 16.989 0 0 1 1.828 4" /><path d="M19.5 17a9 9 0 0 1 -7.5 4a8.991 8.991 0 0 1 -7.484 -4" /><path d="M11.5 21a16.989 16.989 0 0 1 -1.826 -4" /><path d="M12.5 21a16.989 16.989 0 0 0 1.828 -4" /><path d="M2 10l1 4l1.5 -4l1.5 4l1 -4" /><path d="M17 10l1 4l1.5 -4l1.5 4l1 -4" /><path d="M9.5 10l1 4l1.5 -4l1.5 4l1 -4" /></svg>
-                      Domains: {% if user.user_domains is not none and user.user_domains|length > 0 %}
-    {{ user.user_domains|length }}
-{% else %}
-    0
-{% endif %}
-</a>
-                    <a href="#nav-user-data" class="card-btn">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-app-window m-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 5m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M6 8h.01" /><path d="M9 8h.01" /></svg>
-                      Websites: {{ get_user_websites(user.id)|length }}</a>
-                  </div>
-
-
-
-</div>
-
-
-
-{% if "SUSPENDED_" not in user.username %}
-
-<div class="card mb-4" style="margin-top: var(--tblr-gutter-y);">
-
-<div class="card-header">
-<h3 class="card-title">
-Ports
-</h3>
-<div class="card-actions">
-<a href="/security/firewall?search={{user.username}}">
-View Firewall rules
-<svg xmlns="http://www.w3.org/2000/svg" class="icon ms-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path><path d="M16 5l3 3"></path></svg>
-</a>
-</div>
-</div>
-<div id="ports" class="card-body">
-<div id="ports-container" style="list-style: none; display: flex;"></div>
-</div>
-</div>
-
-
-
-<div class="card mb-4" style="margin-top: var(--tblr-gutter-y);">
-
-<div class="card-header">
-<h3 class="card-title">Personalized Message</h3> &nbsp;<span class="text-muted">
-<a data-bs-toggle="collapse" class="nav-link collapsed" href="#message_info" style="display:inline;" role="button" aria-expanded="false" aria-controls="Factor"><i class="bi bi-question-circle"></i></a>
-</span>
-<div class="card-actions">
-<button type="button" id="save_custom_msg_for_user" class="col btn btn-outlined-primary ms-auto">Save</button>
-</div>
-</div>
-<div class="card-body">
-<div class="pb-2 collapse" id="message_info" style="">
-You can create a personalized message to display on this user's dashboard. Both plain text and HTML are allowed. To delete the message, just leave the area blank and click "Save".
-</div>
-<textarea id="custom_message_for_this_user" class="form-control" rows="5"></textarea>
-</div>
-</div>
-
-
-
-
-{% endif %}
-
-</div>
-
-
-
-
-
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-
-<div class="offcanvas offcanvas-end" tabindex="-1" id="caddyOffcanvas">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="domain_name_caddy">Edit DNS</h5>
-        <button id="saveCaddy" class="btn btn-primary mt-2">Save</button>
-    </div>
-    <div class="offcanvas-body" style="overflow-y: hidden;">
-        <textarea id="caddyContent" rows="20" class="ql-container ql-snow" style="height:100%; width: 100%;"></textarea>
-    </div>
-</div>
-
-<div class="offcanvas offcanvas-bottom" tabindex="-1" id="logOffcanvas">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="log_domain_name">View log</h5>
-    </div>
-    <div class="offcanvas-body" style="overflow-y: hidden;padding:0px;">
-        <pre id="logContent" rows="20" class="ql-container ql-snow" style="border-radius: 0px!important; height:100%; width: 100%; padding-bottom: 0;margin-bottom: 0;" disabled></pre>
-    </div>
-</div>
-
-<div class="offcanvas offcanvas-end" tabindex="-1" id="dnsOffcanvas">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="domain_name">Edit DNS</h5>
-        <button id="saveDns" class="btn btn-primary mt-2">Save</button>
-    </div>
-    <div class="offcanvas-body" style="overflow-y: hidden;">
-        <textarea id="dnsContent" rows="20" class="ql-container ql-snow" style="height:100%; width: 100%;"></textarea>
-    </div>
-</div>
-
-
-<style>
-.nav-line .nav-link {
-    color: #6e7985!important;
-}
-</style>
-
-
-
-<script src="{{ url_for('static', filename='pages/users_single.js') }}?v=0.8" defer></script>
-
+                <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="new_ip">IP address</label>
+                    <div class="relative w-full mt-2">
+                                <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" id="ipSelect" name="new_ip">
+                                <option disabled value="">Change IP address</option>
+                                </select>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var planElement = document.querySelector('[data-plan_name]');
-    
-    // Check if the element exists
-    if (planElement) {
-        var planId = planElement.getAttribute('data-plan_name');
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', '/plans?output=json', true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4 && xhr.status === 200) {
-                var response = JSON.parse(xhr.responseText);
-                var plans = response.plans;
-                var matchingPlan = plans.find(function(plan) {
-                    return plan.id === parseInt(planId);
+document.addEventListener("alpine:init", () => {
+    Alpine.store("ipStore", {
+        fetchIPs() {
+            const ipSelect = document.getElementById('ipSelect');
+            const currentIP = "{{ server_ip }}";
+
+            fetch('/system/ips')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Fetched Data:", data);
+
+                    if (!data.ip_addresses || !Array.isArray(data.ip_addresses)) {
+                        throw new Error("Invalid response format");
+                    }
+
+                    ipSelect.innerHTML = '<option disabled value="">Change IP address</option>';
+
+                    data.ip_addresses.forEach(ip => {
+                        const option = document.createElement('option');
+                        option.value = ip;
+                        option.textContent = ip;
+                        if (ip === currentIP) {
+                            option.selected = true;
+                            option.textContent = `${ip} (Current)`;
+                        }
+                        ipSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching IPs:', error);
+
+                    // Fallback: only display the current server IP
+                    ipSelect.innerHTML = '';
+                    const option = document.createElement('option');
+                    option.value = currentIP;
+                    option.textContent = currentIP;
+                    option.selected = true;
+                    ipSelect.appendChild(option);
                 });
+        }
+    });
 
-                // Extract relevant data from the matching plan
-                var ram = parseInt(matchingPlan.ram.replace(' GB', ''));
-                var cpu = parseInt(matchingPlan.cpu.replace(' cores', ''));
 
-                // Log the extracted RAM and CPU values to the console
-                console.log('Extracted RAM: ' + ram + ' GB');
-                console.log('Extracted CPU: ' + cpu + ' cores');
 
-                // Compare with existing data
-                var realRam = parseInt(document.getElementById('memory').textContent.replace(' GB', ''));
-                var realCpu = parseInt(document.getElementById('nanoCpus').textContent.replace(' cores', ''));
 
-                // Log the REAL RAM and CPU values to the console
-                console.log('Real RAM: ' + realRam + ' GB');
-                console.log('Real CPU: ' + realCpu + ' cores');
 
-                // Log the comparison results to the console
-                if (ram !== realRam) {
-                    console.log('Difference in RAM: ' + Math.abs(realRam - ram) + ' GB');
-                } else {
-                    console.log('RAM matches the existing data.');
+
+// Store for Activity Logs
+Alpine.store("activityStore", {
+    activities: [],
+    fetchLogs() {
+        const username = "{{ user.username }}";  // Assuming you have the username passed here
+
+        fetch(`/user_activity/${username}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log("Fetched Activity Logs:", data);
+
+                this.activities = [];  // Reset the activities
+
+                if (!data.user_activity || data.user_activity.length === 0) {
+                    // Show "No activity log yet" message if empty
+                    this.activities.push({ noActivity: true });
+                    return;
                 }
 
-                if (cpu !== realCpu) {
-                    console.log('Difference in CPU: ' + Math.abs(realCpu - cpu) + ' cores');
-                } else {
-                    console.log('CPU matches the existing data.');
-                }
-            }
-        };
-        xhr.send();
+                // Iterate over each activity in the user_activity array
+                data.user_activity.forEach(activity => {
+                    const date = this.formatDateString(activity.timestamp);
+                    const ip = activity.ip_address;
+                    let action = activity.action;
+                    let actionClass = '';
+
+                    // Handle administrator actions
+                    if (activity.user_type === 'Administrator') {
+                        // Add icon and style for administrator actions
+                        action = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-crown" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4z" /></svg> ` + action;
+
+                        // Customize action class based on the action content
+                        if (action.includes('unsuspended')) {
+                            actionClass = 'text-green bg-dark';
+                        } else if (action.includes('suspended')) {
+                            actionClass = 'text-red bg-dark';
+                        } else if (action.includes('edit') || action.includes('changed')) {
+                            actionClass = 'text-yellow bg-dark';
+                        } else {
+                            actionClass = 'text-teal bg-dark';
+                        }
+                    }
+
+                    // Push the activity data into the activities array
+                    this.activities.push({
+                        date: date,
+                        action: action,
+                        ip: ip,
+                        actionClass: actionClass,
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching activity logs:', error);
+            });
+    },
+
+    formatDateString(rawDate) {
+        const dateObj = new Date(rawDate);
+        let day = dateObj.getDate();
+        const month = dateObj.toLocaleString('en-US', { month: 'long' });
+        const year = dateObj.getFullYear();
+        const hours = dateObj.getHours();
+        const minutes = dateObj.getMinutes();
+        const seconds = dateObj.getSeconds();
+
+        day = day < 10 ? '0' + day : day;
+        const formattedHours = hours < 10 ? '0' + hours : hours;
+        const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+        const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
+
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+
+        if (year !== currentYear) {
+            return `${day}.${month}.${year} ${formattedHours}:${formattedMinutes}`;
+        } else {
+            return `${day}.${month} ${formattedHours}:${formattedMinutes}`;
+        }
     }
+});
+
+
+
+
+
+
+
 });
 </script>
 
 
-<script src="{{ url_for('static', filename='pages/users_both.js') }}?v=0.3" defer></script>
 
-
-
-
-{% elif not user %}
-
-
-      <div class="page-wrapper">
-        <!-- Page header -->
-<div class="page-header mt-0 d-print-none">
-          <div class="container-xl">
-            <div class="row g-2 align-items-center">
-              <div class="col">
-                <!-- Page pre-title -->
-                <div class="page-pretitle">
-                  OpenPanel
+                    </div>
                 </div>
-                <h2 class="page-title">
-                  Users
-                </h2>
-              </div>
-              <!-- Page title actions -->
-              <div class="col-auto ms-auto d-print-none">
-                <div class="btn-list">
-                  <a href="#" id="addUserButton" class="btn btn-primary d-none d-sm-inline-block" data-bs-toggle="collapse" data-bs-target="#collapseAddNewUser" aria-expanded="false" aria-controls="collapseAddNewUser">
-                    <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg>New User</a>
+                <div class="hidden col-span-full sm:col-span-3">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="size">MySQL type</label>
+                                <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name="sql_type" id="sql_type">
+                                    <option disabled selected value> -- select sql server -- </option>
+                                    <option value="mysql">MySQL</option>
+                                    <option value="mariadb">MariaDB</option>
+                                </select>
                 </div>
-              </div>
+
+                <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+    <div class="col-span-full">
+        <div role="radiogroup" aria-required="false" dir="ltr" class="grid gap-2" tremor-id="tremor-raw" tabindex="0" style="outline: none;">
+            <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">Select a package</p>
+<div x-data="{ selectedPlan: '{{ user.plan_id }}' }" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {% for plan in plans %}
+    <button type="button" role="radio" 
+        :aria-checked="selectedPlan === '{{ plan.id }}' ? 'true' : 'false'" 
+        :data-state="selectedPlan === '{{ plan.id }}' ? 'checked' : ''" 
+        value="{{ plan.name }}" 
+        class="group relative w-full rounded-md border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 data-[disabled]:border-gray-100 data-[disabled]:dark:border-gray-800 data-[disabled]:bg-gray-50 data-[disabled]:shadow-none data-[disabled]:dark:bg-gray-900 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 flex items-start justify-between" 
+        :id="plan.id" tabindex="0"
+        @click="selectedPlan = '{{ plan.id }}'">
+
+            <div x-show="'{{ plan.id }}' === '{{ user.plan_id }}'" class="absolute -top-3 flex"><span class="inline-flex items-center rounded-full bg-gray-300 text-black text-xs font-semibold py-1 px-3">Current Plan</span></div>
+
+        <div class="flex w-full flex-col justify-between">
+            <div>
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{ plan.id }}" aria-describedby="{{ plan.id }}-description">
+                    {{ plan.name }}
+                </label>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">{{ plan.description }}</p>
             </div>
-          </div>
+
+
+
+            <div class="mt-4" x-data="{ showDetails: false }">
+                <span @click="showDetails = !showDetails" class="text-sm font-medium text-gray-900 dark:text-gray-50">Display Limits</span>
+                <span :class="{ 'hidden': !showDetails }">
+                    <p class="mt-6 text-xs text-gray-500 dark:text-gray-500">{{ plan.cpu }} Cores</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.ram }} Memory</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.disk_limit }} Storage</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.inodes_limit }} Inodes</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.bandwidth }} Mbps</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.domains_limit }} Domains</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.websites_limit }} Websites</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.email_limit }} Email accounts</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.ftp_limit }} FTP accounts</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.db_limit }} MySQL Databases</p>
+                </span>
+            </div>
         </div>
+
+        <div class="relative flex size-4 shrink-0 appearance-none items-center justify-center rounded-full border shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 group-data-[state=checked]:border-0 group-data-[state=checked]:border-transparent group-data-[state=checked]:bg-blue-500 group-data-[disabled]:border-gray-300 group-data-[disabled]:bg-gray-100 group-data-[disabled]:text-gray-400 group-data-[disabled]:dark:border-gray-700 group-data-[disabled]:dark:bg-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+            <span x-show="selectedPlan === '{{ plan.id }}'" class="flex items-center justify-center">
+                <div class="size size-1.5 shrink-0 rounded-full bg-white group-data-[disabled]:bg-gray-400 group-data-[disabled]:dark:bg-gray-500"></div>
+            </span>
+        </div>
+    </button>
+
+    <!-- Hidden radio input to track the selected plan -->
+    <input type="radio" value="{{ plan.id }}" aria-hidden="true" style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 213.328px; height: 146px;" tabindex="-1" name="plan_id" :checked="selectedPlan === '{{ plan.id }}'" />
+    {% endfor %}
+</div>
+
+
+        </div>
+    </div>
+
+
+
+
+            </div>
+
+            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+            <div class="flex items-center justify-end space-x-4">
+                <a href="/users" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">Go back</a>
+                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+</form>
+
+                    </div>
+                  <!-- END EDIT -->
+
+<!-- ACTIVITY -->
+<div x-show="activeTab === 'activity'" x-cloak x-data="{ searchQuery: '' }">
+    <!-- Search Input -->
+    <div class="flex flex-col justify-between gap-2 px-4 py-6 sm:flex-row sm:items-center sm:p-6">
+        <div class="relative w-full sm:w-64 [&>input]:py-1.5">
+            <input
+                x-model="searchQuery"
+                class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8"
+                placeholder="Search activities..."
+                type="search"
+            />
+            <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                    <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+   <div class="overflow-x-auto">
+        <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+            <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                <thead>
+                    <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Action</th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP Address</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+
+
+<template x-if="$store.activityStore.activities.length === 0">
+    <tr>
+        <td colspan="12" class="p-6 text-center">
+            Loading user activity log..
+        </td>
+    </tr>
+</template>
+
+<template x-for="activity in $store.activityStore.activities.filter(activity => {
+    return activity.date.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        activity.action.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        activity.ip.toLowerCase().includes(searchQuery.toLowerCase());
+})" :key="activity.date">
+    <tr :class="activity.actionClass" 
+        class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
+        <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 
+            x-text="activity.date"></td>
+        <td class="flex relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 
+            x-html="activity.action"></td>
+        <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 
+            x-text="activity.ip"></td>
+    </tr>
+</template>
+
+
+
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+                    <!-- END ACTIVITY -->
+
+                    <!-- SUSPEND USER -->
+                    <div x-show="activeTab === 'suspend'" x-cloak>
+<form method="GET" action="/user/suspend/{{ user.username.split('_')[-1] }}">
+<div x-data="{ confirmationText: '' }" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
+    <form action="#" method="POST">
+        <h3 class="font-semibold text-gray-900 dark:text-gray-50">Suspend user account</h3>
+        <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Disable login for OpenPanel user, stop their services and revoke access to websites and emails.</p>
+        <div class="mt-6">
+            <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Type "{{ user.username.split('_')[-1] }}" to confirm:</label>
+            <div class="relative w-full mt-2">
+                <input type="text" x-model="confirmationText" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+            </div>
+        </div>
+        
+        <button x-show="confirmationText === '{{ user.username.split('_')[-1] }}'" x-cloak class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400 mt-4 w-full" type="submit">Suspend account</button>
+    </form>
+</div>
+</form>
+
+
+
+
+                    </div>
+                    <!-- END SUSPEND USER -->
+
+                    <!-- DELETE USER -->
+                    <div x-show="activeTab === 'delete'" x-cloak>
+                      
+<form method="GET" action="/user/delete/{{ user.username.split('_')[-1] }}">
+<div x-data="{ confirmationText: '' }" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
+    <form action="#" method="POST">
+        <h3 class="font-semibold text-gray-900 dark:text-gray-50">Delete user account</h3>
+        <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">All user data will be permanently deleted. There is no coming back after you press delete.</p>
+        <div class="mt-6">
+            <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Type "{{ user.username.split('_')[-1] }}" to confirm:</label>
+            <div class="relative w-full mt-2">
+                <input type="text" x-model="confirmationText" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+            </div>
+        </div>
+        
+        <button x-show="confirmationText === '{{ user.username.split('_')[-1] }}'" x-cloak class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 text-white border-transparent bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 mt-4 w-full" type="submit">Delete account permanently</button>
+    </form>
+</div>
+</form>
+
+
+
+
+                    </div>
+                    <!-- END DELETE USER -->
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
 
 
 </div>
 
+<!--script src="{{ url_for('static', filename='pages/users_single.js') }}?v=0.8" defer></script-->
 
-
-<!-- ovo je duplo i u not user -->
-
-<div class="collapse mb-4 card" id="collapseAddNewUser">
-
-
-
-                  <div class="card-header">
-                    <ul class="nav nav-tabs card-header-tabs nav-fill" data-bs-toggle="tabs" role="tablist">
-                      <li class="nav-item" role="presentation">
-                        <a href="#tabs-create-user" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab" tabindex="-1"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-user-plus"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M16 19h6" /><path d="M19 16v6" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4" /></svg> &nbsp; Create User</a>
-                      </li>
-                      
-                      <li class="nav-item" role="presentation">
-                        <a href="#tabs-import-user" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-user-down"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4c.342 0 .674 .043 .99 .124" /><path d="M19 16v6" /><path d="M22 19l-3 3l-3 -3" /></svg> &nbsp; Import User</a>
-                      </li>
-                    </ul>
-                  </div>
-                  <div class="card-body">
-                    <div class="tab-content">
-                      <div class="tab-pane active show" id="tabs-create-user" role="tabpanel">
-
-                        <!-- Form for adding new users -->
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-md-6 offset-md-3">
-                                    <h2 class="mb-3">Create a New User</h2>
-                                    <p></p>
-                                    <form id="userForm">
-                        <div class="form-group">
-                            <label for="admin_email">Email address:</label>
-                            <input type="email" class="form-control" name="admin_email" id="admin_email" required>
-                        </div>
-                            <div class="form-group">
-                                <label for="plan_name">Plan:</label>
-                                <div class="input-group">
-                        <select class="form-select" size="3" name="plan_name" id="plan_name" aria-label="size 3 select plan_name" required>
-                            {% for plan in plans %}
-                                <option value="{{ plan.name }}" {% if loop.first %}selected{% endif %}>{{ plan.name }} - {{ plan.description }}</option>
-                            {% endfor %}
-                        </select>
-                                </div>
-                            </div>
-
-                            <div class="form-group row">
-                                <div class="col-md-6">
-                                    <label for="admin_username">Username:</label>
-                                    <input type="text" class="form-control" name="admin_username" id="admin_username" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="admin_password">Password:</label>
-                                    <div class="input-group">
-                                        <input type="password" class="form-control" name="admin_password" id="admin_password">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-outline-success" type="button" id="generatePassword">
-                                                Generate
-                                            </button>
-                                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                        <br>
-                        <button type="button" class="btn btn-primary" id="CreateUserButton">Create User</button>
-
-                        </form>
-
-
-                                </div>
-                            </div>
-                        </div>
+{% else %}
 
 
 
-                      </div>
-                      <div class="tab-pane" id="tabs-import-user" role="tabpanel">
-
-                        <!-- Form for importing users -->
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-md-6 offset-md-3">
-                                    <h2 class="mb-3">Import User from cPanel <span class="badge badge-sm bg-green-lt text-uppercase ms-auto">New</span></h2>
-                                    <p></p>
-                                    <form id="userimportForm" method="POST" action="/import/cpanel">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        <div class="form-group">
-                            <label for="admin_email">Backup file:</label>
-                            <input type="text" class="form-control" id="path" name="path" required>
-                        </div>
-                            <div class="form-group">
-                                <label for="plan_name">Plan:</label>
-                                <div class="input-group">
-                        <select class="form-select" size="3" name="plan_name" id="plan_name" aria-label="size 3 select plan_name" required>
-                            {% for plan in plans %}
-                                <option value="{{ plan.name }}" {% if loop.first %}selected{% endif %}>{{ plan.name }} - {{ plan.description }}</option>
-                            {% endfor %}
-                        </select>
-                                </div>
-                            </div>
-
-                        <br>
-                        <button type="submit" class="btn btn-primary" id="ImportUserButton">Import from Backup</button>
-
-                        </form>
-                                </div>
-                            </div>
-                        </div>
-
-                      </div>
-                    </div>
-                  </div>
+<div
+    style="
+        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        height: 90vh;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    "
+>
+    <div>
+        <style>
+            body {
+                color: #000;
+                background: #fff;
+                margin: 0;
+            }
+            .next-error-h1 {
+                border-right: 1px solid rgba(0, 0, 0, 0.3);
+            }
+            @media (prefers-color-scheme: dark) {
+                body {
+                    color: #fff;
+                    background: #000;
+                }
+                .next-error-h1 {
+                    border-right: 1px solid rgba(255, 255, 255, 0.3);
+                }
+            }
+        </style>
+        <div style="display: inline-block;">
+          <h2 style="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">No such user</h2>
+          <p class="mt-1 text-sm leading-6 text-gray-500">This user no longer exists or MySQL database is unreachable.</p>
+          </div>
+    </div>
 </div>
 
 
 {% endif %}
+
+
+
+
+
 
 
 {% endblock %}

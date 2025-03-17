@@ -91,16 +91,9 @@ document.getElementById("CreateUserButton").addEventListener("click", function()
         return; // Stop the execution if the form is not valid
     }
 
-    var collapseElement = document.getElementById("advanced");
-    var bootstrapCollapse = new bootstrap.Collapse(collapseElement, {
-        toggle: false
-    });
-    bootstrapCollapse.hide();
-
-
     var createUserButton = document.getElementById("CreateUserButton");
     createUserButton.disabled = true;
-    createUserButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp; Creating user...';
+    createUserButton.innerHTML = '<span class="animate-spin spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp; Creating user...';
 
     submitForm(form, false); // Initial form submission without debugging
 
@@ -111,8 +104,8 @@ document.getElementById("CreateUserButton").addEventListener("click", function()
         statusMessageDiv.innerText = ""; // Clear previous messages
 
         const scrollinglogAreaDiv = document.getElementById("scrollinglogAreaDiv");
-        scrollinglogAreaDiv.classList.remove("d-none");
-        scrollinglogAreaDiv.classList.add("active");
+        scrollinglogAreaDiv.classList.remove("hidden");
+        scrollinglogAreaDiv.classList.add("block"); // Tailwind 'block' class to display it
 
         fetch("/user/new", {
             method: "POST",
@@ -146,11 +139,11 @@ document.getElementById("CreateUserButton").addEventListener("click", function()
 
             return new Response(stream).text();
         }).then(text => {
-            //bootstrapCollapse.show();
             createUserButton.disabled = false;
             createUserButton.innerHTML = 'Create User';
             const response = JSON.parse(text);
-            scrollinglogAreaDiv.classList.remove("active");
+            //scrollinglogAreaDiv.classList.remove("block");
+            //scrollinglogAreaDiv.classList.add("hidden");
 
             if (response.message && response.message.includes("consider purchasing the Enterprise version")) {
                 const updatedMessage = response.message.replace(
@@ -163,7 +156,8 @@ document.getElementById("CreateUserButton").addEventListener("click", function()
             createUserButton.disabled = false;
             createUserButton.innerHTML = 'Create User';
             console.error('Fetch error:', error);
-            scrollinglogAreaDiv.classList.remove("active");
+            //scrollinglogAreaDiv.classList.remove("block");
+            //scrollinglogAreaDiv.classList.add("hidden");
         });
     }
 });
