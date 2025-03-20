@@ -2,75 +2,103 @@
 
 {% block content %}
 
+
+<!-- Page header -->
+<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">Email Settings</h1>
+                <h2 class="text-sm font-medium text-slate-500">MailServer configuration.</h2>
+            </div>
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+MailServer status: 
+{% if mailserver_status == 'running' %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">
+<span class="badge bg-success me-1">
+{% elif mailserver_status == 'stopped' %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-800 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">
+{% elif mailserver_status == 'not_installed' %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-grey-50 text-grey-800 ring-grey-600/30 dark:bg-grey-400/10 dark:text-grey-400 dark:ring-grey-400/20">
+{% else %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-grey-50 text-grey-800 ring-grey-600/30 dark:bg-grey-400/10 dark:text-grey-400 dark:ring-grey-400/20">
+{% endif %} {{mailserver_status}}</span>
+            </div>
+        </div>
+    </header>
+</div>
+
+
+
+<div class="sm:p-6 lg:p-8">
+    <div>
+        <section>
+
+
+<form method="POST" action="/services" x-data="{ action: '' }" x-ref="controlForm">
+    <input type="hidden" name="real_name" value="openadmin_mailserver">
+    <input type="hidden" name="action" x-model="action">
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50" id="status">Status</h2>
+            <p class="mt-2 text-sm leading-6 text-gray-500">MailServer status and actions.</p>
+        </div>
+        <div class="md:col-span-2">
+            <div>
+                <div class="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                    <h3 id="create-rule-heading" class="text-sm font-semibold">Actions</h3>
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="action = 'start'; $refs.controlForm.submit()" 
+                            class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 text-center font-medium shadow-sm transition-all duration-100 ease-in-out text-base sm:text-sm disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/30 disabled:text-gray-400 disabled:dark:text-gray-600 gap-2 py-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-player-play">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                <path d="M7 4v16l13 -8z" />
+                            </svg> Start
+                        </button>
+
+                        <button type="button" @click="action = 'restart'; $refs.controlForm.submit()" 
+                            class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 text-center font-medium shadow-sm transition-all duration-100 ease-in-out text-base sm:text-sm disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/30 disabled:text-gray-400 disabled:dark:text-gray-600 gap-2 py-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4" />
+                                <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+                            </svg> Restart
+                        </button>
+
+                        <button type="button" @click="action = 'stop'; $refs.controlForm.submit()" 
+                            class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 text-center font-medium shadow-sm transition-all duration-100 ease-in-out text-base sm:text-sm disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/30 disabled:text-gray-400 disabled:dark:text-gray-600 gap-2 py-1.5 text-rose-600 dark:text-rose-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-player-stop">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                <path d="M5 5m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" />
+                            </svg> Stop
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+        </section>
+        <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 my-10" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+    </div>
+</div>
+
+
+
+
+
+
 <!-- Page header -->
 <div class="page-header mt-0 d-print-none">
     <div class="container-xl">
         <div class="row g-2 align-items-center">
-            <div class="col">
-                <!-- Page pre-title -->
-                <div class="page-pretitle">
-                    Emails
-                </div>
-                <h2 class="page-title">
-                    Settings
-                </h2>
-            </div>
-           <!-- Page title actions -->
-            <div class="col-auto ms-auto mt-0 d-print-none">
-                <div class="btn-list">
-                </div>
-            </div>
 
         <!-- Page body -->
         <div class="page-body">
           <div class="container-xl">
             <div class="row row-cards">
-              <div class="col-md-2">
-                <div class="card">
-                  <div class="card-body">
-                    <div class="subheader">MailServer</div>
-                    <div class="h3 m-0" id="mailserver-status">
-{% if mailserver_status == 'running' %}
-<span class="badge bg-success me-1"></span>
-{% elif mailserver_status == 'stopped' %}
-<span class="badge bg-danger me-1"></span>
-{% elif mailserver_status == 'not_installed' %}
-<span class="badge bg-warning me-1"></span>
-{% else %}
-<span class="badge bg-secondary me-1"></span>
-{% endif %} {{mailserver_status}}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="card">
-                  <div class="card-body">
-                    <div class="subheader">Actions</div>
-     
-                      <div class="btn-list h3 m-0">
-
-
-                  <span data-bs-toggle="tooltip" data-bs-placement="top" aria-label="Start MailServer" data-bs-original-title="Start MailServer">
-                  <a href="#" onclick="controlMailServer('start', 'MailServer')" class="">
-                  <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 4v16l13 -8z" /></svg></a></span>
-
-
-                  <span data-bs-toggle="tooltip" data-bs-placement="top" aria-label="Stop MailServer" data-bs-original-title="Stop MailServer">
-                  <a href="#" onclick="controlMailServer('stop', 'MailServer')" class="">
-                  <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 5m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z" /></svg></a></span>
-
-                  <span data-bs-toggle="tooltip" data-bs-placement="top" aria-label="Restart MailServer" data-bs-original-title="Restart MailServer">
-                  <a href="#" onclick="controlMailServer('restart', 'MailServer')" class="">
-                  <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></svg></a></span>
-
-                      </div>
-
-
-
-
-                  </div>
-                </div>
-              </div>
               <div class="col-md-3">
                 <div class="card">
                   <div data-bs-toggle="tooltip" data-bs-placement="top" aria-label="Current webmail software" data-bs-original-title="Current webmail software" class="card-body">
@@ -1141,89 +1169,6 @@
 
 
 
-
-
-<div class="toast-container position-fixed bottom-0 end-0 p-2"></div>
-
-
-<script>
-async function controlMailServer(action, displayName) {
-    // Create a new toast element for the notification
-    const toastElement = document.createElement('div');
-    toastElement.className = 'toast';
-    toastElement.role = 'alert';
-    toastElement.ariaLive = 'assertive';
-    toastElement.ariaAtomic = 'true';
-    toastElement.setAttribute('data-bs-autohide', 'false');
-
-    // Create the header
-    const toastHeader = document.createElement('div');
-    toastHeader.className = 'toast-header';
-    const strong = document.createElement('strong');
-    strong.className = 'me-auto';
-    strong.innerText = `${action.charAt(0).toUpperCase() + action.slice(1)}ing ${displayName}`;
-    const small = document.createElement('small');
-    small.innerText = new Date().toLocaleTimeString();
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.className = 'ms-2 btn-close';
-    closeButton.setAttribute('data-bs-dismiss', 'toast');
-    closeButton.setAttribute('aria-label', 'Close');
-
-    // Append elements to the header
-    toastHeader.appendChild(strong);
-    toastHeader.appendChild(small);
-    toastHeader.appendChild(closeButton);
-    
-    // Create the body
-    const toastBody = document.createElement('div');
-    toastBody.className = 'toast-body';
-    toastBody.innerText = 'Processing your request... Please wait.';
-
-    // Append header and body to the toast
-    toastElement.appendChild(toastHeader);
-    toastElement.appendChild(toastBody);
-
-    // Append the toast to the toast container
-    document.querySelector('.toast-container').appendChild(toastElement);
-
-    // Show the toast
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
-
-    try {
-        // Make the fetch request to control the service
-        const response = await fetch('/services/control', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrf_token
-            },
-            body: JSON.stringify({ real_name: 'openadmin_mailserver', action: action }),
-        });
-
-        // Parse the JSON response
-        const result = await response.json();
-
-        // Check the result status
-        if (result.status === 'success') {
-            // Show success message
-            toastBody.innerHTML = `${displayName} action completed successfully!<br>Page will refresh to display updated information.`;
-            toast.show();
-            location.reload(); // Refresh the page to update information
-        } else {
-            // Show error message
-            toastBody.innerText = 'Error: ' + result.message;
-            toast.show();
-        }
-    } catch (error) {
-        // Handle any network errors
-        console.error('Error:', error);
-        toastBody.innerHTML = 'An error occurred processing the request. Error message:<br><pre>' + error + '</pre>';
-        toast.show();
-    }
-}
-</script>
 
 <script src="{{ url_for('static', filename='pages/emails_settings.js') }}" defer></script>
 
