@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Log Viewer</h1>
+                    <h2 class="text-sm font-medium text-slate-500">View, download or empty system logs files.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
+
+
+        <div class="flex space-x-4 mt-4 md:mt-0">
+            <div>
+                <select id="log-select" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                    <option disabled selected value>-- Select a log file --</option>
+                    <optgroup label="OpenAdmin Logs">
+                        {% for log_file, log_path in log_files.items() %}
+                            {% if log_file.startswith('OpenAdmin') %}
+                                <option value="{{ log_file }}">{{ log_file }} ({{ log_path }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="OpenPanel Logs">
+                        {% for log_file, log_path in log_files.items() %}
+                            {% if log_file.startswith('OpenPanel') %}
+                                <option value="{{ log_file }}">{{ log_file }} ({{ log_path }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Other Logs">
+                        {% for log_file, log_path in log_files.items() %}
+                            {% if not log_file.startswith('OpenAdmin') and not log_file.startswith('OpenPanel') %}
+                                <option value="{{ log_file }}">{{ log_file }} ({{ log_path }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+            <div>
+                <select id="lines-select" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                    <option disabled selected value> -- Lines -- </option>
+                    <option value="20">20</option>
+                    <option value="100">100</option>
+                    <option value="500">500</option>
+                    <option selected value="1000">1000</option>
+                    <option value="2000">2000</option>
+                    <option value="999999">ALL</option>
+                </select>
+            </div>
+        </div>
+
+
+
+                </div>
+            </div>
+    </header>
+    </div>
+
+
+
+<div class="container mx-auto mt-4">
+
+    <div class="mt-6 bg-black-500 shadow-md rounded-lg p-4">
+        <pre id="log-content" class="whitespace-pre-wrap border border-gray-300 p-3">Select a log file to view its content here.</pre>
+    </div>
+
+    <div class="flex justify-center mt-4 space-x-4">
+        <div id="logs-tip" class="hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative" role="alert">
+            <strong class="font-bold pr-2">TIP:</strong><span class="block sm:inline" id="logs-tip-text">Here is something that you might like to know.</span>
+        </div>
+        <button id="truncate-btn" class="hidden relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 text-white border-transparent bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 disabled:bg-red-300 disabled:text-white disabled:dark:bg-red-950 disabled:dark:text-red-400">
+            Delete
+        </button>
+        <button id="download-btn" class="hidden relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" onclick="downloadLog()">
+            Download
+        </button>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='pages/services_logs.js') }}" defer></script>
+
+{% endblock %}
