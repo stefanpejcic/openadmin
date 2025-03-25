@@ -65,6 +65,10 @@
 
 
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>SSL</span><div class="-space-y-2"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></div></div></th>
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>WAF</span><div class="-space-y-2"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></div></div></th>
+
+
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Editor</div></th>
 
 
@@ -81,7 +85,7 @@
 
                         {% for domain in domains %}
 
-                        <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900 {% if 'SUSPENDED_' in domain.username %}suspended-user-row{% endif %}" data-domain="{{ domain.domain_url }}">
+                        <tr data-domain="{{ domain.domain_url }}" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900 {% if 'SUSPENDED_' in domain.username %}suspended-user-row{% endif %}">
                         <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{ domain.domain_id }}</td>
                         <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><a href="http://{{ domain.domain_url }}" class="domain_name_in_table" target="_blank">{{ domain.domain_url }}</a></td>
 
@@ -146,8 +150,14 @@
 
  
             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left sort-ssl">
-            <span class="domain-ssl"><div class="placeholder placeholder-xs col-6"></div></span>
+            <span class="domain-ssl flex"><div class="placeholder placeholder-xs col-6"></div></span>
             </td>
+
+
+           <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left sort-coraza">
+            <span class="domain-coraza"><div class="placeholder placeholder-xs col-6"></div></span>
+            </td>
+
 
                         <td class="flex space-x-2  p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
                             <a href="#" class="flex btn edit_dns_link" data-domain="{{ domain.domain_url }}" data-bs-toggle="offcanvas" data-bs-target="#dnsOffcanvas">
@@ -180,11 +190,35 @@ document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("tr[data-domain]").forEach(function (row) {
         const domain = row.querySelector(".domain_name_in_table").textContent.trim();
 
-        const statusCell = row.querySelector(".sort-status");
-        const suspensionStatusSpan = statusCell.querySelector(".domain-status");
+const statusCell = row.querySelector(".sort-status");
+if (!statusCell) {
+    console.error("Status cell not found for row:", row);
+    return; // Skip this row and continue
+}
 
-        const sslCell = row.querySelector(".sort-ssl");
-        const sslStatusSpan = sslCell.querySelector(".domain-ssl");
+const suspensionStatusSpan = statusCell.querySelector(".domain-status");
+if (!suspensionStatusSpan) {
+    console.error("Suspension status span not found for row:", row);
+    return; // Skip this row and continue
+}
+
+const corazaStatusSpan = row.querySelector(".domain-coraza");
+if (!corazaStatusSpan) {
+    console.error("Coraza status span not found for row:", row);
+    return; // Skip this row and continue
+}
+
+const sslCell = row.querySelector(".sort-ssl");
+if (!sslCell) {
+    console.error("SSL cell not found for row:", row);
+    return; // Skip this row and continue
+}
+
+const sslStatusSpan = sslCell.querySelector(".domain-ssl");
+if (!sslStatusSpan) {
+    console.error("SSL status span not found for row:", row);
+    return; // Skip this row and continue
+}
 
         // Fetch domain status
         fetch(`/domains/${domain}`)
@@ -196,15 +230,26 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .then(data => {
 
-                if (data.suspended_status === "Not Suspended") {
+
+                if (data.coraza === "on") {
+                    corazaStatusSpan.textContent = `Enabled`;
+                } else if (data.coraza === "off") {
+                    corazaStatusSpan.textContent = `Disabled`;
+                } else {
+                    corazaStatusSpan.textContent = `Unknown`;
+                }
+
+
+
+                if (data.status === "active") {
                     suspensionStatusSpan.innerHTML = `<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>`;
-                } else if (data.suspended_status === "Suspended") {
+                } else if (data.status === "suspended") {
                     suspensionStatusSpan.innerHTML = `<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Suspended</span>`;
                 } else {
                     suspensionStatusSpan.innerHTML = `<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Unknown</span>`;
                 }
 
-                if (data.https_status === "Automatic") {
+                if (data.ssl === "automatic") {
                     sslStatusSpan.innerHTML = `
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-check">
                             <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -212,7 +257,16 @@ document.addEventListener("DOMContentLoaded", function () {
                             <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/>
                             <path d="M8 11v-4a4 4 0 1 1 8 0v4"/>
                             <path d="M15 19l2 2l4 -4"/>
-                        </svg>`;
+                        </svg> Automatic TLS`;
+                } else if (data.ssl === "custom") {
+                    sslStatusSpan.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-check">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                            <path d="M11.5 21h-4.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v.5"/>
+                            <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/>
+                            <path d="M8 11v-4a4 4 0 1 1 8 0v4"/>
+                            <path d="M15 19l2 2l4 -4"/>
+                        </svg> Custom SSL`;
                 } else {
                     sslStatusSpan.innerHTML = `
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-open">
@@ -220,20 +274,14 @@ document.addEventListener("DOMContentLoaded", function () {
                             <path d="M5 11m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"/>
                             <path d="M12 16m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
                             <path d="M8 11v-5a4 4 0 0 1 8 0"/>
-                        </svg>`;
+                        </svg> No SSL`;
                 }
             })
             .catch(error => {
                 console.error("Error fetching domain data:", error);
                 suspensionStatusSpan.textContent = "Error";
-                sslStatusSpan.innerHTML = `
-                    Error
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-open">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                        <path d="M5 11m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"/>
-                        <path d="M12 16m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
-                        <path d="M8 11v-5a4 4 0 0 1 8 0"/>
-                    </svg>`;
+                //corazaStatusSpan.textContent = "Error";
+                sslStatusSpan.textContent =  "Error";
             });
     });
 });
