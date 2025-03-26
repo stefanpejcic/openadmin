@@ -226,6 +226,8 @@
                                     </div>
                                 </div>
                             </th>
+
+                            <th class="hidden border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Containers</div></th>
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Created</div></th>
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Owner</div></th>
 
@@ -244,7 +246,14 @@
 
                             <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
                             </td>
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><a href="/users/{{ user[1] }}">{{ user[1].split('_')[-1] }}</a></td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+
+<div id="tooltip-manage-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Manage account
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+                                <a href="/users/{{ user[1] }}" data-tooltip-target="tooltip-manage-{{ user[1].split('_')[-1] }}">{{ user[1].split('_')[-1] }}</a></td>
 
                             <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-600 dark:text-gray-400 first:w-10 text-left">{{ user[3] }}</td>
 
@@ -304,7 +313,14 @@
     {% set color_class = 'blue' %}
 {% endif %}
 
-                <div class="relative" title="Memory usage: {{ stat.stats.MemUsage }}" role="progressbar" aria-label="Memory usage" aria-valuenow="{{ percent | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent | round(0) }}">
+
+
+<div id="tooltip-ram-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Memory usage: {{ stat.stats.MemUsage }}
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+                <div class="relative" data-tooltip-target="tooltip-ram-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="Memory usage" aria-valuenow="{{ percent | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent | round(0) }}">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -313,6 +329,9 @@
                         <span class="text-[11px] font-semibold">{{ percent | round(0) | int }}</span>
                     </div>
                 </div>
+
+
+
 
                 {% set percent_cpu = (stat.stats.CPUPerc|replace(" ", "")|replace("%", "")|float / user[15]|float) if user[15] != 0 else (stat.stats.CPUPerc|replace(" ", "")|replace("%", "")|float) %}
                 {% set percent_total = (100 * user[15]|float) if user[15] != 0 else 100 %}
@@ -328,7 +347,14 @@
     {% set color_class = 'blue' %}
 {% endif %}
 
-                <div class="relative" title="CPU%: {{ stat.stats.CPUPerc|replace(" ", "") }} / {{ percent_total }}%" role="progressbar" aria-label="CPU usage" aria-valuenow="{{ percent_cpu | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_cpu | round(0) }}">
+
+
+
+<div id="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    CPU usage: {{ stat.stats.CPUPerc|replace(" ", "") }} / {{ percent_total }}%
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+                <div class="relative" data-tooltip-target="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="CPU usage" aria-valuenow="{{ percent_cpu | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_cpu | round(0) }}">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent_cpu / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -340,7 +366,13 @@
                 </div>
 
             {% else %}
-                <div class="relative" title="No CPU usage data yet." role="progressbar" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
+
+<div id="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    No CPU usage data yet - no containers started.
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+                <div class="relative" data-tooltip-target="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="78.53981633974483" fill="transparent" stroke="" stroke-linecap="round" class="stroke-blue-500 dark:stroke-blue-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -349,7 +381,13 @@
                         <span class="text-[11px] font-semibold">0</span>
                     </div>
                 </div>
-                <div class="relative" title="No Memory usage data yet." role="progressbar" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
+
+<div id="tooltip-ram-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    No Memory usage data yet - no containers started.
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+                <div class="relative" data-tooltip-target="tooltip-ram-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="78.53981633974483" fill="transparent" stroke="" stroke-linecap="round" class="stroke-blue-500 dark:stroke-blue-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -371,8 +409,16 @@
     {% set color_class = 'green' %}
 {% elif percent_disk > 0 %}
     {% set color_class = 'blue' %}
-{% endif %}                
-                <div class="relative" title="Disk usage: {{ du.disk_used }} / {{ du.disk_hard }}" role="progressbar" aria-label="Disk usage" aria-valuenow="{{ percent_disk | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_disk | round(0) }}">
+{% endif %}         
+
+
+
+<div id="tooltip-du-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Disk usage: {{ du.disk_used }} / {{ du.disk_hard }}
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+                <div class="relative" data-tooltip-target="tooltip-du-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="Disk usage" aria-valuenow="{{ percent_disk | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_disk | round(0) }}">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent_disk / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -394,7 +440,15 @@
 {% elif percent_inodes > 0 %}
     {% set color_class = 'blue' %}
 {% endif %}  
-                <div class="relative" title="Inodes: {{ du.inodes_used }} / {{ du.inodes_hard }}" role="progressbar" aria-label="Inodes usage" aria-valuenow="{{ percent_inodes | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_inodes | round(0) }}">
+
+
+
+<div id="tooltip-inode-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Inodes usage: {{ du.inodes_used }} / {{ du.inodes_hard }}
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+                <div class="relative" data-tooltip-target="tooltip-inode-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="Inodes usage" aria-valuenow="{{ percent_inodes | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_inodes | round(0) }}">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent_inodes / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -405,7 +459,13 @@
                 </div>
 
             {% else %}
-                <div class="relative" title="No Disk usage data yet." role="progressbar" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
+
+<div id="tooltip-du-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    No Disk usage data yet.
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+                <div class="relative" data-tooltip-target="tooltip-du-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="78.53981633974483" fill="transparent" stroke="" stroke-linecap="round" class="stroke-blue-500 dark:stroke-blue-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -419,9 +479,17 @@
     </span>
 </td>
 
+
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">
+<i class="bi bi-box"></i>
+ Containers: {{ stat.stats.Container }}
+<i class="bi bi-reception-4"></i> NetIO: {{ stat.stats.NetIO }}
+<i class="bi bi-list-task"></i> PIDs: {{ stat.stats.PIDs }}
+                            </td>
+
+
        
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">{{ user[9].strftime('%d.%m.%Y %H:%M') }}</td>
-
 
 <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
 {% if user[4] %}<a href="/resellers/{{ user[4] }}" class="text-indigo-600 dark:text-indigo-400">{{ user[4] }}</a>{% endif %}</td>
@@ -430,10 +498,21 @@
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
                            <div class="btn-list flex-nowrap">
     {% if "SUSPENDED_" in user[1] %}  
-<button title="Login is disabled for suspended user" class="hidden relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => spinning = false, 500)"><svg version="1.0" style="vertical-align:middle; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" :class="{'animate-spin': spinning}" class=""><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> OpenPanel</button>
+
+<div id="tooltip-login-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Login is disabled for suspended user
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+<button title="" data-tooltip-target="tooltip-login-{{ user[1].split('_')[-1] }}" class="hidden relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => spinning = false, 500)"><svg version="1.0" style="vertical-align:middle; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" :class="{'animate-spin': spinning}" class=""><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> OpenPanel</button>
 
     {% else %}
-<a href="/login/token?username={{ user[1] }}" title="Login as {{ user[1] }} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => spinning = false, 500)"><svg version="1.0" style="vertical-align:middle; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" :class="{'animate-spin': spinning}" class=""><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> OpenPanel</a>
+
+<div id="tooltip-login-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Login as {{ user[1] }} into OpenPanel
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+<a href="/login/token?username={{ user[1] }}" data-tooltip-target="tooltip-login-{{ user[1].split('_')[-1] }}" target="_blank" class="relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => spinning = false, 500)"><svg version="1.0" style="vertical-align:middle; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" :class="{'animate-spin': spinning}" class=""><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> OpenPanel</a>
 
     {% endif %}
                             </div>
