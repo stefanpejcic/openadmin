@@ -24,27 +24,58 @@ document.addEventListener("DOMContentLoaded", function () {
             saveButton.disabled = false;
             saveButton.innerHTML = 'Save key';
             let alertHtml = '';
-            
+
             if (response.response === "License is invalid" || response.error === "License key validation failed") {
-                alertHtml = `<div class="p-4 sm:p-6 lg:p-8"><div class='bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md'>
-                                <p><strong>License key is invalid.</strong> Please verify it on your <a href='https://my.openpanel.com/clientarea.php?action=products' class='text-blue-500 underline' target='_blank'>my.openpanel.com</a> account.</p>
-                             </div></div>`;
+                alertHtml = `<div class="p-4 sm:p-6 lg:p-8">
+                                <div class='bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md'>
+                                    <p><strong>License key is invalid.</strong> Please verify it on your 
+                                    <a href='https://my.openpanel.com/clientarea.php?action=products' class='text-blue-500 underline' target='_blank'>my.openpanel.com</a> account.</p>
+                                </div>
+                             </div>`;
             } else {
-                alertHtml = `<div class="p-4 sm:p-6 lg:p-8"><div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md'>
-                                <p>License key saved successfully! <a href='/service/restart/admin' class='text-blue-500 underline'>Click here to restart OpenAdmin</a> interface and apply Enterprise features.</p>
-                             </div></div>`;
-                verifyLicense();
+                alertHtml = `<div class="p-4 sm:p-6 lg:p-8">
+                                <div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md'>
+                                    <p>License key saved successfully! 
+                                    <a href="#" id="restartOpenAdmin" class='text-blue-500 underline'>Click here to restart OpenAdmin</a> 
+                                    interface and apply Enterprise features.</p>
+                                </div>
+                            </div>`;
+
+                setTimeout(verifyLicense, 0);
             }
+
             alertContainer.innerHTML = alertHtml;
+
+            const restartLink = document.getElementById("restartOpenAdmin");
+            if (restartLink) {
+                restartLink.replaceWith(restartLink.cloneNode(true));
+                document.getElementById("restartOpenAdmin").addEventListener("click", function (event) {
+                    event.preventDefault();
+                    fetch('/service/restart/admin', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    })
+                    .then(() => {
+                        setTimeout(() => {
+                            window.location.href = "/license";
+                        }, 5000);
+                    })
+                    .catch(error => console.error("Error restarting OpenAdmin:", error));
+                });
+            }
         })
         .catch(error => {
             console.error('Error saving license key:', error);
             saveButton.disabled = false;
             saveButton.innerHTML = 'Save key';
             alertContainer.innerHTML = `<div class="p-4 sm:p-6 lg:p-8">
-            <div class='bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md'>
-                                            <p>License key validation failed. Please check your key and try again.</p>
-                                        </div></div>`;
+                                            <div class='bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md'>
+                                                <p>License key validation failed. Please check your key and try again.</p>
+                                            </div>
+                                        </div>`;
         });
     });
 
@@ -99,7 +130,6 @@ function verifyLicense() {
                            `</ul>`;
             infoContainer.innerHTML = listHtml;
         } catch (e) {
-            // If JSON parsing fails, assume it's a plain string
             infoContainer.innerHTML = `<p class="text-red-600">${response.info}</p>`;
         }
 
@@ -113,4 +143,3 @@ function verifyLicense() {
         document.querySelector('.btn-verify').disabled = false;
     });
 }
-
