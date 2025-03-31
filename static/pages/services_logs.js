@@ -5,6 +5,12 @@ function fetchLog() {
     const linesSelect = document.getElementById('lines-select');
     const linesValue = linesSelect.value;
 
+    // Special case for '/settings/updates/log/'
+    if (logName === '/settings/updates/log/') {
+        window.location.href = logName;
+        return;
+    }
+
     let url = `/services/logs/raw?log_name=${logName}`;
     if (linesValue !== 'ALL') {
         url += `&lines=${linesValue}`;
