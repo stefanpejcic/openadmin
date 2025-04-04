@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.241.118"
+VERSION="20.240.331"
 # Record the process ID of the script
 PID=$$
 
@@ -870,7 +870,7 @@ if [ -n "$NS1_SET" ]; then
         CHECK_NS_ALSO="yes"
 
         #check ns2 only if ns1 is set!
-        NS2_SET=$(awk -F'=' '/^ns1/ {print $2}' "$CONF_FILE")
+        NS2_SET=$(awk -F'=' '/^ns2/ {print $2}' "$CONF_FILE")
         NS2=$NS2_SET
 
     else
