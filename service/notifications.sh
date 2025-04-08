@@ -493,8 +493,7 @@ docker_containers_status() {
 
                     # Log the error and write notification
                     error_log=$(docker --context default logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
-                    message="$error_log"
-                    write_notification "$title" "$message"
+                    write_notification "$title" "$error_log"
                 fi
     }
 
