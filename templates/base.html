@@ -1,0 +1,896 @@
+<!doctype html>
+<!--
+* OpenAdmin default template with TailwindCSS and AlpineJS
+* @link https://openpanel.com
+* Copyright 2023-2025 openpanel.com Stefan Pejcic
+* Licensed under MIT
+-->
+<html lang="en" class="h-full" style="color-scheme: ">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>OpenAdmin [{% if force_domain_value %}{{ force_domain_value }}{% elif server_hostname %}{{ server_hostname }}{% else %}{{public_ip}}{% endif %}] {% if title %}{{title}}{%endif%}</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+
+  <meta name="robots" content="noindex,nofollow">
+  <!-- CSRF protection -->
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+
+<script>
+    // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark')
+    }
+</script>
+
+
+
+  <!-- CSS files -->
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+   <!-- SWITCH TO PROD script src="https://unpkg.com/tailwindcss-cdn@3.4.10/tailwindcss.js"></script -->
+
+    <!-- Tailwind CSS v3 Configuration -->
+    <script>
+        document.documentElement.classList.add(localStorage.getItem('color-theme') || 'dark');
+        const defaultTheme = tailwind.defaultTheme;
+        const colors = tailwind.colors;
+        const plugin = tailwind.plugin;
+
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ["Inter", ...defaultTheme.fontFamily.sans],
+                    },
+                },
+            },
+        };
+    </script>
+
+    <!-- Alpine Core -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine x-cloak style (https://alpinejs.dev/directives/cloak) -->
+    <style>
+        [x-cloak] { display: none !important;}
+    </style>
+
+    <!-- Bootstrap Icons -->
+    <!--link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" /-->
+    
+    <!-- Flowbite -->
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+
+
+</head>
+
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950" x-data="{ sidebarOpen: window.innerWidth >= 768, isMobile: window.innerWidth < 768 }" 
+      x-init="window.addEventListener('resize', () => { sidebarOpen = window.innerWidth >= 768; isMobile = window.innerWidth < 768 })">
+
+
+
+
+<div style="--sidebar-width:16rem" class="flex min-h-svh w-full">
+    <div x-show="sidebarOpen" 
+         :class="{'hidden': !sidebarOpen}" 
+         @click.away="isMobile && (sidebarOpen = false)" 
+         class="group peer md:block" 
+         data-state="expanded" 
+         data-collapsible="false">
+
+
+        <div class="relative h-svh w-[--sidebar-width] bg-transparent transition-[width] duration-150 ease-in-out will-change-transform group-data-[collapsible=true]:w-0"></div>
+        <div class="fixed inset-y-0 z-10 h-svh w-[--sidebar-width] transition-[left,right,width] duration-150 ease-in-out will-change-transform md:flex left-0 group-data-[collapsible=true]:left-[calc(var(--sidebar-width)*-1)] border-r border-gray-200 dark:border-gray-800">
+      
+            <div data-sidebar="sidebar" class="flex h-full w-full flex-col">
+                <div data-sidebar="header" class="flex flex-col gap-2 p-2 px-3 py-4">
+                    <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded-md bg-white p-1.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"><svg version="1.0" class="text-black dark:text-blue-500" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg></span>
+                        <div><span class="block text-sm font-semibold text-gray-900 dark:text-gray-50">
+
+                          <a href="/" id="hostname" style="text-decoration:none;">{% if force_domain_value %}{{ force_domain_value }}{% else %}{{ public_ip }}{% endif %}</a>
+
+</span><span class="block text-xs text-gray-900 dark:text-gray-50">OpenPanel {{ license_type }} license</span></div>
+                    </div>
+                </div>
+                <div data-sidebar="content" class="max-h-100 flex flex-1 flex-col gap-2 overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-3">
+                        <div data-sidebar="group-content" class="w-full text-sm">
+                          <form action="./" method="get" autocomplete="off" novalidate="">
+                            <div class="relative w-full [&amp;>input]:sm:py-1.5" tremor-id="tremor-raw">
+                              <input type="search" autofocus id="searchInput" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search...">
+                                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg></div>
+            <ul class="relative z-50 overflow-hidden rounded-md shadow-xl shadow-black/[2.5%] min-w-48 bg-white dark:bg-[#090E1A] text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade" style="top: 100%; width: 100%; right: 0px; overflow-x: hidden; overflow-y: overlay; max-height: 90vh;" aria-labelledby="searchInput" id="filteredDropdown">
+            </ul>
+                            </div>
+                          </form>
+
+
+<script>
+$(document).ready(function(){
+    $('#searchInput').on('input', function() {
+        var searchText = $(this).val().toLowerCase();
+        var dropdownItems = '';
+
+        $.when(
+            $.get('/core/search_filter'),
+            $.get('/core/search_users'),
+            $.get('/core/search_websites')
+        ).done(function(jsonData, usersData, websiteData) {
+            jsonData = jsonData[0];
+            usersData = usersData[0];
+            websiteData = websiteData[0];
+                
+            $.each(jsonData, function(index, item) {
+                var itemName = item.name || '';
+                var linkTarget = '';
+
+                if (itemName.toLowerCase().includes(searchText)) {
+                    dropdownItems += '<li class="p-1" style="border-bottom: 1px solid #e2e5ec;"><h3 class="m-0"><a class="dropdown-item" href="' + item.link + '" ' + linkTarget + '>' + item.name + '<br><p class="dropdown-item-description" style="display:contents; font-size: 0.7em;margin-bottom: 0px;">' + item.description + '</p></a></h3></li>';
+
+                }
+            });
+
+$.each(usersData, function(index, item) {
+    var itemName = item[0] || '';
+    var suspended = itemName.toLowerCase().includes('suspended');
+    var iconClass = suspended ? '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"> <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/> <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/> </svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>';
+    
+    if (itemName.toLowerCase().startsWith('suspended_')) {
+        var displayName = itemName.substring(itemName.lastIndexOf('_') + 1);
+        var itemLink = '/users/' + itemName;
+        dropdownItems += '<li class="p-1"><h3 class="m-0"><a class="flex text-red" href="' + itemLink + '">' + iconClass + ' &nbsp;<span class="text-base">' + displayName + ' <b>(SUSPENDED)</b></span></a></h3></li>';
+    } else {
+        var itemLink = '/users/' + itemName;
+        dropdownItems += '<li class="p-1"><h3 class="m-0 flex justify-between items-center w-full"><a class="flex" href="' + itemLink + '">' + iconClass + ' &nbsp;<span class="text-base">' + itemName + '</span></a><a href="/login/token?username=' + itemName + '" title="Login as ' + itemName + ' into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg></a></h3></li>';
+    }
+});
+
+
+            $.each(websiteData, function(index, item) {
+                var itemName = item[0] || ''; // Get the site name from the first element
+                var itemLink = '/domains/' + itemName; // Construct link using site name
+                if (itemName.toLowerCase().includes(searchText)) {
+                    dropdownItems += '<li class="p-1"><h3 class="m-0"><a class="dropdown-item" href="' + itemLink + '"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"> <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/> </svg> &nbsp;' + itemName + '</a></h3></li>';
+                }
+            });
+
+            if (dropdownItems) {
+                $('#filteredDropdown')
+                    .html(dropdownItems)
+                    .show()
+                    .addClass('p-1 border');
+            } else {
+                $('#filteredDropdown')
+                    .html('')
+                    .hide()
+                    .removeClass('p-1 border');
+            }
+        });
+    });
+
+    // Hide dropdown when clicking outside
+    $(document).on('click', function(event) {
+        if (!$(event.target).closest('#searchGroup').length) {
+                $('#filteredDropdown')
+                    .html('')
+                    .hide()
+                    .removeClass('p-1 border');
+        }
+    });
+
+});
+</script>
+
+
+
+
+                        </div>
+                    </div>
+                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-3 pt-0">
+                        <div data-sidebar="group-content" class="w-full text-sm">
+                            <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-1">
+
+
+{% if not is_reseller %}
+                                <li><a data-active="{% if request.path.startswith('/dashboard') or request.path == ('/') %}true{% else %}false{% endif %}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/dashboard"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house size-[18px] shrink-0" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Dashboard</span></a></li>
+{% endif %}
+
+
+                                <li><a data-active="{% if request.path.startswith('/notifications') or request.path == ('/view_notifications') %}true{% else %}false{% endif %}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="{{ url_for('view_notifications') }}"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-notification" width="18" height="18"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 6h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3"></path><path d="M17 7m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path></svg>Notifications</span>
+
+{% if unread_notifications %}
+    <span class="inline-flex size-5 items-center justify-center rounded bg-blue-100 text-sm font-medium text-blue-600 sm:text-xs dark:bg-blue-500/10 dark:text-blue-500">
+        {% if unread_notifications > 4 %}
+            5+
+        {% else %}
+            {{ unread_notifications }}
+        {% endif %}
+    </span>
+{% endif %}
+
+                                        </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="px-3">
+                        <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 my-0 py-0" tremor-id="tremor-raw">
+                            <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+                        </div>
+                    </div>
+                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-3">
+                        <div data-sidebar="group-content" class="w-full text-sm">
+                            <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-4">
+
+<li x-data="{ open: false, active: {% if request.path.startswith('/user') %}true{% else %}false{% endif %} || {% if request.path.startswith('/resellers') %}true{% else %}false{% endif %} || {% if request.path.startswith('/administrators') %}true{% else %}false{% endif %} }" class="relative">
+    <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+        <div class="flex items-center gap-2.5">
+            <!-- Icon for Accounts -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-text size-[18px] shrink-0" aria-hidden="true">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"></path>
+                <path d="M8 11h8"></path>
+                <path d="M8 7h6"></path>
+            </svg>
+            Accounts
+        </div>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
+            <path d="M12 16L6 10H18L12 16Z"></path>
+        </svg>
+    </button>
+
+    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+        <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
+        
+        <li>
+            <a aria-current="page" data-active="{% if request.path.startswith('/user') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/users">
+                <div class="absolute left-4 top-1/2 h-5 w-px -translate-y-1/2 bg-blue-500 dark:bg-blue-500" aria-hidden="true"></div>
+                Users
+            </a>
+        </li>
+
+        {% if license_type == "Enterprise" %}
+            <li>
+                <a data-active="{% if request.path.startswith('/resellers') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/resellers">
+                    Resellers
+                </a>
+            </li>
+        {% endif %}
+
+        <li>
+            <a data-active="{% if request.path.startswith('/administrators') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/administrators">
+                Administrators
+            </a>
+        </li>
+    </ul>
+</li>
+
+
+<li x-data="{ open: false, active: {% if request.path.startswith('/plans') or request.path.startswith('/features') %}true{% else %}false{% endif %} }" class="relative">
+    <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+        <div class="flex items-center gap-2.5">
+            <!-- Icon for Hosting Plans -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package-search size-[18px] shrink-0" aria-hidden="true">
+                <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path>
+                <path d="m7.5 4.27 9 5.15"></path>
+                <polyline points="3.29 7 12 12 20.71 7"></polyline>
+                <line x1="12" x2="12" y1="22" y2="12"></line>
+                <circle cx="18.5" cy="15.5" r="2.5"></circle>
+                <path d="M20.27 17.27 22 19"></path>
+            </svg>
+            Hosting Plans
+        </div>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
+            <path d="M12 16L6 10H18L12 16Z"></path>
+        </svg>
+    </button>
+    
+    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+        <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
+        <li><a data-active="{% if request.path.startswith('/plans') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
+            href="/plans">User Packages</a></li>
+        <li><a data-active="{% if request.path.startswith('/features') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
+            href="/features">Feature Manager</a></li>
+    </ul>
+</li>
+
+
+
+{% if not is_reseller %}
+                                <li><a data-active="{% if request.path.startswith('/domains') %}true{% else %}false{% endif %}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/domains"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-world-www"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M19.5 7a9 9 0 0 0 -7.5 -4a8.991 8.991 0 0 0 -7.484 4"></path><path d="M11.5 3a16.989 16.989 0 0 0 -1.826 4"></path><path d="M12.5 3a16.989 16.989 0 0 1 1.828 4"></path><path d="M19.5 17a9 9 0 0 1 -7.5 4a8.991 8.991 0 0 1 -7.484 -4"></path><path d="M11.5 21a16.989 16.989 0 0 1 -1.826 -4"></path><path d="M12.5 21a16.989 16.989 0 0 0 1.828 -4"></path><path d="M2 10l1 4l1.5 -4l1.5 4l1 -4"></path><path d="M17 10l1 4l1.5 -4l1.5 4l1 -4"></path><path d="M9.5 10l1 4l1.5 -4l1.5 4l1 -4"></path></svg>Domains</span></a></li>
+
+
+{% if license_type == "Enterprise" %}
+
+<li x-data="{ open: false, active: {% if request.path.startswith('/emails/accounts') %}true{% else %}false{% endif %} || {% if request.path.startswith('/emails/reports') %}true{% else %}false{% endif %} || {% if request.path.startswith('/emails/settings') %}true{% else %}false{% endif %} }" class="relative">
+    <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+        <div class="flex items-center gap-2.5">
+            <!-- Icon for Emails -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-mail">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z"/>
+                <path d="M3 7l9 6l9 -6"/>
+            </svg>
+            Emails
+        </div>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
+            <path d="M12 16L6 10H18L12 16Z"></path>
+        </svg>
+    </button>
+
+    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+        <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
+        
+        <li>
+            <a data-active="{% if request.path.startswith('/emails/accounts') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/emails/accounts">
+                Email Accounts
+            </a>
+        </li>
+
+        <li>
+            <a data-active="{% if request.path.startswith('/emails/reports') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/emails/reports">
+                Summary Reports
+            </a>
+        </li>
+
+        <li>
+            <a data-active="{% if request.path.startswith('/emails/settings') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/emails/settings">
+                Email Settings
+            </a>
+        </li>
+    </ul>
+</li>
+
+{% endif %}
+
+
+
+
+                                <li class="hidden"><a data-active="{% if request.path.startswith('/backups') %}true{% else %}false{% endif %}" class=" flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/backups"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-box-seam" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 3l8 4.5v9l-8 4.5l-8 -4.5v-9l8 -4.5"></path><path d="M12 12l8 -4.5"></path><path d="M8.2 9.8l7.6 -4.6"></path><path d="M12 12v9"></path><path d="M12 12l-8 -4.5"></path></svg>Backups</span></a></li>
+
+
+
+
+
+
+<li x-data="{ open: false, active: {% if request.path.startswith('/settings/') and not request.path.startswith('/settings/updates/log') %}true{% else %}false{% endif %} }" class="relative">
+    <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+        <div class="flex items-center gap-2.5">
+            <!-- Icon for Settings -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-settings">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/>
+                <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+            </svg>
+            Settings
+        </div>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
+            <path d="M12 16L6 10H18L12 16Z"></path>
+        </svg>
+    </button>
+
+    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+        <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
+
+        <!-- General Settings -->
+        <li>
+            <a data-active="{% if request.path.startswith('/settings/general') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/settings/general">
+                General Settings
+            </a>
+        </li>
+
+        <!-- OpenPanel Settings -->
+        <li>
+            <a data-active="{% if request.path.startswith('/settings/open-panel') %}true{% else %}false{% endif %}" class=" relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/settings/open-panel">
+                OpenPanel Settings
+            </a>
+        </li>
+
+        <!-- OpenAdmin Settings -->
+        <li>
+            <a data-active="{% if request.path.startswith('/settings/open-admin') %}true{% else %}false{% endif %}" class="hidden relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/settings/open-admin">
+                OpenAdmin Settings
+            </a>
+        </li>
+
+        <!-- API Access (Visible only for Enterprise license) -->
+        {% if license_type == "Enterprise" %}
+        <li>
+            <a data-active="{% if request.path.startswith('/settings/api') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/settings/api">
+                API Access
+            </a>
+        </li>
+        {% endif %}
+
+
+        <!-- Update Settings -->
+        <li>
+
+
+            <a data-active="{% if request.path.startswith('/settings/updates') and not request.path.startswith('/settings/updates/log') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/settings/updates">
+                Update Preferences
+            </a>
+        </li>
+
+        <!-- Locales -->
+        <li>
+            <a data-active="{% if request.path.startswith('/settings/locales') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/settings/locales">
+                Locales <span class="inline-flex items-center gap-x-1 whitespace-nowrap text-xs px-2 font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">New</span>
+            </a>
+        </li>
+
+        <!-- Disable Admin -->
+        <li>
+            <a data-active="{% if request.path.startswith('/settings/disable-admin') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/settings/disable-admin">
+                Disable OpenAdmin
+            </a>
+        </li>
+
+    </ul>
+</li>
+
+
+
+
+
+<li x-data="{ open: false, active: {% if request.path.startswith('/services') or request.path.startswith('/settings/updates/log') %}true{% else %}false{% endif %} }" class="relative">
+    <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+        <div class="flex items-center gap-2.5">
+            <!-- Icon for Services -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-server-2">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z"/>
+                <path d="M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z"/>
+                <path d="M7 8l0 .01"/>
+                <path d="M7 16l0 .01"/>
+                <path d="M11 8h6"/>
+                <path d="M11 16h6"/>
+            </svg>
+            Services
+        </div>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
+            <path d="M12 16L6 10H18L12 16Z"></path>
+        </svg>
+    </button>
+
+    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+        <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
+
+        <!-- Service Status -->
+        <li>
+            <a data-active="{% if request.path == '/services' %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/services">
+                Service Status
+            </a>
+        </li>
+
+        <!-- FTP Server Configuration (Visible for Enterprise license only) -->
+        {% if license_type == "Enterprise" %}
+        <li class="hidden">
+            <a data-active="{% if request.path.startswith('/services/ftp') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/services/ftp">
+                FTP Server Configuration
+            </a>
+        </li>
+        {% endif %}
+
+        <!-- View Log Files -->
+        <li>
+
+            <a data-active="{% if request.path.startswith('/services/logs') or request.path.startswith('/settings/updates/log') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/services/logs">
+                View Log Files
+            </a>
+        </li>
+    </ul>
+</li>
+
+
+
+
+<li x-data="{ open: false, active: {% if request.path.startswith('/security/firewall') %}true{% else %}false{% endif %} }" class="relative">
+    <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+        <div class="flex items-center gap-2.5">
+            <!-- Icon for Security -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-spy">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M3 11h18"/>
+                <path d="M5 11v-4a3 3 0 0 1 3 -3h8a3 3 0 0 1 3 3v4"/>
+                <path d="M7 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
+                <path d="M17 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
+                <path d="M10 17h4"/>
+            </svg>
+            Security
+        </div>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
+            <path d="M12 16L6 10H18L12 16Z"></path>
+        </svg>
+    </button>
+
+    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+        <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
+
+        <!-- Firewall Link -->
+        <li>
+            <a data-active="{% if request.path.startswith('/security/firewall') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/security/firewall">
+                Firewall
+            </a>
+        </li>
+    </ul>
+</li>
+
+<li x-data="{ open: false, active: {% if request.path.startswith('/server/root-password') %}true{% elif request.path.startswith('/server/ssh') %}true{% elif request.path.startswith('/server/timezone') %}true{% else %}false{% endif %} }" class="relative">
+    <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+        <div class="flex items-center gap-2.5">
+            <!-- Icon for Advanced -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-terminal-2">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M8 9l3 3l-3 3"/>
+                <path d="M13 15l3 0"/>
+                <path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/>
+            </svg>
+            Advanced
+        </div>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
+            <path d="M12 16L6 10H18L12 16Z"></path>
+        </svg>
+    </button>
+
+    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+        <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
+
+        <!-- Change Root Password Link -->
+        <li>
+            <a data-active="{% if request.path.startswith('/server/root-password') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/server/root-password">
+                Change Root Password
+            </a>
+        </li>
+
+        <!-- SSH Access Link -->
+        <li class="hidden">
+            <a data-active="{% if request.path.startswith('/server/ssh') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/server/ssh">
+                SSH Access
+            </a>
+        </li>
+
+        <!-- Server Time Link -->
+        <li>
+            <a data-active="{% if request.path.startswith('/server/timezone') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/server/timezone">
+                Server Time
+            </a>
+        </li>
+    </ul>
+</li>
+
+
+
+
+
+                                <li><a data-active="{% if request.path.startswith('/license') %}true{% else %}false{% endif %}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/license"><span class="flex items-center gap-x-2.5"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg>License & Support</span></a></li>
+
+{% endif %}
+
+
+
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div data-sidebar="footer" class="flex flex-col gap-2 p-3">
+
+                    <div class="border-t border-gray-200 dark:border-gray-800"></div>
+                    
+
+<div x-data="{ isOpen: false }">
+    <!-- Popup Menu (Initially hidden) -->
+    <div dir="ltr" id="popup-menu" :class="{ 'hidden': !isOpen }" class="hidden">
+        <!-- Popup Menu Content -->
+        <div data-side="top" data-align="start" role="menu" aria-orientation="vertical" data-state="open" dir="ltr" class="relative z-50 overflow-hidden rounded-md border p-1 shadow-xl shadow-black/[2.5%] min-w-48 bg-white dark:bg-[#090E1A] text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade" tabindex="-1" data-orientation="vertical">
+            <!-- Content inside Popup -->
+            <div class="px-2 py-2 text-xs font-medium tracking-wide text-gray-500 dark:text-gray-500">OpenPanel {{panel_version}}</div>
+            <div role="separator" aria-orientation="horizontal" class="-mx-1 my-1 h-px border-t border-gray-200 dark:border-gray-800"></div>
+
+
+
+
+
+            <div role="group">
+                <span
+                    role="menuitem"
+                    class="flex justify-between group/DropdownMenuItem relative cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50"
+                >
+                    <span>Theme:</span>
+
+<button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+</button>
+
+                </span>
+            </div>
+
+            <div role="separator" aria-orientation="horizontal" class="-mx-1 my-1 h-px border-t border-gray-200 dark:border-gray-800"></div>
+
+
+
+            <div role="group">
+                <a
+                    role="menuitem"
+                    class="group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900"
+                    href="https://openpanel.com/docs/changelog/{{panel_version}}/"
+                    target="_blank"
+                    tabindex="-1"
+                    data-orientation="vertical"
+                >
+                    Changelog
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-arrow-up-right mb-1 ml-1 size-3 shrink-0 text-gray-500 dark:text-gray-500"
+                        aria-hidden="true"
+                    >
+                        <path d="M7 7h10v10"></path>
+                        <path d="M7 17 17 7"></path>
+                    </svg>
+                </a>
+                <a
+                    role="menuitem"
+                    class="group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900"
+                    tabindex="-1"
+                    data-orientation="vertical"
+                    href="https://openpanel.com/docs/admin/intro/"
+                    target="_blank"
+                >
+                    Documentation
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-arrow-up-right mb-1 ml-1 size-3 shrink-0 text-gray-500"
+                        aria-hidden="true"
+                    >
+                        <path d="M7 7h10v10"></path>
+                        <path d="M7 17 17 7"></path>
+                    </svg>
+                </a>
+                <a
+                    role="menuitem"
+                    class="group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900"
+                    href="https://community.openpanel.org/"
+                    target="_blank"
+                    tabindex="-1"
+                    data-orientation="vertical"
+                >
+                    Community Forums
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="lucide lucide-arrow-up-right mb-1 ml-1 size-3 shrink-0 text-gray-500"
+                        aria-hidden="true"
+                    >
+                        <path d="M7 7h10v10"></path>
+                        <path d="M7 17 17 7"></path>
+                    </svg>
+                </a>
+            </div>
+            <div role="separator" aria-orientation="horizontal" class="-mx-1 my-1 h-px border-t border-gray-200 dark:border-gray-800"></div>
+            <div role="group">
+                <div role="menuitem" class="group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900" tremor-id="tremor-raw" tabindex="-1" data-orientation="vertical"><a href="/logout" class="w-full">Sign out</a></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Button that Toggles the Menu -->
+    <button id="user-btn-info" class="relative whitespace-nowrap border text-center transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none shadow-none border-transparent dark:text-gray-50 bg-transparent disabled:text-gray-400 disabled:dark:text-gray-600 group flex w-full items-center justify-between rounded-md px-1 py-2 text-sm font-medium text-gray-900 hover:bg-gray-200/50 data-[state=open]:bg-gray-200/50 hover:dark:bg-gray-800/50 data-[state=open]:dark:bg-gray-900 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
+        @click="isOpen = !isOpen" aria-label="User settings" type="button">
+        <span class="flex items-center gap-3">
+            <span class="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-xs text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300" aria-hidden="true">{{ current_user.username|first|upper }}</span>
+            <span>{{ current_user.username }}</span>
+        </span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevrons-up-down size-4 shrink-0 text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400" aria-hidden="true">
+            <path d="m7 15 5 5 5-5"></path>
+            <path d="m7 9 5-5 5 5"></path>
+        </svg>
+    </button>
+</div>
+
+                        
+                        
+                        </div>
+
+
+
+            </div>
+        </div>
+    </div>
+    <div class="w-full">
+        <header class="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-950">
+
+                              <button @click="sidebarOpen = !sidebarOpen" 
+                                      class="group inline-flex rounded-md p-1.5 hover:bg-gray-200/50 hover:dark:bg-gray-900 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-left size-[18px] shrink-0 text-gray-700 dark:text-gray-300" aria-hidden="true">
+                                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                                    <path d="M9 3v18"></path>
+                                </svg>
+                                <span class="sr-only">Toggle Sidebar</span>
+                              </button>
+            <div
+                class="mr-2 h-4 w-px bg-gray-200 dark:bg-gray-800"></div>
+    <nav aria-label="Breadcrumb" class="ml-2">
+        <ol role="list" class="flex items-center space-x-3 text-sm">
+            <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="/dashboard">Home</a></li>
+
+            {% if title %}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+
+            {% if title == 'Users' or title == 'Resellers' or title == 'Administrators' or 'SUSPENDED_' in title or 'User:' in title %}
+
+            <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Users</span></div></li>
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+
+            {% elif 'Change Password for Administrator' in title or 'Rename Administrator' in title %}
+            <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="/administrators">Administrators</a></li>
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+            
+            {% elif 'Change Password for Reseller' in title or 'Rename Reseller' in title %}
+            <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="/resellers">Resellers</a></li>
+
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+
+            {% elif 'Access Log' in title %}
+            
+            <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Domains</span></div></li>
+            
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+
+
+            {% elif request.path.startswith('/settings/updates/log') or request.path.startswith('/services/') %}
+            <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Services</span></div></li>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+
+            {% elif request.path.startswith('/settings/') %}
+            <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Settings</span></div></li>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+
+            {% endif %}
+
+            <li class="flex">
+                <div class="flex items-center"><a class="text-gray-900 dark:text-gray-50" href="{{current_route}}">{% if title == 'Users' %}OpenPanel{% else %}
+
+{% if 'SUSPENDED_' in title %}
+{{ title.split('_')[-1] }}
+{% elif 'User:' in title %}
+{{ title.replace('User:', '') }}
+{% else %}
+{{title}}
+{% endif %}        
+                    {% endif %}</a></div>
+            </li>
+            {% endif%}
+        </ol>
+    </nav>
+    </header>
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+<!-- restart is needed message -->
+{% if restart_messages %}
+        {% for message in restart_messages %}
+<div class="sticky top-0 z-10 h-16 flex items-center p-4 bg-black dark:bg-blue-600 " role="alert">
+  <svg class="shrink-0 w-4 h-4 text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
+  </svg>
+  <span class="sr-only">Restart is needed</span>
+  <div class="ms-3 text-sm font-medium text-white">{{ message }}</div>
+</div>
+        {% endfor %}
+{% endif %}
+<!-- END restart is needed message -->
+
+
+
+<!-- flash messages -->
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+    {% for message in messages %}
+<div id="alert-{{ loop.index }}" class="flex items-center p-4 bg-gray-800" role="alert">
+  <svg class="shrink-0 w-4 h-4 text-gray-300" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
+  </svg>
+  <span class="sr-only">Notification</span>
+  <div class="ms-3 text-sm font-medium text-white">{{ message }}</div>
+  <button type="button" class="ms-auto -mx-1.5 -my-1.5 bg-gray-50 text-gray-500 rounded-lg focus:ring-2 focus:ring-gray-400 p-1.5 hover:bg-gray-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white" data-dismiss-target="#alert-{{ loop.index }}" aria-label="Close">
+    <span class="sr-only">Dismiss</span>
+    <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+    </svg>
+  </button>
+</div>
+    {% endfor %}
+{% endif %}
+{% endwith %}
+<!-- END flash messages -->
+
+<!-- START individual template file -->
+{% block content %}{% endblock %}
+<!-- END individual template file -->
+    </main>
+
+<!-- END individual template file -->
+<div class="relative mb-2 hidden items-center justify-end sm:flex bottom-0 right-0 "><a class="group flex items-center space-x-0.5 text-xs text-slate-500 hover:text-slate-700" href="https://github.com/stefanpejcic/OpenPanel/issues/new?template=1_Bug_report.yaml&affected-versions={{panel_version}}&os=Ubuntu&title=Bug%20in%20OpenAdmin%20UI" target="_blank" rel="noopener noreferrer"><span class="text-inherit">Found a bug? Let us know</span><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-inherit"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"></path></svg></a></div>
+<!-- END individual template file -->
+
+
+
+</div>
+</div>
+
+
+
+</body>
+<script>
+var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+// Change the icons inside the button based on previous settings
+if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    themeToggleLightIcon.classList.remove('hidden');
+} else {
+    themeToggleDarkIcon.classList.remove('hidden');
+}
+
+var themeToggleBtn = document.getElementById('theme-toggle');
+
+themeToggleBtn.addEventListener('click', function() {
+
+    // toggle icons inside button
+    themeToggleDarkIcon.classList.toggle('hidden');
+    themeToggleLightIcon.classList.toggle('hidden');
+
+    // if set via local storage previously
+    if (localStorage.getItem('color-theme')) {
+        if (localStorage.getItem('color-theme') === 'light') {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('color-theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('color-theme', 'light');
+        }
+
+    // if NOT set via local storage previously
+    } else {
+        if (document.documentElement.classList.contains('dark')) {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('color-theme', 'light');
+        } else {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('color-theme', 'dark');
+        }
+    }
+    
+});
+</script>
+
+
+</html>

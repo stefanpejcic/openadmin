@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+
+<div x-data="{ searchQuery: '', filters: { active: false, suspended: false } }">
+    <div x-data="{ showSection: false, fileContent: '' }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Services</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Manage system services and containers.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                
+                <div class="toast-container position-fixed bottom-0 end-0 p-2">
+</div>
+                
+                <a @click="showSection = !showSection" class="hidden relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Edit services</a>
+                </div>
+            </div>
+
+        <!-- Initially Hidden, Show on Click -->
+        <div :class="{ 'md:flex': showSection }" class="hidden mt-8 w-full md:items-stretch md:space-x-4">
+    
+        <textarea x-model="fileContent" class="w-full p-4 border-2 rounded-md border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-50" rows="10" readonly></textarea>
+
+        <button @click="saveContent" class="mt-4 inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            Save
+        </button>
+
+        </div>
+
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('servicesEditor', () => ({
+            showSection: false,
+            fileContent: '',
+
+            // Fetch content from the backend when section is shown
+            async loadContent() {
+                try {
+                    const response = await fetch('/services/edit');
+                    const data = await response.json();
+                    if (response.ok) {
+                        this.fileContent = JSON.stringify(data, null, 4); // Format JSON for textarea
+                    } else {
+                        alert('Failed to load content');
+                    }
+                } catch (error) {
+                    console.error('Error fetching content:', error);
+                }
+            },
+
+            // Save the updated content to the backend
+            async saveContent() {
+                try {
+                    const response = await fetch('/services/edit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: this.fileContent, // Send the updated content
+                    });
+
+                    const result = await response.json();
+                    if (response.ok) {
+                        alert('Configuration saved successfully!');
+                    } else {
+                        alert(`Error: ${result.error}`);
+                    }
+                } catch (error) {
+                    console.error('Error saving content:', error);
+                    alert('An error occurred while saving the content.');
+                }
+            },
+        }));
+    });
+</script>
+
+
+        </header>
+    </div>
+
+    <div class="">
+        <div class="space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+
+                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search services..." type="search">
+
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden flex items-center gap-2">
+                    <div>
+                        <div class="flex justify-center">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="relative">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
+                    <thead class="">
+                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                <th class="hidden border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">
+
+                            </th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Service</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>                         
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Status</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Version</div></th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Real Name</div></th>
+
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Type</div></th>
+
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Port</div></th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Monitoring</div></th>
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800" x-data="{ monitoredServices: [] }" x-init="
+                        fetch('/services/monitored')
+                            .then(response => response.json())
+                            .then(data => monitoredServices = data.monitored_services)
+                    ">
+
+{% if statuses.items() %}
+
+                {% for service_display_name, details in statuses.items() %}
+                        <tr x-show="searchQuery === '' || '{{ service_display_name }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
+
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                            {{ service_display_name }}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+{% if details.status == True %}
+          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
+{% elif details.status == False %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>
+{% elif details.status is none %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-grey-50 text-grey-800 ring-grey-600/30 dark:bg-grey-400/10 dark:text-grey-500 dark:ring-grey-400/20">Unknown</span>
+{% endif %}
+                                </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                {% if details.version %}{{ details.version }}{% endif %}
+                            </td>
+
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                            {{ details.real_name }}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                           {% if details.type == 'docker' %}container{% else %}{{ details.type }}{% endif %}
+                            </td>
+
+
+
+
+
+
+
+
+
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+{% if details.port %}
+    {% set ports = details.port %}
+    {% if ports is string %}
+        <!-- Handle single port as a string -->
+        <span class="text-secondary">{{ ports }}</span>
+    {% elif ports is iterable and ports|length > 0 %}
+        {% if ports|length > 1 %}
+            {% set port_list = ports|join(', ') %}
+            <span class="text-secondary">{{ port_list }}</span>
+        {% else %}
+            <span class="text-secondary">{{ ports[0] }}</span>
+        {% endif %}
+    {% else %}
+        <span class="text-secondary"> </span>
+    {% endif %}
+{% else %}
+    <span class="text-secondary"> </span>
+{% endif %}
+
+
+                                    </td>
+
+
+
+<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-left"
+    x-text="(realName => {
+        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return 'Monitored';
+        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return 'Monitored';
+        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return 'Monitored';
+        return monitoredServices.includes(realName) ? 'Monitored' : '';
+    })('{{ details.real_name }}')"
+    x-bind:title="(realName => {
+        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
+        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
+        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
+        return monitoredServices.includes(realName) ? 'This service is being monitored and will be restarted by OpenPanel on failure.' : '';
+    })('{{ details.real_name }}')">
+    <a href="/notifications/settings" x-show="(realName => {
+        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return true;
+        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return true;
+        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return true;
+        return monitoredServices.includes(realName);
+    })('{{ details.real_name }}')" class="text-blue-500 hover:underline">
+        Monitored
+    </a>
+</td>
+
+
+
+
+
+                            <td class="flex p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right justify-end">
+
+<form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="real_name" value="{{ details.real_name }}">
+<input type="hidden" name="container" value="{{ details.type }}">
+                    {% if details.status %}
+
+<button type="submit" class="btn btn-outline-danger"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" /></svg></button>
+<input type="hidden" name="action" value="stop">
+                    {% else %}
+<input type="hidden" name="action" value="start">
+<button class="btn btn-outline-success" type="submit"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="currentColor"  class="icon icon-tabler icons-tabler-filled icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" /></svg></button>
+                    {% endif %}
+</form>
+
+
+                    &nbsp;
+<form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="real_name" value="{{ details.real_name }}">
+<input type="hidden" name="container" value="{{ details.type }}">
+<input type="hidden" name="action" value="restart">
+
+                    <button class="btn btn-outline-warning" type="submit"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path></svg></button>
+                    </form>
+                </td>
+
+
+
+
+
+
+                        </tr>
+                {% endfor %}
+
+
+
+
+{% else %}
+<tr>
+    <td colspan="6" class="p-6 text-center">
+        No services or the <code>/etc/openpanel/openadmin/config/services.json</code> file is invalid.
+    </td>
+</tr>
+{% endif %}
+                    </tbody>
+                </table>
+                
+
+                <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
