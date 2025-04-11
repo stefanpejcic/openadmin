@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.240.331"
+VERSION="20.240.408"
 # Record the process ID of the script
 PID=$$
 
@@ -594,16 +594,21 @@ check_service_status() {
 # generate report file for email/gui - added in 0.3.6
 generate_crashlog_report() {
     local proc=$(/bin/top -b -n 1| head -23)
-    local mysql=$(mysqladmin pr)
+    local mysql=$(mysql -e "SHOW PROCESSLIST" | grep -v "Id" | awk '{print $1}')
     local io=$(/usr/sbin/iotop -oqqqk | head -10)
     local swap=$(for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r | head -10)
     local net_stat=$(/usr/sbin/ss -s)
+    if command -v iotop >/dev/null 2>&1; then
+        local io=$(iotop -oqqqk | head -10)
+    else
+        local io=$(iostat -xz 1 10 | head -n 10)
+    fi
     local break="+-----------------------------------------------------------------------------------------------------------------+"
     local date=$(date +%d-%m-%Y-%H:%M)
     local formatted_date=${date//-/ }
     local filename=$(date +%s)
     local crashlog_dir="/var/log/openpanel/admin/crashlog"
-    generated_report= "${crashlog_dir}/${filename}.txt"
+    generated_report="${crashlog_dir}/${filename}.txt"
     mkdir -p $crashlog_dir
     touch $generated_report
 
@@ -952,21 +957,21 @@ else
           echo -e "\e[32m[✔]\e[0m Skip checking nameservers as they are not set."
       else
           if [ -n "$NS1" ] && [ -n "$NS2" ]; then
-              #echo "Checking if nameservers $NS1 and $NS2 resolve to this server IP ($SERVER_IP).."
               ns1_ip=$(dig +short @"$GOOGLE_DNS_SERVER" "$NS1")
               ns2_ip=$(dig +short @"$GOOGLE_DNS_SERVER" "$NS2")
+              all_server_ips=$(hostname -I)
 
-              if [ "$ns1_ip" == "$SERVER_IP" ] && [ "$ns2_ip" == "$SERVER_IP" ]; then
-              ((PASS++))
-                  echo -e "\e[32m[✔]\e[0m $NS1 and $NS2 both resolve to $SERVER_IP"
+              if echo "$all_server_ips" | grep -qw "$ns1_ip" && echo "$all_server_ips" | grep -qw "$ns2_ip"; then
+                  ((PASS++))
+                  echo -e "\e[32m[✔]\e[0m $NS1 and $NS2 both resolve to local IPs ($(hostname -I))"
               else
-                          ((FAIL++))
-            STATUS=2
+                  ((FAIL++))
+                  STATUS=2
                   echo -e "\e[31m[✘]\e[0m Nameservers do not resolve correctly:"
-                  echo "    $NS1 resolves to $ns1_ip (expected $SERVER_IP)"
-                  echo "    $NS2 resolves to $ns2_ip (expected $SERVER_IP)"
-                  local title="Configured nameservers do not resolve to $SERVER_IP"
-                  local message="$NS1 resolves to $ns1_ip (expected $SERVER_IP) | $NS2 resolves to $ns2_ip (expected $SERVER_IP)"
+                  echo "    $NS1 resolves to $ns1_ip (expected one of: $all_server_ips)"
+                  echo "    $NS2 resolves to $ns2_ip (expected one of: $all_server_ips)"
+                  local title="Configured nameservers do not resolve to local IPs"
+                  local message="$NS1 resolves to $ns1_ip (expected one of: $all_server_ips) | $NS2 resolves to $ns2_ip (expected one of: $all_server_ips)"
                   write_notification "$title" "$message"
               fi
           else 

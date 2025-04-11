@@ -163,9 +163,41 @@
 
 
 								<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{title}}</td>
-								<td class="max-w-[25%] break-words p-4 text-sm text-gray-600 dark:text-gray-400">{{ message|replace('\\n', '<br>')|safe }}</td>
+<td class="max-w-[25%] break-words p-4 text-sm text-gray-600 dark:text-gray-400">
+  {% set message_with_links = message | replace('\n', '<br>') %}
+
+{% if message.startswith('Used RAM:') %}
+
+    {% set parts = message.split(',') %}
+    {% set used_ram = parts[0].split(':')[1].strip().split(' ')[0] %}
+    {% set total_ram = parts[1].split(':')[1].strip().split(' ')[0] %}
+    {% set usage_percent = parts[2].split(':')[1].strip().replace('%', '') %}
+
+<div>
+    <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500"><span>{{ usage_percent }}%</span><span>{{ used_ram }} of {{ total_ram }} MB</span></p>
+    <div class="flex w-full items-center mt-1" role="progressbar" aria-label="Progress bar" aria-valuenow="{{ usage_percent }}%" aria-valuemax="100">
+        <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30"><div class="h-full flex-col rounded-full bg-red-500 dark:bg-red-500" style="width: {{ usage_percent }}%;"></div></div>
+    </div>
+</div>
 
 
+
+
+{% else %}
+
+
+  {% set parts = message_with_links.split('Log file:') %}
+  {% if parts|length > 1 %}
+    {% set log_name = parts[1].strip().split('/')[-1] %}
+    {{ parts[0] }} Log file: <a href="/settings/updates/log/?log_name={{ log_name }}" class="text-blue-600 underline">{{ parts[1].strip() }}</a>
+  {% else %}
+    {{ message_with_links }}
+  {% endif %}
+
+{% endif %}
+
+
+</td>
 							<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
                           {% if status == "UNREAD" %}
                 
