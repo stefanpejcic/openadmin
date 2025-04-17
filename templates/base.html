@@ -67,7 +67,6 @@
     <!-- Flowbite -->
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
 
-
 </head>
 
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950" x-data="{ sidebarOpen: window.innerWidth >= 768, isMobile: window.innerWidth < 768 }" 
@@ -489,7 +488,7 @@ $.each(usersData, function(index, item) {
 
 
 
-<li x-data="{ open: false, active: {% if request.path.startswith('/security/firewall') %}true{% else %}false{% endif %} }" class="relative">
+<li x-data="{ open: false, active: {% if request.path.startswith('/security/') %}true{% else %}false{% endif %} }" class="relative">
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Security -->
@@ -511,12 +510,19 @@ $.each(usersData, function(index, item) {
     <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
-        <!-- Firewall Link -->
+        <!-- CSF -->
         <li>
             <a data-active="{% if request.path.startswith('/security/firewall') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/security/firewall">
                 Firewall
             </a>
         </li>
+        <!-- Basic Auth -->
+        <li>
+            <a data-active="{% if request.path.startswith('/security/basic_auth') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/security/basic_auth">
+                OpenAdmin Basic Auth
+            </a>
+        </li>
+
     </ul>
 </li>
 
@@ -793,6 +799,12 @@ $.each(usersData, function(index, item) {
         </ol>
     </nav>
     </header>
+
+            <!-- Flowbite toasts 2 -->
+            <div id="toast-container" class="fixed sm:bottom-10 sm:right-10 flex flex-col items-center space-y-2 z-50 overflow-y-none"></div>
+            <!-- END Flowbite toasts -->
+
+
     <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
 <!-- restart is needed message -->
 {% if restart_messages %}
@@ -811,6 +823,7 @@ $.each(usersData, function(index, item) {
 
 
 <!-- flash messages -->
+<span id="placeholder-for-backend-notifications">
 {% with messages = get_flashed_messages() %}
 {% if messages %}
     {% for message in messages %}
@@ -831,6 +844,7 @@ $.each(usersData, function(index, item) {
 {% endif %}
 {% endwith %}
 <!-- END flash messages -->
+</span>
 
 <!-- START individual template file -->
 {% block content %}{% endblock %}
@@ -891,6 +905,9 @@ themeToggleBtn.addEventListener('click', function() {
     
 });
 </script>
+
+    <!-- Toasts JS -->
+    <script defer src="/static/pages/showtoasts.min.js?ver=1.1.2"></script>
 
 
 </html>
