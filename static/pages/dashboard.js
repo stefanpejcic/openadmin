@@ -1,6 +1,6 @@
 function updateUserActivityTable() {
     $.ajax({
-        url: '/combined_activity_logs',
+        url: '/json/combined_activity',
         type: 'GET',
         dataType: 'json',
         success: function (data) {
@@ -75,14 +75,11 @@ function updateUserActivityTable() {
     // Use Ajax to get disk usage data
     $(document).ready(function() {
         $.ajax({
-            url: '/json/disk-usage',
+            url: '/json/disk',
             type: 'GET',
             dataType: 'json',
             success: function(data) {
                 updateHomeUsage(data);
-            },
-            error: function(error) {
-                console.log(error);
             }
         });
     });
@@ -167,7 +164,7 @@ function formatDiskSize(bytes) {
 
     // Function to update RAM info
 function updateRamInfo() {
-    $.get("/json/ram-usage", function(data) {
+    $.get("/json/memory", function(data) {
         var html = data.human_readable_info.used + " / " + data.human_readable_info.total + " (" + data.human_readable_info.percent + ")";
         var percentString = data.human_readable_info.percent;
         var percent = parseInt(percentString.slice(0, -1));
@@ -321,7 +318,7 @@ function updateLoadChart(loadData) {
 
 
 function getServerLoad() {
-    fetch('/get_server_load')
+    fetch('/json/load')
         .then(response => response.json())
         .then(loadData => {
             const load1min = parseFloat(loadData.load1min);

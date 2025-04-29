@@ -181,7 +181,23 @@
 </div>
 
 
+{% elif message.startswith('Disk Usage:') %}
 
+
+{% set message_parts = message.split("| Partitions:") %}
+{% set before_disk = message_parts[0]|trim %}
+{% set after_disks = message_parts[1]|trim %}
+
+
+<div x-data="{ open: false }">
+    <div>
+    <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500"><span>{{ before_disk.split(':')[1].strip() }}</span><span><a href="#" @click.prevent="open = !open" x-text="open ? 'Hide Partitions' : 'Show Partitions'" class="text-blue-600 underline"></a></span></p>
+        <div class="flex w-full items-center mt-1" role="progressbar" aria-label="Progress bar" aria-valuenow="{{ before_disk.split(':')[1].strip() }}" aria-valuemax="100">
+            <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30"><div class="h-full flex-col rounded-full bg-red-500 dark:bg-red-500" style="width: {{ before_disk.split(':')[1].strip() }};"></div></div>
+        </div>
+    </div>
+<pre style="width:100%;" class="text-xs" x-show="open" x-transition>{{ after_disks|replace('\\n', '<br>')|safe }}</pre>
+</div>
 
 {% else %}
 
