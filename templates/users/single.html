@@ -1273,7 +1273,7 @@ document.addEventListener("alpine:init", () => {
 Alpine.store("activityStore", {
     activities: [],
     fetchLogs() {
-        const username = "{{ user.username }}";  // Assuming you have the username passed here
+        const username = "{{ user.username }}";
 
         fetch(`/user_activity/${username}`)
             .then(response => response.json())
@@ -1492,11 +1492,11 @@ Alpine.store("activityStore", {
     </tr>
 </template>
 
-<template x-for="activity in $store.activityStore.activities.filter(activity => {
+<template x-for="(activity, index) in $store.activityStore.activities.filter(activity => {
     return activity.date.toLowerCase().includes(searchQuery.toLowerCase()) || 
         activity.action.toLowerCase().includes(searchQuery.toLowerCase()) || 
         activity.ip.toLowerCase().includes(searchQuery.toLowerCase());
-})" :key="activity.date">
+})" :key="activity.timestamp + '-' + index">
     <tr :class="activity.actionClass" 
         class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
         <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 

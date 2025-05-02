@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.240.408"
+VERSION="20.250.501"
 # Record the process ID of the script
 PID=$$
 
@@ -192,17 +192,29 @@ email_notification() {
 
 
 # Check for SSL
-SSL=$(awk -F'=' '/^ssl/ {print $2}' "$CONF_FILE")
+DOMAIN=$(opencli domain)
 
-# Determine protocol based on SSL configuration
-if [ "$SSL" = "yes" ]; then
+if [[ "$DOMAIN" =~ ^[a-zA-Z0-9.-]+$ ]]; then
   PROTOCOL="https"
 else
   PROTOCOL="http"
 fi
 
-# Send email using appropriate protocol
-curl -k -X POST "$PROTOCOL://127.0.0.1:2087/send_email" -F "transient=$TRANSIENT" -F "recipient=$EMAIL" -F "subject=$title" -F "body=$message"  > /dev/null 2>&1
+
+response=$(curl -k -X POST "$PROTOCOL://127.0.0.1:2087/send_email" \
+  -F "transient=$TRANSIENT" \
+  -F "recipient=$EMAIL" \
+  -F "subject=$title" \
+  -F "body=$message" 2>/dev/null)
+
+
+if echo "$response" | grep -q '"error"'; then
+  echo "Error: Failed to send email. Response: $response"
+elif echo "$response" | grep -q '"sent successfully"'; then
+  echo "Email sent successfully."
+fi
+
+
 
 }
 
@@ -249,12 +261,11 @@ write_notification() {
   # Check if the current message content is the same as the last one and has "UNREAD" status
   if [ "$message" != "$last_message_content" ] && ! is_unread_message_present "$title"; then
     echo "$current_message" >> "$LOG_FILE"
-    if [ "$EMAIL_ALERT" != "no" ]; then
-      email_notification "$title" "$message"
-    else
+    if [ "$EMAIL_ALERT" == "no" ]; then
       echo "Email alerts are disabled."
+    else
+      email_notification "$title" "$message"
     fi
-
 
   fi
 }
@@ -580,7 +591,17 @@ check_service_status() {
         echo "no logs."
       fi
 
+      # Restart the service if it's not running
+      echo -e "\e[33m[⚠️]\e[0m Restarting $service_name..."
+      systemctl restart "$service_name"
 
+      # Verify if the restart was successful
+      if systemctl is-active --quiet "$service_name"; then
+        echo -e "\e[32m[✔]\e[0m $service_name has been restarted and is now active."
+      else
+        echo -e "\e[31m[✘]\e[0m Failed to restart $service_name."
+      fi
+      
     fi
     
 
@@ -594,10 +615,10 @@ check_service_status() {
 # generate report file for email/gui - added in 0.3.6
 generate_crashlog_report() {
     local proc=$(/bin/top -b -n 1| head -23)
-    local mysql=$(mysql -e "SHOW PROCESSLIST" | grep -v "Id" | awk '{print $1}')
+    local mysql=$(mysql -e "SHOW PROCESSLIST" | grep -v "Id")
     local io=$(/usr/sbin/iotop -oqqqk | head -10)
     local swap=$(for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r | head -10)
-    local net_stat=$(/usr/sbin/ss -s)
+    local net_stat=$(ss -s)
     if command -v iotop >/dev/null 2>&1; then
         local io=$(iotop -oqqqk | head -10)
     else
@@ -618,14 +639,14 @@ $break
  GENERAL INFO
 $break
 
-- Hostname: $hostname
+- Hostname: $HOSTNAME
 - Date: $formatted_date
 
 $break
  CURRENT LOAD
 $break
 
-Load: $loadavg
+Load: $current_load
 
 $break
 PROCESS INFO
@@ -672,7 +693,7 @@ EOF
 check_system_load() {
   local title="High System Load!"
 
-  local current_load=$(uptime | awk -F'average:' '{print $2}' | awk -F', ' '{print $1}')
+  current_load=$(uptime | awk -F'average:' '{print $2}' | awk -F', ' '{print $1}')
   local load_int=${current_load%.*}  # Extract the integer part
   
   if [ "$load_int" -gt "$LOAD_THRESHOLD" ]; then
@@ -1040,6 +1061,23 @@ check_for_debug_and_print_info(){
       echo "------------------------------------------------------"
       echo ""
   fi
+}
+
+
+
+
+
+
+
+email_daily_report() {
+  local title="Daily Usage Report"
+  local message="Daily Usage Report"
+    if [ "$EMAIL_ALERT" != "no" ]; then
+    echo "Generating daily usage report.."
+      email_notification "$title" "$message"
+    else
+      echo "Email alerts are disabled - daily usage report will not be generated."
+    fi
 }
 
 

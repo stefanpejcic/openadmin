@@ -16,70 +16,9 @@
                 <div class="toast-container position-fixed bottom-0 end-0 p-2">
 </div>
                 
-                <a @click="showSection = !showSection" class="hidden relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Edit services</a>
+                <a href="/services/edit" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Edit services</a>
                 </div>
             </div>
-
-        <!-- Initially Hidden, Show on Click -->
-        <div :class="{ 'md:flex': showSection }" class="hidden mt-8 w-full md:items-stretch md:space-x-4">
-    
-        <textarea x-model="fileContent" class="w-full p-4 border-2 rounded-md border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-50" rows="10" readonly></textarea>
-
-        <button @click="saveContent" class="mt-4 inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
-            Save
-        </button>
-
-        </div>
-
-
-<script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('servicesEditor', () => ({
-            showSection: false,
-            fileContent: '',
-
-            // Fetch content from the backend when section is shown
-            async loadContent() {
-                try {
-                    const response = await fetch('/services/edit');
-                    const data = await response.json();
-                    if (response.ok) {
-                        this.fileContent = JSON.stringify(data, null, 4); // Format JSON for textarea
-                    } else {
-                        alert('Failed to load content');
-                    }
-                } catch (error) {
-                    console.error('Error fetching content:', error);
-                }
-            },
-
-            // Save the updated content to the backend
-            async saveContent() {
-                try {
-                    const response = await fetch('/services/edit', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: this.fileContent, // Send the updated content
-                    });
-
-                    const result = await response.json();
-                    if (response.ok) {
-                        alert('Configuration saved successfully!');
-                    } else {
-                        alert(`Error: ${result.error}`);
-                    }
-                } catch (error) {
-                    console.error('Error saving content:', error);
-                    alert('An error occurred while saving the content.');
-                }
-            },
-        }));
-    });
-</script>
-
-
         </header>
     </div>
 
