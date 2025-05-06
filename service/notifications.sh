@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.250.501"
+VERSION="20.250.506"
 # Record the process ID of the script
 PID=$$
 
@@ -302,7 +302,7 @@ check_ssh_logins() {
     fi
 
     # Get IP addresses from the 'who' command
-    ssh_ips=$(who | grep 'pts' | awk '{print $5}' | sed 's/[()]//g')
+    ssh_ips=$(who | grep 'pts' | awk '{print $5}' | sed -E 's/[():]//g' | cut -d':' -f1)
 
     # Check if there are any IPs currently logged to SSH
     if [ -z "$ssh_ips" ]; then
