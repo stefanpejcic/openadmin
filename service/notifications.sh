@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.250.506"
+VERSION="20.250.507"
 # Record the process ID of the script
 PID=$$
 
@@ -455,33 +455,42 @@ check_new_logins() {
 
 mysql_docker_containers_status() {
 
-#### only mysql so far..
-
       # Check if the MySQL Docker container is running
-      if docker --context default ps --format "{{.Names}}" | grep -q "openpanel_mysql"; then
-      ((PASS++))
-        echo -e "\e[32m[✔]\e[0m MySQL Docker container is active."
-      else
-                  ((FAIL++))
-            STATUS=2
-        echo -e "\e[31m[✘]\e[0m MySQL Docker container is not active." #Writing notification to log file."
+      if docker --context=default ps --format "{{.Names}}" | grep -q "openpanel_mysql"; then
 
-        # Check the last 100 lines of the MySQL error log for the specified condition
-        error_log=$(tail -100 /var/log/mysql/error.log | grep -m 1 "No space left on device")
+        if mysql -Ne "SELECT 'PONG' AS PING;" 2>/dev/null | grep -q "PONG"; then
+        ((PASS++))
+          echo -e "\e[32m[✔]\e[0m MySQL container is active and service running."
+        else
+          echo -e "\e[31m[✘]\e[0m MySQL container is running but not responding correctly, initiating restart.."
+          cd /root && docker --context default compose up -d openpanel_mysql 2>/dev/null
+        fi
+
+      else
+
+        ((FAIL++))
+        STATUS=2
+        echo -e "\e[31m[✘]\e[0m MySQL Docker container is not active, initiating restart.." #Writing notification to log file."
+
+        cd /root && docker --context default compose up -d openpanel_mysql 2>/dev/null
 
         title="MySQL service is not active. Users are unable to log into OpenPanel!"
+        message="MySQL container is running, but is not respond to queries. Sentinel failed to restart mysql and users are unable to login to OpenPanel, please check ASAP."
 
+        sleep 5
 
-
-        # Check if there's an error log and include it in the message
-        if [ -n "$error_log" ]; then
-          message="$error_log"
-          write_notification "$title" "$message"
+        if mysql -Ne "SELECT 'PONG' AS PING;" 2>/dev/null | grep -q "PONG"; then
+          ((FAIL--))
+          STATUS=1
+          echo "    Success: MySQL is now back online and responding to queries."
+          title="MySQL service was restarted successfully!"
+          message="MySQL container was running, but did not respond to queries. Sentinel restarted mysql and it is responding now."
         else
-          error_log=$(journalctl -n 5 -u "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
-          message="$error_log"
-          write_notification "$title" "$message"
+          echo "    Error: MySQL restared but still not responding to queries!"
         fi
+
+        write_notification "$title" "$message"
+
       fi
 }
 
@@ -493,7 +502,7 @@ docker_containers_status() {
 
 
     check_status_after_restart(){
-                if docker --context default ps --format "{{.Names}}" | grep -wq "$service_name"; then
+                if docker --context=default ps --format "{{.Names}}" | grep -wq "$service_name"; then
                     echo -e "\e[32m[✔]\e[0m $service_name docker container successfully restarted."
                     ((WARN--))
                 else
@@ -503,32 +512,51 @@ docker_containers_status() {
                   STATUS=2
 
                     # Log the error and write notification
-                    error_log=$(docker --context default logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
+                    error_log=$(docker --context=default logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
                     write_notification "$title" "$error_log"
                 fi
     }
 
 
 
-    if docker --context default ps --format "{{.Names}}" | grep -wq "$service_name"; then
-        ((PASS++))
-        echo -e "\e[32m[✔]\e[0m $service_name docker container is active."
-    else 
+      start_caddy() {
+            ((WARN++))
+            echo -e "\e[38;5;214m[!]\e[0m $service_name docker container is not running."
 
-        ((WARN++))
-        echo -e "\e[38;5;214m[!]\e[0m $service_name docker container is not running."
-      
-        if [ "$service_name" == "caddy" ]; then
             echo "  - Checking if domains exist and if caddy service should be started..."
-            if ls /etc/openpanel/openpanel/core/users/*/domains > /dev/null 2>&1; then
+            if ls /etc/openpanel/caddy/domains > /dev/null 2>&1; then
                 echo "  - Domains are hosted on this server, starting caddy service.."
-                cd /root && docker --context default compose up -d caddy > /dev/null 2>&1
+                cd /root && docker --context=default compose up -d caddy > /dev/null 2>&1
                 check_status_after_restart
             else
                 ((WARN--))
                 echo "  - No domains detected. Caddy is not yet needed."
             fi
+        }
+
+
+
+    if docker --context=default ps --format "{{.Names}}" | grep -wq "$service_name"; then
+
+      if [ "$service_name" == "caddy" ]; then
+          local url="http://localhost/check"
+          local status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 --max-time 1 "$url")
+
+
+        if [ "$status_code" -eq 200 ] || [ "$status_code" -eq 404 ]; then
+          ####DEBUG####echo "Healthy ($status_code)"
+          ((PASS++))
+          echo -e "\e[32m[✔]\e[0m $service_name docker container is active (status code: $status_code)."
+        else
+          ####DEBUG####echo "Unhealthy (Unexpected status: $status_code)"
+          start_caddy
         fi
+      else
+        ((PASS++))
+        echo -e "\e[32m[✔]\e[0m $service_name docker container is active."
+      fi
+    else 
+
 
         if [ "$service_name" == "openpanel" ]; then
             echo "  - Checking if users exist and if openpanel service should be started..."
@@ -538,14 +566,14 @@ docker_containers_status() {
               echo "  - No users found in the database."
             else
                 echo "  - User accounts are hosted on this server, starting openpanel service.."
-                cd /root && docker --context default compose up -d openpanel > /dev/null 2>&1
+                cd /root && docker --context=default compose up -d openpanel > /dev/null 2>&1
                 check_status_after_restart
             fi 
         elif [ "$service_name" == "openpanel_dns" ]; then
             echo "  - Checking if DNS zones exist and if BIND9 service should be started..."
             if ls /etc/bind/zones/*.zone > /dev/null 2>&1; then
                 echo "  - DNS zones are hosted on this server, starting BIND9 service.."
-                cd /root && docker --context default compose up -d bind9 > /dev/null 2>&1
+                cd /root && docker --context=default compose up -d bind9 > /dev/null 2>&1
                 check_status_after_restart
             else
                 ((WARN--))
@@ -553,7 +581,7 @@ docker_containers_status() {
             fi
         else
 
-            docker --context default restart "$service_name"  > /dev/null 2>&1
+            docker --context=default restart "$service_name"  > /dev/null 2>&1
             check_status_after_restart
         fi
     fi
