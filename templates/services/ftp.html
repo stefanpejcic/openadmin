@@ -2,143 +2,159 @@
 
 {% block content %}
 
-<!-- Page header -->
-<div class="page-header mt-0 d-print-none">
-    <div class="container-xl">
-        <div class="row g-2 align-items-center">
-            <div class="col">
-                <!-- Page pre-title -->
-                <div class="page-pretitle">
-                    Services
+<div x-data="{ searchQuery: '', filters: { active: false, suspended: false } }">
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">FTP Accounts</h1>
+                    <h2 class="text-sm font-medium text-slate-500">View and manage FTP sub-accounts of OpenPanel users.</h2>
                 </div>
-                <h2 class="page-title">
-                    FTP Accounts and Configuration
-                </h2>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                  Status: {{ ftpserver_status }}
+                </div>
             </div>
-            <!-- Page title actions -->
-            <div class="col-auto ms-auto mt-0 d-print-none">
-                <div class="btn-list">
-                    <span class="d-none">
-                        <div class="input-icon">
-                            <span class="input-icon-addon">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg>
-                            </span>
-                        <input type="text" id="userSearchInput" class="form-control" placeholder="Search FTP accounts" aria-label="Search email accounts">
-                        </div>
-                    </span>
-                    <button id="addPlanButton" class="d-none btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#modal-report"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg>New Account</button>
-                    
-                    Status: <b data-bs-toggle="tooltip" data-bs-placement="bottom" aria-label="FTP service status can be changed from Services Status page" data-bs-original-title="FTP service status can be changed from Services Status page">{{ ftpserver_status }}</b>
-                    
-                    </div>
-            </div>
-        </div>
+        </header>
     </div>
-</div>
-
-
-
-
-
 
 {% if ftpserver_status == 'running' %}
 <!-- status is running -->
-
-
-
-{% if ftp_accounts %}
-<!-- accounts exist -->
-<div class="page-body">
     <div class="">
-        <div class="row row-deck row-cards">
-            <div class="col-lg-12" id="domains">
-                <div class="card-body p-0">
-                    <div id="table-default" class="table-responsive">
-                    <table class="table table-vcenter card-table table-striped">
-                        <thead>
-                        <tr>
-                        <th><button class="table-sort" data-sort="sort-id">Username</button></th>
-                        <th><button class="table-sort" data-sort="sort-user">Owner</button></th>
-                        <th><button class="table-sort" data-sort="sort-url">Path</button></th>
-                        <th class="d-none">Configuration</th>
+        <div class="space-y-3">
+            <div class="relative overflow-hidden overflow-x-auto">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead class="">
+                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Account</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Owner</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+
+
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Path</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th class="hidden border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>GUID</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+
+
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Actions</span>
+                                </div>
+                            </th>
                         </tr>
-                        </thead>
-                        <tbody class="table-tbody">
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+      {% if ftp_accounts %}
+      <!-- accounts exist -->
 
                         {% for account in ftp_accounts %}
-                        <tr>
-                        <td class="text-secondary sort-url">{{ account.user }}</td>
-                        <td class="text-secondary sort-user"><a href="/users/{{ account.user.split('.')[-1] }}">{{ account.user.split('.')[-1] }}</a></td>
+                        <tr x-show="searchQuery === '' || '{{ account.user }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{ account.user }}</td>
 
-                        <td class="sort-id">{{ account.path }}</td>
-                        <td class="d-none"><a href="/emails/client/{{ account.user }}" data-domain="{{ account.user }}"><svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-folder-cog"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12.5 19h-7.5a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2h4l3 3h7a2 2 0 0 1 2 2v3" /><path d="M19.001 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M19.001 15.5v1.5" /><path d="M19.001 21v1.5" /><path d="M22.032 17.25l-1.299 .75" /><path d="M17.27 20l-1.3 .75" /><path d="M15.97 17.25l1.3 .75" /><path d="M20.733 20l1.3 .75" /></svg> View FTP Client Settings</a></td>
+<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/users/{{ account.owner }}" class="text-indigo-600 dark:text-indigo-400">{{ account.owner }}</a></td>
+
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{ account.guid }}</td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{ account.path }}</td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"></td>
                         </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                    </div>
-                </div>
+                      {% endfor %}
+      {% else %}
+      <tr>
+          <td colspan="5" class="p-6 text-center">
+              FTP server is running but there are not FTP accounts created yet. <a href="/services/ftp/refresh" id="refresh_data"  class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Click to refresh data</a>
+          </td>
+      </tr>
+
+      <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const refreshDataButton = document.getElementById('refresh_data');
+
+        refreshDataButton.addEventListener('click', (event) => {
+          event.preventDefault(); // Prevent the default link behavior
+
+          refreshDataButton.disabled = true;
+          refreshDataButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp; Processing...';
+
+          fetch(refreshDataButton.href, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          .then(response => {
+            if (response.ok) {
+            refreshDataButton.disabled = false;
+            refreshDataButton.innerHTML = '<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-check"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg> Completed';
+              window.location.reload();
+            } else {
+              refreshDataButton.disabled = true;
+              refreshDataButton.innerHTML = "Failed. run command 'opencli ftp-users'";
+              console.error('Failed to run opencli ftp-users:', response.statusText);
+            }
+          })
+          .catch(error => {
+            console.error('Error during AJAX request:', error);
+          });
+        });
+      });
+      </script>
+
+
+      {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-</div>
-                        {% else %}
-<!-- no accounts found -->   
-<div class="page page-center">
-      <div class="container-tight py-4">
-        <div class="empty">
-          <div class="empty-header">No FTP accounts</div>
-          <p class="empty-title">FTP server is running but there are not FTP accounts created yet.</p>
-          <div class="empty-action">
-            <a href="/services/ftp/refresh" id="refresh_data" class="btn btn-outlined-primary">
-              <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-reload"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M19.933 13.041a8 8 0 1 1 -9.925 -8.788c3.899 -1 7.935 1.007 9.425 4.747" /><path d="M20 4v5h-5" /></svg>
-              Click to refresh data
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const refreshDataButton = document.getElementById('refresh_data');
-
-  refreshDataButton.addEventListener('click', (event) => {
-    event.preventDefault(); // Prevent the default link behavior
-
-    refreshDataButton.disabled = true;
-    refreshDataButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp; Processing...';
-
-    fetch(refreshDataButton.href, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(response => {
-      if (response.ok) {
-      refreshDataButton.disabled = false;
-      refreshDataButton.innerHTML = '<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-check"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg> Completed';
-        window.location.reload();
-      } else {
-        refreshDataButton.disabled = true;
-        refreshDataButton.innerHTML = "Failed. run command 'opencli ftp-users'";
-        console.error('Failed to run opencli ftp-users:', response.statusText);
-      }
-    })
-    .catch(error => {
-      console.error('Error during AJAX request:', error);
-    });
-  });
-});
-</script>
-
-
-
-
-                        {% endif %}
-
 
 {% elif ftpserver_status == 'not_installed' %}
 <!-- status not_installed -->

@@ -297,28 +297,53 @@
 
 
 <!-- pagination -->
-        <div class="m-6 flex justify-center">
-            <nav aria-label="Pagination">
-                <ul class="inline-flex -space-x-px text-sm">
-                    {% if current_page > 1 %}
-                        <li>
-                            <a href="{{ url_for('view_domain_access_log', domain_name=domain_name, page=current_page-1) }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">Previous</a>
-                        </li>
-                    {% endif %}
-                    {% for p in range(1, total_pages + 1) %}
-                        <li>
-                            <a href="{{ url_for('view_domain_access_log', domain_name=domain_name, page=p) }}" class="px-3 py-2 leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 {% if p == current_page %} bg-gray-200 dark:bg-gray-700 {% endif %}">{{ p }}</a>
-                        </li>
-                    {% endfor %}
-                    {% if current_page < total_pages %}
-                        <li>
-                            <a href="{{ url_for('view_domain_access_log', domain_name=domain_name, page=current_page+1) }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">Next</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
+<div class="m-6 flex justify-center">
+    <nav aria-label="Pagination">
+        <ul class="inline-flex -space-x-px text-sm">
+            {% if current_page > 1 %}
+                <li>
+                    <a href="{{ url_for('view_domain_access_log', domain_name=domain_name, page=current_page-1) }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">Previous</a>
+                </li>
+            {% endif %}
+
+            {% set window = 2 %}
+            {% set start = 1 if current_page - window < 1 else current_page - window %}
+            {% set end = total_pages if current_page + window > total_pages else current_page + window %}
+
+            {% if start > 1 %}
+                <li>
+                    <a href="{{ url_for('view_domain_access_log', domain_name=domain_name, page=1) }}" class="px-3 py-2 leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 {% if current_page == 1 %} bg-gray-200 dark:bg-gray-700 {% endif %}">1</a>
+                </li>
+                {% if start > 2 %}
+                    <li><span class="px-3 py-2 text-gray-500 dark:text-gray-400">…</span></li>
+                {% endif %}
+            {% endif %}
+
+            {% for p in range(start, end + 1) %}
+                <li>
+                    <a href="{{ url_for('view_domain_access_log', domain_name=domain_name, page=p) }}" class="px-3 py-2 leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 {% if p == current_page %} bg-gray-200 dark:bg-gray-700 {% endif %}">{{ p }}</a>
+                </li>
+            {% endfor %}
+
+            {% if end < total_pages %}
+                {% if end < total_pages - 1 %}
+                    <li><span class="px-3 py-2 text-gray-500 dark:text-gray-400">…</span></li>
+                {% endif %}
+                <li>
+                    <a href="{{ url_for('view_domain_access_log', domain_name=domain_name, page=total_pages) }}" class="px-3 py-2 leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 {% if current_page == total_pages %} bg-gray-200 dark:bg-gray-700 {% endif %}">{{ total_pages }}</a>
+                </li>
+            {% endif %}
+
+            {% if current_page < total_pages %}
+                <li>
+                    <a href="{{ url_for('view_domain_access_log', domain_name=domain_name, page=current_page+1) }}" class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700">Next</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
 <!-- END pagination -->
+
 
 
 {% else %}

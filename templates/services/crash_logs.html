@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Crash Logs Viewer</h1>
+                    <h2 class="text-sm font-medium text-slate-500">View, download or empty OpenPanel crashlogs.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
+
+
+        <div class="flex space-x-4 mt-4 md:mt-0">
+            <div>
+                <select id="log-select" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                    <option disabled selected value>-- Select a log file --</option>
+                    {% for log_file in log_files %}
+                    <option value="{{ log_file.replace('/var/log/openpanel/admin/crashlog/', '') }}">{{ log_file }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+
+
+                </div>
+            </div>
+    </header>
+    </div>
+
+
+
+<div class="container mx-auto mt-4">
+
+    <div class="mt-6 bg-black-500 shadow-md rounded-lg p-4">
+        <pre id="log-content" class="whitespace-pre-wrap border border-gray-300 p-3">Select a log file to view its content here.</pre>
+    </div>
+
+    <div class="flex justify-center mt-4 space-x-4">
+        <button id="truncate-btn" class="hidden relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 text-white border-transparent bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 disabled:bg-red-300 disabled:text-white disabled:dark:bg-red-950 disabled:dark:text-red-400">
+            Delete
+        </button>
+        <button id="download-btn" class="hidden relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" onclick="downloadLog()">
+            Download
+        </button>
+    </div>
+</div>
+
+<script>
+    // SHOW LOG FILE CONTENT
+function fetchLog() {
+    const logSelect = document.getElementById('log-select');
+    const logName = logSelect.value;
+
+    let url = `/services/crashlogs/log/raw?log_name=${logName}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const logContentDiv = document.getElementById('log-content');
+            logContentDiv.textContent = data.error || (data.content.trim() ? data.content : 'The log file is empty.');
+            document.getElementById('truncate-btn').classList.remove('hidden');
+            document.getElementById('download-btn').classList.remove('hidden');
+        })
+        .catch(error => {
+            console.error('Error fetching crash log:', error);
+            document.getElementById('log-content').textContent = 'Error fetching log data.';
+        });
+}
+
+
+function getLogNameFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('log_name');
+}
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    const logNameFromURL = getLogNameFromURL();
+
+    if (logNameFromURL) {
+        // Select the log name in the dropdown
+        const logSelect = document.getElementById('log-select');
+        const options = logSelect.getElementsByTagName('option');
+        for (let option of options) {
+            if (option.value === logNameFromURL) {
+                option.selected = true;
+                break;
+            }
+        }
+        // Fetch the log content immediately
+        fetchLog();
+    }
+
+    document.getElementById('log-select').addEventListener('change', fetchLog);
+});
+
+// DOWNLOAD LOG FILE
+function downloadLog() {
+    const logName = document.getElementById('log-select').value;
+    const url = `/services/crashlogs/log/raw?log_name=${logName}`;
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `${logName}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+    })
+    .catch(error => {
+        console.error('Error downloading crash log:', error);
+        alert('Error downloading crash log file.');
+    });
+}
+
+// EMPTY LOG CONTENT
+function truncateLog() {
+    const logName = document.getElementById('log-select').value;
+    fetch(`/services/crashlogs/log/raw?log_name=${logName}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message));
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('truncate-btn').addEventListener('click', truncateLog);
+});
+
+</script>
+
+{% endblock %}

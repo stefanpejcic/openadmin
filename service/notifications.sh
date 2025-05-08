@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.241.118"
+VERSION="20.250.507"
 # Record the process ID of the script
 PID=$$
 
@@ -192,17 +192,29 @@ email_notification() {
 
 
 # Check for SSL
-SSL=$(awk -F'=' '/^ssl/ {print $2}' "$CONF_FILE")
+DOMAIN=$(opencli domain)
 
-# Determine protocol based on SSL configuration
-if [ "$SSL" = "yes" ]; then
+if [[ "$DOMAIN" =~ ^[a-zA-Z0-9.-]+$ ]]; then
   PROTOCOL="https"
 else
   PROTOCOL="http"
 fi
 
-# Send email using appropriate protocol
-curl -k -X POST "$PROTOCOL://127.0.0.1:2087/send_email" -F "transient=$TRANSIENT" -F "recipient=$EMAIL" -F "subject=$title" -F "body=$message"  > /dev/null 2>&1
+
+response=$(curl -k -X POST "$PROTOCOL://127.0.0.1:2087/send_email" \
+  -F "transient=$TRANSIENT" \
+  -F "recipient=$EMAIL" \
+  -F "subject=$title" \
+  -F "body=$message" 2>/dev/null)
+
+
+if echo "$response" | grep -q '"error"'; then
+  echo "Error: Failed to send email. Response: $response"
+elif echo "$response" | grep -q '"sent successfully"'; then
+  echo "Email sent successfully."
+fi
+
+
 
 }
 
@@ -249,12 +261,11 @@ write_notification() {
   # Check if the current message content is the same as the last one and has "UNREAD" status
   if [ "$message" != "$last_message_content" ] && ! is_unread_message_present "$title"; then
     echo "$current_message" >> "$LOG_FILE"
-    if [ "$EMAIL_ALERT" != "no" ]; then
-      email_notification "$title" "$message"
-    else
+    if [ "$EMAIL_ALERT" == "no" ]; then
       echo "Email alerts are disabled."
+    else
+      email_notification "$title" "$message"
     fi
-
 
   fi
 }
@@ -291,7 +302,7 @@ check_ssh_logins() {
     fi
 
     # Get IP addresses from the 'who' command
-    ssh_ips=$(who | grep 'pts' | awk '{print $5}' | sed 's/[()]//g')
+    ssh_ips=$(who | grep 'pts' | awk '{print $5}' | sed -E 's/[():]//g' | cut -d':' -f1)
 
     # Check if there are any IPs currently logged to SSH
     if [ -z "$ssh_ips" ]; then
@@ -444,33 +455,42 @@ check_new_logins() {
 
 mysql_docker_containers_status() {
 
-#### only mysql so far..
-
       # Check if the MySQL Docker container is running
-      if docker --context default ps --format "{{.Names}}" | grep -q "openpanel_mysql"; then
-      ((PASS++))
-        echo -e "\e[32m[✔]\e[0m MySQL Docker container is active."
-      else
-                  ((FAIL++))
-            STATUS=2
-        echo -e "\e[31m[✘]\e[0m MySQL Docker container is not active." #Writing notification to log file."
+      if docker --context=default ps --format "{{.Names}}" | grep -q "openpanel_mysql"; then
 
-        # Check the last 100 lines of the MySQL error log for the specified condition
-        error_log=$(tail -100 /var/log/mysql/error.log | grep -m 1 "No space left on device")
+        if mysql -Ne "SELECT 'PONG' AS PING;" 2>/dev/null | grep -q "PONG"; then
+        ((PASS++))
+          echo -e "\e[32m[✔]\e[0m MySQL container is active and service running."
+        else
+          echo -e "\e[31m[✘]\e[0m MySQL container is running but not responding correctly, initiating restart.."
+          cd /root && docker --context default compose up -d openpanel_mysql 2>/dev/null
+        fi
+
+      else
+
+        ((FAIL++))
+        STATUS=2
+        echo -e "\e[31m[✘]\e[0m MySQL Docker container is not active, initiating restart.." #Writing notification to log file."
+
+        cd /root && docker --context default compose up -d openpanel_mysql 2>/dev/null
 
         title="MySQL service is not active. Users are unable to log into OpenPanel!"
+        message="MySQL container is running, but is not respond to queries. Sentinel failed to restart mysql and users are unable to login to OpenPanel, please check ASAP."
 
+        sleep 5
 
-
-        # Check if there's an error log and include it in the message
-        if [ -n "$error_log" ]; then
-          message="$error_log"
-          write_notification "$title" "$message"
+        if mysql -Ne "SELECT 'PONG' AS PING;" 2>/dev/null | grep -q "PONG"; then
+          ((FAIL--))
+          STATUS=1
+          echo "    Success: MySQL is now back online and responding to queries."
+          title="MySQL service was restarted successfully!"
+          message="MySQL container was running, but did not respond to queries. Sentinel restarted mysql and it is responding now."
         else
-          error_log=$(journalctl -n 5 -u "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
-          message="$error_log"
-          write_notification "$title" "$message"
+          echo "    Error: MySQL restared but still not responding to queries!"
         fi
+
+        write_notification "$title" "$message"
+
       fi
 }
 
@@ -482,7 +502,7 @@ docker_containers_status() {
 
 
     check_status_after_restart(){
-                if docker --context default ps --format "{{.Names}}" | grep -wq "$service_name"; then
+                if docker --context=default ps --format "{{.Names}}" | grep -wq "$service_name"; then
                     echo -e "\e[32m[✔]\e[0m $service_name docker container successfully restarted."
                     ((WARN--))
                 else
@@ -492,33 +512,51 @@ docker_containers_status() {
                   STATUS=2
 
                     # Log the error and write notification
-                    error_log=$(docker --context default logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
-                    message="$error_log"
-                    write_notification "$title" "$message"
+                    error_log=$(docker --context=default logs -f --tail 10 "$service_name" 2>/dev/null | sed ':a;N;$!ba;s/\n/\\n/g')
+                    write_notification "$title" "$error_log"
                 fi
     }
 
 
 
-    if docker --context default ps --format "{{.Names}}" | grep -wq "$service_name"; then
-        ((PASS++))
-        echo -e "\e[32m[✔]\e[0m $service_name docker container is active."
-    else 
+      start_caddy() {
+            ((WARN++))
+            echo -e "\e[38;5;214m[!]\e[0m $service_name docker container is not running."
 
-        ((WARN++))
-        echo -e "\e[38;5;214m[!]\e[0m $service_name docker container is not running."
-      
-        if [ "$service_name" == "caddy" ]; then
             echo "  - Checking if domains exist and if caddy service should be started..."
-            if ls /etc/openpanel/openpanel/core/users/*/domains > /dev/null 2>&1; then
+            if ls /etc/openpanel/caddy/domains > /dev/null 2>&1; then
                 echo "  - Domains are hosted on this server, starting caddy service.."
-                cd /root && docker --context default compose up -d caddy > /dev/null 2>&1
+                cd /root && docker --context=default compose up -d caddy > /dev/null 2>&1
                 check_status_after_restart
             else
                 ((WARN--))
                 echo "  - No domains detected. Caddy is not yet needed."
             fi
+        }
+
+
+
+    if docker --context=default ps --format "{{.Names}}" | grep -wq "$service_name"; then
+
+      if [ "$service_name" == "caddy" ]; then
+          local url="http://localhost/check"
+          local status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 --max-time 1 "$url")
+
+
+        if [ "$status_code" -eq 200 ] || [ "$status_code" -eq 404 ]; then
+          ####DEBUG####echo "Healthy ($status_code)"
+          ((PASS++))
+          echo -e "\e[32m[✔]\e[0m $service_name docker container is active (status code: $status_code)."
+        else
+          ####DEBUG####echo "Unhealthy (Unexpected status: $status_code)"
+          start_caddy
         fi
+      else
+        ((PASS++))
+        echo -e "\e[32m[✔]\e[0m $service_name docker container is active."
+      fi
+    else 
+
 
         if [ "$service_name" == "openpanel" ]; then
             echo "  - Checking if users exist and if openpanel service should be started..."
@@ -528,14 +566,14 @@ docker_containers_status() {
               echo "  - No users found in the database."
             else
                 echo "  - User accounts are hosted on this server, starting openpanel service.."
-                cd /root && docker --context default compose up -d openpanel > /dev/null 2>&1
+                cd /root && docker --context=default compose up -d openpanel > /dev/null 2>&1
                 check_status_after_restart
             fi 
         elif [ "$service_name" == "openpanel_dns" ]; then
             echo "  - Checking if DNS zones exist and if BIND9 service should be started..."
             if ls /etc/bind/zones/*.zone > /dev/null 2>&1; then
                 echo "  - DNS zones are hosted on this server, starting BIND9 service.."
-                cd /root && docker --context default compose up -d bind9 > /dev/null 2>&1
+                cd /root && docker --context=default compose up -d bind9 > /dev/null 2>&1
                 check_status_after_restart
             else
                 ((WARN--))
@@ -543,7 +581,7 @@ docker_containers_status() {
             fi
         else
 
-            docker --context default restart "$service_name"  > /dev/null 2>&1
+            docker --context=default restart "$service_name"  > /dev/null 2>&1
             check_status_after_restart
         fi
     fi
@@ -581,7 +619,17 @@ check_service_status() {
         echo "no logs."
       fi
 
+      # Restart the service if it's not running
+      echo -e "\e[33m[⚠️]\e[0m Restarting $service_name..."
+      systemctl restart "$service_name"
 
+      # Verify if the restart was successful
+      if systemctl is-active --quiet "$service_name"; then
+        echo -e "\e[32m[✔]\e[0m $service_name has been restarted and is now active."
+      else
+        echo -e "\e[31m[✘]\e[0m Failed to restart $service_name."
+      fi
+      
     fi
     
 
@@ -595,16 +643,21 @@ check_service_status() {
 # generate report file for email/gui - added in 0.3.6
 generate_crashlog_report() {
     local proc=$(/bin/top -b -n 1| head -23)
-    local mysql=$(mysqladmin pr)
+    local mysql=$(mysql -e "SHOW PROCESSLIST" | grep -v "Id")
     local io=$(/usr/sbin/iotop -oqqqk | head -10)
     local swap=$(for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r | head -10)
-    local net_stat=$(/usr/sbin/ss -s)
+    local net_stat=$(ss -s)
+    if command -v iotop >/dev/null 2>&1; then
+        local io=$(iotop -oqqqk | head -10)
+    else
+        local io=$(iostat -xz 1 10 | head -n 10)
+    fi
     local break="+-----------------------------------------------------------------------------------------------------------------+"
     local date=$(date +%d-%m-%Y-%H:%M)
     local formatted_date=${date//-/ }
     local filename=$(date +%s)
     local crashlog_dir="/var/log/openpanel/admin/crashlog"
-    generated_report= "${crashlog_dir}/${filename}.txt"
+    generated_report="${crashlog_dir}/${filename}.txt"
     mkdir -p $crashlog_dir
     touch $generated_report
 
@@ -614,14 +667,14 @@ $break
  GENERAL INFO
 $break
 
-- Hostname: $hostname
+- Hostname: $HOSTNAME
 - Date: $formatted_date
 
 $break
  CURRENT LOAD
 $break
 
-Load: $loadavg
+Load: $current_load
 
 $break
 PROCESS INFO
@@ -668,7 +721,7 @@ EOF
 check_system_load() {
   local title="High System Load!"
 
-  local current_load=$(uptime | awk -F'average:' '{print $2}' | awk -F', ' '{print $1}')
+  current_load=$(uptime | awk -F'average:' '{print $2}' | awk -F', ' '{print $1}')
   local load_int=${current_load%.*}  # Extract the integer part
   
   if [ "$load_int" -gt "$LOAD_THRESHOLD" ]; then
@@ -870,7 +923,7 @@ if [ -n "$NS1_SET" ]; then
         CHECK_NS_ALSO="yes"
 
         #check ns2 only if ns1 is set!
-        NS2_SET=$(awk -F'=' '/^ns1/ {print $2}' "$CONF_FILE")
+        NS2_SET=$(awk -F'=' '/^ns2/ {print $2}' "$CONF_FILE")
         NS2=$NS2_SET
 
     else
@@ -953,21 +1006,21 @@ else
           echo -e "\e[32m[✔]\e[0m Skip checking nameservers as they are not set."
       else
           if [ -n "$NS1" ] && [ -n "$NS2" ]; then
-              #echo "Checking if nameservers $NS1 and $NS2 resolve to this server IP ($SERVER_IP).."
               ns1_ip=$(dig +short @"$GOOGLE_DNS_SERVER" "$NS1")
               ns2_ip=$(dig +short @"$GOOGLE_DNS_SERVER" "$NS2")
+              all_server_ips=$(hostname -I)
 
-              if [ "$ns1_ip" == "$SERVER_IP" ] && [ "$ns2_ip" == "$SERVER_IP" ]; then
-              ((PASS++))
-                  echo -e "\e[32m[✔]\e[0m $NS1 and $NS2 both resolve to $SERVER_IP"
+              if echo "$all_server_ips" | grep -qw "$ns1_ip" && echo "$all_server_ips" | grep -qw "$ns2_ip"; then
+                  ((PASS++))
+                  echo -e "\e[32m[✔]\e[0m $NS1 and $NS2 both resolve to local IPs ($(hostname -I))"
               else
-                          ((FAIL++))
-            STATUS=2
+                  ((FAIL++))
+                  STATUS=2
                   echo -e "\e[31m[✘]\e[0m Nameservers do not resolve correctly:"
-                  echo "    $NS1 resolves to $ns1_ip (expected $SERVER_IP)"
-                  echo "    $NS2 resolves to $ns2_ip (expected $SERVER_IP)"
-                  local title="Configured nameservers do not resolve to $SERVER_IP"
-                  local message="$NS1 resolves to $ns1_ip (expected $SERVER_IP) | $NS2 resolves to $ns2_ip (expected $SERVER_IP)"
+                  echo "    $NS1 resolves to $ns1_ip (expected one of: $all_server_ips)"
+                  echo "    $NS2 resolves to $ns2_ip (expected one of: $all_server_ips)"
+                  local title="Configured nameservers do not resolve to local IPs"
+                  local message="$NS1 resolves to $ns1_ip (expected one of: $all_server_ips) | $NS2 resolves to $ns2_ip (expected one of: $all_server_ips)"
                   write_notification "$title" "$message"
               fi
           else 
@@ -1036,6 +1089,23 @@ check_for_debug_and_print_info(){
       echo "------------------------------------------------------"
       echo ""
   fi
+}
+
+
+
+
+
+
+
+email_daily_report() {
+  local title="Daily Usage Report"
+  local message="Daily Usage Report"
+    if [ "$EMAIL_ALERT" != "no" ]; then
+    echo "Generating daily usage report.."
+      email_notification "$title" "$message"
+    else
+      echo "Email alerts are disabled - daily usage report will not be generated."
+    fi
 }
 
 

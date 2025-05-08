@@ -1,79 +1,100 @@
 {% extends 'base.html' %}
 
 {% block content %}
-        
-<!-- Page header -->
-<div class="page-header mt-0 d-print-none">
-	<div class="container-xl">
-		<div class="row g-2 align-items-center">
-			<div class="col">
-				<!-- Page pre-title -->
-				<div class="page-pretitle">
-                  Server Configuration
-                </div>
-				<h2 class="page-title">
-                  OpenPanel Cron Jobs
-                </h2>
-			</div>
-			<!-- Page title actions -->
-			<div class="col-auto ms-auto d-print-none">
-				<form method="POST" action="/server/crons">
-				    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<button type="submit" class="btn btn-primary">Update</button>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div class="page-body">
-		<div class="container-xl">
-			<div class="row row-deck row-cards">
-				<div class="col-lg-12">
-					<div class="card">
-						<div class="card-body">
-							<div class="row">
-								<div class="col-lg-12">
-									<p class="d-none d-sm-inline">Here you can view scheduled crons for OpenAdmin and edit their schedule or enable/disable logging to 
-										<a href="/services/logs">/etc/openpanel/openadmin/cron.log</a> file.
-									</p>
-									<div id="table-default" class="table-responsive">
-										<table class="table table-vcenter card-table table-striped">
-											<thead>
-												<tr>
-													<th>Schedule</th>
-													<th class="w-50">Command</th>
-													<th class="w-1 pe-0 text-center" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-original-title="Enable logging to /etc/openpanel/openadmin/cron.log">Logging</th>
-												</tr>
-											</thead>
-											<tbody class="table-tbody">
-                              {% for cron, details in cron_jobs.items() %}
-                          
-												<tr>
-													<td>
-														<input type="text" class="form-control" id="{{ cron }}_time" name="{{ cron }}_time" value="{{ ' '.join(details['time']) }}">
-														</td>
-														<td>
-															<input type="text" class="form-control disabled" id="{{ cron }}_command" name="{{ cron }}_command" value="{{ cron }}" disabled>
-															</td>
-															<td>
-																<label class="form-check form-check-single form-switch">
-																	<input class="form-check-input" type="checkbox" id="{{ cron }}_logging" name="{{ cron }}_logging" {% if details['logging_enabled'] %} checked {% endif %}>
-																	</label>
-																</td>
-															</tr>
-                            {% endfor %}
-                            
-														</tbody>
-													</table>
-												</form>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<div></div>
-			</div>
 
+
+<form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+
+
+<div x-data="{ searchQuery: '' }">
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Crons</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Manage system crons.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Save</button>
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <div class="">
+        <div class="space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+
+                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search crons..." type="search">
+
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden flex items-center gap-2">
+                    <div>
+                        <div class="flex justify-center">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="relative">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead class="">
+                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Schedule</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Command</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Logging</div></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+
+{% if cron_jobs %}
+                {% for job in cron_jobs %}
+                        <tr id="{{ job.line_number }}" x-show="searchQuery === '' || '{{ job.command }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
+
+{% set schedule_parts = job.schedule.strip().split(' ') %}
+<td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 text-left">
+  {% for i in range(5) %}
+    <input type="text" class="relative appearance-none truncate rounded-md border px-0 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden inline-block w-12 text-center" name="{{ job.line_number }}_schedule_{{ i }}" value="{{ schedule_parts[i] if schedule_parts|length > i else '' }}">
+  {% endfor %}
+</td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{ job.command }}</td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                                <label class="form-check form-check-single form-switch">
+                                    <input class="form-check-input" type="checkbox" id="{{ job.line_number }}_logging" name="{{ job.line_number }}_logging" {% if job.log %} checked {% endif %}>
+                                </label>
+							</td>
+                        </tr>
+                {% endfor %}
+
+{% else %}
+<tr>
+    <td colspan="4" class="p-6 text-center">
+        No crons or the <code>/etc/cron.d/openpanel</code> file is invalid.
+    </td>
+</tr>
+{% endif %}
+                    </tbody>
+                </table>
+                
+
+                <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</form>
 {% endblock %}

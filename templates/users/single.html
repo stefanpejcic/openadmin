@@ -28,8 +28,15 @@
 
                     {% if "SUSPENDED_" in user.username %}
                     {% else %}
+
+<div id="tooltip-user-autologin" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Login as {{ user.username.split('_')[-1] }} into OpenPanel
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
 <a href="/login/token?username={{ user.username.split('_')[-1] }}" 
    target="_blank" 
+   data-tooltip-target="tooltip-user-autologin" data-tooltip-placement="left"
    class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
    x-data="{ spinning: false }"
    @click="spinning = true; setTimeout(() => spinning = false, 500)">
@@ -150,35 +157,10 @@
                         </ul>
                     </div>
 
-                    <div class="hidden">
-                        <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">User Data</span>
-                        <ul class="mt-1 space-y-2">
-
-                            <li>
-                                <a @click="activeTab = 'domains'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'domains'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Domains & DNS</a>
-                            </li>
-                            <li>
-                                <a @click="activeTab = 'websites'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'websites'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Websites</a>
-                            </li>
-                            <li>
-                                <a @click="activeTab = 'emails'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'emails'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Email accounts</a>
-                            </li>
-
-                            <li>
-                                <a @click="activeTab = 'ftp'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'ftp'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> FTP accounts</a>
-                            </li>
-
-                            <li>
-                                <a @click="activeTab = 'backups'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'backups'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Backups</a>
-                            </li>
-
-                        </ul>
-                    </div>
-
                     <div>
                         <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Account</span>
                         <ul class="mt-1 space-y-2">
-                            <li class="hidden">
+                            <li>
                               <a @click="activeTab = 'info'; fetchCustomMessage()" 
                                 :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}" 
                                 class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
@@ -405,11 +387,23 @@
 
         </div>
     </div>
-    <div class="hidden mt-2 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-900 dark:bg-gray-950">
+
+
+
+
+<div class="grid grid-cols-2 gap-4">
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Running containers:</span><span class="font-medium"><a href="#" @click="activeTab = 'services'" class="inline-flex items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">{{ stats.stats.Container }}</a></span></div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Disk I/O:</span><span class="font-medium">{{ stats.stats.BlockIO }}</span></div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Network I/O:</span><span class="font-medium">{{ stats.stats.NetIO }}</span></div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">PIDs:</span><span class="font-medium">{{ stats.stats.PIDs }}</span></div>
+</div>
+
+
+    <div class="mt-4 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-900 dark:bg-gray-950">
         <h4 class="text-sm font-medium text-gray-900 dark:text-gray-50">Usage updated hourly</h4>
         <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-500">
-            Monthly usage resets in 4 days.<!-- -->
-            <a href="#" class="inline-flex items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">
+            Docker stats last updated at: {{ stats.date }}<!-- -->
+            <a href="#" class="hidden inline-flex items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">
                 Manage plan
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4">
                     <path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path>
@@ -1088,22 +1082,29 @@ $.ajax({
 
                   <!-- INFO -->
                     <div x-show="activeTab === 'info'" x-cloak>
-                      Custom message for user: <textarea id="custom_message_for_this_user" class="form-control" rows="5"></textarea>
+
+
+<div class="grid grid-cols-2 gap-4">
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID:</span><span class="font-medium">{{user.id}}</span></div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium">{{user.email}}</span></div>
+
+
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium"> {{server_ip}}</span></div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="font-medium">{{country_name}} ({{country_code}})</span></div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Docker Context:</span><span class="font-medium">{{server_name}}</span></div>
+
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">2FA status:</span><span class="font-medium">{% if user.twofa_enabled  == 1 %}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>>{% elif user.twofa_enabled  == 0 %}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{% else %}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Unknown</span>{% endif %}</span></div>
+    {% if user.owner %}<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Reseller:</span><span class="font-medium"><a href="/resellers">{{user.owner}}</a></span></div>{% endif %}
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Setup time:</span><span class="font-medium">{{ user.registered_date.strftime('%d.%m.%Y %H:%M:%S') }}</span></div>
+
+
+</div>
+                       
                       <br>
-                      ID: {{user.id}}
+                      Custom message for user: <textarea id="custom_message_for_this_user" class="flex min-h-[4rem] w-full rounded-md border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" rows="5"></textarea>
                       <br>
-                      Server ip: {{server_ip}}
-                      <br>
-                      Docker Context: {{server_name}}
-                      <br>
-                      2fa status: {{user.twofa_enabled}}
-                      <br>
-                      Reseller: {{user.owner}}
-                      <br>
-                      Setup time: {{ user.registered_date.strftime('%d.%m.%Y %H:%M:%S') }}
-                      <br>
-                      Country: {{country_name}} ({{country_code}})
-                      
+
+
                     </div>
                   <!-- INFO -->
 
@@ -1216,7 +1217,7 @@ $.ajax({
                 <div class="col-span-full sm:col-span-3">
                     <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="new_ip">IP address</label>
                     <div class="relative w-full mt-2">
-                                <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" id="ipSelect" name="new_ip">
+                                <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" id="ipSelect" name="new_ip" disabled>
                                 <option disabled value="">Change IP address</option>
                                 </select>
 
@@ -1227,7 +1228,7 @@ document.addEventListener("alpine:init", () => {
             const ipSelect = document.getElementById('ipSelect');
             const currentIP = "{{ server_ip }}";
 
-            fetch('/system/ips')
+            fetch('/system/ips?output=json')
                 .then(response => response.json())
                 .then(data => {
                     console.log("Fetched Data:", data);
@@ -1272,7 +1273,7 @@ document.addEventListener("alpine:init", () => {
 Alpine.store("activityStore", {
     activities: [],
     fetchLogs() {
-        const username = "{{ user.username }}";  // Assuming you have the username passed here
+        const username = "{{ user.username }}";
 
         fetch(`/user_activity/${username}`)
             .then(response => response.json())
@@ -1491,11 +1492,11 @@ Alpine.store("activityStore", {
     </tr>
 </template>
 
-<template x-for="activity in $store.activityStore.activities.filter(activity => {
+<template x-for="(activity, index) in $store.activityStore.activities.filter(activity => {
     return activity.date.toLowerCase().includes(searchQuery.toLowerCase()) || 
         activity.action.toLowerCase().includes(searchQuery.toLowerCase()) || 
         activity.ip.toLowerCase().includes(searchQuery.toLowerCase());
-})" :key="activity.date">
+})" :key="activity.timestamp + '-' + index">
     <tr :class="activity.actionClass" 
         class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
         <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 
@@ -1579,8 +1580,6 @@ Alpine.store("activityStore", {
 
 
 </div>
-
-<!--script src="{{ url_for('static', filename='pages/users_single.js') }}?v=0.8" defer></script-->
 
 {% else %}
 

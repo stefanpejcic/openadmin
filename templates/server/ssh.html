@@ -1,149 +1,201 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    
-<script>
-        function fetchFullConfig() {
-            fetch('/server/ssh/config')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('full_config').value = data.config;
-                });
-        }
-    </script>
+
 <!-- Page header -->
-<div class="page-header mt-0 d-print-none">
-	<div class="container-xl">
-		<div class="row g-2 align-items-center">
-			<div class="col">
-				<!-- Page pre-title -->
-				<div class="page-pretitle">
-                  Server Configuration
-                </div>
-				<h2 class="page-title">
-                  SSH Access
-                </h2>
-			</div>
-			<!-- Page title actions -->
-			<div class="col-auto ms-auto d-print-none">
-				<div class="h3 m-0">status: 
-					<span class="{% if status == 'active' %}text-green{% else %}text-red{% endif %}" id="ssh-status">{{ status }}</span>
-				</div>
-			</div>
-		</div>
-	</div>
+<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">SSH Access</h1>
+            </div>
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
+
+<div class="flex text-center  sm:text-start items-center gap-2"><dt class="text-sm text-gray-500 dark:text-gray-500">SSH service status:</dt><div class="flex gap-0.5">
+	{% if status == 'active' %}
+	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+	</div><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">active </p></div>
+	{% else %}
+	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+	</div><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{ status }} </p></div>
+	{% endif %}
+            </div>
+        </div>
+    </header>
 </div>
-<div class="page-body">
-	<div class="container-xl">
-		<div class="row row-deck row-cards">
-			<div class="col-lg-12">
-				<div class="card">
-					<div class="card-header">
-						<ul class="nav nav-tabs card-header-tabs flex-row-reverse" data-bs-toggle="tabs" role="tablist">
-                      {% if pubkey_auth == 'yes' %}
-                      
-							<li class="nav-item" role="presentation">
-								<a href="#tabs-keys" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab">Authorized Keys</a>
-							</li>
-                      {% endif %}
-                      
-							<li class="nav-item" role="presentation">
-								<a href="#tabs-advanced" onclick="fetchFullConfig();" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab">Advanced</a>
-							</li>
-							<li class="nav-item" role="presentation">
-								<a href="#tabs-basic" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">Basic</a>
-							</li>
-						</ul>
+
+<div x-data="{ tab: 'basic' }">
+	<nav aria-label="Tabs" data-orientation="horizontal" dir="ltr">
+		<div style="position: relative;">
+			<ul data-orientation="horizontal" class="flex bg-gray-50 dark:bg-gray-950 items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
+
+
+			<li class="flex">
+				<a 
+					@click="tab = 'basic'"
+					:class="tab === 'basic' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
+					class="group relative flex shrink-0 select-none items-center justify-center"
+					role="tab">
+						<span
+							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
+						>
+							Basic
+						</span>
+				</a>
+			</li>
+
+
+			{% if pubkey_auth == 'yes' %}
+				<li class="flex">
+					<button 
+						@click="tab = 'keys'"
+						:class="tab === 'keys' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
+						class="group relative flex shrink-0 select-none items-center justify-center"
+						role="tab">
+						<span
+							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
+						>
+							Authorized Keys
+						</span>
+					</button>
+				</li>
+			{% endif %}
+
+				<li class="flex">
+				<button 
+					@click="tab = 'advanced'; fetchFullConfig();"
+					:class="tab === 'advanced' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
+					class="group relative flex shrink-0 select-none items-center justify-center"
+					role="tab">
+	<span
+							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
+						>
+							Advanced
+						</span>            </button>                    
+				</li>
+
+			</ul>
+		</div>
+	</nav>
+
+	<script>
+			function fetchFullConfig() {
+				fetch('/server/ssh/config')
+					.then(response => response.json())
+					.then(data => {
+						document.getElementById('full_config').value = data.config;
+					});
+			}
+	</script>
+
+<div id="collapseAddNewUser">
+    <div id="create_user_form" class="sm:mx-auto sm:max-w-2xl mt-8" style="display:block;">
+        
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+<div  class="col-span-full">
+
+
+    <!-- Tabs Content -->
+    <div class="p-4">
+        
+        <!-- Basic Settings Tab -->
+        <div x-show="tab === 'basic'" role="tabpanel">
+			<h3 class="font-medium text-gray-900 dark:text-gray-50">Basic Settings</h3>
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="port" class="">SSH Port</label>
+                    <input type="number" id="port" name="port" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" min="22" max="10000" value="{{ port }}" autocomplete="off">
+                    <small class="form-hint">Make sure to open the new port on firewall.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="permit_root_login" class="">Permit Root Login</label>
+                    <select id="permit_root_login" name="permit_root_login" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2">
+                        <option {% if permit_root_login == 'yes' %}selected{% endif %} value="yes">yes</option>
+                        <option {% if permit_root_login == 'no' %}selected{% endif %} value="no">no</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="password_auth" class="">Password Authentication</label>
+                    <select id="password_auth" name="password_auth" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2">
+                        <option {% if password_auth == 'yes' %}selected{% endif %} value="yes">yes</option>
+                        <option {% if password_auth == 'no' %}selected{% endif %} value="no">no</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pubkey_auth" class="">Public Key Authentication</label>
+                    <select id="pubkey_auth" name="pubkey_auth" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2">
+                        <option {% if pubkey_auth == 'yes' %}selected{% endif %} value="yes">yes</option>
+                        <option {% if pubkey_auth == 'no' %}selected{% endif %} value="no">no</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Save</button>
+            </form>
+        </div>
+
+        <!-- Advanced Tab -->
+        <div x-show="tab === 'advanced'" x-cloak role="tabpanel">
+			<h3 class="font-medium text-gray-900 dark:text-gray-50">Edit Configuration file</h3>
+
+            <form method="POST" action="/server/ssh/config" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <textarea id="full_config" name="config" rows="30" class="flex min-h-[4rem] w-full rounded-md border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700"></textarea>
+
+                <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Save Configuration</button>
+            </form>
+        </div>
+
+        <!-- Authorized Keys Tab -->
+        {% if pubkey_auth == 'yes' %}
+        <div x-show="tab === 'keys'" x-cloak role="tabpanel">
+			<h3 class="font-medium text-gray-900 dark:text-gray-50">Authorized Keys</h3>
+            <ul class="space-y-2">
+                {% if keys %}
+                    {% for key in keys %}
+                    <li class="bg-gray-100 p-2 rounded">
+                        <pre class="whitespace-pre-wrap">{{ key }}</pre>
+                        <form method="POST" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="key_to_remove" value="{{ key }}">
+                            <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Remove</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <p>No authorized keys in <code>/root/.ssh/authorized_keys</code> file.</p>
+                {% endif %}
+            </ul>
+
+            <div class="mt-6">
+				<h3 class="font-medium text-gray-900 dark:text-gray-50">Add New SSH Key</h3>
+                <form method="POST" class="mt-2 space-y-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <textarea name="new_key" rows="5" class="flex min-h-[4rem] w-full rounded-md border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" placeholder="Paste public ssh key here"></textarea>
+                    <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Add SSH Key</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+
 					</div>
-					<div class="card-body">
-						<div class="tab-content">
-							<div class="tab-pane active show" id="tabs-basic" role="tabpanel">
-								<h4>Basic SSH Settings</h4>
-								<form method="POST">
-									    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </div>
 
-									<div class="col-md-6 mb-3">
-										<div class="form-floating mb-3">
-											<form method="POST">
-												    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-												<input type="number" id="port" name="port" class="form-control" min="22" max="10000" value="{{ port }}" autocomplete="off">
-													<label for="floating-input">SSH Port</label>
-												</div>
-												<div class="form-floating mb-3">
-													<select class="form-select" id="permit_root_login" name="permit_root_login" aria-label="Permit Root Login">
-														<option {% if permit_root_login == 'yes' %}selected=""{% endif %} value="yes">yes</option>
-														<option {% if permit_root_login == 'no' %}selected=""{% endif %} value="no">no</option>
-													</select>
-													<label for="permit_root_login">Permit Root Login</label>
-												</div>
-												<div class="form-floating mb-3">
-													<select class="form-select" id="password_auth" name="password_auth" aria-label="Password Authentication">
-														<option {% if password_auth == 'yes' %}selected=""{% endif %} value="yes">yes</option>
-														<option {% if password_auth == 'no' %}selected=""{% endif %} value="no">no</option>
-													</select>
-													<label for="password_auth">Password Authentication</label>
-												</div>
-												<div class="form-floating mb-3">
-													<select class="form-select" id="pubkey_auth" name="pubkey_auth" aria-label="Public Key Authentication">
-														<option {% if pubkey_auth == 'yes' %}selected=""{% endif %} value="yes">yes</option>
-														<option {% if pubkey_auth == 'no' %}selected=""{% endif %} value="no">no</option>
-													</select>
-													<label for="pubkey_auth">Public Key Authentication</label>
-												</div>
-												<button type="submit" id="save_ssh" class="btn btn-primary">Save</button>
-											</form>
-										</div>
-									</div>
-									<div class="tab-pane" id="tabs-advanced" role="tabpanel">
-										<h4>Edit SSH Configuration file</h4>
-										<form method="POST" action="/server/ssh/config">
-										    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-											<textarea id="full_config" name="config" rows="30" class="form-control"></textarea>
-											<br>
-												<button class="btn btn-primary mt-2" type="submit">Save Configuration</button>
-											</form>
-										</div>
-										<div class="tab-pane" id="tabs-keys" role="tabpanel">
-											<h4>Authorized SSH Keys</h4>
-											<ul>
-                              {% if keys %}
-                                {% for key in keys %}
-                                    
-												<li>
-													<pre>{{ key }}</pre>
-													<form method="POST" style="display:inline;">
-														    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-														<input type="hidden" name="key_to_remove" value="{{ key }}">
-															<button class="btn btn-danger" type="submit">Remove</button>
-														</form>
-													</li>
-                                {% endfor %}
-                              {% else %}
-                              No authorized keys in 
-													<code>/root/.ssh/authorized_keys</code> file.
-                              {% endif %}
-                            
-												</ul>
-												<br>
-													<h4 class="mt-3">Add New SSH Key</h4>
-													<form method="POST">
-														    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-														<textarea name="new_key" rows="5" cols="80" placeholder="Enter new SSH key here"></textarea>
-														<br>
-															<button class="btn btn-primary mt-2" type="submit">Add SSH Key</button>
-														</form>
-														<br>
-														</div>
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-								<div></div>
-							</div>
-
+</div>
+</div>
 {% endblock %}

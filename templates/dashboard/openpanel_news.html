@@ -9,95 +9,145 @@
     }
 </style>
 
-<div class="w-full md:w-1/3 p-3">
-    <div id="custom_message" class="bg-white shadow-lg rounded-lg h-72 p-4">
-        <div class="flex justify-between items-center border-b pb-2">
-            <div>
+<div class="">
+    <div id="custom_message" class="">
                 <form action="{{ url_for('dismiss_dashboard_widget', template_name='openpanel_news') }}" method="post">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <h6 class="text-lg font-semibold">Latest News 
-                        <button class="dismiss-custom_message-button text-sm text-gray-500 hover:text-gray-700" type="submit" aria-label="Hide and never show news from openpanel.com/blog again">Dismiss</button>
-                    </h6>
-                    <p class="text-sm text-gray-500">from the openpanel.co blog</p>
+                    <div class="p-6 flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start border-b border-gray-200 px-6 dark:border-gray-900"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">Latest News <button class="dismiss-custom_message-button relative inline-flex items-center justify-center rounded-md border px-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 w-full gap-x-0.5 whitespace-nowrap sm:w-fit" type="submit" title="Hide and never show news from openpanel.com/blog again">Dismiss</button></h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">from the OpenPanel blog.</p></div></div>
                 </form>
-            </div>
-            <div class="bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded">news</div>
-        </div>
-        <div class="overflow-auto mt-2 h-48" id="news-content"></div>
+
+        <div class="overflow-auto mt-2 h-full divide-y divide-gray-200 dark:divide-gray-800" id="news-content"></div>
     </div>
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     const newsContent = document.getElementById('news-content');
+    const CACHE_KEY = "cachedNews";
+    const CACHE_EXPIRY_KEY = "cachedNewsExpiry";
+    const CACHE_DURATION = 1000 * 60 * 60 * 6; // 6 hours
 
-    fetch('https://api.github.com/repos/stefanpejcic/OpenPanel/contents/website/blog')
-        .then(response => response.json())
-        .then(data => {
-            const markdownFiles = data
-                .filter(file => file.name.endsWith('.md'))
-                .sort((a, b) => new Date(b.name.split('-').slice(0, 3).join('-')) - new Date(a.name.split('-').slice(0, 3).join('-')))
-                .slice(0, 5);
+    const loadFromCache = () => {
+        const cached = localStorage.getItem(CACHE_KEY);
+        const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+        if (cached && expiry && Date.now() < parseInt(expiry)) {
+            return JSON.parse(cached);
+        }
+        return null;
+    };
 
-            const fetchRequiredLines = async (fileUrl) => {
-                const response = await fetch(fileUrl);
-                const text = await response.text();
-                const lines = text.split('\n');
-                const title = lines.find(line => line.startsWith('title:'))?.replace('title:', '').trim() || 'No Title';
-                const description = lines.find(line => line.startsWith('description:'))?.replace('description:', '').trim() || '';
-                const slug = lines.find(line => line.startsWith('slug:'))?.replace('slug:', '').trim() || '';
-                const image = lines.find(line => line.startsWith('image:'))?.replace('image:', '').trim() || '';
-                return { title, description, slug, image };
-            };
+    const saveToCache = (data) => {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(CACHE_EXPIRY_KEY, Date.now() + CACHE_DURATION);
+    };
 
-            const fetchAndDisplayContent = async (file) => {
-                const fileUrl = `https://raw.githubusercontent.com/stefanpejcic/OpenPanel/main/website/blog/${file.name}`;
-                const { title, description, slug, image } = await fetchRequiredLines(fileUrl);
+    const fetchRequiredLines = async (fileUrl) => {
+        const response = await fetch(fileUrl);
+        const text = await response.text();
+        const lines = text.split('\n');
+        const title = lines.find(line => line.startsWith('title:'))?.replace('title:', '').trim() || 'No Title';
+        const description = lines.find(line => line.startsWith('description:'))?.replace('description:', '').trim() || '';
+        const slug = lines.find(line => line.startsWith('slug:'))?.replace('slug:', '').trim() || '';
+        const image = lines.find(line => line.startsWith('image:'))?.replace('image:', '').trim() || '';
+        return { title, description, slug, image };
+    };
 
-                const newsItemDiv = document.createElement('div');
-                newsItemDiv.classList.add('flex', 'items-center', 'py-2', 'border-b');
+    const fetchAndProcessData = async () => {
+        const response = await fetch('https://api.github.com/repos/stefanpejcic/OpenPanel/contents/website/blog');
+        const data = await response.json();
 
-                if (image) {
-                    const imageDiv = document.createElement('div');
-                    imageDiv.classList.add('w-1/4', 'pr-3');
-                    const imgLink = document.createElement('a');
-                    imgLink.href = `https://openpanel.com/blog/${slug}`;
-                    imgLink.target = '_blank';
-                    const img = document.createElement('img');
-                    img.src = image;
-                    img.alt = title;
-                    img.classList.add('rounded-lg', 'w-full');
-                    imgLink.appendChild(img);
-                    imageDiv.appendChild(imgLink);
-                    newsItemDiv.appendChild(imageDiv);
-                }
+        const markdownFiles = data
+            .filter(file => file.name.endsWith('.md'))
+            .sort((a, b) => new Date(b.name.split('-').slice(0, 3).join('-')) - new Date(a.name.split('-').slice(0, 3).join('-')))
+            .slice(0, 7);
 
-                const contentDiv = document.createElement('div');
-                contentDiv.classList.add('flex-1');
-                const titleElement = document.createElement('h3');
-                titleElement.classList.add('text-lg', 'font-semibold');
-                const titleLink = document.createElement('a');
-                titleLink.href = `https://openpanel.com/blog/${slug}`;
-                titleLink.target = '_blank';
-                titleLink.classList.add('text-blue-600', 'hover:underline');
-                titleLink.textContent = title;
-                titleElement.appendChild(titleLink);
-                const descriptionElement = document.createElement('p');
-                descriptionElement.classList.add('text-sm', 'text-gray-500');
-                descriptionElement.textContent = description;
-                contentDiv.appendChild(titleElement);
-                contentDiv.appendChild(descriptionElement);
-                newsItemDiv.appendChild(contentDiv);
-                newsContent.appendChild(newsItemDiv);
-            };
-
-            markdownFiles.forEach(file => {
-                fetchAndDisplayContent(file);
+        const content = [];
+        for (const file of markdownFiles) {
+            const fileUrl = `https://raw.githubusercontent.com/stefanpejcic/OpenPanel/main/website/blog/${file.name}`;
+            const info = await fetchRequiredLines(fileUrl);
+            const dateStr = file.name.split('-').slice(0, 3).join('-');
+            const formattedDate = new Date(dateStr).toLocaleDateString(undefined, {
+                year: 'numeric', month: 'long', day: 'numeric'
             });
-        })
-        .catch(error => {
-            console.error('Error fetching the GitHub API:', error);
+            content.push({ ...info, formattedDate });
+        }
+
+        saveToCache(content);
+        return content;
+    };
+
+const renderNewsItems = (items) => {
+    newsContent.innerHTML = '';
+    items.forEach(({ title, description, slug, image, formattedDate }) => {
+        const newsItemDiv = document.createElement('div');
+        newsItemDiv.classList.add('flex', 'items-center', 'py-2');
+
+        if (image) {
+            const imageDiv = document.createElement('div');
+            imageDiv.classList.add('w-1/4', 'pr-3');
+            const imgLink = document.createElement('a');
+            imgLink.href = `https://openpanel.com/blog/${slug}`;
+            imgLink.target = '_blank';
+            const img = document.createElement('img');
+            img.src = image;
+            img.alt = title;
+            img.classList.add('rounded-lg', 'w-full');
+            imgLink.appendChild(img);
+            imageDiv.appendChild(imgLink);
+            newsItemDiv.appendChild(imageDiv);
+        }
+
+        const contentDiv = document.createElement('div');
+        contentDiv.classList.add('flex-1');
+
+        const headerWrapper = document.createElement('div');
+        headerWrapper.classList.add('flex', 'justify-between', 'space-x-4');
+
+        const titleElement = document.createElement('h3');
+        titleElement.classList.add('text-lg', 'font-semibold');
+        const titleLink = document.createElement('a');
+        titleLink.href = `https://openpanel.com/blog/${slug}`;
+        titleLink.target = '_blank';
+        titleLink.classList.add('text-sm', 'font-medium', 'text-gray-900', 'dark:text-gray-50', 'hover:underline');
+        titleLink.textContent = title;
+        titleElement.appendChild(titleLink);
+
+        const dateElement = document.createElement('p');
+        dateElement.classList.add('text-xs', 'text-gray-500', 'dark:text-gray-400');
+        dateElement.textContent = formattedDate;
+
+        headerWrapper.appendChild(titleElement);
+        headerWrapper.appendChild(dateElement);
+
+        const descriptionElement = document.createElement('p');
+        descriptionElement.classList.add('text-sm', 'capitalize', 'text-gray-600', 'dark:text-gray-400');
+        descriptionElement.textContent = description;
+
+        contentDiv.appendChild(headerWrapper);
+        contentDiv.appendChild(descriptionElement);
+        newsItemDiv.appendChild(contentDiv);
+        newsContent.appendChild(newsItemDiv);
+    });
+};
+
+
+
+    const init = async () => {
+        try {
+            const cachedData = loadFromCache();
+            if (cachedData) {
+                renderNewsItems(cachedData);
+            } else {
+                const freshData = await fetchAndProcessData();
+                renderNewsItems(freshData);
+            }
+        } catch (error) {
+            console.error('Error loading news:', error);
             newsContent.innerHTML = '<p class="text-red-500">Error loading news</p>';
-        });
+        }
+    };
+
+    init();
 });
 </script>
+
