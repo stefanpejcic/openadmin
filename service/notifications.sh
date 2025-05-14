@@ -419,7 +419,11 @@ check_new_logins() {
       return 1
     fi
 
-
+    # Exclude 127.0.0.1
+    if [[ $ip_address == "127.0.0.1" ]]; then
+      echo "IP address 127.0.0.1 is not allowed."
+      return 1
+    fi
 
     # Check if the username appears more than once in the log file
     if [ $(grep -c $username /var/log/openpanel/admin/login.log) -eq 1 ]; then
@@ -799,7 +803,7 @@ check_swap_usage() {
         swap_usage=$(free -t | awk 'FNR == 3 {print $3/$2*100}')
         swap_usage_no_decimals=$(printf %.0f $SWAP_USAGE)
         local title_ok="SWAP is cleared - Current value: $swap_usage_no_decimals"
-        local title_not_ok="URGENT! SWAP could not be cleared on $HOSTNAME  - Current value: $swap_usage_no_decimals"
+        local title_not_ok="URGENT! SWAP could not be cleared on $HOSTNAME"
         if [ "$swap_usage_no_decimals" -lt "$SWAP_THRESHOLD" ]; then
             echo -e "The Sentinel service has completed clearing SWAP on server $HOSTNAME! \n THANK YOU FOR USING THIS SERVICE! PLEASE REPORT ALL BUGS AND ERRORS TO sentinel@openpanel.co"
             write_notification "$title_ok" "The Sentinel service has completed clearing SWAP on server $HOSTNAME!"

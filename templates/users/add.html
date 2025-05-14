@@ -115,31 +115,35 @@
 
                 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
-    <div class="col-span-full">
-        <div role="radiogroup" aria-required="false" dir="ltr" class="grid gap-2" tremor-id="tremor-raw" tabindex="0" style="outline: none;">
-            <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">Select a package</p>
-    <div x-data="{ selectedPlan: '{{ plans[0].name }}' }" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {% for plan in plans %}
-        <button type="button" role="radio" 
-            :aria-checked="selectedPlan === '{{ plan.name }}' ? 'true' : 'false'" 
-            :data-state="selectedPlan === '{{ plan.name }}' ? 'checked' : ''" 
-            value="{{ plan.name }}" 
-            class="group relative w-full rounded-md border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 data-[disabled]:border-gray-100 data-[disabled]:dark:border-gray-800 data-[disabled]:bg-gray-50 data-[disabled]:shadow-none data-[disabled]:dark:bg-gray-900 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 flex items-start justify-between" 
-            :id="plan.id" tabindex="0"
-            @click="selectedPlan = '{{ plan.name }}'">
+<div class="col-span-full">
+    <div role="radiogroup" aria-required="false" dir="ltr" class="grid gap-2" tremor-id="tremor-raw" tabindex="0" style="outline: none;">
+        <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">Select a package</p>
 
-            <div class="flex w-full flex-col justify-between">
-                <div>
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{ plan.id }}" aria-describedby="{{ plan.id }}-description">
-                        {{ plan.name }}
-                    </label>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">{{ plan.description }}</p>
-                </div>
+        <!-- Alpine.js state defined outside the loop -->
+        <div x-data="{ selectedPlan: '{{ plans[0].name }}' }" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {% for plan in plans %}
+            <button
+                type="button"
+                role="radio"
+                :aria-checked="selectedPlan === '{{ plan.name }}' ? 'true' : 'false'"
+                :data-state="selectedPlan === '{{ plan.name }}' ? 'checked' : ''"
+                class="group relative w-full rounded-md border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500"
+                @click="selectedPlan = '{{ plan.name }}'"
+                id="{{ plan.id }}"
+            >
+                <div class="flex w-full flex-col justify-between">
+                    <div>
+                        <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{ plan.id }}" aria-describedby="{{ plan.id }}-description">
+                            {{ plan.name }}
+                        </label>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">{{ plan.description }}</p>
+                    </div>
 
-                <div class="mt-4" x-data="{ showDetails: false }">
-                    <span @click="showDetails = !showDetails" class="text-sm font-medium text-gray-900 dark:text-gray-50">Display Limits</span>
-                    <span :class="{ 'hidden': !showDetails }">
-                        <p class="mt-6 text-xs text-gray-500 dark:text-gray-500">{{ plan.cpu }} Cores</p>
+                    <!-- Show/hide limits with local state -->
+                    <div class="mt-4" x-data="{ showDetails: false }">
+                        <span @click="showDetails = !showDetails" class="text-sm font-medium text-gray-900 dark:text-gray-50 cursor-pointer">Display Limits</span>
+                        <div x-show="showDetails">
+                        <p class="mt-6 text-xs text-gray-500 dark:text-gray-500"> {{ plan.cpu }} Cores</p>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.ram }} Memory</p>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.disk_limit }} Storage</p>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.inodes_limit }} Inodes</p>
@@ -149,23 +153,29 @@
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.email_limit }} Email accounts</p>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.ftp_limit }} FTP accounts</p>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.db_limit }} MySQL Databases</p>
-                    </span>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="relative flex size-4 shrink-0 appearance-none items-center justify-center rounded-full border shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 group-data-[state=checked]:border-0 group-data-[state=checked]:border-transparent group-data-[state=checked]:bg-blue-500 group-data-[disabled]:border-gray-300 group-data-[disabled]:bg-gray-100 group-data-[disabled]:text-gray-400 group-data-[disabled]:dark:border-gray-700 group-data-[disabled]:dark:bg-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
-                <span x-show="selectedPlan === '{{ plan.name }}'" class="flex items-center justify-center">
-                    <div class="size size-1.5 shrink-0 rounded-full bg-white group-data-[disabled]:bg-gray-400 group-data-[disabled]:dark:bg-gray-500"></div>
-                </span>
-            </div>
-        </button>
+                <div class="hidden relative flex size-4 shrink-0 appearance-none items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+                    <template x-if="selectedPlan === '{{ plan.name }}'">
+                        <div class="size-1.5 shrink-0 rounded-full bg-white"></div>
+                    </template>
+                </div>
+            </button>
 
-        <input type="radio" value="{{ plan.name }}" aria-hidden="true" style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 213.328px; height: 146px;" tabindex="-1" name="plan_name" value="{{ plan.name }}" :checked="selectedPlan === '{{ plan.name }}'" />
-        {% endfor %}
-    </div>
-
+            <input
+                type="radio"
+                value="{{ plan.name }}"
+                name="plan_name"
+                :checked="selectedPlan === '{{ plan.name }}'"
+                style="display: none;"
+            />
+            {% endfor %}
         </div>
     </div>
+</div>
+
 
 
 
