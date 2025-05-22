@@ -95,9 +95,9 @@
                     <div class="relative w-full mt-2">
                                 <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name="webserver" id="webserver">
                                     <option disabled selected value> -- select web server -- </option>
-                                    <option value="apache">Apache</option>
-                                    <option value="nginx">Nginx</option>
-                                    <option value="nginx">OpenResty</option>
+                                    <option value="apache" {% if defaults.WEB_SERVER == 'apache' %}selected{% endif %}>Apache {% if defaults.WEB_SERVER == 'apache' %}(default){% endif %}</option>
+                                    <option value="nginx" {% if defaults.WEB_SERVER == 'nginx' %}selected{% endif %}>Nginx {% if defaults.WEB_SERVER == 'nginx' %}(default){% endif %}</option>
+                                    <option value="openresty" {% if defaults.WEB_SERVER == 'openresty' %}selected{% endif %}>OpenResty {% if defaults.WEB_SERVER == 'openresty' %}(default){% endif %}</option>
                                     <option value="varnish+openresty">Varnish + OpenResty</option>
                                     <option value="varnish+nginx">Varnish + Nginx</option>
                                     <option value="varnish+apache">Varnish + Apache</option>
@@ -108,8 +108,8 @@
                     <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="size">MySQL type</label>
                                 <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name="sql_type" id="sql_type">
                                     <option disabled selected value> -- select sql server -- </option>
-                                    <option value="mysql">MySQL</option>
-                                    <option value="mariadb">MariaDB</option>
+                                    <option value="mysql" {% if defaults.MYSQL_TYPE == 'mysql' %}selected{% endif %}>MySQL {% if defaults.MYSQL_TYPE == 'mysql' %}(default){% endif %}</option>
+                                    <option value="mariadb" {% if defaults.MYSQL_TYPE == 'mariadb' %}selected{% endif %}>MariaDB {% if defaults.MYSQL_TYPE == 'mariadb' %}(default){% endif %}</option>
                                 </select>
                 </div>
 
@@ -143,16 +143,46 @@
                     <div class="mt-4" x-data="{ showDetails: false }">
                         <span @click="showDetails = !showDetails" class="text-sm font-medium text-gray-900 dark:text-gray-50 cursor-pointer">Display Limits</span>
                         <div x-show="showDetails">
-                        <p class="mt-6 text-xs text-gray-500 dark:text-gray-500"> {{ plan.cpu }} Cores</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.ram }} Memory</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.disk_limit }} Storage</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.inodes_limit }} Inodes</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.bandwidth }} Mbps</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.domains_limit }} Domains</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.websites_limit }} Websites</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.email_limit }} Email accounts</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.ftp_limit }} FTP accounts</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-500"> {{ plan.db_limit }} MySQL Databases</p>
+<p class="mt-6 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.cpu == 0 or plan.cpu == '0' else plan.cpu }} Cores
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.ram|lower == '0g' or plan.ram == 0 else plan.ram }} Memory
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.disk_limit == '0 GB' else plan.disk_limit }} Storage
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.inodes_limit == 0 else plan.inodes_limit }} Inodes
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.bandwidth == 0 else plan.bandwidth }} Mbps
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.domains_limit == 0 else plan.domains_limit }} Domains
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.websites_limit == 0 else plan.websites_limit }} Websites
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.email_limit == 0 else plan.email_limit }} Email accounts
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.ftp_limit == 0 else plan.ftp_limit }} FTP accounts
+</p>
+
+<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+  {{ '∞' if plan.db_limit == 0 else plan.db_limit }} MySQL Databases
+</p>
+
                         </div>
                     </div>
                 </div>

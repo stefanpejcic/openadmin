@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.250.507"
+VERSION="20.250.519"
 # Record the process ID of the script
 PID=$$
 
@@ -126,16 +126,12 @@ LIMIT=$(awk -F'=' '/^limit/ {print $2}' "$INI_FILE")
 LIMIT=${LIMIT:-yes}
 [[ "$LIMIT" =~ ^(yes|no)$ ]] || LIMIT=yes
 
-BACKUP=$(awk -F'=' '/^backup/ {print $2}' "$INI_FILE")
-BACKUP=${BACKUP:-yes}
-[[ "$BACKUP" =~ ^(yes|no)$ ]] || BACKUP=yes
-
 UPDATE=$(awk -F'=' '/^update/ {print $2}' "$INI_FILE")
 UPDATE=${UPDATE:-yes}
 [[ "$UPDATE" =~ ^(yes|no)$ ]] || UPDATE=yes
 
 SERVICES=$(awk -F'=' '/^services/ {print $2}' "$INI_FILE")
-SERVICES=${SERVICES:-"admin,docker,mysql,csf,ufw,panel"}
+SERVICES=${SERVICES:-"admin,docker,mysql,csf,panel"}
 
 LOAD_THRESHOLD=$(awk -F'=' '/^load/ {print $2}' "$INI_FILE")
 LOAD_THRESHOLD=${LOAD_THRESHOLD:-20}
@@ -1082,7 +1078,6 @@ check_for_debug_and_print_info(){
       echo "LOGIN:           $LOGIN"
       echo "ATTACK:          $ATTACK"
       echo "LIMIT:           $LIMIT"
-      echo "BACKUP:          $BACKUP"
       echo "UPDATE:          $UPDATE"
       echo "SERVICES:        $SERVICES"
       echo "LOAD_THRESHOLD:  $LOAD_THRESHOLD"
@@ -1152,8 +1147,6 @@ check_services() {
 
   if echo "$SERVICES" | grep -q "csf"; then
     check_service_status "csf" "ConfigService Firewall (CSF) is not active. Server and websites are not protected!"
-  elif echo "$SERVICES" | grep -q "ufw"; then
-    check_service_status "ufw" "Firewall (UFW) service is not active. Server and websites are not protected!"
   fi
   
   if echo "$SERVICES" | grep -q "admin"; then
