@@ -1,0 +1,250 @@
+<!-- templates/terminal.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">{{ title }}</h1>
+                    <h2 class="text-sm font-medium text-slate-500">
+                      {% if terminal_type == 'users' %}
+                      User: <a href="/users/{{ username }}">{{ username }}</a> | Container: {{ container_name}}</h2>
+                      {% elif terminal_type == 'root' %}
+                      Command line access to the server’s “root” account.
+                      {% endif %}
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                 <select id="shell" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                  <option disabled="" selected="" value=""> -- Shell type -- </option>
+                  <option value="sh">sh</option>
+                  <option value="bash">bash</option>
+                </select>
+                </div>
+            </div>
+    </header>
+    </div>
+
+
+<div id="terminal" style="width: 80vw; height: 60vh;" class="px-4"></div>
+
+
+{% if terminal_type == 'root' %}
+<script>
+  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+  const term = new Terminal({
+    cursorBlink: true
+  });
+  term.open(document.getElementById('terminal'));
+
+  const shellSelect = document.getElementById('shell');  
+  const username = 'root';  // todo!
+  function prompt() {
+    term.write(`\r\n${username}@localhost:~$ `);
+  }
+
+  prompt();
+
+  let input = '';
+
+  term.onKey(e => {
+    const char = e.key;
+
+    if (char === '\r') {  // Enter pressed
+      term.write('\r\n');
+      const command = input.trim();
+      input = '';
+
+      if (command.length === 0) {
+        prompt();
+        return;
+      }
+
+      const shell = shellSelect.value || 'sh';
+
+      fetch(`/terminal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token
+        },
+        body: JSON.stringify({
+          command: command,
+          shell: shell
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        term.write(data.output.replace(/\n/g, '\r\n'));
+        prompt();
+      })
+      .catch(() => {
+        term.write('Error running command');
+        prompt();
+      });
+
+    } else if (char === '\u007F') { // Backspace
+      if (input.length > 0) {
+        input = input.slice(0, -1);
+        term.write('\b \b');
+      }
+    } else {
+      input += char;
+      term.write(char);
+    }
+  });
+
+// ** todo paste handler **
+</script>
+
+{% elif terminal_type == 'users' %}
+<script>
+  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+  const term = new Terminal({
+    cursorBlink: true
+  });
+  term.open(document.getElementById('terminal'));
+
+  const shellSelect = document.getElementById('shell');  
+  const username = 'root';  // todo!
+  const docker_context = '{{ username }}';
+  const container = '{{ container_name }}';
+  function prompt() {
+    term.write(`\r\n${username}@${container}:~$ `);
+  }
+
+  //term.write(`Connected to container: ${container}\r\n`);
+  prompt();
+
+  let input = '';
+
+  term.onKey(e => {
+    const char = e.key;
+
+    if (char === '\r') {  // Enter pressed
+      term.write('\r\n');
+      const command = input.trim();
+      input = '';
+
+      if (command.length === 0) {
+        prompt();
+        return;
+      }
+
+      const shell = shellSelect.value || 'sh';
+
+      fetch(`/terminal/${docker_context}/${container}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token
+        },
+        body: JSON.stringify({
+          command: command,
+          shell: shell
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        term.write(data.output.replace(/\n/g, '\r\n'));
+        prompt();
+      })
+      .catch(() => {
+        term.write('Error running command');
+        prompt();
+      });
+
+    } else if (char === '\u007F') { // Backspace
+      if (input.length > 0) {
+        input = input.slice(0, -1);
+        term.write('\b \b');
+      }
+    } else {
+      input += char;
+      term.write(char);
+    }
+  });
+
+// ** todo paste handler **
+</script>
+{% elif terminal_type == 'users' %}
+<script>
+  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+  const term = new Terminal({
+    cursorBlink: true
+  });
+  term.open(document.getElementById('terminal'));
+
+  const shellSelect = document.getElementById('shell');  
+  const username = 'root';  // todo!
+  const docker_context = '{{ username }}';
+  const container = '{{ container_name }}';
+  function prompt() {
+    term.write(`\r\n${username}@${container}:~$ `);
+  }
+
+  //term.write(`Connected to container: ${container}\r\n`);
+  prompt();
+
+  let input = '';
+
+  term.onKey(e => {
+    const char = e.key;
+
+    if (char === '\r') {  // Enter pressed
+      term.write('\r\n');
+      const command = input.trim();
+      input = '';
+
+      if (command.length === 0) {
+        prompt();
+        return;
+      }
+
+      const shell = shellSelect.value || 'sh';
+
+      fetch(`/terminal/${docker_context}/${container}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token
+        },
+        body: JSON.stringify({
+          command: command,
+          shell: shell
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        term.write(data.output.replace(/\n/g, '\r\n'));
+        prompt();
+      })
+      .catch(() => {
+        term.write('Error running command');
+        prompt();
+      });
+
+    } else if (char === '\u007F') { // Backspace
+      if (input.length > 0) {
+        input = input.slice(0, -1);
+        term.write('\b \b');
+      }
+    } else {
+      input += char;
+      term.write(char);
+    }
+  });
+
+// ** todo paste handler **
+</script>
+{% endif %}
+
+
+
+
+
+{% endblock %}
