@@ -3,8 +3,8 @@
 # *                                                                       *
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
-# * Version: 1.3.2                                                        *
-# * Build Date: 2025-05-27 19:36:31                                       *
+# * Version: 1.3.3                                                        *
+# * Build Date: 2025-05-28 10:37:26                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -281,14 +281,15 @@ def get_first_ip(current_username):
     dedicated_ip_file_path = f"/etc/openpanel/openpanel/core/users/{current_username}/ip.json"
 
     if os.path.exists(dedicated_ip_file_path):
-        with open(dedicated_ip_file_path, 'r') as file:
-            try:
+        try:
+            with open(dedicated_ip_file_path, 'r') as file:
                 data = json.load(file)
                 ip = data.get("ip", "")
-                if ip:  # Check if IP is non-empty
-            except json.JSONDecodeError:
-                ip = get_system_ip_from_hostname_cmd()
-    else:       
+                if not ip:  # if IP is empty, fallback
+                    ip = get_system_ip_from_hostname_cmd()
+        except json.JSONDecodeError:
+            ip = get_system_ip_from_hostname_cmd()
+    else:
         ip = get_system_ip_from_hostname_cmd()
     return ip
 
