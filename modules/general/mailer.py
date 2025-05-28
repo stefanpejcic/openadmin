@@ -3,8 +3,8 @@ from flask import request, redirect, url_for, jsonify, render_template
 # *                                                                       *
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
-# * Version: 1.3.2                                                        *
-# * Build Date: 2025-05-27 19:36:19                                       *
+# * Version: 1.3.3                                                        *
+# * Build Date: 2025-05-28 10:37:18                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
