@@ -2,7 +2,12 @@
 
 {% block content %}
 
-<div x-data="{ searchQuery: '' }">
+<div x-data="{ searchQuery: '', init() {
+      const params = new URLSearchParams(window.location.search);
+      const owner = params.get('owner');
+      if (owner) this.searchQuery = owner;
+    }
+  }" x-init="init()">
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
@@ -68,7 +73,7 @@
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>WAF</span><div class="-space-y-2"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></div></div></th>
 
 
-                            <th class="hidden border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Editor</div></th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Editor</div></th>
 
 
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>Owner</span><div class="-space-y-2"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></div></div></th>
@@ -83,7 +88,7 @@
 {% if domains %}
 
                         {% for domain in domains %}
-                        <tr data-domain="{{ domain.domain_url }}" x-show="searchQuery === '' || '{{domain.domain_url}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900 {% if 'SUSPENDED_' in domain.username %}suspended-user-row{% endif %}">
+                        <tr data-domain="{{ domain.domain_url }}" x-show="searchQuery === '' || '{{domain.domain_url}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ domain.username.split('_')[-1] }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900 {% if 'SUSPENDED_' in domain.username %}suspended-user-row{% endif %}">
 
                         <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{ domain.domain_id }}</td>
                         <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><a href="http://{{ domain.domain_url }}" class="domain_name_in_table" target="_blank">{{ domain.domain_url }}</a></td>
@@ -158,14 +163,12 @@
             </td>
 
 
-                        <td class="hidden flex space-x-2  p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
-                            <a href="#" class="flex btn edit_dns_link" data-domain="{{ domain.domain_url }}" data-bs-toggle="offcanvas" data-bs-target="#dnsOffcanvas">
+                        <td class="flex space-x-2  p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                                <a href="/domains/dns/{{ domain.domain_url }}" target="_blank" class="flex btn">
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path><path d="M16 5l3 3"></path></svg> DNS</a>
 
-<a href="#" class="flex btn edit_caddy_link" data-domain="{{ domain.domain_url }}" data-bs-toggle="offcanvas" data-bs-target="#caddyOffcanvas">
+<a href="/caddy-vhosts/{{ domain.domain_url }}" target="_blank" class="hidden flex btn">
 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path><path d="M16 5l3 3"></path></svg> VHosts</a></td>
-
-
 
 
                         <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left sort-username"><a href="/users/{{ domain.username }}">{{ domain.username.split('_')[-1] }} {% if "SUSPENDED_" in domain.username %}<span class="badge bg-red-lt">SUSPENDED</span>{% endif %}
@@ -285,153 +288,6 @@ if (!sslStatusSpan) {
     });
 });
 </script>
-
-<div class="hidden offcanvas offcanvas-end" tabindex="-1" id="caddyOffcanvas">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="domain_name_caddy">Edit DNS</h5>
-        <button id="saveCaddy" class="btn btn-primary mt-2">Save</button>
-    </div>
-    <div class="offcanvas-body" style="overflow-y: hidden;">
-        <textarea id="caddyContent" rows="20" class="ql-container ql-snow" style="height:100%; width: 100%;"></textarea>
-    </div>
-</div>
-
-<div class="hidden offcanvas offcanvas-bottom" tabindex="-1" id="logOffcanvas">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="log_domain_name">View log</h5>
-    </div>
-    <div class="offcanvas-body" style="overflow-y: hidden;padding:0px;">
-        <pre id="logContent" rows="20" class="ql-container ql-snow" style="border-radius: 0px!important; height:100%; width: 100%; padding-bottom: 0;margin-bottom: 0;" disabled></pre>
-    </div>
-</div>
-
-<div class="hidden offcanvas offcanvas-end" tabindex="-1" id="dnsOffcanvas">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="domain_name">Edit DNS</h5>
-        <button id="saveDns" class="btn btn-primary mt-2">Save</button>
-    </div>
-    <div class="offcanvas-body" style="overflow-y: hidden;">
-        <textarea id="dnsContent" rows="20" class="ql-container ql-snow" style="height:100%; width: 100%;"></textarea>
-    </div>
-</div>
-
-
-
-
-<script>
-
-// EDIT USER DNS FOR DOMAIN
-
-$(document).ready(function() {
-    var currentDomain;
-
-    $('.edit_caddy_link').click(function(e) {
-        e.preventDefault();
-        currentDomain = $(this).data('domain');
-        $.get(`/caddy-vhosts/${currentDomain}`, function(data) {
-            $('#caddyContent').val(data.caddy_content);
-            $('#domain_name_caddy').text(`Caddy vHosts for ${currentDomain}`);
-            $('#caddyOffcanvas').addClass('show');
-        });
-    });
-
-    $('#saveCaddy').click(function() {
-        var newContent = $('#caddyContent').val();
-        $.ajax({
-            type: 'POST',
-            url: `/save-vhosts/${currentDomain}`,
-            contentType: 'application/json;charset=UTF-8',
-            data: JSON.stringify({
-                'new_content': newContent
-            }),
-            success: function(response) {
-                alert('Caddy configuration saved successfully!');
-            },
-            error: function(error) {
-                alert('Error saving Caddy configuration: ' + error.responseText);
-            }
-        });
-    });
-
-
-    $('#closeOffcanvasBtn').click(function() {
-        $('#caddyOffcanvas').removeClass('show');
-    });
-
-
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('.edit_caddy_link').length && !$(e.target).closest('#caddyOffcanvas').length) {
-            $('#caddyOffcanvas').removeClass('show');
-        }
-    });
-});
-
-
-
-
-
-
-
-// EDIT USER DNS ZONE
-$(document).ready(function() {
-    var currentDomain;
-
-    $('.edit_dns_link').click(function(e) {
-        e.preventDefault();
-
-        currentDomain = $(this).data('domain');
-
-        $.get(`/dns-bind/${currentDomain}`, function(data) {
-            $('#dnsContent').val(data.bind_content);
-            $('#domain_name').text(`Edit DNS for ${currentDomain}`);
-            $('#dnsOffcanvas').addClass('show');
-        });
-    });
-
-    $('#saveDns').click(function() {
-        var newContent = $('#dnsContent').val();
-
-        $.ajax({
-            type: 'POST',
-            url: `/save-dns/${currentDomain}`,
-            contentType: 'application/json;charset=UTF-8',
-            data: JSON.stringify({
-                'new_content': newContent
-            }),
-            success: function(response) {
-                alert('DNS content saved successfully!');
-            },
-            error: function(error) {
-                alert('Error saving DNS content: ' + error.responseText);
-            }
-        });
-    });
-
-
-    $('#closeOffcanvasBtn').click(function() {
-        $('#dnsOffcanvas').removeClass('show');
-    });
-
-
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('.edit_dns_link').length && !$(e.target).closest('#dnsOffcanvas').length) {
-            $('#dnsOffcanvas').removeClass('show');
-        }
-    });
-});
-
-
-</script>
-
-
-
-
-
-
-
-
-
-
 
 
 

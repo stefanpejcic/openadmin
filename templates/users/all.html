@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD" crossorigin="anonymous">
 
 
-<div x-data="{ searchQuery: '', filters: { active: false, suspended: false } }">
+<div x-data="userTable()" x-init="initWatchers()" x-cloak>
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
@@ -30,13 +30,29 @@
         <div class="space-y-3">
             <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
                 <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+
+                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search..." type="search" @input="searchQuery = $event.target.value.trim()">
+
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+
+
                     <button
                         type="button"
-                        class="hidden flex w-full items-center gap-x-1.5 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500"
+                        class="flex w-full items-center gap-x-1.5 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500"
                         aria-haspopup="dialog"
                         aria-expanded="false"
                         aria-controls="radix-:rj:"
                         data-state="closed"
+                        id="ownerBgHoverButton"
+                        data-dropdown-toggle="ownerBgHover"
                     >
                         <span aria-hidden="true">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-px size-5 shrink-0 transition sm:size-4">
@@ -49,112 +65,226 @@
                         </svg>
                     </button>
 
-
-<button
-    type="button"
-    class="hidden  flex w-full items-center gap-x-1.5 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500"
-    aria-haspopup="dialog"
-    aria-expanded="false"
-    aria-controls="radix-:rj:"
-    data-state="closed"
-    id="ownerBgHoverButton"
-    data-dropdown-toggle="ownerBgHover"
->
-    <span aria-hidden="true">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-px size-5 shrink-0 transition sm:size-4">
-            <path d="M11 11V5H13V11H19V13H13V19H11V13H5V11H11Z"></path>
-        </svg>
-    </span>
-    <span class="w-full text-left sm:w-fit">Status</span>
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-gray-500 sm:size-4">
-        <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
-    </svg>
-</button>
-
-<div id="ownerBgHover" class="z-10 hidden w-48 bg-white rounded-lg shadow-sm dark:bg-gray-700">
-    <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="ownerBgHoverButton">
-            <li>
-                <div class="flex items-center p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
-                    <input id="checkbox-item-4" type="checkbox" x-model="filters.active" 
-                           class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
-                    <label for="checkbox-item-4" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">Active</label>
-                </div>
-            </li>
-            <li>
-                <div class="flex items-center p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
-                    <input id="checkbox-item-6" type="checkbox" x-model="filters.suspended" 
-                           class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
-                    <label for="checkbox-item-6" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">Suspended</label>
-                </div>
-            </li>
-    </ul>
-</div>
-
-
-
-
-
-                    <button
-                        type="button"
-                        class="hidden flex w-full items-center gap-x-1.5 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500"
-                        aria-haspopup="dialog"
-                        aria-expanded="false"
-                        aria-controls="radix-:rl:"
-                        data-state="closed"
-                    >
-                        <span aria-hidden="true">
-                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-px size-5 shrink-0 transition sm:size-4">
-                                <path d="M11 11V5H13V11H19V13H13V19H11V13H5V11H11Z"></path>
-                            </svg>
-                        </span>
-                        <span class="w-full text-left sm:w-fit">Usage</span>
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-gray-500 sm:size-4">
-                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
-                        </svg>
-                    </button>
-                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search by user/owner..." type="search" @input="searchQuery = (filters.active ? 'active ' : '') + (filters.suspended ? 'suspended ' : '') + $event.target.value.trim()">
-
-                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
-                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
-                                <path
-                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
-                                ></path>
-                            </svg>
-                        </div>
+                    <div id="ownerBgHover" class="z-10 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-48 dark:divide-gray-600 hidden">
+                        <ul class="p-2 space-y-1" aria-labelledby="ownerBgHoverButton">
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input id="checkbox-item-4" type="checkbox" x-model="filters.active" 
+                                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
+                                        <label for="checkbox-item-4" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">Active</label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input id="checkbox-item-6" type="checkbox" x-model="filters.suspended" 
+                                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded-sm focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
+                                        <label for="checkbox-item-6" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">Suspended</label>
+                                    </div>
+                                </li>
+                        </ul>
                     </div>
+
+
+
                 </div>
-                <div class="hidden flex items-center gap-2">
-                    <button
-                        class="relative items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex"
-                    >
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
-                            <path d="M3 19H21V21H3V19ZM13 13.1716L19.0711 7.1005L20.4853 8.51472L12 17L3.51472 8.51472L4.92893 7.1005L11 13.1716V2H13V13.1716Z"></path>
-                        </svg>
-                        Export
-                    </button>
-                    <div>
-                        <div class="flex justify-center">
-                            <button
-                                class="relative items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex"
-                                type="button"
-                                aria-haspopup="dialog"
-                                aria-expanded="false"
-                                aria-controls="radix-:rm:"
-                                data-state="closed"
-                            >
-                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4">
-                                    <path
-                                        d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"
-                                    ></path>
-                                </svg>
-                                View
-                            </button>
+                <div class="flex items-center gap-2">
+
+
+        <!-- Dropdown for Column Visibility -->
+        <div class="relative">
+            <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="rrelative items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex" type="button"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg> Show Columns</button>
+
+            <!-- Dropdown menu -->
+            <div id="dropdownToggle" class="z-10 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-72 dark:divide-gray-600 hidden">
+                <ul class="p-2 space-y-1" aria-labelledby="dropdownToggleButton">
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.username" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Username</span>
+                            </label>
                         </div>
-                    </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.email" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Email address</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.twofa" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Two-factor authentication</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.status" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Status</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.ip" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">IP address</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.plan" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Package</span>
+                            </label>
+                        </div>
+                    </li>
+
+
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.domains" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Domain Names</span>
+                            </label>
+                        </div>
+                    </li>
+
+
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.memory_limit" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Allocated Memory</span>
+                            </label>
+                        </div>
+                    </li>
+
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.cpu_limit" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Allocated CPU</span>
+                            </label>
+                        </div>
+                    </li>
+
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.disk_limit" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Allocated Storage</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.inodes_limit" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Allocated Inodes</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.usage" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Current Usage</span>
+                            </label>
+                        </div>
+                    </li>
+
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.context" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Docker Context</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.containers" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Containers</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.netio" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Network I/O</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.pids" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">PIDs</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.date" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Created Date</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.owner" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Owner/Reseller</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.login" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Auto-Login</span>
+                            </label>
+                        </div>
+                    </li>
+
+
+
+                </ul>
+            </div>
+        </div>
+
                 </div>
             </div>
-            <div class="relative">
+            <div class="relative overflow-y-auto">
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
@@ -169,7 +299,7 @@
                                     class="relative inline-flex size-4 shrink-0 appearance-none items-center justify-center rounded shadow-sm ring-1 ring-inset transition duration-100 enabled:cursor-pointer text-white dark:text-gray-50 bg-white dark:bg-gray-950 ring-gray-300 dark:ring-gray-800 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:ring-gray-300 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 data-[disabled]:dark:ring-gray-700 enabled:data-[state=checked]:bg-indigo-600 enabled:data-[state=checked]:ring-0 enabled:data-[state=checked]:ring-transparent enabled:data-[state=indeterminate]:bg-indigo-600 enabled:data-[state=indeterminate]:ring-0 enabled:data-[state=indeterminate]:ring-transparent outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 translate-y-0.5"
                                 ></button>
                             </th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                            <th x-show="columns.username" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span>Username</span>
                                     <div class="-space-y-2">
@@ -182,7 +312,7 @@
                                     </div>
                                 </div>
                             </th>
-                            <th class="hidden border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                            <th x-show="columns.email" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span>Email</span>
                                     <div class="-space-y-2">
@@ -194,8 +324,25 @@
                                         </svg>
                                     </div>
                                 </div>
-                            </th>                            
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                            </th>         
+
+
+
+                            <th x-show="columns.twofa" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left w-10">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>2FA</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>     
+
+                            <th x-show="columns.status" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left w-10">
                                 <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span>Status</span>
                                     <div class="-space-y-2">
@@ -208,13 +355,16 @@
                                     </div>
                                 </div>
                             </th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">IP address</div></th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Package</div></th>                            
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Memory</div></th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">CPU</div></th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Disk</div></th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Inodes</div></th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">
+                            <th x-show="columns.ip" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">IP address</div></th>
+                            <th x-show="columns.plan" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left hover:text-gray-900 dark:hover:text-gray-50"><div class="">Package</div></th>
+                            
+                            <th x-show="columns.domains" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Domains</div></th>
+
+                            <th x-show="columns.memory_limit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Memory</div></th>
+                            <th x-show="columns.cpu_limit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">CPU</div></th>
+                            <th x-show="columns.disk_limit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Disk</div></th>
+                            <th x-show="columns.inodes_limit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Inodes</div></th>
+                            <th x-show="columns.usage" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">
                                 <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>Usage</span>
                                     <div class="-space-y-2">
                                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
@@ -227,14 +377,22 @@
                                 </div>
                             </th>
 
-                            <th class="hidden border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Containers</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Created</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Owner</div></th>
 
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Login</th>
+                            <th x-show="columns.context" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Context</div></th>
+
+                            <th x-show="columns.containers" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Containers</div></th>
+                            <th x-show="columns.netio" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Net I/O</div></th>
+                            <th x-show="columns.pids" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">PIDs</div></th>
+
+
+
+                            <th x-show="columns.date" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Created</div></th>
+                            <th x-show="columns.owner" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Owner</div></th>
+
+                            <th x-show="columns.login" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Login</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <tbody x-ref="tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
 
 {% if mysql_is_down %}
 <tr>
@@ -248,52 +406,95 @@
 
                 {% for user in users %}
                 
-                        <tr x-show="searchQuery === '' || '{{ user[1] }}'.toLowerCase().includes(searchQuery.toLowerCase()) {% if user[4] %} || '{{ user[4] }}'.toLowerCase().includes(searchQuery.toLowerCase()){% endif %}" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
+<tr       x-show="(searchQuery === '' || '{{ user[1] }}'.toLowerCase().includes(searchQuery.toLowerCase())
+                {% if user[4] %} || '{{ user[4] }}'.toLowerCase().includes(searchQuery.toLowerCase()){% endif %})
+              &&
+              ((filters.active && !'{{ user[1] }}'.includes('SUSPENDED_')) || 
+               (filters.suspended && '{{ user[1] }}'.includes('SUSPENDED_')))"
+                           class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900 {% if "SUSPENDED_" in user[1] %}bg-red-50 dark:bg-red-400/10{% endif %}">
 
-                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
-                            </td>
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
-
-<div id="tooltip-manage-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-    Manage account
-    <div class="tooltip-arrow" data-popper-arrow></div>
-</div>
-
-                                <a href="/users/{{ user[1] }}" data-tooltip-target="tooltip-manage-{{ user[1].split('_')[-1] }}" data-tooltip-placement="right">{{ user[1].split('_')[-1] }}</a></td>
-
-                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-600 dark:text-gray-400 first:w-10 text-left">{{ user[3] }}</td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
-    {% if "SUSPENDED_" in user[1] %}
-<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Suspended</span>
-    {% else %}
-          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
-    {% endif %}
-
-
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400"><div class="flex items-center">
+                                <input id="default-checkbox" type="checkbox" value="" class="relative inline-flex size-4 shrink-0 items-center justify-center rounded shadow-sm ring-1 ring-inset transition duration-100 enabled:cursor-pointer text-white dark:text-gray-50 bg-white dark:bg-gray-950 ring-gray-300 dark:ring-gray-800 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:ring-gray-300 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 data-[disabled]:dark:ring-gray-700 enabled:data-[state=checked]:bg-indigo-600 enabled:data-[state=checked]:ring-0 enabled:data-[state=checked]:ring-transparent enabled:data-[state=indeterminate]:bg-indigo-600 enabled:data-[state=indeterminate]:ring-0 enabled:data-[state=indeterminate]:ring-transparent outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 translate-y-0.5">
                                 
+                            </div></td>
+                            <td x-show="columns.username" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+
+                                <div id="tooltip-manage-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+                                    Manage account
+                                    <div class="tooltip-arrow" data-popper-arrow></div>
+                                </div>
+
+                                <a href="/users/{{ user[1] }}" class="select-text" data-tooltip-target="tooltip-manage-{{ user[1].split('_')[-1] }}" data-tooltip-placement="right">{{ user[1].split('_')[-1] }}</a>
                             </td>
 
+                            <td x-show="columns.email" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-600 dark:text-gray-400 first:w-10 text-left select-text">{{ user[3] }}</td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><div class="public-ip">{{ public_ip }}</div></td>
+                            <td x-show="columns.twofa" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums select-text w-10"><span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset {% if user[6] %}bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20{% else %}bg-blue-50 text-blue-900 ring-blue-500/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30{% endif %} rounded-full">
+                            
+                            <span class="size-1.5 shrink-0 rounded-full {% if user[6] %}bg-blue-500 dark:bg-blue-500{% else %}bg-gray-500 dark:bg-gray-500{% endif %}" aria-hidden="true"></span>{% if user[6] %}On{% else %}Off{% endif %}</span></td>
 
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/plans#{{ user[12] }}">{{ user[12] }}</a></td>
+<td x-show="columns.status" class='{% if "SUSPENDED_" in user[1] %}grid{% endif %} p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-center'>
+    <a 
+        href='/users/{{ user[1] }}#{% if "SUSPENDED_" in user[1] %}un{% endif %}suspend' 
+        class="hover:text-gray-700 hover:dark:text-gray-300 w-full"
+        x-data="{ hover: false }"
+        @mouseenter="hover = true" 
+        @mouseleave="hover = false"
+    >
+        <span 
+            :class="hover 
+                ? '{% if "SUSPENDED_" in user[1] %}bg-blue-50 text-blue-900 ring-blue-600/20 dark:bg-blue-400/10 dark:text-blue-500 dark:ring-blue-400/20{% else %}bg-rose-50 text-rose-900 ring-rose-600/20 dark:bg-rose-400/10 dark:text-rose-500 dark:ring-rose-400/20{% endif %}'
+                : '{% if "SUSPENDED_" in user[1] %}bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20{% else %}bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20{% endif %}'"
+            class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 transition-colors duration-150 w-full justify-center"
+        >
+            <span x-text="hover 
+                ? '{% if 'SUSPENDED_' in user[1] %}Unsuspend{% else %}Suspend{% endif %}' 
+                : '{% if 'SUSPENDED_' in user[1] %}Suspended{% else %}Active{% endif %}'">
+                {% if "SUSPENDED_" in user[1] %}Suspended{% else %}Active{% endif %}
+            </span>
+        </span>
+    </a>
+    
+{% if "SUSPENDED_" in user[1] %}
+<small class="select-text">
+  {% set datetime_str = user[1].split('_')[1] %}
+  {% set year = datetime_str[0:4] %}
+  {% set month = datetime_str[4:6] %}
+  {% set day = datetime_str[6:8] %}
+  {% set hour = datetime_str[8:10] %}
+  {% set minute = datetime_str[10:12] %}
+  on: {{ day }}.{{ month }}.{{ year }} {{ hour }}:{{ minute }}
+  </small>
+{% endif %}
+
+</td>
+
+
+
+
+                            <td x-show="columns.ip" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><div class="public-ip select-text">{{ public_ip }}</div></td>
+
+
+                            <td x-show="columns.plan" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text"><a class="hover:text-gray-900 dark:hover:text-gray-50" href="/plans#{{ user[12] }}">{{ user[12] }}</a></td>
+
+                            <td x-show="columns.domains" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text"><a class="hover:text-gray-900 dark:hover:text-gray-50" href="/domains?owner={{ user[1].split('_')[-1] }}">{{ user[5] }}</a></td>
+
 
                 {% set stat = stats | selectattr("user", "equalto", user[1].split('_')[-1]) | list | first %}
                 {% set du = disk.get(user[10]) %}
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Memory allocated to the user."><span class="icon icon-tabler"><i class="bi bi-memory"></i></span> {% if user[16] == 0 %}∞{% else %}{{ user[16]|replace('g', ' GB') }}{% endif %}</p></td>
+                            <td x-show="columns.memory_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Memory allocated to the user."><span class="icon icon-tabler"><i class="bi bi-memory"></i></span> {% if user[16] == 0 %}∞{% else %}{{ user[16]|replace('g', ' GB') }}{% endif %}</p></td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="CPU cores allocated to the user."><span class="icon icon-tabler"><i class="bi bi-cpu"></i></span> {% if user[15] == 0 %}∞{% else %}{{ user[15] }}{% endif %} Core</p></td>
+                            <td x-show="columns.cpu_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="CPU cores allocated to the user."><span class="icon icon-tabler"><i class="bi bi-cpu"></i></span> {% if user[15] == 0 %}∞{% else %}{{ user[15] }}{% endif %} Core</p></td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Disk space allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd"></i></span> {{ user[13] }}</p></td>
+                            <td x-show="columns.disk_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Disk space allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd"></i></span> {{ user[13] }}</p></td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{% set inodes = ( (user[14]|int / 1000000) | round(2) ) ~ 'M' if user[14] != 0 else '∞' %}
+                            <td x-show="columns.inodes_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{% set inodes = ( (user[14]|int / 1000000) | round(2) ) ~ 'M' if user[14] != 0 else '∞' %}
                                         <p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Inodes allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd-stack"></i></span> {{inodes }}</p></td>
 
 
-<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+<td x-show="columns.usage" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
     <span class="font-medium">
         <div class="flex items-end gap-x-2.5">
 
@@ -326,6 +527,8 @@
     <div class="tooltip-arrow" data-popper-arrow></div>
 </div>
 
+<a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=memory&owner={{ user[1].split('_')[-1] }}">
+
                 <div class="relative" data-tooltip-target="tooltip-ram-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="Memory usage" aria-valuenow="{{ percent | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent | round(0) }}">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
@@ -335,7 +538,7 @@
                         <span class="text-[11px] font-semibold">{{ percent | round(0) | int }}</span>
                     </div>
                 </div>
-
+</a>
 
 
 {% set percent_cpu = (stat.stats.CPUPerc|replace(" ", "")|replace("%", "")|float / user[15]|float) if (user[15] != 0 and user[15] != '0') else (stat.stats.CPUPerc|replace(" ", "")|replace("%", "")|float) %}
@@ -360,6 +563,8 @@
     CPU usage: {{ stat.stats.CPUPerc|replace(" ", "") }} / {{ percent_total }}%
     <div class="tooltip-arrow" data-popper-arrow></div>
 </div>
+                                <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=cpu&owner={{ user[1].split('_')[-1] }}">
+
                 <div class="relative" data-tooltip-target="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="CPU usage" aria-valuenow="{{ percent_cpu | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_cpu | round(0) }}">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
@@ -370,6 +575,7 @@
 </span>
                     </div>
                 </div>
+            </a>
 
             {% else %}
 
@@ -485,26 +691,38 @@
     </span>
 </td>
 
+<td x-show="columns.context" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums text-select">{{ user[10] }}
+</td>
 
-                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">
-{% if stat %}
 
-<i class="bi bi-box"></i>
- Containers: {{ stat.stats.Container }}
-<i class="bi bi-reception-4"></i> NetIO: {{ stat.stats.NetIO }}
-<i class="bi bi-list-task"></i> PIDs: {{ stat.stats.PIDs }}
-{% endif %}
-                            </td>
+
+<td x-show="columns.containers" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">
+    <a href="/users/{{ user[1] }}#services" class="hover:text-gray-900 dark:hover:text-gray-50">
+    <i class="bi bi-box"></i> {% if stat %}{{ stat.stats.Container }}{% else %}0{% endif %}
+    </a>
+</td>
+
+<td x-show="columns.netio" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">
+<i class="bi bi-reception-4"></i> {% if stat %}{{ stat.stats.NetIO }}{% else %}0 / 0{% endif %}
+</td>                     
+
+<td x-show="columns.pids" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">
+<a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=owner&owner={{ user[1].split('_')[-1] }}">
+<i class="bi bi-list-task"></i> {% if stat %}{{ stat.stats.PIDs }}{% else %}0{% endif %}
+</a>
+</td>   
+
+
 
 
        
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">{{ user[9].strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td x-show="columns.date" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums select-text">{{ user[9].strftime('%d.%m.%Y %H:%M') }}</td>
 
-<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+<td x-show="columns.owner" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">
 {% if user[4] %}<a href="/resellers/{{ user[4] }}" class="text-indigo-600 dark:text-indigo-400">{{ user[4] }}</a>{% endif %}</td>
 
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+                            <td x-show="columns.login" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
                            <div class="btn-list flex-nowrap">
     {% if "SUSPENDED_" in user[1] %}  
 
@@ -569,13 +787,17 @@
 
                 <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
             </div>
-            <div class="hidden px-6 py-2 flex items-center justify-between">
-                <div class="text-sm tabular-nums text-gray-500">0 of 52 row(s) selected.</div>
+            <div class="px-6 py-2 flex items-center justify-between">
+                <div></div>
+                <div class="hidden text-sm tabular-nums text-gray-500">0 of {{ users|length }} row(s) selected.</div>
                 <div class="flex items-center gap-x-6 lg:gap-x-8">
-                    <p class="hidden text-sm tabular-nums text-gray-500 sm:block">Showing <span class="font-medium text-gray-900 dark:text-gray-50">1-20</span> of <span class="font-medium text-gray-900 dark:text-gray-50">52</span></p>
-                    <div class="flex items-center gap-x-1.5">
+<p class="text-sm tabular-nums text-gray-500 sm:block">
+  Showing 
+  <span class="font-medium text-gray-900 dark:text-gray-50" x-text="count"></span> of <span class="font-medium text-gray-900 dark:text-gray-50">{{ users|length }}</span>
+</p>
+                    <div class="hidden flex items-center gap-x-1.5">
                         <button
-                            class="relative items-center justify-center whitespace-nowrap rounded-md border text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 hidden sm:block p-1.5"
+                            class="relative items-center justify-center whitespace-nowrap rounded-md border text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:block p-1.5"
                             disabled=""
                         >
                             <span class="sr-only">First page</span>
@@ -603,7 +825,7 @@
                             </svg>
                         </button>
                         <button
-                            class="relative items-center justify-center whitespace-nowrap rounded-md border text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 hidden sm:block p-1.5"
+                            class="relative items-center justify-center whitespace-nowrap rounded-md border text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:block p-1.5"
                         >
                             <span class="sr-only">Last page</span>
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
@@ -622,6 +844,56 @@
 
 
 
+<script>
+function userTable() {
+    return {
+        searchQuery: '',
+        filters: {
+            active: true,
+            suspended: true
+        },
+        columns: {
+                username: true,
+                email: false,
+                twofa: false,
+                status: true,
+                ip: false,
+                plan: true,
+                domains: false,
+                memory_limit: true,
+                cpu_limit: true,
+                disk_limit: true,
+                inodes_limit: true,
+                usage: true,
+                context: false,
+                containers: false,
+                netio: false,
+                pids: false,
+                date: true,
+                owner: false,
+                login: true
+            },
+        initWatchers() {
+this.$watch('filters.active', () => {
+    this.$nextTick(() => this.updateCount());
+});
+this.$watch('filters.suspended', () => {
+    this.$nextTick(() => this.updateCount());
+});
+this.$watch('searchQuery', () => {
+    this.$nextTick(() => this.updateCount());
+});
+        },
+        count: {{ users|length }},
+        updateCount() {
+            // Count visible rows
+            this.count = [...this.$refs.tbody.querySelectorAll('tr.user-row')]
+                .filter(row => row.offsetParent !== null).length;
+            console.log("Visible count updated to:", this.count);
+        }
+    };
+}
+</script>
 
 
 

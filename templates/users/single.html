@@ -19,7 +19,7 @@
                     <h1 class="mb-1 text-xl font-bold">{{ user.username.split('_')[-1] }} {% if "SUSPENDED_" in user.username %} <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-300 dark:ring-gray-400/20 ml-1">Suspended</span>{% endif %}
 </h1>
                     <h2 class="text-sm flex font-medium text-slate-500">
-{% if country_code and country_name %}<img  class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_name}}"></img>{{server_ip}} / {% endif %} {{env_data.TOTAL_CPU}} Cores / {{ env_data.TOTAL_RAM[:-1] + ' GB' if env_data.TOTAL_RAM.endswith('g') else '∞' }} Memory  <!----> / {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}{% else %}∞{% endif %} GB Disk <!----></div><!---->
+{% if country_code %}<img  class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img>{{server_ip}} / {% endif %} {{env_data.TOTAL_CPU}} Cores / {{ env_data.TOTAL_RAM[:-1] + ' GB' if env_data.TOTAL_RAM.endswith('g') else '∞' }} Memory  <!----> / {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}{% else %}∞{% endif %} GB Disk <!----></div><!---->
                     </h2>
                 
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
@@ -97,7 +97,7 @@
     </header>
     </div>
 
-<div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0" x-data="{
+<div class="relative w-full p-6 text-left border-b bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0" x-data="{
    activeTab: 'stats',
    containerName: '{{ user.username.split('_')[-1] }}', 
    fetchCustomMessage() {
@@ -121,7 +121,28 @@
    }
    });
    }
-   }">
+   }"
+   x-init="
+        if (window.location.hash === '#services') {
+            activeTab = 'services';
+        } else if (window.location.hash === '#activity') {
+            activeTab = 'activity';
+            $nextTick(() => $store.activityStore.fetchLogs());
+        } else if (window.location.hash === '#suspend') {
+            activeTab = 'suspend';
+        } else if (window.location.hash === '#unsuspend') {
+            activeTab = 'unsuspend';
+        } else if (window.location.hash === '#edit') {
+            activeTab = 'edit';
+            $nextTick(() => $store.ipStore.fetchIPs());
+        } else if (window.location.hash === '#delete') {
+            activeTab = 'delete';
+            $nextTick(() => $store.ipStore.fetchIPs());
+        } else if (window.location.hash === '#overview') {
+            activeTab = 'info';
+            $nextTick(() => fetchCustomMessage());
+        }
+    ">
 
 
                   <script>
@@ -510,7 +531,7 @@
                         <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Running containers:</span><span class="font-medium"><a href="#" @click="activeTab = 'services'" class="inline-flex items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">{{ stats.stats.Container }}</a></span></div>
                         <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Disk I/O:</span><span class="font-medium">{{ stats.stats.BlockIO }}</span></div>
                         <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Network I/O:</span><span class="font-medium">{{ stats.stats.NetIO }}</span></div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">PIDs:</span><span class="font-medium">{{ stats.stats.PIDs }}</span></div>
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">PIDs:</span><a href="/server/processes?sort=owner&owner={{ user.username.split('_')[-1] }}" class="font-medium">{{ stats.stats.PIDs }}</a></div>
                      </div>
                      <div class="mt-4 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-900 dark:bg-gray-950">
                         <h4 class="text-sm font-medium text-gray-900 dark:text-gray-50">Usage updated hourly</h4>
@@ -712,7 +733,7 @@
                       if (totalCpuStr !== "0") {
                           const totalCpu= parseFloat(totalCpuStr);
                           const result = cpuPercentage / totalCpu;
-                          document.getElementById('cpu_percentage').textContent = `${result}%`;
+                          document.getElementById('cpu_percentage').textContent = `${result.toFixed(2)}%`;
                           updateProgressBar('cpu_graph', result);
                       } else {
                           document.getElementById('cpu_percentage').textContent = `${cpuPercentage}%`;
@@ -733,7 +754,7 @@
                           totalRamStr = totalRamStr.slice(0, -1);
                           const totalRam = parseFloat(totalRamStr);
                           const result = ramPercentage / totalRam;
-                          document.getElementById('ram_percentage').textContent = `${result}%`;
+                          document.getElementById('ram_percentage').textContent = `${result.toFixed(2)}%`;
                           updateProgressBar('ram_graph', result);
                       } else {
                           document.getElementById('ram_percentage').textContent = `${ramPercentage}%`;
@@ -1137,14 +1158,38 @@
                   <div class="grid grid-cols-2 gap-4">
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID:</span><span class="font-medium">{{user.id}}</span></div>
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium">{{user.email}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium"> {{server_ip}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="font-medium">{{country_name}} ({{country_code}})</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Docker Context:</span><span class="font-medium">{{server_name}}</span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium"> {{server_ip}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{ip_type}}</span></span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="flex items-center font-medium">
+                        {% if country_name %}{{country_name}}{% elif country_code %}<img  class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img>{% endif %} ({{country_code}})</span></div>
+
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Server:</span><span class="font-medium">{{server_name}}</span></div>
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Docker Context:</span><span class="font-medium">{{docker_context}}</span></div>
+
+
+
+
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">2FA status:</span><span class="font-medium">{% if user.twofa_enabled  == 1 %}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>>{% elif user.twofa_enabled  == 0 %}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{% else %}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Unknown</span>{% endif %}</span></div>
                      {% if user.owner %}
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Reseller:</span><span class="font-medium"><a href="/resellers">{{user.owner}}</a></span></div>
                      {% endif %}
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Setup time:</span><span class="font-medium">{{ user.registered_date.strftime('%d.%m.%Y %H:%M:%S') }}</span></div>
+
+
+{% if "SUSPENDED_" in user.username %}
+  {% set datetime_str = user.username.split('_')[1] %}
+  {% set year = datetime_str[0:4] %}
+  {% set month = datetime_str[4:6] %}
+  {% set day = datetime_str[6:8] %}
+  {% set hour = datetime_str[8:10] %}
+  {% set minute = datetime_str[10:12] %}
+  <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Suspended on:</span><span class="font-medium">{{ day }}.{{ month }}.{{ year }} {{ hour }}:{{ minute }}</span></div>
+{% endif %}
+
+
+
+
                   </div>
                   <br>
                   <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">

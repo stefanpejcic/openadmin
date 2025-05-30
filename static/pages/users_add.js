@@ -197,7 +197,7 @@ document.getElementById('title').textContent = `User created successfully!`;
 document.getElementById('subtitle').textContent = `Username: ${username} Password: ${password}`;
 helpBtn.parentElement.appendChild(newLink);
 
-                            } else if (text.includes("Error")) {
+                            } else if (text.toLowerCase().includes("error")) {
                                 showToast("Error, please check the log below the form.", 'error');
                                 createUserForm.classList.remove("hidden");
 
