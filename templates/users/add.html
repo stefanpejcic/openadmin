@@ -53,6 +53,54 @@
 <div id="collapseAddNewUser">
     <div id="create_user_form" class="sm:mx-auto sm:max-w-2xl" style="display:block;">
         <form id="userForm" class="mt-8">
+
+<div x-data="{ serverType: 'current' }" class="grid gap-4">
+
+  <!-- Select for server type -->
+  <div class="col-span-full">
+    <label for="serverType" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">
+      Select Server
+    </label>
+    <select x-model="serverType" id="serverType" name="serverType" 
+      class="mt-2 block w-full rounded-md border border-gray-300 px-2.5 py-2 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
+      <option value="current">{% if force_domain_value %}{{ force_domain_value }} ({{ public_ip }}){% else %}{{ public_ip }}{% endif %}</option>
+      <option value="remote">remote server</option>
+    </select>
+  </div>
+
+
+  <template x-if="serverType === 'remote'">
+    <div class="flex items-center p-4 bg-gray-800"><svg class="shrink-0 w-4 h-4 text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20"><path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"></path></svg><div class="ms-3 text-sm font-medium text-white">{% if license_type != "Community" %}The remote server must have a fresh installation of Ubuntu 24.04.{% else %}This experimental feature is available on Enterprise edition only.{% endif %}</div></div>
+  </template>
+
+  <template x-if="serverType === 'remote'">
+    {% if license_type != "Community" %}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+      <div class="col-span-full sm:col-span-3">
+        <label for="slave" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">IP Address<span class="text-red-500 dark:text-red-500">*</span></label>
+        <input type="text" name="slave" id="slave" placeholder="IPv4 address" 
+          class="mt-2 block w-full rounded-md border border-gray-300 px-2.5 py-2 shadow-sm outline-none transition sm:text-sm
+                 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500
+                 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:dark:ring-blue-700/30 focus:dark:border-blue-700" />
+      </div>
+
+      <div class="col-span-full sm:col-span-3">
+        <label for="ssh_key_path" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">SSH private key<span class="text-red-500 dark:text-red-500">*</span></label>
+        <input type="text" name="ssh_key_path" id="ssh_key_path" placeholder="/root/some-key.rsa"
+          class="mt-2 block w-full rounded-md border border-gray-300 px-2.5 py-2 shadow-sm outline-none transition sm:text-sm
+                 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500
+                 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 focus:dark:ring-blue-700/30 focus:dark:border-blue-700" />
+      </div>
+
+    </div>
+    {% endif %}
+  </template>
+
+  <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full">
+    <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+  </div>
+</div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
                 <div class="col-span-full sm:col-span-3">
                     <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="admin_username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
@@ -208,36 +256,7 @@
 
 
 
-
-
             </div>
-            <div class="hidden mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-
-                                            {% if license_type != "Community" %}
-                                            <div class="hidden form-group row mt-2">
-                                                <div class="alert alert-warning" role="alert">
-                                                <strong>Warning:</strong> Clustering is an experimental feature and is not recommended for production use!  
-                                                The slave server must be a remote machine with a fresh install of Ubuntu 24 and no OpenPanel installed.  
-                                                Generate SSH keys and ensure you can establish an SSH connection from this server to the slave server.  
-                                                Once configured, it can be used for new accounts.
-                                                </div>
-
-
-                                                <div class="col-md-6">
-                                                    <label for="slave">Slave server:</label>
-                                                    <input type="text" class="form-control" name="slave" id="slave" placeholder="IPv4 address">
-                                                </div>
-
-                                                <div class="col-md-6">
-                                                    <label for="ssh_key_path">SSH private key:</label>
-                                                    <input type="text" class="form-control" name="ssh_key_path" id="ssh_key_path" placeholder="/root/some-key.rsa">
-
-                                                </div>
-
-
-                                            </div>
-                                            {% endif %}
 
 
             <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
