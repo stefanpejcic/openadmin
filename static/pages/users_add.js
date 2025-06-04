@@ -56,10 +56,7 @@ function generateRandomStrongPassword(length) {
 
 // Form for New User
 window.onload = function() {
-    const generatedUsername = generateRandomUsername(8);
     const generatedPassword = generateRandomStrongPassword(16);
-
-    document.getElementById("admin_username").value = generatedUsername;
     document.getElementById("admin_password").value = generatedPassword;
 };
 

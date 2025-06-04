@@ -743,7 +743,7 @@ check_system_load() {
 
 
 check_swap_usage() {
-    local title="High System Load!"
+    local title="High SWAP usage!"
 
     # Run the 'free' command and capture the output
     free_output=$(free -t)
