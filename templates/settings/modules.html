@@ -1,0 +1,73 @@
+<!-- templates/settings/modules.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+
+
+<div x-data="{ searchQuery: '' }">
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Modules</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Enable/disable modules (options) for OpenPanel. <a href="https://openpanel.com/docs/admin/settings/openpanel/#enable-features" target="_blank" class="inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400">Learn more<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a></h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
+                </div>
+            </div>
+        </header>
+    </div>
+
+
+<form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+<div class="m-8">
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+
+
+    <div class="md:col-span-3">
+
+
+<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+  {% for feature in features %}
+    <div x-data="{ enabled: {{ 'true' if feature.status else 'false' }} }" class="relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden p-0">
+      <div class="px-4 pb-6 pt-4">
+        <span class="text-sm text-gray-500">{{ feature.link }}</span>
+        <h4 class="mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50">{{ feature.title }}</h4>
+        <p class="mt-2 max-w-xl text-sm leading-6 text-gray-500">{{ feature.description }}</p>
+      </div>
+      <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-4 dark:border-gray-900 dark:bg-gray-900">
+        <div class="flex items-center gap-3">
+          <button @click="enabled = !enabled" :aria-checked="enabled" :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'" class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9">
+            <span :class="enabled ? 'translate-x-4' : 'translate-x-0'" class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"></span>
+          </button>
+          <input type="checkbox" x-model="enabled" hidden name="{{ feature.name }}" value="{{ feature.name }}" :checked="enabled">
+          <label class="text-sm leading-none text-gray-900 dark:text-gray-50" for="{{ feature.name }}">Activate</label>
+        </div>
+        <a href="{{ feature.help_link }}" class="hidden inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Learn more
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
+            <path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+
+
+        <div class="col-span-full mt-6 flex justify-end"></div>
+    </div>
+</div>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+</div>
+
+</div>
+
+{% endblock %}
