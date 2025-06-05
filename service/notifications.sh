@@ -197,7 +197,20 @@ else
 fi
 
 
-response=$(curl -k -X POST "$PROTOCOL://127.0.0.1:2087/send_email" \
+
+
+admin_conf_file="/etc/openpanel/openadmin/config/admin.ini"
+AUTH_OPTION=""
+
+if grep -q '^basic_auth=yes' "$admin_conf_file"; then
+    username=$(grep '^basic_auth_username=' "$admin_conf_file" | cut -d'=' -f2)
+    password=$(grep '^basic_auth_password=' "$admin_conf_file" | cut -d'=' -f2)
+    AUTH_OPTION="--user ${username}:${password}"
+fi
+
+
+response=$(curl -k -X POST "$PROTOCOL://$DOMAIN:2087/send_email" \
+  $AUTH_OPTION \
   -F "transient=$TRANSIENT" \
   -F "recipient=$EMAIL" \
   -F "subject=$title" \

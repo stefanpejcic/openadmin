@@ -3,71 +3,155 @@
 
 {% block content %}
 
-
 <div x-data="{ searchQuery: '' }">
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
                     <h1 class="mb-1 text-xl font-bold">Feature Manager</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Enable/disable features (pages) in the OpenPanel interface. <a href="https://openpanel.com/docs/admin/settings/openpanel/#enable-features" target="_blank" class="inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400">Learn more<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a></h2>
+                    <h2 class="text-sm font-medium text-slate-500">{% if plan %}Edit features set: {{ plan }}{% else %}Manage feature sets.{% endif %}</h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-
                 </div>
             </div>
         </header>
     </div>
 
+  {% if plan %}
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="">
+        <div class="space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search by feature name..." type="search" @input="searchQuery = $event.target.value.trim()">
 
-<form method="post">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="relative">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
+                    <thead class="">
+                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Name</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>                        
+                            <th class="hidden border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><span>Page</span></th> 
+                            
+                            <th class="hidden border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><span>Description</span></th> 
 
-<div class="m-8">
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Enable</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            {% for feature in features %}
+                        <tr  x-data="{ enabled: {{ 'true' if feature.status else 'false' }} }" x-show="searchQuery === '' || '{{ feature.title }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{ feature.title }}</td>
+                  
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{ feature.link }}</td>
+
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{ feature.description }}</td>
 
 
-<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+
+                              <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+                  <button @click="enabled = !enabled" :aria-checked="enabled"
+                    :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                    class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9">
+                    <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
+                      class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"></span>
+                  </button>
+                  <input type="checkbox" x-model="enabled" hidden name="{{ feature.name }}" value="{{ feature.name }}" :checked="enabled">
 
 
-    <div class="md:col-span-3">
+                              </td>    
+                          </tr>
 
+                {% endfor %}
 
-<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-  {% for feature in features %}
-    <div x-data="{ enabled: {{ 'true' if feature.status else 'false' }} }" class="relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden p-0">
-      <div class="px-4 pb-6 pt-4">
-        <span class="text-sm text-gray-500">{{ feature.link }}</span>
-        <h4 class="mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50">{{ feature.title }}</h4>
-        <p class="mt-2 max-w-xl text-sm leading-6 text-gray-500">{{ feature.description }}</p>
-      </div>
-      <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-4 dark:border-gray-900 dark:bg-gray-900">
-        <div class="flex items-center gap-3">
-          <button @click="enabled = !enabled" :aria-checked="enabled" :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'" class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9">
-            <span :class="enabled ? 'translate-x-4' : 'translate-x-0'" class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"></span>
-          </button>
-          <input type="checkbox" x-model="enabled" hidden name="{{ feature.name }}" value="{{ feature.name }}" :checked="enabled">
-          <label class="text-sm leading-none text-gray-900 dark:text-gray-50" for="{{ feature.name }}">Activate</label>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <a href="{{ feature.help_link }}" class="hidden inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Learn more
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
-            <path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path>
-          </svg>
-        </a>
-      </div>
     </div>
-  {% endfor %}
-</div>
+    </form>
+  {% else %}
+  <form method="post">
+  <div class="m-8">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+            <div>
+                <h2 id="personal-information" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Create</h2>
+                <p class="mt-1 text-sm leading-6 text-gray-500">Create a new feature list to be used.</p>
+            </div>
+            <div class="md:col-span-2">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                    <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="feature_name">Add a new feature list</label>
+                        <div class="relative w-full mt-2 flex"><input class="relative block w-full appearance-none truncate rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" type="text" class="form-control ps-0" name="feature_name" autocomplete="off" required>
+                        <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-r border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400 __web-inspector-hide-shortcut__" type="submit">Create</button></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
 
 
+        <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
-        <div class="col-span-full mt-6 flex justify-end"></div>
-    </div>
-</div>
 
-<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-</div>
-
+        <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+            <div>
+                <h2 id="personal-information" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Manage</h2>
+                <p class="mt-1 text-sm leading-6 text-gray-500">Select existing feature set to edit.</p>
+            </div>
+            <div class="md:col-span-2">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                    <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="files">Manage feature set:</label>
+                        <div class="relative w-full mt-2">
+                                        <select id="files" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name="version" onchange="redirectToSelectedVersion(this)">
+                          <option value="" disabled selected>Select feature set</option> 
+                      {% for file in files %}
+                          <option value="{{ file }}">{{ file }}</option>
+                      {% endfor %}
+                      </select>
+                      <script>
+                          // JavaScript function to redirect to the same page with domain parameter
+                          function redirectToSelectedVersion(selectElement) {
+                              var selectedVersion = selectElement.value;
+                              if (selectedVersion) {
+                                  var url = `/features/${selectedVersion}`;
+                                  window.open(url, '_self');
+                              }
+                          }
+                      </script>
+                      </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+  </div>
+  </form>
+  {% endif %}
 </div>
 
 {% endblock %}
