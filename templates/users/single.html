@@ -836,10 +836,7 @@
                <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
                <script>
                   $(document).ready(function() {
-                  
-                  
-                  
-                  
+                             
                   // Helper function to update the circle graph based on percentage
                   function updateProgressBar(elementId, percentage) {
                       const circle = document.querySelector(`#${elementId} circle:nth-of-type(2)`);
@@ -874,23 +871,27 @@
                   }
                   
                   // Update RAM usage graph
-                  function updateRamUsage(ramPercentage) {
-                  
-                      let totalRamStr = "{{ env_data.TOTAL_RAM }}";
-                  
-                      if (totalRamStr.toUpperCase().endsWith('G')) {
-                          totalRamStr = totalRamStr.slice(0, -1);
-                          const totalRam = parseFloat(totalRamStr);
-                          const result = ramPercentage / totalRam;
-                          document.getElementById('ram_percentage').textContent = `${result.toFixed(2)}%`;
-                          updateProgressBar('ram_graph', result);
-                      } else {
-                          document.getElementById('ram_percentage').textContent = `${ramPercentage}%`;
-                          updateProgressBar('ram_graph', ramPercentage);
-                      }
-                  
-                  
-                  }
+function updateRamUsage(ramPercentage) {
+    let totalRamStr = "{{ env_data.TOTAL_RAM }}";
+
+    if (totalRamStr.toUpperCase().endsWith('G')) {
+        totalRamStr = totalRamStr.slice(0, -1);
+        const totalRam = parseFloat(totalRamStr);
+
+        if (!isNaN(totalRam) && totalRam > 0) {
+            const result = ramPercentage / totalRam;
+            document.getElementById('ram_percentage').textContent = `${result.toFixed(2)}%`;
+            updateProgressBar('ram_graph', result);
+        } else {
+            document.getElementById('ram_percentage').textContent = `${ramPercentage}%`;
+            updateProgressBar('ram_graph', ramPercentage);
+        }
+    } else {
+        document.getElementById('ram_percentage').textContent = `${ramPercentage}%`;
+        updateProgressBar('ram_graph', ramPercentage);
+    }
+}
+
                   
                   
                   
