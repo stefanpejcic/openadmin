@@ -11,17 +11,19 @@
 
 
 
-<div>
+<div x-data="{ activeTab: 'stats'}">
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
                     <h1 class="mb-1 text-xl font-bold">{{ user.username.split('_')[-1] }} {% if "SUSPENDED_" in user.username %} <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-300 dark:ring-gray-400/20 ml-1">Suspended</span>{% endif %}
 </h1>
-                    <h2 class="text-sm flex font-medium text-slate-500">
-{% if country_code %}<img  class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img>{{server_ip}} / {% endif %} {{env_data.TOTAL_CPU}} Cores / {{ env_data.TOTAL_RAM[:-1] + ' GB' if env_data.TOTAL_RAM.endswith('g') else '∞' }} Memory  <!----> / {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}{% else %}∞{% endif %} GB Disk <!----></div><!---->
+                    <h2 class="text-sm font-medium text-slate-500">
+                       <span class="inline-flex">
+{% if country_code %}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img></span><span>{{server_ip}} / {% endif %} {{env_data.TOTAL_CPU}} Cores / {{ env_data.TOTAL_RAM[:-1] + ' GB' if env_data.TOTAL_RAM.endswith('g') else '∞' }} Memory  <!----> / {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}{% else %}∞{% endif %} GB Disk <!----></span>
+
                     </h2>
-                
+               </div> 
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
                     <a style="display:none!important;" @click="showSection = !showSection" class="hidden relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">
                         Need Help?
@@ -94,11 +96,77 @@
                 <p class="text-sm text-gray-500 dark:text-gray-500">Lorem ipsum dolor sit amet.</p>
             </div>
         </div>
+
+
     </header>
     </div>
 
+
+
+
+<nav class="flex sm:hidden justify-center w-full" aria-label="Actions" data-orientation="horizontal" dir="ltr">
+    <div style="position: relative;">
+        <ul data-orientation="horizontal" class="flex items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800" dir="ltr">
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'stats'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'stats'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Statistics</span>
+                </a>
+            </li>
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'services'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'services'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Services</span>
+                </a>
+            </li>
+            <li class="hidden">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'volumes'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'volumes'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Volumes</span>
+                </a>
+            </li>
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'info'; fetchCustomMessage()" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Account</span>
+                </a>
+            </li>
+
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="$store.activityStore.fetchLogs(); activeTab = 'activity'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Activity</span>
+                </a>
+            </li>
+
+{% if "SUSPENDED_" in user.username %} 
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" href="/user/unsuspend/{{ user.username.split('_')[-1] }}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Unsuspend</span>
+                </a>
+            </li>
+{% else %}
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="$store.ipStore.fetchIPs(); activeTab = 'edit'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'edit'}" >
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Edit</span>
+                </a>
+            </li>
+
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'suspend'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'suspend'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Suspend</span>
+                </a>
+            </li>
+{% endif %}                
+
+
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'delete'" :class="{'text-red-600 dark:text-red-500': activeTab === 'delete'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Delete</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+
+
 <div class="relative w-full p-6 text-left border-b bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0" x-data="{
-   activeTab: 'stats',
    containerName: '{{ user.username.split('_')[-1] }}', 
    fetchCustomMessage() {
    $.ajax({
@@ -286,7 +354,7 @@
    <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0">
       <div class="grid-cols-12 divide-y divide-gray-200 dark:divide-gray-800 md:grid md:divide-x md:divide-y-0">
          <!-- Sidebar Navigation -->
-         <div class="p-4 divide-y divide-gray-200 px-2 dark:divide-gray-800 md:col-span-2">
+         <div class="hidden sm:flex p-4 divide-y divide-gray-200 px-2 dark:divide-gray-800 md:col-span-2">
             <nav aria-label="core navigation links" class="flex flex-1 flex-col space-y-10">
                <div>
                   <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Docker</span>
@@ -316,17 +384,6 @@
                               <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"></path>
                            </svg>
                            Volumes
-                        </a>
-                     </li>
-                     <li class="hidden">
-                        <a @click="activeTab = 'settings'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'settings'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings2 size-5 shrink-0" aria-hidden="true">
-                              <path d="M20 7h-9"></path>
-                              <path d="M14 17H5"></path>
-                              <circle cx="17" cy="17" r="3"></circle>
-                              <circle cx="7" cy="7" r="3"></circle>
-                           </svg>
-                           Settings
                         </a>
                      </li>
                   </ul>
@@ -371,15 +428,15 @@
             </nav>
          </div>
          <!-- Content Area -->
-         <div class="h-56 md:col-span-10 md:h-auto">
-            <div class="relative h-full overflow-hidden rounded">
+         <div class="md:col-span-10 h-auto">
+            <div class="relative h-full rounded">
                <!-- DOCKER STATS -->
                <div x-show="activeTab === 'stats'">
                   <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden !p-0 sm:mx-auto" tremor-id="tremor-raw">
                      <div class="p-6">
                         <h3 class="hidden text-sm font-medium text-gray-900 dark:text-gray-50">Resource usage</h3>
                         <p class="hidden text-sm text-gray-500 dark:text-gray-500">No activity measured yet.</p>
-                        <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-4">
+                        <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
                            <!-- DISK -->
                            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
                               <div class="relative">
@@ -764,6 +821,7 @@
                                           <span class="font-medium" x-text="value"></span> cores <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><i class="bi bi-pencil-fill"></i></a></span>
                                           <!-- Editable Input and Save Button -->
                                           <form action="/containers/cpu/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+                                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                              <input x-model="value" name="value" type="number" min="0.10" max="{{ total_cpu }}" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
                                              <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
                                           </form>
@@ -800,6 +858,7 @@
                                              <span class="font-medium">{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }} GB{% else %}∞{% endif %} </span> <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><i class="bi bi-pencil-fill"></i></a></span>
                                              <!-- Editable Input and Save Button -->
                                              <form action="/containers/ram/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input x-model="value" name="value" type="number" min="0.10" max="{{ total_ram }}" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
                                                 <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
                                              </form>
@@ -810,6 +869,7 @@
                                  </td>
                                  <td id="actions-{{ service }}" class="flex gap-1">
                                     <form method="POST" action="/containers/start/{{ details.container_name if details.container_name else service }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                        <button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">
                                           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600">
                                              <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path>
@@ -986,7 +1046,7 @@ function updateRamUsage(ramPercentage) {
                                       ramCell.html(ramInfo);
                   
                                       var actionsInfo = `
-                                          <form method="POST" action="/containers/stop/${containerId}"><button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</button></form>
+                                          <form method="POST" action="/containers/stop/${containerId}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</button></form>
                                           <a href="/terminal/{{ user.username.split('_')[-1] }}/${containerId}" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-terminal" viewBox="0 0 16 16"> <path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9M3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708z"/>  <path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/></svg>Terminal</a>`;
                                       actionsCell.html(actionsInfo);
                   
@@ -1281,13 +1341,13 @@ function updateRamUsage(ramPercentage) {
                   </ul>
                </div>
                <!-- END VOLUMES -->
-               <div x-show="activeTab === 'settings'" x-cloak>Settings</div>
+
                <!-- INFO -->
                <div x-show="activeTab === 'info'" class="p-4" x-cloak>
                   <div class="grid grid-cols-2 gap-4">
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID:</span><span class="font-medium">{{user.id}}</span></div>
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium">{{user.email}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium"> {{server_ip}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{ip_type}}</span></span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium"> {{server_ip}}<span class="hidden sm:flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{ip_type}}</span></span></div>
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="flex items-center font-medium">
                         {% if country_name %}{{country_name}}{% elif country_code %}<img  class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img>{% endif %} ({{country_code}})</span></div>
 
@@ -1322,15 +1382,16 @@ function updateRamUsage(ramPercentage) {
                   </div>
                   <br>
                   <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
-                  <span class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Custom message for user:</span> <button id="save_custom_message_btn" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+                  <span class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Custom message for user:</span> <button class="hidden sm:flex save_custom_message_btn relative  items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
                   </div>
                   <textarea id="custom_message_for_this_user" class="flex min-h-[4rem] w-full rounded-md border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" rows="5"></textarea>
                   
+<button class="w-full mt-2 sm:hidden save_custom_message_btn relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
 
 <script>
   const username = "{{ user.username.split('_')[-1] }}";
   const textarea = document.getElementById('custom_message_for_this_user');
-  const saveBtn = document.getElementById('save_custom_message_btn');
+  const saveBtn = document.querySelector('.save_custom_message_btn');
   var csrf_token = $('meta[name="csrf-token"]').attr('content');
 
   async function saveCustomMessage() {
@@ -1601,7 +1662,7 @@ function updateRamUsage(ramPercentage) {
                            <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
                               <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
                               <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Action</th>
-                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP Address</th>
+                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP Address</th>
                            </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -1621,9 +1682,9 @@ function updateRamUsage(ramPercentage) {
                                  class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
                                  <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 
                                     x-text="activity.date"></td>
-                                 <td class="flex relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 
+                                 <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left truncate max-w-[100px]" 
                                     x-html="activity.action"></td>
-                                 <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 
+                                 <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-end" 
                                     x-text="activity.ip"></td>
                               </tr>
                            </template>
@@ -1635,7 +1696,8 @@ function updateRamUsage(ramPercentage) {
             <!-- END ACTIVITY -->
             <!-- SUSPEND USER -->
             <div x-show="activeTab === 'suspend'" class="p-4" x-cloak>
-               <form method="GET" action="/user/suspend/{{ user.username.split('_')[-1] }}">
+               <form method="POST" action="/user/suspend/{{ user.username.split('_')[-1] }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <div x-data="{ confirmationText: '' }" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
                <form action="#" method="POST">
                <h3 class="font-semibold text-gray-900 dark:text-gray-50">Suspend user account</h3>
@@ -1654,9 +1716,10 @@ function updateRamUsage(ramPercentage) {
             <!-- END SUSPEND USER -->
             <!-- DELETE USER -->
             <div x-show="activeTab === 'delete'" class="p-4" x-cloak>
-               <form method="GET" action="/user/delete/{{ user.username.split('_')[-1] }}">
+               <form method="POST" action="/user/delete/{{ user.username.split('_')[-1] }}">
                   <div x-data="{ confirmationText: '' }" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
                <form action="#" method="POST">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                <h3 class="font-semibold text-gray-900 dark:text-gray-50">Delete user account</h3>
                <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">All user data will be permanently deleted. There is no coming back after you press delete.</p>
                <div class="mt-6">

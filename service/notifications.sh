@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="20.250.519"
+VERSION="20.250.609"
 # Record the process ID of the script
 PID=$$
 
@@ -209,7 +209,7 @@ if grep -q '^basic_auth=yes' "$admin_conf_file"; then
 fi
 
 
-response=$(curl -k -X POST "$PROTOCOL://$DOMAIN:2087/send_email" \
+response=$(curl -4 --max-time 5 -k -X POST "$PROTOCOL://$DOMAIN:2087/send_email" \
   $AUTH_OPTION \
   -F "transient=$TRANSIENT" \
   -F "recipient=$EMAIL" \
@@ -805,7 +805,7 @@ check_swap_usage() {
         # create when we start
         touch "$LOCK_FILE"
         
-        echo 2 >/proc/sys/vm/drop_caches
+        echo 3 >/proc/sys/vm/drop_caches
         swapoff -a
         swapon -a
 
