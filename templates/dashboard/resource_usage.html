@@ -11,7 +11,7 @@
                         <i class="bi bi-bar-chart-fill px-2"></i> <span class="load1min" id="loadIconColor">Load</span>
                     </button>
                     <button @click="activeTab = 'ram'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'ram' }" type="button" role="tab" aria-selected="false" aria-controls="ram" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
-                        <i class="bi bi-memory px-2"></i> <span class="ram_usage" id="ramIconColor">RAM</span>
+                        <i class="bi bi-memory px-2"></i> <span class="ram_usage">RAM</span>
                     </button>
                     <button @click="activeTab = 'cpu'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'cpu' }" type="button" role="tab" aria-selected="false" aria-controls="cpu" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
                         <i class="bi bi-cpu px-2"></i> <span id="cpu_avg-now">CPU</span>
@@ -184,196 +184,68 @@
 
 
             <div x-show="activeTab === 'ram'" data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="ram" id="ram" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
-                                 <a href="/server/processes?sort=memory" style="text-decoration:none;">
+                                 
                   <div>
+                      
                     <div class="d-flex align-items-baseline">
-                      <div class="h3 mb-3 me-2 py-2 ram-info">Memory usage: <span id="human-readable-info"></span></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div class="h3 mb-3 me-2 py-2 ram-info"><a href="/server/processes?sort=memory" style="text-decoration:none;">Memory usage: <span id="human-readable-info"></span></a> <button class="items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto gap-x-2 px-2 py-1.5 text-sm sm:text-xs cursor-pointer" id="clear-cache">Drop Cache</button> </div>
+                      <div class="h3 mb-3 me-2 py-2 ram-info">SWAP usage: <span id="swap-human-readable-info"></span> <button class="items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto gap-x-2 px-2 py-1.5 text-sm sm:text-xs cursor-pointer" id="clear-swap">Clear Swap</button></div>
+                        </div>
                       <div class="me-auto">
                         <span class="bg-primary-lt text-white d-inline-flex align-items-center lh-1"></span>
                       </div>
                     </div>
+                    
                     <div id="chart-ram" class="chart"></div>
                   </div>
-                </a>   
+ 
 
 
-    <script>
-        $(document).ready(function() {
-            $('#clear-cache').on('click', function(event) {
-                event.preventDefault(); // Prevent the default behavior to keep the dropdown open
-                var dropdownItem = $(this);
-
-                $.ajax({
-                    url: '/server/memory_usage/drop',
-                    type: 'POST',
-                    success: function(response) {
-                        // Update only the "Clear Cached RAM" item
-                        dropdownItem.html('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-rocket"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3" /><path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3" /><path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>&nbsp;' + response.message);
-                    },
-                    error: function(xhr, status, error) {
-                        // Handle error
-                        dropdownItem.html('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-rocket"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3" /><path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3" /><path d="M15 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>&nbsp; Error: ' + xhr.responseJSON.message);
-                    }
-                });
+<script>
+    $(document).ready(function() {
+        var csrf_token = $('meta[name="csrf-token"]').attr('content');
+        $('#clear-cache').on('click', function(event) {
+            $.ajax({
+                url: '/server/memory_usage/drop',
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf_token
+                },
+                success: function(response) {
+                    showToast(response.message, 'success');
+                },
+                error: function(xhr, status, error) {
+                    showToast(xhr.responseJSON.message, 'error');
+                }
             });
         });
-    </script>
+        $('#clear-swap').on('click', function(event) {
+            $.ajax({
+                url: '/server/memory_usage/drop-swap',
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf_token
+                },
+                success: function(response) {
+                    showToast(response.message, 'success');
+                },
+                error: function(xhr, status, error) {
+                    showToast(xhr.responseJSON.message, 'error');
+                }
+            });
+        });
+
+
+    });
+</script>
+
                       </div>
 
             <div x-show="activeTab === 'disk'" data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="disk" id="disk" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">                            
                   <div class="">
                     <div class="h3 mb-3 me-2 py-2">Disk usage: <span id="total_gb_used"></span> <span class="home_usage">...</span></div>
                   </div>
-                    <table id="disk-usage-table" class="hidden table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Partition</th>
-                                <th>Storage Usage</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td class="d-none">
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="progressbg">
-                                        <div class="progress progressbg-progress">
-                                            <div class="progress-bar bg-primary-lt" style="width:15.2%" role="progressbar" aria-valuenow="15.2" aria-valuemin="0" aria-valuemax="100" aria-label="15.2% Used"><span class="visually-hidden">15.2% Complete</span></div>
-                                        </div>
-                                        <div class="progressbg-text">/</div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td class="">
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="progressbg">
-                                        <div class="progress progressbg-progress">
-                                            <div class="progress-bar bg-primary-lt" style="width:55.2%" role="progressbar" aria-valuenow="55.2" aria-valuemin="0" aria-valuemax="100" aria-label="15.2% Used"><span class="visually-hidden">15.2% Complete</span></div>
-                                        </div>
-                                        <div class="progressbg-text">/</div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td class="">
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="progressbg">
-                                        <div class="progress progressbg-progress">
-                                            <div class="progress-bar bg-primary-lt" style="width:85.2%" role="progressbar" aria-valuenow="85.2" aria-valuemin="0" aria-valuemax="100" aria-label="15.2% Used"><span class="visually-hidden">15.2% Complete</span></div>
-                                        </div>
-                                        <div class="progressbg-text">/</div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td class="">
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="progressbg">
-                                        <div class="progress progressbg-progress">
-                                            <div class="progress-bar bg-primary-lt" style="width:85.2%" role="progressbar" aria-valuenow="85.2" aria-valuemin="0" aria-valuemax="100" aria-label="15.2% Used"><span class="visually-hidden">15.2% Complete</span></div>
-                                        </div>
-                                        <div class="progressbg-text">/</div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td class="">
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder col-9 mb-0"></div>
-                                </td>
-                                <td>
-                                    <div class="progressbg">
-                                        <div class="progress progressbg-progress">
-                                            <div class="progress-bar bg-primary-lt" style="width:85.2%" role="progressbar" aria-valuenow="85.2" aria-valuemin="0" aria-valuemax="100" aria-label="15.2% Used"><span class="visually-hidden">15.2% Complete</span></div>
-                                        </div>
-                                        <div class="progressbg-text">/</div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td>
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                                <td class="">
-                                    <div class="placeholder placeholder-xs col-8"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
 
                       </div>
 
