@@ -165,60 +165,64 @@ function formatDiskSize(bytes) {
     // Function to update RAM info
 function updateRamInfo() {
     $.get("/json/memory", function(data) {
-        var html = data.human_readable_info.used + " / " + data.human_readable_info.total + " (" + data.human_readable_info.percent + ")";
-        var percentString = data.human_readable_info.percent;
-        var percent = parseInt(percentString.slice(0, -1));
-        $("#human-readable-info").html(html);
-        $('.ram_usage').text(percent + '%');
+        // RAM
+        var ramHtml = data.human_readable.ram.used + " / " + data.human_readable.ram.total + " (" + data.human_readable.ram.percent + ")";
+        var ramPercent = parseInt(data.human_readable.ram.percent.slice(0, -1));
+        $("#human-readable-info").html(ramHtml);
+        $('.ram_usage').text(ramPercent + '%');
 
-        updateRamChart(data.human_readable_info);
+        // Swap
+        var swapHtml = data.human_readable.swap.used + " / " + data.human_readable.swap.total + " (" + data.human_readable.swap.percent + ")";
+        var swapPercent = parseInt(data.human_readable.swap.percent.slice(0, -1));
+        $("#swap-human-readable-info").html(swapHtml);
+        //$('.swap_usage').text(swapPercent + '%');
 
-        var ramIndicator = $("#ramIndicator");
-        var ramIconColor = $("#ramIconColor");
-        ramIndicator.removeClass("bg-primary");
-        ramIconColor.removeClass("bg-primary-lt");
-
-        if (percent < 60) {
-            ramIndicator.addClass("bg-success");
-            ramIconColor.addClass("bg-success-lt");
-        } else if (percent >= 60 && percent <= 80) {
-            ramIndicator.addClass("bg-warning");
-            ramIconColor.addClass("bg-warning-lt");
-        } else {
-            ramIndicator.addClass("bg-danger");
-            ramIconColor.addClass("bg-danger-lt");
-        }
+        updateRamChart(data.human_readable);
     });
 }
+
 
 let chartLoad;
 let chartRam;
 
 
 
+
 function initRamChart() {
     chartRam = new ApexCharts(document.getElementById('chart-ram'), {
         chart: {
-            type: "line",
+            type: "area",
             height: 250,
             animations: {
                 enabled: false
             }
         },
         series: [
-            { name: "Used RAM", data: [] },
-            { name: "Total RAM", data: [] },
-            { name: "RAM Usage %", data: [] }
+            { name: "Used RAM (GB)", data: [] },
+            { name: "Total RAM (GB)", data: [] }
         ],
         xaxis: {
             type: "datetime",
         },
         yaxis: {
             title: {
-                text: "RAM Usage"
+                text: "Memory Usage (GB)"
             }
         },
-        colors: ["#007bff", "#28a745", "#ffc107"],
+        colors: ["#007bff", "#28a745"],
+        fill: {
+            type: "gradient",
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.4,
+                opacityTo: 0.05,
+                stops: [0, 90, 100]
+            }
+        },
+        stroke: {
+            curve: 'smooth',
+            width: 2
+        },
         tooltip: {
             theme: 'dark'
         }
@@ -226,29 +230,32 @@ function initRamChart() {
     chartRam.render();
 }
 
-
-function updateRamChart(ramData) {
+function updateRamChart(memData) {
     const now = new Date().getTime();
-    const { used, total, percent } = ramData;
 
-    const roundedUsed = parseFloat(used).toFixed(2);
-    const roundedTotal = parseFloat(total).toFixed(2);
-    const roundedPercent = parseFloat(percent).toFixed(2);
+    const ramUsed = parseFloat(memData.ram.used).toFixed(2);
+    const ramTotal = parseFloat(memData.ram.total).toFixed(2);
 
     chartRam.updateSeries([
-        { name: "Used RAM", data: [...chartRam.w.config.series[0].data, [now, parseFloat(roundedUsed)]] },
-        { name: "Total RAM", data: [...chartRam.w.config.series[1].data, [now, parseFloat(roundedTotal)]] },
-        { name: "RAM Usage %", data: [...chartRam.w.config.series[2].data, [now, parseFloat(roundedPercent)]] }
+        {
+            name: "Used RAM (GB)",
+            data: [...chartRam.w.config.series[0].data, [now, parseFloat(ramUsed)]]
+        },
+        {
+            name: "Total RAM (GB)",
+            data: [...chartRam.w.config.series[1].data, [now, parseFloat(ramTotal)]]
+        }
     ]);
 
-    // Trim data to keep the last 100 points
+    // Trim to 100 points
     chartRam.updateOptions({
         series: chartRam.w.config.series.map(series => ({
             name: series.name,
-            data: series.data.slice(-100) // Keep only the last 100 points
+            data: series.data.slice(-100)
         }))
     });
 }
+
 
 
 function initLoadChart() {
