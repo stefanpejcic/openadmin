@@ -86,38 +86,75 @@ function updateUserActivityTable() {
 
 
 
-// 0.3.8
 function updateHomeUsage(data) {
     var homeUsage = data.find(disk_info => disk_info.mountpoint === '/');
     if (homeUsage) {
-        // Update the main display of usage
+        const percent = Math.round(homeUsage.percent);
+
+        // Update percentage display
+
+        $('#current_disk_usage_percentage_also').text(percent + '%');
+        
         $('.home_usage').text(homeUsage.percent + '%');
 
-        // Update the progress bar width and aria attributes
-        $('#du_usage_loader')
-            .css('width', homeUsage.percent + '%')
-            .attr('aria-valuenow', homeUsage.percent)
-            .attr('aria-label', homeUsage.percent + '%');
 
-        // Update the visually hidden percentage display
-        $('#current_disk_usage_percentage_also').text(homeUsage.percent + '%');
+        // Update donut chart visual
+        const radius = 45;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (percent / 100) * circumference;
 
-        // Update the total GB used value
-        $('#total_gb_used').text(formatDiskSize(homeUsage.used));
+        $('#donut_fill')
+            .css('stroke-dashoffset', offset);
 
-        // Update the serverduIndicator background color
-        var serverduIndicator = $("#serverduIndicator");
-        serverduIndicator.removeClass("bg-primary-lt bg-danger-lt bg-warning-lt bg-success-lt bg-primary-lt");
+        $('#donut_percent').text(percent + '%');
 
-        if (homeUsage.percent >= 90) {
+        // Optional: Change donut color based on thresholds
+        const donut = $('#donut_fill');
+        donut.removeClass('text-green-500 text-yellow-500 text-red-500');
+
+        if (percent >= 90) {
+            donut.addClass('text-red-500');
+        } else if (percent >= 80) {
+            donut.addClass('text-yellow-500');
+        } else {
+            donut.addClass('text-green-500');
+        }
+
+
+        // Update additional disk info
+        $('#disk_device').text(homeUsage.device || 'N/A');
+        $('#disk_fstype').text(homeUsage.fstype || 'N/A');
+        $('#disk_total').text(formatDiskSize(homeUsage.total));
+        $('#disk_used').text(formatDiskSize(homeUsage.used));
+        $('#disk_free').text(formatDiskSize(homeUsage.free));
+
+        // Tailwind-style progress bar update
+        const progressBar = $('#tailwind_progress_fill');
+        progressBar.css('width', percent + '%');
+
+        // Remove existing color classes and set appropriate one
+        progressBar
+            .removeClass('bg-red-500 bg-orange-400 bg-green-500')
+            .addClass(
+                percent >= 90 ? 'bg-red-500' :
+                percent >= 80 ? 'bg-orange-500' :
+                'bg-green-500'
+            );
+
+        // Update serverduIndicator color
+        const serverduIndicator = $("#serverduIndicator");
+        serverduIndicator.removeClass("bg-primary-lt bg-danger-lt bg-warning-lt bg-success-lt");
+
+        if (percent >= 90) {
             serverduIndicator.addClass("bg-danger-lt");
-        } else if (homeUsage.percent >= 80) {
+        } else if (percent >= 80) {
             serverduIndicator.addClass("bg-warning-lt");
-        } else if (homeUsage.percent < 80) {
+        } else if (percent < 80) {
             serverduIndicator.addClass("bg-success-lt");
         } else {
             serverduIndicator.addClass("bg-primary-lt");
         }
+
     } else {
         console.log('Mountpoint "/" not found in disk usage data.');
     }
