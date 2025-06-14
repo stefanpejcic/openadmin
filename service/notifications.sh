@@ -532,6 +532,20 @@ docker_containers_status() {
 
 
 
+      check_caddy_health() {
+          local url="http://localhost/check"
+          local status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 --max-time 1 "$url")
+
+
+        if [ "$status_code" -eq 200 ] || [ "$status_code" -eq 404 ]; then
+          ((PASS++))
+          echo -e "\e[32m[✔]\e[0m $service_name docker container is active (status code: $status_code)."
+        else
+          start_caddy
+        fi
+      }
+
+
       start_caddy() {
             ((WARN++))
             echo -e "\e[38;5;214m[!]\e[0m $service_name docker container is not running."
@@ -552,22 +566,14 @@ docker_containers_status() {
     if docker --context=default ps --format "{{.Names}}" | grep -wq "$service_name"; then
 
       if [ "$service_name" == "caddy" ]; then
-          local url="http://localhost/check"
-          local status_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 --max-time 1 "$url")
 
+      check_caddy_health
 
-        if [ "$status_code" -eq 200 ] || [ "$status_code" -eq 404 ]; then
-          ####DEBUG####echo "Healthy ($status_code)"
-          ((PASS++))
-          echo -e "\e[32m[✔]\e[0m $service_name docker container is active (status code: $status_code)."
-        else
-          ####DEBUG####echo "Unhealthy (Unexpected status: $status_code)"
-          start_caddy
-        fi
       else
         ((PASS++))
         echo -e "\e[32m[✔]\e[0m $service_name docker container is active."
       fi
+
     else 
 
 
@@ -592,6 +598,8 @@ docker_containers_status() {
                 ((WARN--))
                 echo "  - No domains detected. DNS is not yet needed."
             fi
+        elif [ "$service_name" == "caddy" ]; then
+            check_caddy_health
         else
 
             docker --context=default restart "$service_name"  > /dev/null 2>&1

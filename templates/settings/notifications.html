@@ -1,0 +1,191 @@
+<!-- templates/settings/user.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+
+
+<div x-data="{ searchQuery: '' }">
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+
+
+    <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> 
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Notification settings</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Important notifications and system alerts.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400"
+                    type="submit">Save changes</button>
+                </div>
+            </div>
+        </header>
+    </div>
+
+
+
+
+<div class="m-8">
+
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="email" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Email</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">All alerts and a Daily Usage report are sent to this address. Leave empty to disable emails.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+            <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="email">Email address:</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="email" placeholder="" value="{{ email_address }}" type="email"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="services" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Services</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when a service is down or not responding. Services are checked every 5 minutes.</p>
+    </div>
+    <div class="md:col-span-2">
+<div x-data="{
+        serviceStates: {
+            {% for service in ['panel', 'admin', 'caddy', 'mysql', 'docker', 'named', 'csf'] %}
+                '{{ service }}': {{ 'true' if service in config_data['DEFAULT']['services'].split(',') else 'false' }},
+            {% endfor %}
+        },
+        get selectedServices() {
+            return Object.entries(this.serviceStates)
+                        .filter(([_, v]) => v)
+                        .map(([k, _]) => k)
+                        .join(',');
+        }
+    }">
+
+    <input type="hidden" name="services" :value="selectedServices">
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+        {% set service_info = {
+            'panel': {'name': 'OpenPanel', 'desc': 'Receive a notification when OpenPanel UI fails.'},
+            'admin': {'name': 'OpenAdmin', 'desc': 'Receive a notification when OpenAdmin UI fails.'},
+            'caddy': {'name': 'Caddy', 'desc': 'Receive a notification when webserver is not responding.'},
+            'mysql': {'name': 'MySQL', 'desc': 'Receive a notification when database is unreachable.'},
+            'docker': {'name': 'Docker', 'desc': 'Receive a notification when Docker service is down.'},
+            'named': {'name': 'BIND9', 'desc': 'Receive a notification when DNS service is down or not responding to requests.'},
+            'csf': {'name': 'ConfigServer Firewall', 'desc': 'Receive a notification when CSF is disabled.'},
+        } %}
+
+        {% for service in service_info %}
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{service}}">
+                    {{ service_info[service].name }}
+                </label>
+                <div class="relative w-full mt-2">
+                    <div class="flex items-center space-x-2">
+                        <button
+                            type="button"
+                            @click="serviceStates['{{ service }}'] = !serviceStates['{{ service }}']"
+                            :aria-checked="serviceStates['{{ service }}']"
+                            role="switch"
+                            :class="serviceStates['{{ service }}'] ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                            class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+                        >
+                            <span
+                                :class="serviceStates['{{ service }}'] ? 'translate-x-4' : 'translate-x-0'"
+                                class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"
+                            ></span>
+                        </button>
+                        <span class="text-sm" x-text="serviceStates['{{ service }}'] ? 'Enabled' : 'Disabled'"></span>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ service_info[service].desc }}</p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+    </div>
+</div>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="thresholds" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Resource Usage</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when resource usage exceeds the defined threshold. Usage is monitored every 5 minutes.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+        {% for key, label in {'load': 'Load Avg.', 'cpu': 'CPU', 'ram': 'RAM', 'du': 'Disk Usage', 'swap': 'SWAP'}.items() %}
+
+            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{ key }}">{{ label }}</label>
+                <div class="relative w-full mt-2 flex-grow flex items-center">
+                    <input type="number" class="relative block w-full appearance-none truncate rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="{{ key }}" placeholder="{{ key }}" min="10" max="100" value="{{ config_data['DEFAULT'][key[:-9] if 'Threshold' in key else key] }}" >
+                    <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">%</span>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    </div>
+</div>
+
+
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="actions" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Actions</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when a certain action is performed: new ssh login, system reboot, and more.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+        {% for key, label in {
+            'reboot': 'Server was rebooted',
+            'attack': 'Website is under attack',
+            'limit': 'User reaches plan limits',
+            'login': 'OpenAdmin is accessed from a new IP address',
+            'update': 'New OpenPanel update is available'
+        }.items() %}
+
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{service}}">{{display_name}}</label>
+                <div class="relative w-full mt-2">
+
+            <label class="flex items-center space-x-2">
+                <input type="checkbox" name="{{ key }}" id="{{ key }}" class="toggle-checkbox" {% if config_data['DEFAULT'][key] == 'yes' %}checked{% endif %}>
+                <span>{{ label }}</span>
+            </label>
+
+                        </div>
+            </div>
+                                {% endfor %}
+
+
+
+        </div>
+    </div>
+</div>
+
+
+
+
+</div>
+
+{% endblock %}
