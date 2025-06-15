@@ -13,8 +13,8 @@
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">Crons</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Manage system crons.</h2>
+                    <h1 class="mb-1 text-xl font-bold">Configure OpenPanel Cron Jobs</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Edit schedule and logging for OpenPanel Cron Jobs.</h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
                     <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Save</button>
@@ -48,7 +48,7 @@
                     </div>
                 </div>
             </div>
-            <div class="relative">
+            <div class="relative" x-data="cronJobs">
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
@@ -66,11 +66,36 @@
 {% set schedule_parts = job.schedule.strip().split(' ') %}
 <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 text-left">
   {% for i in range(5) %}
-    <input type="text" class="relative appearance-none truncate rounded-md border px-0 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden inline-block w-12 text-center" name="{{ job.line_number }}_schedule_{{ i }}" value="{{ schedule_parts[i] if schedule_parts|length > i else '' }}">
+    {% set rounded_classes = 'rounded-l' if loop.index0 == 0 else ('rounded-r' if loop.last else '') %}
+    <input type="text"
+           class="relative appearance-none truncate border px-0 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden inline-block w-12 text-center {{ rounded_classes }}"
+           name="{{ job.line_number }}_schedule_{{ i }}"
+           value="{{ schedule_parts[i] if schedule_parts|length > i else '' }}">
   {% endfor %}
 </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{ job.command }}</td>
+<td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">
+    {{ job.command }}
+    
+    <template x-if="getDescription('{{ job.command }}')">
+        <p class="text-xs text-gray-500 mt-1">
+            <span x-text="getDescription('{{ job.command }}').description"></span>
+            
+            <template x-if="getDescription('{{ job.command }}').link">
+                <a class="ml-1 inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400"
+                :href="getDescription('{{ job.command }}').link"
+                target="_blank">
+                    Learn more
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
+                        <path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path>
+                    </svg>
+                </a>
+            </template>
+        </p>
+    </template>
+
+</td>
+
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
                                 <label class="form-check form-check-single form-switch">
                                     <input class="form-check-input" type="checkbox" id="{{ job.line_number }}_logging" name="{{ job.line_number }}_logging" {% if job.log %} checked {% endif %}>
@@ -78,6 +103,76 @@
 							</td>
                         </tr>
                 {% endfor %}
+
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('cronJobs', () => ({
+        searchQuery: '',
+        commandDescriptions: {
+            'opencli docker-collect_stats --all': {
+                description: 'Collect docker resource usage information (cpu, ram, i/o) for all OpenPanel users accounts.',
+                link: 'https://dev.openpanel.com/cli/docker.html#Collect-Stats'
+            },
+            'opencli domains-stats': {
+                description: 'Parse domain (Caddy) access logs and generate static reports for users domains accessible from their Domains > Access Log page.',
+                link: 'https://dev.openpanel.com/cli/domains.html#Parse-domain-access-logs'
+            },
+            'opencli websites-pagespeed --all': {
+                description: 'Collect Google PageSpeed Insights data for all websites hosted on the server.',
+                link: 'https://dev.openpanel.com/cli/websites.html#PageSpeed'
+            },
+            'opencli docker-usage_stats_cleanup': {
+                description: 'Rotate resource usage logs for all users according to the resource_usage_retention setting.',
+                link: 'https://dev.openpanel.com/cli/docker.html#Usage-Stats-Cleanup'
+            },
+            'opencli update': {
+                description: 'Check if new OpenPanel update is available, and update if auto-updates are enabled.',
+                link: 'https://dev.openpanel.com/cli/update.html#Update'
+            },
+            'opencli server-ips': {
+                description: 'Checks IP address for each OpenPanel user account. (DEPRECATED)',
+            },
+            'opencli server-motd': {
+                description: 'Generates MOTD for ssh users. (DEPRECATED)',
+            },
+            'opencli ftp-users': {
+                description: 'Generates a list of all FTP sub-users.',
+                link: 'https://dev.openpanel.com/cli/ftp.html#Users'
+            },
+            'opencli email-server pflogsumm': {
+                description: 'Generates Summary Reports from Mailserver logs.',
+                link: 'https://dev.openpanel.com/cli/email.html#pflogsumm'
+            },
+            'opencli docker-images --all': {
+                description: 'Updates all docker images. (DEPRECATED)',
+            },
+            'opencli files-purge_trash': {
+                description: 'Remoces files form users .Trash folder, according to the autopurge_trash retention.',
+                link: 'https://dev.openpanel.com/cli/files.html#Purge-Trash'
+            },
+            'opencli sentinel': {
+                description: 'Checks running services, resource usage and sends alerts/emails.',
+                link: 'https://dev.openpanel.com/cli/sentinel.html#Sentinel'
+            },
+            'opencli sentinel --report': {
+                description: 'Sends a Daily Usage report to Administrator email address.',
+                link: 'https://dev.openpanel.com/cli/sentinel.html#Sentinel'
+            }
+        },
+        getDescription(command) {
+            for (const prefix in this.commandDescriptions) {
+                if (command.startsWith(prefix)) {
+                    return this.commandDescriptions[prefix];
+                }
+            }
+            return null;
+        }
+    }))
+})
+</script>
+
+
 
 {% else %}
 <tr>
