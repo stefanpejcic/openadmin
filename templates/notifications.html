@@ -114,6 +114,37 @@
     </div>
 </div>
 
+{% elif message.startswith('CPU Usage:') %}
+    {% set usage_line = message.split('|')[0] %}
+    {% set usage_percent = usage_line.split(':')[1].strip().replace('%', '') %}
+    {% set process_lines = message.split('|', 1)[1].strip() %}
+
+<div>
+    <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+        <span>CPU Usage</span>
+        <span>{{ usage_percent }}%</span>
+    </p>
+    <div class="flex w-full items-center mt-1" role="progressbar" aria-label="Progress bar" aria-valuenow="{{ usage_percent }}" aria-valuemax="100">
+        <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
+            <div class="h-full flex-col rounded-full bg-red-500 dark:bg-red-500" style="width: {{ usage_percent }}%;"></div>
+        </div>
+    </div>
+</div>
+
+<div x-data="{ open: false }" class="mt-4">
+    <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+        <span></span>
+        <a href="#" @click.prevent="open = !open" x-text="open ? 'Hide Processes' : 'Display Processes'" class="text-blue-600 underline"></a>
+    </p>
+    <pre class="text-xs mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-auto" x-show="open" x-transition>
+{{ process_lines.replace('\\n', '\n') }}
+    </pre>
+</div>
+
+
+
+
+
 
 {% elif message.startswith('Disk Usage:') %}
 
