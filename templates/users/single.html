@@ -729,9 +729,12 @@
                                  <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
                                     Name
                                  </th>
-                                 <th scope="col"  class="hidden w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                 <th scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
                                     Ports
                                  </th>
+                                 <th scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Env
+                                 </th>                                 
                                  <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
                                     CPU Usage
                                  </th>
@@ -765,94 +768,145 @@
                                        </div>
                                     </div>
                                  </td>
-                                 <td class="hidden">PORTS: {{ details.ports if details.ports }}</td>
-                                 <td class="hidden">ENV: {{ details.environment if details.environment }}</td>
-                                 <td x-data="{ editing: false, value: '{{ details.deploy.resources.limits.cpus if details.deploy.resources.limits.cpus else "0" }}' }"
-                                 class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
-                                 <div class="flex gap-2">
-                                    <!-- CPU Usage -->
-                                    <div id="cpu-{{ service }}">
-                                       <div class="flex items-center gap-x-2.5">
-                                          <div class="relative" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                                             <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
-                                                <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
-                                                <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 dark:stroke-blue-500 transition-all duration-300"></circle>
-                                             </svg>
-                                             <div class="absolute inset-0 flex items-center justify-center">
-                                                <span class="text-[11px] font-semibold">0</span>
-                                             </div>
-                                          </div>
-                                       </div>
-                                    </div>
-                                    <!-- Text and Edit Icon Section -->
-                                    <div class="flex flex-col gap-0">
-                                       <span class="text-gray-900 dark:text-gray-50">
-                                       <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
-                                       <span class="font-medium" id="cpu-usage-{{ service }}"></span>
-                                       </span>
-                                       <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
-                                       Allocated: &nbsp;
-                                       <span x-show="!editing">
-                                          <span class="font-medium" x-text="value"></span> cores <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><i class="bi bi-pencil-fill"></i></a></span>
-                                          <!-- Editable Input and Save Button -->
-                                          <form action="/containers/cpu/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
-                                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                             <input x-model="value" name="value" type="number" min="0.10" max="{{ total_cpu }}" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
-                                             <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
-                                          </form>
-                                       </span>
-                                    </div>
-                                 </div>
+                                 <td class="">
+        <div class="flex flex-col">
+  {% if details.ports %}
+    {% for port in details.ports %}
+      {% if port.published != '0' %}
+        <span class="text-xs font-medium text-gray-500 dark:text-gray-500">{{ port.host_ip }}:{{ port.published }} → {{ port.target }}</span>
+      {% endif %}
+    {% endfor %}
+  {% endif %}                                    
+         </div>
                                  </td>
-                                 <td x-data="{ editing: false, value: '{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }}{% else %}0{% endif %}' }"
-                                    class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
-                                    <div class="flex gap-2">
-                                       <!-- CPU Usage -->
-                                       <div id="ram-{{ service }}">
-                                          <div class="flex items-center gap-x-2.5">
-                                             <div class="relative" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                                                <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
-                                                   <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
-                                                   <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 dark:stroke-blue-500 transition-all duration-300"></circle>
-                                                </svg>
-                                                <div class="absolute inset-0 flex items-center justify-center">
-                                                   <span class="text-[11px] font-semibold">0</span>
-                                                </div>
-                                             </div>
-                                          </div>
-                                       </div>
-                                       <!-- Text and Edit Icon Section -->
-                                       <div class="flex flex-col gap-0">
-                                          <span class="text-gray-900 dark:text-gray-50">
-                                          <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
-                                          <span class="font-medium" id="ram-usage-{{ service }}"></span>
-                                          </span>
-                                          <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
-                                          Allocated: &nbsp;
-                                          <span x-show="!editing">
-                                             <span class="font-medium">{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }} GB{% else %}∞{% endif %} </span> <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><i class="bi bi-pencil-fill"></i></a></span>
-                                             <!-- Editable Input and Save Button -->
-                                             <form action="/containers/ram/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
-                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                <input x-model="value" name="value" type="number" min="0.10" max="{{ total_ram }}" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
-                                                <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
-                                             </form>
-                                          </span>
-                                          </a>
-                                       </div>
-                                    </div>
+                                 <td class="">
+  {% if details.environment %}
+        <div class="flex flex-col">
+      {% for key, value in details.environment.items() %}
+        <span class="text-xs text-gray-500 dark:text-gray-500">{{ key }}: <span class="font-medium">{{ value }}</span></span>
+      {% endfor %}
+        </div>
+  {% endif %}                                    
                                  </td>
-                                 <td id="actions-{{ service }}" class="flex gap-1">
-                                    <form method="POST" action="/containers/start/{{ details.container_name if details.container_name else service }}">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                       <button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">
-                                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600">
-                                             <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path>
-                                          </svg>
-                                          Disabled
-                                       </button>
-                                    </form>
-                                 </td>
+
+
+<td x-data="{ editing: false, value: '{{ details.deploy.resources.limits.cpus if details.deploy.resources.limits.cpus else "0" }}' }"
+    class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+    
+    <div class="flex gap-2">
+        <!-- CPU Usage -->
+        <div id="cpu-{{ service }}">
+            <div class="flex items-center gap-x-2.5">
+                <div class="relative" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 dark:stroke-blue-500 transition-all duration-300"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-[11px] font-semibold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text and Edit Icon Section -->
+        <div class="flex flex-col gap-0">
+            <span class="text-gray-900 dark:text-gray-50">
+                <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
+                <span class="font-medium" id="cpu-usage-{{ service }}"></span>
+            </span>
+            <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
+                <input id="cpu-allocated-{{service}}" type="hidden" value="{{ total_cpu }}">
+                Allocated: &nbsp;
+                <span x-show="!editing"><span class="font-medium" x-text="value"></span> cores <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+</svg></a></span>
+            <!-- Editable Input and Save Button -->
+            <form action="/containers/cpu/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+
+                <input x-model="value" name="value" type="number" min="0.10" {% if total_cpu != 0 %} max="{{ total_cpu }}" {% endif %} step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+                <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
+            </form>
+            </span>
+        </div>
+    </div>
+</td>
+
+
+
+
+
+
+<td x-data="{ editing: false, value: '{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }}{% else %}0{% endif %}' }"
+    class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+    
+    <div class="flex gap-2">
+        <!-- CPU Usage -->
+        <div id="ram-{{ service }}">
+            <div class="flex items-center gap-x-2.5">
+                <div class="relative" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 dark:stroke-blue-500 transition-all duration-300"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-[11px] font-semibold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text and Edit Icon Section -->
+        <div class="flex flex-col gap-0">
+            <span class="text-gray-900 dark:text-gray-50">
+                <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
+                <span class="font-medium" id="ram-usage-{{ service }}"></span>
+            </span>
+            <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
+                Allocated: &nbsp;
+                <span x-show="!editing"><span class="font-medium">{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }} GB{% else %}∞{% endif %} </span> <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+</svg></a></span>
+            <!-- Editable Input and Save Button -->
+            <form action="/containers/ram/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <input x-model="value" name="value" type="number" min="0.10" {% if total_ram != 0 %} max="{{ total_ram }}" {% endif %} step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+
+                <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
+            </form>
+            </span>
+
+            
+            </a>
+        </div>
+    </div>
+</td>
+
+
+                    <td id="actions-{{ service }}" x-data="{ pullValue: 'false' }" class="flex flex-col gap-1">
+                        <form method="POST" action="/containers/{{ user.username.split('_')[-1] }}/start/{{ details.container_name if details.container_name else service }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+    <!-- Hidden input with dynamic value based on mouse click -->
+                            <input type="hidden" name="pull" class="pullInput" :value="pullValue">
+
+                            <button
+                                type="submit"
+                                class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"
+                                tremor-id="tremor-raw"
+                                @contextmenu.prevent="pullValue = 'true'; $nextTick(() => $el.closest('form').submit())"
+                            >
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600">
+                                    <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path>
+                                </svg>
+                                Disabled
+                            </button>
+                        </form>
+                    </td>
                               </tr>
                               {% endfor %}
                               {% else %}
@@ -1021,8 +1075,8 @@ function updateRamUsage(ramPercentage) {
                                       ramCell.html(ramInfo);
                   
                                       var actionsInfo = `
-                                          <form method="POST" action="/containers/stop/${containerId}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</button></form>
-                                          <a href="/terminal/{{ user.username.split('_')[-1] }}/${containerId}" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-terminal" viewBox="0 0 16 16"> <path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9M3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708z"/>  <path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/></svg>Terminal</a>`;
+                                          <form method="POST" action="/containers/{{ user.username.split('_')[-1] }}/stop/${containerId}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="button" class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</button></form>
+                                          <a href="/terminal/{{ user.username.split('_')[-1] }}/${containerId}" class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-terminal" viewBox="0 0 16 16"> <path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9M3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708z"/>  <path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/></svg>Terminal</a>`;
                                       actionsCell.html(actionsInfo);
                   
                                   });
