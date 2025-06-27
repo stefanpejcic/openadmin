@@ -110,7 +110,7 @@
                             <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
                             </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">
                             {{ service_display_name }}
                             </td>
 
@@ -124,16 +124,16 @@
 {% endif %}
                                 </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">
                                 {% if details.version %}{{ details.version }}{% endif %}
                             </td>
 
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 select-text">
                             {{ details.real_name }}
                             </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 select-text">
                            {% if details.type == 'docker' %}container{% else %}{{ details.type }}{% endif %}
                             </td>
 
@@ -146,7 +146,7 @@
 
 
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">
 {% if details.port %}
     {% set ports = details.port %}
     {% if ports is string %}
@@ -171,34 +171,38 @@
 
 
 
-<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-left"
-    x-text="(realName => {
-        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return 'Monitored';
-        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return 'Monitored';
-        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return 'Monitored';
-        return monitoredServices.includes(realName) ? 'Monitored' : '';
-    })('{{ details.real_name }}')"
-    x-bind:title="(realName => {
-        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
-        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
-        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return 'This service is being monitored and will be restarted by OpenPanel on failure.';
-        return monitoredServices.includes(realName) ? 'This service is being monitored and will be restarted by OpenPanel on failure.' : '';
-    })('{{ details.real_name }}')">
-    <a href="/notifications/settings" x-show="(realName => {
-        if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return true;
-        if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return true;
-        if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return true;
-        return monitoredServices.includes(realName);
-    })('{{ details.real_name }}')" class="text-blue-500 hover:underline">
-        Monitored
+<td
+  x-data="{
+    isMonitored(realName) {
+      if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return true;
+      if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return true;
+      if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return true;
+      return monitoredServices.includes(realName);
+    },
+    monitoredMsg: 'This service is being monitored and will be restarted by OpenPanel on failure.'
+  }"
+  class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-left"
+  x-bind:title="isMonitored('{{ details.real_name }}') ? monitoredMsg : ''"
+>
+  <template x-if="isMonitored('{{ details.real_name }}')">
+    <a href="/settings/notifications#services" class="text-blue-500 hover:underline">
+      Monitored
     </a>
+  </template>
 </td>
-
 
 
 
 <td class="flex p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right justify-end">
   
+
+
+{% if license_type == "Community" and (details.real_name.startswith('openadmin_') or details.real_name == 'clamav') %}
+
+<div class="cursor-default items-center justify-start gap-3 text-xs font-medium uppercase tracking-widest text-gray-600 sm:flex sm:justify-center dark:text-gray-400"><span>Enterprise only</span></div>
+
+{% else %}
+
   <!-- Start/Stop Form -->
   <form x-data @submit="$el.submit()" method="POST">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -262,7 +266,7 @@
   </form>
 </td>
 
-
+{% endif %}
 
 
 

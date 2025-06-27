@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div>
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Server Migration</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Initiate and monitor a full migration to another server.</h2>
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <div id="collapseAddNewUser">
+        <div class="sm:mx-auto sm:max-w-2xl" style="display:block;">
+            <form class="mt-8 space-y-2" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                {% if migrate_started %}
+<script>
+    let pollInterval;
+
+    function pollMigrationStatus() {
+        fetch('/server/migrate/status')
+            .then(res => res.json())
+            .then(data => {
+                const out = document.getElementById('migration_output');
+                out.textContent = data.output || "Waiting for output...";
+                out.scrollTop = out.scrollHeight;
+
+                if (data.status === "finished") {
+                    clearInterval(pollInterval);
+                    showToast("Migration finished successfully!", 'success');
+                    document.getElementById("progress_migrate").classList.add("hidden");
+                    document.getElementById("success_migrate").classList.remove("hidden");
+                }
+            })
+            .catch(() => {
+                showToast("Unable to fetch migration status.", "error");
+            });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        pollMigrationStatus();
+        pollInterval = setInterval(pollMigrationStatus, 3000);
+    });
+</script>
+
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                    <div class="col-span-full">
+                        <ul id="migration_actions" class="space-y-2 text-gray-500 list-inside dark:text-gray-400">
+
+                            <li id="success_migrate" class="hidden flex items-center justify-center">
+                                Migration process completed.
+                            </li>
+
+                            <li id="progress_migrate" class="flex items-center justify-center">
+                                <div role="status">
+                                    <svg aria-hidden="true" class="w-4 h-4 me-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
+                                         viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M100 50.5908C100 78.2051 77.6142..." fill="currentColor"/>
+                                        <path d="M93.9676 39.0409C96.393..." fill="currentFill"/>
+                                    </svg>
+                                    <span class="sr-only">Loading...</span>
+                                </div>
+                                Server migration is in progress...
+                            </li>
+                        </ul>
+
+                        <pre id="migration_output" class="mt-4 text-xs bg-gray-100 dark:bg-gray-800 text-emerald-500 p-4 rounded-md overflow-x-auto overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:60vh"></pre>
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                    <div class="col-span-full">
+                        <p class="mt-1 text-sm text-gray-500">
+                            Enter the remote server information and initiate a migration.
+                        </p>
+                    </div>
+                </div>
+
+                <input type="text" name="host" placeholder="Remote Host (e.g. 1.2.3.4)" required
+                       class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden">
+
+                <input type="text" name="root" placeholder="Username (usually root)" required
+                       class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden">
+
+                <input type="password" name="password" placeholder="Password" required
+                       class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden">
+
+                <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500">
+                    <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+                </div>
+
+                <div class="flex items-center justify-end space-x-4">
+                    <button type="submit"
+                            class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:bg-blue-300">
+                        Start Migration
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

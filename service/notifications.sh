@@ -257,6 +257,27 @@ ensure_dig_installed() {
     fi
 }
 
+ensure_bc_installed() {
+    if ! command -v bc &> /dev/null; then
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update > /dev/null 2>&1
+            sudo apt-get install -y -qq bc > /dev/null 2>&1
+        elif command -v yum &> /dev/null; then
+            sudo yum install -y -q bc > /dev/null 2>&1
+        elif command -v dnf &> /dev/null; then
+            sudo dnf install -y -q bc > /dev/null 2>&1
+        else
+            echo "Error: No compatible package manager found. Please install bc command manually and try again."
+            exit 1
+        fi
+
+        # Check if installation was successful
+        if ! command -v bc &> /dev/null; then
+            echo "Error: bc command installation failed. Please install bc manually and try again."
+            exit 1
+        fi
+    fi
+}
 
 
 
@@ -726,7 +747,9 @@ check_system_load() {
   local title="High System Load!"
 
   current_load=$(uptime | awk -F'average:' '{print $2}' | awk -F', ' '{print $1}')
-    
+
+  ensure_bc_installed
+
   if (( $(echo "$current_load > $LOAD_THRESHOLD" | bc -l) )); then
       ((FAIL++))
       STATUS=2

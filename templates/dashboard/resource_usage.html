@@ -6,7 +6,7 @@
             </div>
 
 
-                <div role="tablist" aria-orientation="horizontal" class="inline-flex items-center justify-center p-1 bg-gray-100 dark:bg-gray-900 rounded-md md:w-100" tabindex="0" data-orientation="horizontal" style="outline:none">
+                <div role="tablist" aria-orientation="horizontal" class="inline-flex items-center justify-center p-1 bg-gray-100 dark:bg-gray-900 rounded-md" tabindex="0" data-orientation="horizontal" style="outline:none">
                     <button @click="activeTab = 'load'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'load' }" type="button" role="tab" aria-selected="true" aria-controls="load" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
                         <i class="bi bi-bar-chart-fill px-2"></i> <span class="load1min" id="loadIconColor">Load</span>
                     </button>
@@ -19,6 +19,13 @@
                     <button @click="activeTab = 'disk'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'disk' }" type="button" role="tab" aria-selected="false" aria-controls="disk" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
                         <i class="bi bi-hdd-fill px-2"></i> <span class="home_usage" id="serverduIndicator">Disk</span>
                     </button>
+
+            <button @click="activeTab = 'network'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'network' }" type="button" role="tab" aria-selected="false" aria-controls="network" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
+                <i class="bi bi-activity px-2"></i> <span>Network</span>
+            </button>
+
+
+
                 </div>
         </div>
 
@@ -70,65 +77,6 @@
                         </a>
                     </div>
 
-<script>
-    $(document).ready(function() {
-        function fetchData() {
-            $.ajax({
-                url: '/json/cpu',
-                type: 'GET',
-                dataType: 'json',
-                async: true,
-                success: function(data) {
-                    var container = $('.container2');
-                    container.empty();
-
-                    var totalUsage = 0;
-                    var coreCount = 0;
-
-                    $.each(data, function(core, usage) {
-                        totalUsage += usage;
-                        coreCount++;
-
-                        var coreInfo = '<div><span>' + usage.toFixed(1) + '%</span></div>';
-                        var coreDiv = $(coreInfo);
-
-                        if (usage >= 90) {
-                            coreDiv.css('background-color', 'crimson');
-                        } else if (usage >= 80) {
-                            coreDiv.css('background-color', 'antiquewhite');
-                        }
-
-                        container.append(coreDiv);
-                    });
-
-                    var avgUsage = coreCount > 0 ? (totalUsage / coreCount).toFixed(1) : 0;
-
-                    $('#cpu_avg-now').removeClass("bg-primary-lt bg-danger-lt bg-warning-lt bg-success-lt");
-
-                    if (avgUsage >= 90) {
-                        $('#cpu_avg-now').addClass("bg-danger-lt");
-                    } else if (avgUsage >= 80) {
-                        $('#cpu_avg-now').addClass("bg-warning-lt");
-                    } else if (avgUsage >= 50) {
-                        $('#cpu_avg-now').addClass("bg-success-lt");
-                    } else {
-                        $('#cpu_avg-now').addClass("bg-primary-lt"); // Default class
-                    }
-
-                    $('#cpu_avg-now').text(avgUsage + '%');
-                    $('#cpu_total').text(avgUsage + '%');
-                },
-                error: function() {
-                    // Handle any errors here
-                    console.log('Error fetching CPU usage data.');
-                }
-            });
-        }
-
-        fetchData();
-        setInterval(fetchData, 1000);
-    });
-</script>
 
                    <style>
                         .main2 {
@@ -200,50 +148,11 @@
                     <div id="chart-ram" class="chart"></div>
                   </div>
  
-
-
-<script>
-    $(document).ready(function() {
-        var csrf_token = $('meta[name="csrf-token"]').attr('content');
-        $('#clear-cache').on('click', function(event) {
-            $.ajax({
-                url: '/server/memory_usage/drop',
-                type: 'POST',
-                headers: {
-                    'X-CSRFToken': csrf_token
-                },
-                success: function(response) {
-                    showToast(response.message, 'success');
-                },
-                error: function(xhr, status, error) {
-                    showToast(xhr.responseJSON.message, 'error');
-                }
-            });
-        });
-        $('#clear-swap').on('click', function(event) {
-            $.ajax({
-                url: '/server/memory_usage/drop-swap',
-                type: 'POST',
-                headers: {
-                    'X-CSRFToken': csrf_token
-                },
-                success: function(response) {
-                    showToast(response.message, 'success');
-                },
-                error: function(xhr, status, error) {
-                    showToast(xhr.responseJSON.message, 'error');
-                }
-            });
-        });
-
-
-    });
-</script>
-
                       </div>
 
-            <div x-show="activeTab === 'disk'" data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="disk" id="disk" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">                            
+            <div x-show="activeTab === 'disk'" data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="disk" id="disk" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
                   <div class="">
+                      <h4 class="font-medium text-gray-900 dark:text-gray-50 mt-2 mb-2">Disk Usage</h4>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
   <!-- Disk Space Info -->
 
@@ -294,10 +203,67 @@
 
 
 
-
                   </div>
 
+
+                <div>
+                    <h4 class="font-medium text-gray-900 dark:text-gray-50 mb-2">Disk IO</h4>
+                    <div id="chart-io" class="chart mb-4"></div>
+                    <div id="io-table-wrapper" class="overflow-x-auto">
+                        <table class="w-full bg-white dark:bg-gray-900 text-sm rounded shadow">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2">Disk</th>
+                                    <th class="px-3 py-2">Read Count</th>
+                                    <th class="px-3 py-2">Write Count</th>
+                                    <th class="px-3 py-2">Read Bytes</th>
+                                    <th class="px-3 py-2">Write Bytes</th>
+                                    <th class="px-3 py-2">Read Time</th>
+                                    <th class="px-3 py-2">Write Time</th>
+                                    <th class="px-3 py-2">Busy Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="io-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+
+
+
                       </div>
+
+
+            <!-- NETWORK TABPANEL -->
+            <div x-show="activeTab === 'network'" data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="network" id="network" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 py-4">
+                <div>
+                    <h4 class="font-medium text-gray-900 dark:text-gray-50 mb-2">Network IO</h4>
+                    <div id="chart-net" class="chart mb-4"></div> 
+                    <div id="network-table-wrapper" class="overflow-x-auto">
+                        <table class="w-full bg-white dark:bg-gray-900 text-sm rounded shadow">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2">Interface</th>
+                                    <th class="px-3 py-2">Bytes Sent</th>
+                                    <th class="px-3 py-2">Bytes Recv</th>
+                                    <th class="px-3 py-2">Packets Sent</th>
+                                    <th class="px-3 py-2">Packets Recv</th>
+                                    <th class="px-3 py-2">Err In</th>
+                                    <th class="px-3 py-2">Err Out</th>
+                                    <th class="px-3 py-2">Drop In</th>
+                                    <th class="px-3 py-2">Drop Out</th>
+                                </tr>
+                            </thead>
+                            <tbody id="network-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
         </div>
     </div>
