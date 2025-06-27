@@ -46,7 +46,7 @@
 
                     <button
                         type="button"
-                        class="flex w-full items-center gap-x-1.5 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500"
+                        class="flex w-full items-center gap-x-1.5 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 cursor-pointer"
                         aria-haspopup="dialog"
                         aria-expanded="false"
                         aria-controls="radix-:rj:"
@@ -515,11 +515,11 @@
                 {% set stat = stats | selectattr("user", "equalto", user[1].split('_')[-1]) | list | first %}
                 {% set du = disk.get(user[10]) %}
 
-                            <td x-show="columns.memory_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Memory allocated to the user."><span class="icon icon-tabler"><i class="bi bi-memory"></i></span> {% if user[16] == 0 %}∞{% else %}{{ user[16]|replace('g', ' GB') }}{% endif %}</p></td>
+                            <td x-show="columns.memory_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Memory allocated to the user."><span class="icon icon-tabler"><i class="bi bi-memory"></i></span> {% if user[16] == 0 or user[16] == '0g' %}∞{% else %}{{ user[16]|replace('g', ' GB') }}{% endif %}</p></td>
 
-                            <td x-show="columns.cpu_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="CPU cores allocated to the user."><span class="icon icon-tabler"><i class="bi bi-cpu"></i></span> {% if user[15] == 0 %}∞{% else %}{{ user[15] }}{% endif %} Core</p></td>
+                            <td x-show="columns.cpu_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="CPU cores allocated to the user."><span class="icon icon-tabler"><i class="bi bi-cpu"></i></span> {% if user[15] == 0 or user[15] == '0' %}∞{% else %}{{ user[15] }}{% endif %} Core</p></td>
 
-                            <td x-show="columns.disk_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Disk space allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd"></i></span> {{ user[13] }}</p></td>
+                            <td x-show="columns.disk_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Disk space allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd"></i></span>{% if user[13] == 0 or user[13] == '0 GB' %}∞{% else %}{{ user[13] }}{% endif %}</p></td>
 
                             <td x-show="columns.inodes_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{% set inodes = ( (user[14]|int / 1000000) | round(2) ) ~ 'M' if user[14] != 0 else '∞' %}
                                         <p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Inodes allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd-stack"></i></span> {{inodes }}</p></td>
@@ -661,6 +661,8 @@
     <div class="tooltip-arrow" data-popper-arrow></div>
 </div>
 
+            <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/users/{{ user[1] }}#storage">
+
                 <div class="relative" data-tooltip-target="tooltip-du-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="Disk usage" aria-valuenow="{{ percent_disk | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_disk | round(0) }}">
                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                         <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
@@ -671,6 +673,7 @@
 </span>
                     </div>
                 </div>
+            </a>
 
 {% set percent_inodes = ((du.inodes_used / du.inodes_hard) * 100) if du.inodes_hard != 0 else 0 %}
 {% set color_class = 'gray' %}

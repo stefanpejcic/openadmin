@@ -10,13 +10,54 @@
 {% if user %}
 
 
+<div x-data="{
+    activeTab: 'stats',
+    diskInfo: [],
+    containers: [],
+    images: [],
+    volumes: [],
+    loading: false,
+    error: null,
+    diskLoaded: false, // <-- Add this flag
 
-<div x-data="{ activeTab: 'stats'}">
+    loadDiskUsage() {
+        if (this.diskLoaded) return; // <-- Prevent further execution
+        this.diskLoaded = true;      // <-- Mark as loaded
+
+        this.loading = true;
+        this.error = null;
+
+        fetch(`/client/disk/{{ user.username }}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    this.error = data.error;
+                    this.containers = [];
+                    this.images = [];
+                    this.volumes = [];
+                } else {
+                    const payload = data[0] || {};
+                    this.containers = payload.Containers || [];
+                    this.images = payload.Images || [];
+                    this.volumes = payload.Volumes || [];
+                }
+            })
+            .catch(err => {
+                this.error = 'Failed to load disk info';
+                console.error(err);
+            })
+            .finally(() => {
+                this.loading = false;
+            });
+    }
+}">
+
+
     <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">{{ user.username.split('_')[-1] }} {% if "SUSPENDED_" in user.username %} <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-300 dark:ring-gray-400/20 ml-1">Suspended</span>{% endif %}
+                    <h1 class="mb-1 text-xl font-bold">{{ user.username.split('_')[-1] }} {% if "SUSPENDED_" in user.username %} <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-700 ring-red-500/30 dark:bg-red-400/10 dark:text-red-300 dark:ring-red-400/20 ml-1">Suspended</span>{% endif %}
 </h1>
                     <h2 class="text-sm font-medium text-slate-500">
                        <span class="inline-flex">
@@ -86,9 +127,9 @@
                     <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Services</span>
                 </a>
             </li>
-            <li class="hidden">
-                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'volumes'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'volumes'}">
-                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Volumes</span>
+            <li class="">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'storage'; loadDiskUsage()"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'storage'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Storage</span>
                 </a>
             </li>
             <li class="flex cursor-pointer">
@@ -172,6 +213,9 @@
             activeTab = 'suspend';
         } else if (window.location.hash === '#unsuspend') {
             activeTab = 'unsuspend';
+        } else if (window.location.hash === '#storage') {
+            activeTab = 'storage';
+            $nextTick(() => loadDiskUsage());
         } else if (window.location.hash === '#edit') {
             activeTab = 'edit';
             $nextTick(() => $store.ipStore.fetchIPs());
@@ -351,11 +395,11 @@
                         </a>
                      </li>
                      <li>
-                        <a @click="activeTab = 'volumes'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'volumes'}" class="hidden cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                        <a @click="activeTab = 'storage'; loadDiskUsage()"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'storage'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-table2 size-5 shrink-0" aria-hidden="true">
                               <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"></path>
                            </svg>
-                           Volumes
+                           Storage
                         </a>
                      </li>
                   </ul>
@@ -407,55 +451,71 @@
             <div class="relative h-full rounded">
                <!-- DOCKER STATS -->
                <div x-show="activeTab === 'stats'">
-                  <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden !p-0 sm:mx-auto" tremor-id="tremor-raw">
+                  <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden !p-0 sm:mx-auto">
                      <div class="p-6">
                         <h3 class="hidden text-sm font-medium text-gray-900 dark:text-gray-50">Resource usage</h3>
                         <p class="hidden text-sm text-gray-500 dark:text-gray-500">No activity measured yet.</p>
                         <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                           <!-- DISK -->
-                           <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
-                              <div class="relative">
-                                 {% set disk_usage = ((disk.disk_used / disk.disk_hard) * 100) if disk.disk_hard != 0 else 0 %}
-                                 {% if disk_usage > 90 %}
-                                 {% set disk_graph_class = 'stroke-red-200 dark:stroke-red-500/40' %}
-                                 {% elif disk_usage > 80 %}
-                                 {% set disk_graph_class = 'stroke-orange-200 dark:stroke-orange-500/40' %}
-                                 {% elif disk_usage > 60 %}
-                                 {% set disk_graph_class = 'stroke-blue-200 dark:stroke-blue-500/40' %}
-                                 {% else %}
-                                 {% set disk_graph_class = 'stroke-gray-200 dark:stroke-gray-500/40' %}
-                                 {% endif %}
-                                 {% set disk_usage_rounded = disk_usage | round(2) %}
-                                 <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{ disk_usage_rounded }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ disk_usage_rounded }}">
-                                    <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{ disk_graph_class }}"></circle>
-                                    <!-- Dynamic Circle for Progress -->
-                                    <circle
-                                       r="29"
-                                       cx="32"
-                                       cy="32"
-                                       stroke-width="6"
-                                       stroke-dasharray="182.212373908208 182.212373908208"
-                                       stroke-dashoffset="{{ 182.212373908208 - (182.212373908208 * disk_usage_rounded / 100) }}"
-                                       fill="transparent"
-                                       stroke="currentColor"
-                                       stroke-linecap="round"
-                                       class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
-                                       ></circle>
-                                 </svg>
-                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-500 dark:text-gray-500">{{ disk_usage_rounded }}%</span></div>
-                              </div>
-                              <div class="mt-0 text-left sm:mt-2 sm:text-center">
-                                 <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
-                                    {% if disk.disk_hard != 0 %}
-                                    {{ (disk.disk_used / 1024000) | round(2) }} / {{ (disk.disk_hard / 1024000) | round(2) }} 
-                                    {% else %}
-                                    {{disk.disk_used}}/∞ 
-                                    {% endif %}
-                                    GB
-                                 </p>
-                                 <p class="text-sm text-gray-500 dark:text-gray-500">Storage used</p>
-                              </div>
-                           </div>
+<!-- DISK -->
+<div 
+  x-data="{ hovered: false }" 
+  class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5"
+>
+  <div class="relative">
+    {% set disk_usage = ((disk.disk_used / disk.disk_hard) * 100) if disk.disk_hard != 0 else 0 %}
+    {% if disk_usage > 90 %}
+    {% set disk_graph_class = 'stroke-red-200 dark:stroke-red-500/40' %}
+    {% elif disk_usage > 80 %}
+    {% set disk_graph_class = 'stroke-orange-200 dark:stroke-orange-500/40' %}
+    {% elif disk_usage > 60 %}
+    {% set disk_graph_class = 'stroke-blue-200 dark:stroke-blue-500/40' %}
+    {% else %}
+    {% set disk_graph_class = 'stroke-gray-200 dark:stroke-gray-500/40' %}
+    {% endif %}
+    {% set disk_usage_rounded = disk_usage | round(2) %}
+    <div 
+      @mouseenter="hovered = true" 
+      @mouseleave="hovered = false"
+    >
+      <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{ disk_usage_rounded }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ disk_usage_rounded }}">
+        <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{ disk_graph_class }}"></circle>
+        <!-- Dynamic Circle for Progress -->
+        <circle
+          r="29"
+          cx="32"
+          cy="32"
+          stroke-width="6"
+          stroke-dasharray="182.212373908208 182.212373908208"
+          stroke-dashoffset="{{ 182.212373908208 - (182.212373908208 * disk_usage_rounded / 100) }}"
+          fill="transparent"
+          stroke="currentColor"
+          stroke-linecap="round"
+          class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
+        ></circle>
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <!-- Percentage or Link on Hover -->
+        <template x-if="!hovered">
+          <span class="text-sm font-medium text-gray-500 dark:text-gray-500">{{ disk_usage_rounded }}%</span>
+        </template>
+        <template x-if="hovered">
+            <button type="button" class="relative items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 group hidden h-10 text-sm sm:flex" @click="activeTab = 'storage'; loadDiskUsage()">Explore</button>
+        </template>
+      </div>
+    </div>
+  </div>
+  <div class="mt-0 text-left sm:mt-2 sm:text-center">
+    <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
+      {% if disk.disk_hard != 0 %}
+      {{ (disk.disk_used / 1024000) | round(2) }} / {{ (disk.disk_hard / 1024000) | round(2) }} 
+      {% else %}
+      {{disk.disk_used}}/∞ 
+      {% endif %}
+      GB
+    </p>
+    <p class="text-sm text-gray-500 dark:text-gray-500">Storage used</p>
+  </div>
+</div>
                            <!-- END DISK -->
                            <!-- INODES -->
                            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
@@ -504,7 +564,7 @@
                            <!-- END INODES -->
                            <!-- CPU -->
                            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
-                              <div class="relative" tremor-id="tremor-raw">
+                              <div class="relative">
                                  <svg id="cpu_graph" width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
                                     <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-200 dark:stroke-gray-500/40"></circle>
                                     <circle
@@ -530,7 +590,7 @@
                            <!-- END CPU -->
                            <!-- RAM -->
                            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
-                              <div class="relative" tremor-id="tremor-raw">
+                              <div class="relative">
                                  <svg id="ram_graph" width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
                                     <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-200 dark:stroke-gray-500/40"></circle>
                                     <circle
@@ -703,7 +763,12 @@
                </div>
                <!-- END DOCKER STATS -->
                <!-- DOCKER SERVICES -->
-               <div x-show="activeTab === 'services'" x-cloak x-data="{ searchQuery: '' }">
+               <div x-show="activeTab === 'services'" x-cloak 
+                  x-data="Object.assign({ searchQuery: '' }, userTable())" 
+                  x-init="init()">                 
+                 
+                 
+                 
                   <div class="flex flex-col justify-between gap-2 px-4 py-6 sm:flex-row sm:items-center sm:p-6">
                      <div class="relative w-full sm:w-64 [&amp;>input]:py-1.5">
                         <input
@@ -720,28 +785,113 @@
                            </svg>
                         </div>
                      </div>
+
+                     <div class="relative w-full sm:w-64 [&amp;>input]:py-1.5">
+                        <!-- Dropdown for Column Visibility -->
+                        <div class="relative">
+                              <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="relative items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer" type="button"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg> Show Columns</button>
+
+                              <!-- Dropdown menu -->
+                              <div id="dropdownToggle" class="z-10 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-72 dark:divide-gray-600 hidden">
+                                 <ul class="p-2 space-y-1" aria-labelledby="dropdownToggleButton">
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.name" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Name</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.image" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Image</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.ports" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Ports</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.env" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Enviroment</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.cpu" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">CPU Usage</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.ram" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Memory Usage</span>
+                                             </label>
+                                          </div>
+                                    </li>
+
+
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.actions" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Actions</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                 </ul>
+                              </div>
+                        </div>
+                     </div>
+
+
+
                   </div>
                   <div class="overflow-x-auto">
                      <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
                         <table id="databases-table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                            <thead class="">
                               <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
-                                 <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                 <th x-show="columns.name" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
                                     Name
                                  </th>
-                                 <th scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+
+                                 <th x-show="columns.image" scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Image
+                                 </th>
+                                 <th x-show="columns.ports" scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
                                     Ports
                                  </th>
-                                 <th scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                 <th x-show="columns.env" scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
                                     Env
                                  </th>                                 
-                                 <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
-                                    CPU Usage
+                                 <th x-show="columns.cpu" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    CPU
                                  </th>
-                                 <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
-                                    Memory Usage
+                                 <th x-show="columns.ram" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Memory
                                  </th>
-                                 <th scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                 <th x-show="columns.actions" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
                                     Actions
                                  </th>
                               </tr>
@@ -750,11 +900,15 @@
                               {% if docker_data.services %}
                               {% for service, details in docker_data.services.items() %}
                               <tr x-show="searchQuery === '' || '{{ details.container_name }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ service }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ details.image }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
-                                 <td>
+                                 <td x-show="columns.name">
                                     <div class="flex flex-col gap-1">
                                        <span class="font-medium text-gray-900 dark:text-gray-50">{{ details.container_name if details.container_name else service }}</span>
+                                    </div>
+                                 </td>
+
+                                 <td x-show="columns.image">
+                                    <div class="flex flex-col gap-1">
                                        <div class="flex items-center gap-1 text-xs">
-                                          <span class="text-gray-500 dark:text-gray-500">Image:</span>
                                           <span class="font-mono font-medium uppercase tabular-nums text-gray-900 dark:text-gray-50">{{ details.image }}</span>
                                           {% if 'httpd' in details.image or 'busybox' in details.image or 'elasticsearch' in details.image or 'mariadb' in details.image or 'memcached' in details.image or 'mysql' in details.image or 'redis' in details.image or 'nginx' in details.image or '-fpm' in details.image or 'openpanel' in details.image or 'phpmyadmin' in details.image or 'varnish' in details.image %}
                                           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="remixicon size-3 shrink-0 text-emerald-600 dark:text-emerald-400">
@@ -768,7 +922,10 @@
                                        </div>
                                     </div>
                                  </td>
-                                 <td class="">
+
+
+
+                                 <td x-show="columns.ports" class="px-2">
         <div class="flex flex-col">
   {% if details.ports %}
     {% for port in details.ports %}
@@ -779,7 +936,7 @@
   {% endif %}                                    
          </div>
                                  </td>
-                                 <td class="">
+                                 <td x-show="columns.env" class="px-2">
   {% if details.environment %}
         <div class="flex flex-col">
       {% for key, value in details.environment.items() %}
@@ -790,7 +947,7 @@
                                  </td>
 
 
-<td x-data="{ editing: false, value: '{{ details.deploy.resources.limits.cpus if details.deploy.resources.limits.cpus else "0" }}' }"
+<td x-show="columns.cpu" x-data="{ editing: false, value: '{{ details.deploy.resources.limits.cpus if details.deploy.resources.limits.cpus else "0" }}' }"
     class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
     
     <div class="flex gap-2">
@@ -822,7 +979,7 @@
   <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
 </svg></a></span>
             <!-- Editable Input and Save Button -->
-            <form action="/containers/cpu/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+            <form action="/containers/{{ user.username.split('_')[-1] }}/cpu/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
 
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
@@ -840,7 +997,7 @@
 
 
 
-<td x-data="{ editing: false, value: '{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }}{% else %}0{% endif %}' }"
+<td x-show="columns.ram" x-data="{ editing: false, value: '{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }}{% else %}0{% endif %}' }"
     class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
     
     <div class="flex gap-2">
@@ -871,7 +1028,7 @@
   <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
 </svg></a></span>
             <!-- Editable Input and Save Button -->
-            <form action="/containers/ram/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+            <form action="/containers/{{ user.username.split('_')[-1] }}/ram/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
     <input x-model="value" name="value" type="number" min="0.10" {% if total_ram != 0 %} max="{{ total_ram }}" {% endif %} step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
@@ -887,7 +1044,7 @@
 </td>
 
 
-                    <td id="actions-{{ service }}" x-data="{ pullValue: 'false' }" class="flex flex-col gap-1">
+                    <td x-show="columns.actions" id="actions-{{ service }}" x-data="{ pullValue: 'false' }">
                         <form method="POST" action="/containers/{{ user.username.split('_')[-1] }}/start/{{ details.container_name if details.container_name else service }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         
@@ -897,7 +1054,7 @@
                             <button
                                 type="submit"
                                 class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"
-                                tremor-id="tremor-raw"
+                               
                                 @contextmenu.prevent="pullValue = 'true'; $nextTick(() => $el.closest('form').submit())"
                             >
                                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600">
@@ -909,6 +1066,52 @@
                     </td>
                               </tr>
                               {% endfor %}
+
+<script>
+function userTable() {
+    return {
+        searchQuery: '',
+        filters: {
+            active: true,
+            suspended: true
+        },
+        columns: {
+            name: true,
+            image: false,
+            ports: false,
+            env: false,
+            cpu: true,
+            ram: true,
+            actions: true
+        },
+
+        init() {
+            this.loadColumns();
+        },
+
+
+        saveColumns() {
+            localStorage.setItem('columns-singe-user', JSON.stringify(this.columns));
+        },
+
+        loadColumns() {
+            const saved = localStorage.getItem('columns-singe-user');
+            if (saved) {
+                try {
+                    this.columns = JSON.parse(saved);
+                } catch (e) {
+                    console.warn("Failed to parse columns-singe-user from localStorage", e);
+                }
+            }
+        }
+    };
+}
+</script>
+
+
+
+
+
                               {% else %}
                               <tr>
                                  <td colspan="6" class="p-6 text-center">
@@ -1076,7 +1279,7 @@ function updateRamUsage(ramPercentage) {
                   
                                       var actionsInfo = `
                                           <form method="POST" action="/containers/{{ user.username.split('_')[-1] }}/stop/${containerId}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="button" class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</button></form>
-                                          <a href="/terminal/{{ user.username.split('_')[-1] }}/${containerId}" class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-terminal" viewBox="0 0 16 16"> <path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9M3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708z"/>  <path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/></svg>Terminal</a>`;
+                                          <a href="/terminal/{{ user.username.split('_')[-1] }}/${containerId}" class="mt-2 w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-terminal" viewBox="0 0 16 16"> <path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9M3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708z"/>  <path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/></svg>Terminal</a>`;
                                       actionsCell.html(actionsInfo);
                   
                                   });
@@ -1107,269 +1310,368 @@ function updateRamUsage(ramPercentage) {
                </script>
                <!-- END JS for stats -->
                <!-- END DOCKER SERVICES -->
-               <!-- VOLUMES -->
-               <div x-show="activeTab === 'volumes'" x-cloak>
-                  <ul role="list" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
-                     <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800">
-                        <div class="flex items-center space-x-2">
-                           <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
-                              <a href="#" class="focus:outline-none">
-                                 <span class="absolute inset-0" aria-hidden="true"></span>
-                           </h4>
-                           <span class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-400">active</span>
+               <!-- STORAGE -->
+               <div x-show="activeTab === 'storage'" x-cloak>
+
+<!-- Loading and Error messages for df -->
+<template x-if="loading">
+  <div
+    x-data="{
+      messages: [
+        'Loading storage information...',
+        'Fetching data from server...',
+        'Almost there, please wait...',
+        'Preparing your dashboard...',
+        'Why is this taking so long...',
+        'Its taking forever, refresh and try again...'
+      ],
+      messageIndex: 0,
+      get message() { return this.messages[this.messageIndex]; },
+      interval: null,
+      startRotating() {
+        // Show the first message after 1s, then next message after each +1s (2s, 3s, etc)
+        let delay = 1000;
+        const showNext = () => {
+          if (this.messageIndex < this.messages.length - 1) {
+            this.messageIndex++;
+            delay += 1000;
+            this.interval = setTimeout(showNext, delay);
+          } else {
+            // Stop rotating at the last message
+            this.stopRotating();
+          }
+        };
+        this.interval = setTimeout(showNext, delay);
+      },
+      stopRotating() {
+        if (this.interval) clearTimeout(this.interval);
+      }
+    }"
+    x-init="startRotating()"
+    x-on:remove="stopRotating()"
+    style="
+      font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+      height: 90vh;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    "
+    class="p-6 h-72 w-full flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400"
+  >
+    <svg
+      class="animate-spin h-8 w-8 text-gray-400 dark:text-gray-600"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none" viewBox="0 0 24 24"
+    >
+      <circle
+        class="opacity-25"
+        cx="12" cy="12" r="10"
+        stroke="currentColor" stroke-width="4"
+      ></circle>
+      <path
+        class="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+      ></path>
+    </svg>
+
+    <p class="mt-3 font-medium text-gray-900 dark:text-gray-50" x-text="message"></p>
+  </div>
+</template>
+
+
+<template x-if="error">
+    <div class="text-red-600" x-text="error"></div>
+</template>
+
+<template x-if="!loading && !error">
+
+    <div>
+        <!-- Combined Table Format -->
+        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+            <thead>
+                <tr class="sm:[&_td:last-child]:pr-6 sm:[&_th:last-child]:pr-6 sm:[&_td:first-child]:pl-6 sm:[&_th:first-child]:pl-6">
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name/ID</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Details</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Used By</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Status</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Type</th>
+
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                <!-- Volumes -->
+                <tr>
+                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
+                        <div class="flex gap-1 items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-database" viewBox="0 0 16 16">
+  <path d="M4.318 2.687C5.234 2.271 6.536 2 8 2s2.766.27 3.682.687C12.644 3.125 13 3.627 13 4c0 .374-.356.875-1.318 1.313C10.766 5.729 9.464 6 8 6s-2.766-.27-3.682-.687C3.356 4.875 3 4.373 3 4c0-.374.356-.875 1.318-1.313M13 5.698V7c0 .374-.356.875-1.318 1.313C10.766 8.729 9.464 9 8 9s-2.766-.27-3.682-.687C3.356 7.875 3 7.373 3 7V5.698c.271.202.58.378.904.525C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777A5 5 0 0 0 13 5.698M14 4c0-1.007-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1s-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4v9c0 1.007.875 1.755 1.904 2.223C4.978 15.71 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13zm-1 4.698V10c0 .374-.356.875-1.318 1.313C10.766 11.729 9.464 12 8 12s-2.766-.27-3.682-.687C3.356 10.875 3 10.373 3 10V8.698c.271.202.58.378.904.525C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777A5 5 0 0 0 13 8.698m0 3V13c0 .374-.356.875-1.318 1.313C10.766 14.729 9.464 15 8 15s-2.766-.27-3.682-.687C3.356 13.875 3 13.373 3 13v-1.302c.271.202.58.378.904.525C4.978 12.71 6.427 13 8 13s3.022-.289 4.096-.777c.324-.147.633-.323.904-.525"/>
+</svg> Volumes
+                        <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="volumes.length"></span>
+                    </div>
+                    </th>
+                </tr>
+                <template x-for="v in volumes" :key="'volume-' + v.Name">
+                    <tr>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="v.Name"></td>
+                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            <div class="flex items-center gap-1">Mountpoint: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" class="bi bi-folder-fill" viewBox="0 0 16 16"><path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.825a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12q.322-.119.684-.12h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"></path></svg> <span class="font-medium text-gray-900 dark:text-gray-50" x-text="v.Mountpoint"></span></div>
+
+                            <div>Type: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="v.Driver"></span></div>
+
+<div x-data="{
+    showAll: false,
+    get mainLabels() {
+        // Only purpose and description
+        return this.v.Labels.split(',')
+            .filter(l => l.startsWith('purpose=') || l.startsWith('description='));
+    },
+    get otherLabels() {
+        // All except purpose and description
+        return this.v.Labels.split(',')
+            .filter(l => !(l.startsWith('purpose=') || l.startsWith('description=')));
+    },
+    formatLabel(label) {
+        const [key, ...rest] = label.split('=');
+        // Capitalize first letter and replace '-' with space if needed
+        const name = key.charAt(0).toUpperCase() + key.slice(1);
+        return name + ': ' + rest.join('=');
+    }
+}">
+  <ul>
+    <template x-for="label in mainLabels" :key="label">
+      <li x-text="formatLabel(label)"></li>
+    </template>
+  </ul>
+
+  <template x-if="otherLabels.length">
+    <div>
+      <a href="#" @click.prevent="showAll = !showAll" class="text-blue-600 underline">
+        <span x-text="showAll ? 'Hide all labels' : 'Show all labels'"></span>
+      </a>
+      <div x-show="showAll" class="mt-2">
+        <ul>
+          <template x-for="label in otherLabels" :key="label">
+            <li x-text="label"></li>
+          </template>
+        </ul>
+      </div>
+    </div>
+  </template>
+</div>
+
+                        </td>
+
+                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="v.Size"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span x-text="v.Links"></span> containers
+                        </td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                        </td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"> Volume</td>
+                    </tr>
+                </template>
+                <!-- Containers -->
+                <tr>
+
+                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
+                        <div class="flex gap-1 items-center">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-seam" viewBox="0 0 16 16">
+  <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2zm3.564 1.426L5.596 5 8 5.961 14.154 3.5zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/>
+</svg> Containers
+                        <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="containers.length"></span>
                         </div>
-                        <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
-                        <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">Test workspace</span></li>
-                        <li class="flex items-center space-x-2 py-1">
-                        <span>Database:</span>
-                        <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
-                        <span class="size-2 shrink-0 rounded-sm bg-blue-500 dark:bg-blue-500" aria-hidden="true"></span>live_data
-                        </span>
-                        </li>
-                        </ul>
-                        <div class="mt-5 flex flex-wrap gap-4">
-                        <div class="flex items-center space-x-1.5">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                        <path
-                           d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
-                           ></path>
+                    </th>
+                </tr>
+                <template x-for="c in containers" :key="'container-' + c.ID">
+                    <tr>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="c.Names"></td>
+                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            <div>ID: <span x-text="c.ID"></span></div>
+                            <div>Image: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Image"></span></div>
+                            <div>Status: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Status"></span></div>
+                            <div class="hidden">Running For: <span x-text="c.RunningFor"></span></div>
+                            <div>Ports: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Ports"></span></div>
+
+<div class="flex">
+
+    <div class="w-1/2">
+        Networks:
+        <ul class="list-inside space-y-1" x-show="c.Networks && c.Networks.split(',').filter(Boolean).length">
+            <template x-for="network in c.Networks.split(',').filter(Boolean)" :key="network">
+                <li class="flex items-center gap-1">
+                    <template x-if="network.trim().endsWith('_www')">
+                        <!-- Globe icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe" viewBox="0 0 16 16">
+                            <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472M3.82 11a13.7 13.7 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5zm6.853 3.472A7 7 0 0 0 13.745 12H11.91a9.3 9.3 0 0 1-.64 1.539 7 7 0 0 1-.597.933M8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855q.26-.487.468-1.068zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.7 13.7 0 0 1-.312 2.5m2.802-3.5a7 7 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7 7 0 0 0-3.072-2.472c.218.284.418.598.597.933M10.855 4a8 8 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4z"/>
                         </svg>
-                        <span class="text-xs font-medium text-gray-500 dark:text-gray-500">34</span>
-                        </div>
-                        <div class="flex items-center space-x-1.5">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                        <path
-                           d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
-                           ></path>
+                    </template>
+                    <template x-if="network.trim().endsWith('_db')">
+                        <!-- Database icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-database-fill" viewBox="0 0 16 16">
+                            <path d="M3.904 1.777C4.978 1.289 6.427 1 8 1s3.022.289 4.096.777C13.125 2.245 14 2.993 14 4s-.875 1.755-1.904 2.223C11.022 6.711 9.573 7 8 7s-3.022-.289-4.096-.777C2.875 5.755 2 5.007 2 4s.875-1.755 1.904-2.223"/>
+                            <path d="M2 6.161V7c0 1.007.875 1.755 1.904 2.223C4.978 9.71 6.427 10 8 10s3.022-.289 4.096-.777C13.125 8.755 14 8.007 14 7v-.839c-.457.432-1.004.751-1.49.972C11.278 7.693 9.682 8 8 8s-3.278-.307-4.51-.867c-.486-.22-1.033-.54-1.49-.972"/>
+                            <path d="M2 9.161V10c0 1.007.875 1.755 1.904 2.223C4.978 12.711 6.427 13 8 13s3.022-.289 4.096-.777C13.125 11.755 14 11.007 14 10v-.839c-.457.432-1.004.751-1.49.972-1.232.56-2.828.867-4.51.867s-3.278-.307-4.51-.867c-.486-.22-1.033-.54-1.49-.972"/>
+                            <path d="M2 12.161V13c0 1.007.875 1.755 1.904 2.223C4.978 15.711 6.427 16 8 16s3.022-.289 4.096-.777C13.125 14.755 14 14.007 14 13v-.839c-.457.432-1.004.751-1.49.972-1.232.56-2.828.867-4.51.867s-3.278-.307-4.51-.867c-.486-.22-1.033-.54-1.49-.972"/>
                         </svg>
-                        <span class="text-xs font-medium text-gray-500 dark:text-gray-500">5/10GB</span>
-                        </div>
-                        <div class="flex items-center space-x-1.5">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                        <path
-                           d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
-                           ></path>
+                    </template>
+                    <template x-if="!network.trim().endsWith('_www') && !network.trim().endsWith('_db')">
+                        <!-- Generic network icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hdd-network" viewBox="0 0 16 16">
+                            <path d="M4.5 5a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/>
+                            <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H8.5v3a1.5 1.5 0 0 1 1.5 1.5h5.5a.5.5 0 0 1 0 1H10A1.5 1.5 0 0 1 8.5 14h-1A1.5 1.5 0 0 1 6 12.5H.5a.5.5 0 0 1 0-1H6A1.5 1.5 0 0 1 7.5 10V7H2a2 2 0 0 1-2-2zm1 0v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1m6 7.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5"/>
                         </svg>
-                        <span class="text-xs font-medium text-gray-500 dark:text-gray-500">1d ago</span>
+                    </template>
+                    <span class="font-medium text-gray-900 dark:text-gray-50" x-text="network.trim()"></span>
+                </li>
+            </template>
+        </ul>
+        <span x-show="!c.Networks || !c.Networks.split(',').filter(Boolean).length" class="text-gray-400">None</span>
+    </div>
+
+    <div class="w-1/2">
+        Mounts:
+        <ul class="list-inside space-y-1" x-show="c.Mounts && c.Mounts.split(',').filter(Boolean).length">
+            <template x-for="mount in c.Mounts.split(',').filter(Boolean)" :key="mount">
+                <li class="flex items-center gap-1">
+                    <template x-if="(() => {
+                        let parts = mount.trim().split('/');
+                        let last = parts[parts.length - 1];
+                        return last.includes('.');
+                    })()">
+                        <!-- File icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-fill" viewBox="0 0 16 16">
+                            <path d="M9.293 0H1a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.707a1 1 0 0 0-.293-.707l-5.414-5.414A1 1 0 0 0 11.293 0H9.293zM9 1.5v4A1.5 1.5 0 0 0 10.5 7H15v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h7z"/>
+                        </svg>
+                    </template>
+                    <template x-if="!(() => {
+                        let parts = mount.trim().split('/');
+                        let last = parts[parts.length - 1];
+                        return last.includes('.');
+                    })()">
+                        <!-- Folder icon SVG -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" class="bi bi-folder-fill" viewBox="0 0 16 16">
+                            <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.825a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12q.322-.119.684-.12h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"></path>
+                        </svg>
+                    </template>
+                    <span class="font-medium text-gray-900 dark:text-gray-50" x-text="mount.trim()"></span>
+                </li>
+            </template>
+        </ul>
+        <span x-show="!c.Mounts || !c.Mounts.split(',').filter(Boolean).length" class="text-gray-400">None</span>
+    </div>
+
+</div>
+
+
+<div>
+  Command:
+  <div class="w-80 overflow-x-auto bg-gray-100 dark:bg-gray-900 rounded p-2 my-2">
+    <code class="break-words whitespace-pre-wrap" x-text="c.Command">
+    </code>
+  </div>
+</div>
+
+
+
+
+
+<div x-data="{
+    showAll: false,
+    get allLabels() {
+        return this.c.Labels.split(',').filter(l => l.trim().length);
+    }
+}">
+  <span>
+    Labels:
+    <template x-if="allLabels.length">
+      <a href="#" @click.prevent="showAll = !showAll" class="text-blue-600 underline ml-2">
+        <span x-text="showAll ? 'Hide all labels' : 'Show all labels'"></span>
+      </a>
+    </template>
+  </span>
+  <template x-if="allLabels.length">
+    <div x-show="showAll" class="mt-2">
+      <ul>
+        <template x-for="label in allLabels" :key="label">
+          <li x-text="label"></li>
+        </template>
+      </ul>
+    </div>
+  </template>
+</div>
+
+                        </td>
+                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="c.Size"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span x-text="c.LocalVolumes"></span> volumes
+                        </td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">
+                                <span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>
+                                <span x-text="c.State"></span>
+                            </span>
+                        </td>
+
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"> Container</td>
+
+
+                    </tr>
+                </template>
+                <!-- Images -->
+                <tr>
+
+
+                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
+                        <div class="flex gap-1 items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
+                        <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
+                        <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z"/>
+                        </svg> Images
+                                                <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="images.length"></span>
                         </div>
-                        </div>
-                     </li>
-                     <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
-                     <div class="flex items-center space-x-2">
-                     <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
-                     <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>sales_by_day_api</a>
-                     </h4>
-                     <span class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-400">active</span>
-                     </div>
-                     <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
-                     <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">Test workspace</span></li>
-                     <li class="flex items-center space-x-2 py-1">
-                     <span>Database:</span>
-                     <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
-                     <span class="size-2 shrink-0 rounded-sm bg-blue-500 dark:bg-blue-500" aria-hidden="true"></span>live_data
-                     </span>
-                     </li>
-                     </ul>
-                     <div class="mt-5 flex flex-wrap gap-4">
-                     <div class="flex items-center space-x-1.5">
-                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                     <path
-                        d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
-                        ></path>
-                     </svg>
-                     <span class="text-xs font-medium text-gray-500 dark:text-gray-500">34</span>
-                     </div>
-                     <div class="flex items-center space-x-1.5">
-                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                     <path
-                        d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
-                        ></path>
-                     </svg>
-                     <span class="text-xs font-medium text-gray-500 dark:text-gray-500">5/10GB</span>
-                     </div>
-                     <div class="flex items-center space-x-1.5">
-                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                     <path
-                        d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
-                        ></path>
-                     </svg>
-                     <span class="text-xs font-medium text-gray-500 dark:text-gray-500">1d ago</span>
-                     </div>
-                     </div>
-                     </li>
-                     <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
-                        <div class="flex items-center space-x-2">
-                           <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
-                              <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>testing_environment_2</a>
-                           </h4>
-                        </div>
-                        <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
-                           <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">API</span></li>
-                           <li class="flex items-center space-x-2 py-1">
-                              <span>Database:</span>
-                              <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
-                              <span class="size-2 shrink-0 rounded-sm bg-gray-400 dark:bg-gray-600" aria-hidden="true"></span>test_data
-                              </span>
-                           </li>
-                        </ul>
-                        <div class="mt-5 flex flex-wrap gap-4">
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">28</span>
-                           </div>
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">7.4/10GB</span>
-                           </div>
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">2d ago</span>
-                           </div>
-                        </div>
-                     </li>
-                     <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
-                        <div class="flex items-center space-x-2">
-                           <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
-                              <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>training_environment</a>
-                           </h4>
-                           <span class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-400">active</span>
-                        </div>
-                        <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
-                           <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">Test workspace</span></li>
-                           <li class="flex items-center space-x-2 py-1">
-                              <span>Database:</span>
-                              <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
-                              <span class="size-2 shrink-0 rounded-sm bg-blue-500 dark:bg-blue-500" aria-hidden="true"></span>live_data
-                              </span>
-                           </li>
-                        </ul>
-                        <div class="mt-5 flex flex-wrap gap-4">
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">38</span>
-                           </div>
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">3.2/10GB</span>
-                           </div>
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">4h ago</span>
-                           </div>
-                        </div>
-                     </li>
-                     <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
-                        <div class="flex items-center space-x-2">
-                           <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
-                              <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>analytics_dashboard</a>
-                           </h4>
-                        </div>
-                        <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
-                           <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">API</span></li>
-                           <li class="flex items-center space-x-2 py-1">
-                              <span>Database:</span>
-                              <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
-                              <span class="size-2 shrink-0 rounded-sm bg-gray-400 dark:bg-gray-600" aria-hidden="true"></span>test_data
-                              </span>
-                           </li>
-                        </ul>
-                        <div class="mt-5 flex flex-wrap gap-4">
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">34</span>
-                           </div>
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">5/10GB</span>
-                           </div>
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">1d ago</span>
-                           </div>
-                        </div>
-                     </li>
-                     <li class="relative w-full border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 rounded-md p-4 dark:border-gray-800" tremor-id="tremor-raw">
-                        <div class="flex items-center space-x-2">
-                           <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-50">
-                              <a href="#" class="focus:outline-none"><span class="absolute inset-0" aria-hidden="true"></span>managed_database_test</a>
-                           </h4>
-                           <span class="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-400">active</span>
-                        </div>
-                        <ul role="list" class="mt-3 text-sm text-gray-500 dark:text-gray-500">
-                           <li class="flex items-center space-x-2 py-1"><span>Type:</span><span class="font-medium text-gray-900 dark:text-gray-50">Test workspace</span></li>
-                           <li class="flex items-center space-x-2 py-1">
-                              <span>Database:</span>
-                              <span class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-900 ring-1 ring-inset ring-gray-200 dark:text-gray-50 dark:ring-gray-800">
-                              <span class="size-2 shrink-0 rounded-sm bg-blue-500 dark:bg-blue-500" aria-hidden="true"></span>live_data
-                              </span>
-                           </li>
-                        </ul>
-                        <div class="mt-5 flex flex-wrap gap-4">
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M2 22C2 17.5817 5.58172 14 10 14C14.4183 14 18 17.5817 18 22H16C16 18.6863 13.3137 16 10 16C6.68629 16 4 18.6863 4 22H2ZM10 13C6.685 13 4 10.315 4 7C4 3.685 6.685 1 10 1C13.315 1 16 3.685 16 7C16 10.315 13.315 13 10 13ZM10 11C12.21 11 14 9.21 14 7C14 4.79 12.21 3 10 3C7.79 3 6 4.79 6 7C6 9.21 7.79 11 10 11ZM18.2837 14.7028C21.0644 15.9561 23 18.752 23 22H21C21 19.564 19.5483 17.4671 17.4628 16.5271L18.2837 14.7028ZM17.5962 3.41321C19.5944 4.23703 21 6.20361 21 8.5C21 11.3702 18.8042 13.7252 16 13.9776V11.9646C17.6967 11.7222 19 10.264 19 8.5C19 7.11935 18.2016 5.92603 17.041 5.35635L17.5962 3.41321Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">39</span>
-                           </div>
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">5.9/10GB</span>
-                           </div>
-                           <div class="flex items-center space-x-1.5">
-                              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 text-gray-400 dark:text-gray-600">
-                                 <path
-                                    d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"
-                                    ></path>
-                              </svg>
-                              <span class="text-xs font-medium text-gray-500 dark:text-gray-500">7d ago</span>
-                           </div>
-                        </div>
-                     </li>
-                  </ul>
+                    </th>
+                </tr>
+                <template x-for="img in images" :key="'image-' + img.ID">
+                    <tr>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="img.Repository + (img.Tag && img.Tag !== '<none>' ? ':' + img.Tag : '')"></td>
+                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            <div>ID: <span x-text="img.ID"></span></div>
+                            <div class="hidden">Tag: <span x-text="img.Tag"></span></div>
+                            <div class="hidden">Repository: <span x-text="img.Repository"></span></div>
+                            <div>Created: <span x-text="img.CreatedAt"></span></div>
+
+
+                            <div>Labels: <span x-text="img.Labels"></span></div>
+
+
+
+                            <div>Created since: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="img.CreatedSince"></span></div>
+                        </td>
+                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="img.Size"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span x-text="img.Containers"></span> containers
+                        </td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                        </td>
+
+
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">Image</td>
+
+
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</template>
+
+
                </div>
-               <!-- END VOLUMES -->
+               <!-- END STORAGE -->
 
                <!-- INFO -->
                <div x-show="activeTab === 'info'" class="p-4" x-cloak>
@@ -1576,7 +1878,7 @@ function updateRamUsage(ramPercentage) {
                   </div>
                   <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
                   <div class="col-span-full">
-                  <div role="radiogroup" aria-required="false" dir="ltr" class="grid gap-2" tremor-id="tremor-raw" tabindex="0" style="outline: none;">
+                  <div role="radiogroup" aria-required="false" dir="ltr" class="grid gap-2" tabindex="0" style="outline: none;">
                   <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">Select a package</p>
                   <div x-data="{ selectedPlan: '{{ user.plan_id }}' }" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                   {% for plan in plans %}
@@ -1654,7 +1956,7 @@ function updateRamUsage(ramPercentage) {
                   </div>
                   </div>
                   </div>
-                  <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+                  <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
                   <div class="flex items-center justify-end space-x-4">
                   <a href="/users" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">Go back</a>
                   <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">Save</button>
