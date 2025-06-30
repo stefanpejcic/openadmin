@@ -61,7 +61,14 @@
 </h1>
                     <h2 class="text-sm font-medium text-slate-500">
                        <span class="inline-flex">
-{% if country_code %}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img></span><span>{{server_ip}} / {% endif %} {{env_data.TOTAL_CPU}} Cores / {{ env_data.TOTAL_RAM[:-1] + ' GB' if env_data.TOTAL_RAM.endswith('g') else '∞' }} Memory  <!----> / {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}{% else %}∞{% endif %} GB Disk <!----></span>
+<!-- IP --> 
+{% if country_code %}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img></span><span>{{server_ip}} / {% endif %} 
+<!-- CPU -->
+{% if env_data.TOTAL_CPU == 0 or env_data.TOTAL_CPU == '0' %}∞{% else %}{{env_data.TOTAL_CPU}}{% endif %} Cores /
+<!-- RAM -->
+{% if env_data.TOTAL_RAM == 0 or env_data.TOTAL_RAM == '0g' %}∞{% else %}{{env_data.TOTAL_RAM[:-1]}} GB{% endif %} Memory /
+<!-- DISK -->
+{% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}{% else %}∞{% endif %} GB Disk</span>
 
                     </h2>
                </div> 
@@ -201,7 +208,11 @@
    }
    }
    });
-   }
+
+   }"
+   x-init="
+        if (window.location.hash === '#services') {
+
    }"
    x-init="
         if (window.location.hash === '#services') {
@@ -232,15 +243,17 @@
                   <script>
                      document.addEventListener("alpine:init", () => {
                          Alpine.store("ipStore", {
+                             fetchedips: false,
                              fetchIPs() {
+                                if (this.fetchedips) return;
+                                this.fetchedips = true;
+
                                  const ipSelect = document.getElementById('ipSelect');
                                  const currentIP = "{{ server_ip }}";
-                     
+
                                  fetch('/system/ips?output=json')
                                      .then(response => response.json())
-                                     .then(data => {
-                                         console.log("Fetched Data:", data);
-                     
+                                     .then(data => {                     
                                          if (!data.ip_addresses || !Array.isArray(data.ip_addresses)) {
                                              throw new Error("Invalid response format");
                                          }
@@ -260,6 +273,7 @@
                                      })
                                      .catch(error => {
                                          console.error('Error fetching IPs:', error);
+                                         this.fetchedips = false;
                      
                                          // Fallback: only display the current server IP
                                          ipSelect.innerHTML = '';
@@ -280,13 +294,18 @@
                      // Store for Activity Logs
                      Alpine.store("activityStore", {
                          activities: [],
+                         fetchedlogs: false,
                          fetchLogs() {
+
+                            if (this.fetchedlogs) return;
+                            this.fetchedlogs = true;
+
+
                              const username = "{{ user.username }}";
                      
                              fetch(`/user_activity/${username}`)
                                  .then(response => response.json())
                                  .then(data => {
-                                     console.log("Fetched Activity Logs:", data);
                      
                                      this.activities = [];  // Reset the activities
                      
@@ -330,6 +349,7 @@
                                      });
                                  })
                                  .catch(error => {
+                                     this.fetched = false;
                                      console.error('Error fetching activity logs:', error);
                                  });
                          },
@@ -1416,7 +1436,11 @@ function updateRamUsage(ramPercentage) {
                 </tr>
                 <template x-for="v in volumes" :key="'volume-' + v.Name">
                     <tr>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="v.Name"></td>
+                        <td 
+                        class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 relative"
+                        x-bind:title="v.Name"
+                        x-text="v.Name.length > 20 ? v.Name.slice(0, 20) + '...' : v.Name"
+                        ></td>
                         <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
                             <div class="flex items-center gap-1">Mountpoint: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" class="bi bi-folder-fill" viewBox="0 0 16 16"><path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.825a2 2 0 0 1-1.991-1.819l-.637-7a2 2 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12q.322-.119.684-.12h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"></path></svg> <span class="font-medium text-gray-900 dark:text-gray-50" x-text="v.Mountpoint"></span></div>
 
@@ -1678,7 +1702,7 @@ function updateRamUsage(ramPercentage) {
                   <div class="grid grid-cols-2 gap-4">
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID:</span><span class="font-medium">{{user.id}}</span></div>
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium">{{user.email}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium"> {{server_ip}}<span class="hidden sm:flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{ip_type}}</span></span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium flex"> {{server_ip}}<span class="hidden sm:flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{ip_type}}</span></span></div>
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="flex items-center font-medium">
                         {% if country_name %}{{country_name}}{% elif country_code %}<img  class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img>{% endif %} ({{country_code}})</span></div>
 

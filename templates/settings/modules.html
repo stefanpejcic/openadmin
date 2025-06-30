@@ -35,34 +35,65 @@
 <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
   {% for feature in features %}
 
-
-
-
-
-
-
-
-
-
+    {% set type = feature.type|lower %}
+    {% set is_enterprise = (type == "enterprise") %}
+    {% set disable_toggle = is_enterprise and (license_type != "Enterprise") %}
     <div x-data="{ enabled: {{ 'true' if feature.status else 'false' }} }" class="relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden p-0 flex flex-col h-full">
       <div class="px-4 pb-6 pt-4">
         <span class="text-sm text-gray-500">{{ feature.link }}</span>
-        <h4 class="mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50">{{ feature.title }}</h4>
+        <div class="flex items-center gap-2 mt-4">
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-50">
+            {{ feature.title }}
+          </h4>
+          {% if type == "beta" %}
+            <span class="inline-block rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-white px-2 py-0.5 text-xs font-medium uppercase">BETA</span>
+          {% elif type == "enterprise" %}
+            <span class="inline-block rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-white px-2 py-0.5 text-xs font-medium">Enterprise</span>
+          {% elif type == "community" %}
+            <span class="inline-block rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-white px-2 py-0.5 text-xs font-medium">Community</span>
+          {% else %}
+            <span class="inline-block rounded bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 px-2 py-0.5 text-xs font-medium">{{type}}</span>
+          {% endif %}
+        </div>
         <p class="mt-2 max-w-xl text-sm leading-6 text-gray-500">{{ feature.description }}</p>
       </div>
       <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-4 dark:border-gray-900 dark:bg-gray-900 mt-auto">
+
         <div class="flex items-center gap-3">
-          <button @click="enabled = !enabled" :aria-checked="enabled" :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'" class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9">
+          <button
+            @click="enabled = !enabled"
+            :aria-checked="enabled"
+            :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+            class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+            {% if disable_toggle %}
+              disabled aria-disabled="true"
+              class="opacity-50 cursor-not-allowed {{ 'bg-indigo-300 dark:bg-indigo-900' if feature.status else 'bg-gray-100 dark:bg-gray-800' }}"
+            {% endif %}
+          >
             <span :class="enabled ? 'translate-x-4' : 'translate-x-0'" class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"></span>
           </button>
-          <input type="checkbox" x-model="enabled" hidden name="{{ feature.name }}" value="{{ feature.name }}" :checked="enabled">
-          <label class="text-sm leading-none text-gray-900 dark:text-gray-50" for="{{ feature.name }}">Activate</label>
+          <input
+            type="checkbox"
+            x-model="enabled"
+            hidden
+            name="{{ feature.name }}"
+            value="{{ feature.name }}"
+            :checked="enabled"
+            {% if disable_toggle %}disabled{% endif %}
+          >
+        {% if not disable_toggle %}
+        <label class="text-sm leading-none text-gray-900 dark:text-gray-50" for="{{ feature.name }}">Activate</label>
+        {% endif %}
         </div>
-        <a href="{{ feature.help_link }}" class="hidden inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Learn more
+
+
+        {% if feature.help_link %}
+        <a href="{{ feature.help_link }}" target="_blank" class="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Learn more
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
             <path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path>
           </svg>
         </a>
+        {% endif %}
       </div>
     </div>
   {% endfor %}

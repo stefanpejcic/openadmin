@@ -94,6 +94,9 @@
                                     </div>
                                 </div>
                             </th>                        
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><span>Type</span></th> 
+
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><span>Page</span></th> 
 
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Enable</th>
@@ -101,6 +104,11 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
             {% for feature in features %}
+    {% set type = feature.type|lower %}
+    {% set is_enterprise = (type == "enterprise") %}
+    {% set disable_toggle = is_enterprise and (license_type != "Enterprise") %}
+
+
                         <tr  x-data="{ enabled: {{ 'true' if feature.status else 'false' }} }" x-show="searchQuery === '' || '{{ feature.title }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
@@ -112,14 +120,31 @@
                                 
                                 <span class="select-text" data-tooltip-target="tooltip-{{ feature.title }}" data-tooltip-placement="right">{{ feature.title }}</span></td>
                   
+
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 w-10 text-left select-text">
+                                {% if type == "beta" %}
+                                    <span class="inline-block rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-white px-2 py-0.5 text-xs font-medium w-full text-center uppercase">BETA</span>
+                                {% elif type == "enterprise" %}
+                                    <span class="inline-block rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-white px-2 py-0.5 text-xs font-medium w-full text-center">Enterprise</span>
+                                {% elif type == "community" %}
+                                    <span class="inline-block rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-white px-2 py-0.5 text-xs font-medium w-full text-center">Community</span>
+                                {% else %}
+                                    <span class="inline-block rounded bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 px-2 py-0.5 text-xs font-medium w-full text-center">{{type}}</span>
+                                {% endif %}
+                            </td>
+
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">{{ feature.link }}</td>
-
-
 
                               <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
                   <button @click="enabled = !enabled" :aria-checked="enabled"
                     :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
-                    class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9">
+                    class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+                    {% if disable_toggle %}
+                    disabled aria-disabled="true"
+                    class="opacity-50 cursor-not-allowed {{ 'bg-indigo-300 dark:bg-indigo-900' if feature.status else 'bg-gray-100 dark:bg-gray-800' }}"
+                    {% endif %}
+                    >
                     <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
                       class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"></span>
                   </button>
