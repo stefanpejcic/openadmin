@@ -116,7 +116,7 @@ function updateHomeUsage(data) {
 
     // Disk indicator
     $("#serverduIndicator").removeClass("text-red-500 text-orange-500 text-emerald-500 text-gray-500")
-        .addClass(percent >= 90 ? "text-red-500" : percent >= 80 ? "text-orange-500" : percent < 80 ? "text-emerald-500" : "text-gray-500");
+        .addClass(percent >= 90 ? "text-red-500" : percent >= 80 ? "text-orange-500" : percent < 80 ? "text-gray-500" : "text-gray-500");
 }
 
 function fetchDiskUsage() {
@@ -176,16 +176,32 @@ function initLoadChart() {
             { name: "5 Min Load", data: [] },
             { name: "15 Min Load", data: [] }
         ],
-        xaxis: { type: "datetime", labels: { formatter: v => new Date(v).toLocaleTimeString() }},
-        yaxis: { title: { text: "Server Load" }},
+        xaxis: {
+            type: "datetime",
+            labels: {
+                formatter: v => new Date(v).toLocaleTimeString()
+            }
+        },
+        yaxis: {
+            title: { text: "Server Load" },
+            labels: {
+                formatter: value => parseFloat(value.toFixed(2)).toString()
+            }
+        },
         colors: ["#007bff", "#28a745", "#ffc107"],
         tooltip: {
             theme: 'dark',
-            x: { formatter: v => new Date(v).toLocaleTimeString() }
+            x: {
+                formatter: v => new Date(v).toLocaleTimeString()
+            },
+            y: {
+                formatter: value => parseFloat(value.toFixed(2)).toString()
+            }
         }
     });
     chartLoad.render();
 }
+
 
 function updateLoadChart(load) {
     const now = Date.now();
@@ -293,12 +309,16 @@ function updateNetChart(netData) {
 }
 
 // --- Server Load ---
+function formatDecimal(num) {
+    return parseFloat(num.toFixed(2)).toString();
+}
+
 function getServerLoad() {
     fetch('/json/load').then(res => res.json()).then(load => {
         const l1 = +load.load1min, l5 = +load.load5min, l15 = +load.load15min;
-        $('.load1min').text(l1.toFixed(2));
-        $('#load5min').text(l5.toFixed(2));
-        $('#load15min').text(l15.toFixed(2));
+        $('.load1min').text(formatDecimal(l1));
+        $('#load5min').text(formatDecimal(l5));
+        $('#load15min').text(formatDecimal(l15));
         updateLoadChart({ load1min: l1, load5min: l5, load15min: l15 });
 
         // Load indicator/arrows
@@ -333,7 +353,7 @@ function fetchCpuUsage() {
         });
         const avg = count ? (total / count).toFixed(1) : 0;
         $('#cpu_avg-now').removeClass("text-red-500 text-orange-500 text-emerald-500 text-gray-500")
-            .addClass(avg >= 90 ? "text-red-500" : avg >= 80 ? "text-orange-500" : avg >= 50 ? "text-emerald-500" : "text-gray-500")
+            .addClass(avg >= 90 ? "text-red-500" : avg >= 80 ? "text-orange-500" : avg >= 50 ? "text-gray-500" : "text-gray-500")
             .text(avg + '%');
         $('#cpu_total').text(avg + '%');
     });
