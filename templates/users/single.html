@@ -18,12 +18,11 @@
     volumes: [],
     loading: false,
     error: null,
-    diskLoaded: false, // <-- Add this flag
+    diskLoaded: false,
 
     loadDiskUsage() {
-        if (this.diskLoaded) return; // <-- Prevent further execution
-        this.diskLoaded = true;      // <-- Mark as loaded
-
+        if (this.diskLoaded) return;
+        this.diskLoaded = true;
         this.loading = true;
         this.error = null;
 
@@ -68,7 +67,7 @@
 <!-- RAM -->
 {% if env_data.TOTAL_RAM == 0 or env_data.TOTAL_RAM == '0g' %}∞{% else %}{{env_data.TOTAL_RAM[:-1]}} GB{% endif %} Memory /
 <!-- DISK -->
-{% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}{% else %}∞{% endif %} GB Disk</span>
+{% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}<!---->GB{% else %}∞{% endif %} Disk</span>
 
                     </h2>
                </div> 
@@ -186,59 +185,64 @@
 
 
 
-<div class="relative w-full p-6 text-left border-b bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0" x-data="{
-   containerName: '{{ user.username.split('_')[-1] }}', 
-   fetchCustomMessage() {
-   $.ajax({
-   url: `/get_custom_message_for_user/${this.containerName}`,
-   type: 'GET',
-   success: (response) => {
-   if (response.custom_message) {
-   $('#custom_message_for_this_user').val(response.custom_message);
-   } else {
-   $('#custom_message_for_this_user').val('');
-   }
-   },
-   error: (xhr) => {
-   if (xhr.status === 404) {
-   const response = xhr.responseJSON;
-   $('#custom_message_for_this_user').val('');
-   } else {
-   showMessageModal('Error', xhr.responseJSON.error || 'An error occurred while retrieving the custom message.');
-   }
-   }
-   });
+<div 
+  class="relative w-full p-6 text-left border-b bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0"
+  x-data="customMessageComponent('{{ user.username }}')"
+  x-init="initTabs()"
+>
 
-   }"
-   x-init="
-        if (window.location.hash === '#services') {
-
-   }"
-   x-init="
-        if (window.location.hash === '#services') {
-            activeTab = 'services';
-        } else if (window.location.hash === '#activity') {
-            activeTab = 'activity';
-            $nextTick(() => $store.activityStore.fetchLogs());
-        } else if (window.location.hash === '#suspend') {
-            activeTab = 'suspend';
-        } else if (window.location.hash === '#unsuspend') {
-            activeTab = 'unsuspend';
-        } else if (window.location.hash === '#storage') {
-            activeTab = 'storage';
-            $nextTick(() => loadDiskUsage());
-        } else if (window.location.hash === '#edit') {
-            activeTab = 'edit';
-            $nextTick(() => $store.ipStore.fetchIPs());
-        } else if (window.location.hash === '#delete') {
-            activeTab = 'delete';
-            $nextTick(() => $store.ipStore.fetchIPs());
-        } else if (window.location.hash === '#overview') {
-            activeTab = 'info';
-            $nextTick(() => fetchCustomMessage());
+<script>
+function customMessageComponent(username) {
+    return {
+        containerName: username.split('_').pop(),
+        activeTab: '',
+        fetchCustomMessage() {
+            $.ajax({
+                url: `/get_custom_message_for_user/${this.containerName}`,
+                type: 'GET',
+                success: (response) => {
+                    if (response.custom_message) {
+                        $('#custom_message_for_this_user').val(response.custom_message);
+                    } else {
+                        $('#custom_message_for_this_user').val('');
+                    }
+                },
+                error: (xhr) => {
+                    if (xhr.status === 404) {
+                        $('#custom_message_for_this_user').val('');
+                    } else {
+                        showMessageModal('Error', xhr.responseJSON.error || 'An error occurred while retrieving the custom message.');
+                    }
+                }
+            });
+        },
+        initTabs() {
+            if (window.location.hash === '#services') {
+                this.activeTab = 'services';
+            } else if (window.location.hash === '#activity') {
+                this.activeTab = 'activity';
+                this.$nextTick(() => $store.activityStore.fetchLogs());
+            } else if (window.location.hash === '#suspend') {
+                this.activeTab = 'suspend';
+            } else if (window.location.hash === '#unsuspend') {
+                this.activeTab = 'unsuspend';
+            } else if (window.location.hash === '#storage') {
+                this.activeTab = 'storage';
+                this.$nextTick(() => loadDiskUsage());
+            } else if (window.location.hash === '#edit') {
+                this.activeTab = 'edit';
+                this.$nextTick(() => $store.ipStore.fetchIPs());
+            } else if (window.location.hash === '#delete') {
+                this.activeTab = 'delete';
+                this.$nextTick(() => $store.ipStore.fetchIPs());
+            } else if (window.location.hash === '#overview') {
+                this.activeTab = 'info';
+                this.$nextTick(() => this.fetchCustomMessage());
+            }
         }
-    ">
-
+    }
+}
+</script>
 
                   <script>
                      document.addEventListener("alpine:init", () => {
@@ -492,7 +496,8 @@
     {% else %}
     {% set disk_graph_class = 'stroke-gray-200 dark:stroke-gray-500/40' %}
     {% endif %}
-    {% set disk_usage_rounded = disk_usage | round(2) %}
+    {% set disk_usage_clamped = disk_usage if disk_usage < 100 else 100 %}
+    {% set disk_usage_rounded = disk_usage_clamped | round(2) %}
     <div 
       @mouseenter="hovered = true" 
       @mouseleave="hovered = false"
@@ -516,7 +521,7 @@
       <div class="absolute inset-0 flex items-center justify-center">
         <!-- Percentage or Link on Hover -->
         <template x-if="!hovered">
-          <span class="text-sm font-medium text-gray-500 dark:text-gray-500">{{ disk_usage_rounded }}%</span>
+          <span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{ disk_usage_rounded }}%</span>
         </template>
         <template x-if="hovered">
             <button type="button" class="relative items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 group hidden h-10 text-sm sm:flex" @click="activeTab = 'storage'; loadDiskUsage()">Explore</button>
@@ -526,12 +531,9 @@
   </div>
   <div class="mt-0 text-left sm:mt-2 sm:text-center">
     <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
-      {% if disk.disk_hard != 0 %}
-      {{ (disk.disk_used / 1024000) | round(2) }} / {{ (disk.disk_hard / 1024000) | round(2) }} 
-      {% else %}
-      {{disk.disk_used}}/∞ 
-      {% endif %}
-      GB
+      {% if disk.disk_used != 0 %}{{ (disk.disk_used / 1024000) | round(2) }}<!---->GB{% else %}{{disk.disk_used}}<!---->B{% endif %}
+      <!---->/<!---->
+      {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}<!---->GB{% else %}∞{% endif %}
     </p>
     <p class="text-sm text-gray-500 dark:text-gray-500">Storage used</p>
   </div>
@@ -550,34 +552,49 @@
                                  {% else %}
                                  {% set inodes_graph_class = 'stroke-gray-200 dark:stroke-gray-500/40' %}
                                  {% endif %}
-                                 {% set inodes_usage_rounded = inodes_usage | round(2) %}
-                                 <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{ inodes_usage_rounded }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ inodes_usage_rounded }}">
-                                    <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{ inodes_graph_class }}"></circle>
-                                    <!-- Dynamic Circle for Progress -->
-                                    <circle
-                                       r="29"
-                                       cx="32"
-                                       cy="32"
-                                       stroke-width="6"
-                                       stroke-dasharray="182.212373908208 182.212373908208"
-                                       stroke-dashoffset="{{ 182.212373908208 - (182.212373908208 * inodes_usage_rounded / 100) }}"
-                                       fill="transparent"
-                                       stroke="currentColor"
-                                       stroke-linecap="round"
-                                       class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
-                                       ></circle>
-                                 </svg>
-                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-500 dark:text-gray-500">{{ inodes_usage_rounded }}%</span></div>
+                                 {% set inodes_usage_clamped = inodes_usage if inodes_usage < 100 else 100 %}
+                                 {% set inodes_usage_rounded = inodes_usage_clamped | round(2) %}
+
+                                <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{ inodes_usage_rounded }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ inodes_usage_rounded }}">
+                                <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{ inodes_graph_class }}"></circle>
+                                <!-- Dynamic Circle for Progress -->
+                                <circle
+                                    r="29"
+                                    cx="32"
+                                    cy="32"
+                                    stroke-width="6"
+                                    stroke-dasharray="182.212373908208 182.212373908208"
+                                    stroke-dashoffset="{{ 182.212373908208 - (182.212373908208 * inodes_usage_rounded / 100) }}"
+                                    fill="transparent"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
+                                ></circle>
+                                </svg>
+                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{ inodes_usage_rounded }}%</span></div>
                               </div>
                               <div class="mt-0 text-left sm:mt-2 sm:text-center">
-                                 <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
-                                    {% if disk.inodes_hard != 0 %}
-                                    {{ (disk.inodes_used / 1000000) | round(2) }} / {{ (disk.inodes_hard / 1000000) | round(2) }} 
+                                <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
+                                {% if disk.inodes_used != 0 %}
+                                    {% if disk.inodes_used >= 1000000 %}
+                                    {{ (disk.inodes_used / 1000000) | round(2) }}M
                                     {% else %}
-                                    {{disk.inodes_used}}/∞ 
+                                    {{ disk.inodes_used }}
                                     {% endif %}
-                                    M
-                                 </p>
+                                {% else %}
+                                    {{ disk.inodes_used }}
+                                {% endif %}
+                                /
+                                {% if disk.inodes_hard != 0 %}
+                                    {% if disk.inodes_hard >= 1000000 %}
+                                    {{ (disk.inodes_hard / 1000000) | round(2) }}M
+                                    {% else %}
+                                    {{ disk.inodes_hard }}
+                                    {% endif %}
+                                {% else %}
+                                    ∞
+                                {% endif %}
+                                </p>
                                  <p class="text-sm text-gray-500 dark:text-gray-500">Inodes used</p>
                               </div>
                            </div>
@@ -600,7 +617,7 @@
                                        class="stroke-gray-500 dark:stroke-gray-500 transform-gpu transition-all duration-300 ease-in-out"
                                        ></circle>
                                  </svg>
-                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-500 dark:text-gray-500"><span id="cpu_percentage">0%</span></span></div>
+                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="cpu_percentage">0%</span></span></div>
                               </div>
                               <div class="mt-0 text-left sm:mt-2 sm:text-center">
                                  <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="global_cpu_usage">0</span> / {{ (env_data.TOTAL_CPU|int * 100) | round(2) if env_data.TOTAL_CPU != 0 else '∞' }}%</p>
@@ -627,7 +644,7 @@
                                        ></circle>
                                  </svg>
                                  <div class="absolute inset-0 flex items-center justify-center">
-                                    <span class="text-sm font-medium text-gray-500 dark:text-gray-500"><span id="ram_percentage">0%</span></span>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="ram_percentage">0%</span></span>
                                  </div>
                               </div>
                               <div class="mt-0 text-left sm:mt-2 sm:text-center">
@@ -2036,7 +2053,7 @@ function updateRamUsage(ramPercentage) {
                                  class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
                                  <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" 
                                     x-text="activity.date"></td>
-                                 <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left truncate max-w-[100px]" 
+                                 <td class="flex items-center relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left truncate max-w-[100px]" 
                                     x-html="activity.action"></td>
                                  <td class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-end" 
                                     x-text="activity.ip"></td>

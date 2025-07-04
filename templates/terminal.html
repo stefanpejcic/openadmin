@@ -42,21 +42,42 @@
   term.open(document.getElementById('terminal'));
 
   const shellSelect = document.getElementById('shell');  
-  const username = 'root';  // todo!
+  const username = 'root';
+  const promptStr = `${username}@localhost:~$ `;
+
+  let input = '';
+  let commandHistory = [];
+  let historyIndex = -1;
+
   function prompt() {
-    term.write(`\r\n${username}@localhost:~$ `);
+    term.write(`\r\n${promptStr}`);
+    input = '';
+    historyIndex = commandHistory.length;
+  }
+
+  function clearLine() {
+    for (let i = 0; i < input.length; i++) {
+      term.write('\b \b');
+    }
+  }
+
+  function replaceInput(newInput) {
+    clearLine();
+    input = newInput;
+    term.write(input);
   }
 
   prompt();
 
-  let input = '';
-
-  term.onKey(e => {
-    const char = e.key;
-
-    if (char === '\r') {  // Enter pressed
+  term.onData(data => {
+    if (data === '\r') { // Enter
       term.write('\r\n');
       const command = input.trim();
+
+      if (command.length > 0) {
+        commandHistory.push(command);
+      }
+
       input = '';
 
       if (command.length === 0) {
@@ -87,18 +108,30 @@
         prompt();
       });
 
-    } else if (char === '\u007F') { // Backspace
+    } else if (data === '\u007F') { // Backspace
       if (input.length > 0) {
         input = input.slice(0, -1);
         term.write('\b \b');
       }
+    } else if (data === '\u001b[A') { // Up arrow
+      if (commandHistory.length > 0 && historyIndex > 0) {
+        historyIndex--;
+        replaceInput(commandHistory[historyIndex]);
+      }
+    } else if (data === '\u001b[B') { // Down arrow
+      if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+        historyIndex++;
+        replaceInput(commandHistory[historyIndex]);
+      } else if (historyIndex === commandHistory.length - 1) {
+        historyIndex++;
+        replaceInput('');
+      }
     } else {
-      input += char;
-      term.write(char);
+      const sanitized = data.replace(/[\x00-\x1F\x7F]/g, '');
+      input += sanitized;
+      term.write(sanitized);
     }
   });
-
-// ** todo paste handler **
 </script>
 
 {% elif terminal_type == 'users' %}
@@ -110,24 +143,44 @@
   term.open(document.getElementById('terminal'));
 
   const shellSelect = document.getElementById('shell');  
-  const username = 'root';  // todo!
+  const username = 'root';
   const docker_context = '{{ username }}';
   const container = '{{ container_name }}';
-  function prompt() {
-    term.write(`\r\n${username}@${container}:~$ `);
-  }
-
-  //term.write(`Connected to container: ${container}\r\n`);
-  prompt();
+  const promptStr = `${username}@${container}:~$ `;
 
   let input = '';
+  let commandHistory = [];
+  let historyIndex = -1;
 
-  term.onKey(e => {
-    const char = e.key;
+  function prompt() {
+    term.write(`\r\n${promptStr}`);
+    input = '';
+    historyIndex = commandHistory.length;
+  }
 
-    if (char === '\r') {  // Enter pressed
+  function clearLine() {
+    for (let i = 0; i < input.length; i++) {
+      term.write('\b \b');
+    }
+  }
+
+  function replaceInput(newInput) {
+    clearLine();
+    input = newInput;
+    term.write(input);
+  }
+
+  prompt();
+
+  term.onData(data => {
+    if (data === '\r') { // Enter
       term.write('\r\n');
       const command = input.trim();
+
+      if (command.length > 0) {
+        commandHistory.push(command);
+      }
+
       input = '';
 
       if (command.length === 0) {
@@ -158,89 +211,32 @@
         prompt();
       });
 
-    } else if (char === '\u007F') { // Backspace
+    } else if (data === '\u007F') { // Backspace
       if (input.length > 0) {
         input = input.slice(0, -1);
         term.write('\b \b');
       }
-    } else {
-      input += char;
-      term.write(char);
-    }
-  });
-
-// ** todo paste handler **
-</script>
-{% elif terminal_type == 'users' %}
-<script>
-  var csrf_token = $('meta[name="csrf-token"]').attr('content');
-  const term = new Terminal({
-    cursorBlink: true
-  });
-  term.open(document.getElementById('terminal'));
-
-  const shellSelect = document.getElementById('shell');  
-  const username = 'root';  // todo!
-  const docker_context = '{{ username }}';
-  const container = '{{ container_name }}';
-  function prompt() {
-    term.write(`\r\n${username}@${container}:~$ `);
-  }
-
-  //term.write(`Connected to container: ${container}\r\n`);
-  prompt();
-
-  let input = '';
-
-  term.onKey(e => {
-    const char = e.key;
-
-    if (char === '\r') {  // Enter pressed
-      term.write('\r\n');
-      const command = input.trim();
-      input = '';
-
-      if (command.length === 0) {
-        prompt();
-        return;
+    } else if (data === '\u001b[A') { // Up arrow
+      if (commandHistory.length > 0 && historyIndex > 0) {
+        historyIndex--;
+        replaceInput(commandHistory[historyIndex]);
       }
-
-      const shell = shellSelect.value || 'sh';
-
-      fetch(`/terminal/${docker_context}/${container}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrf_token
-        },
-        body: JSON.stringify({
-          command: command,
-          shell: shell
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        term.write(data.output.replace(/\n/g, '\r\n'));
-        prompt();
-      })
-      .catch(() => {
-        term.write('Error running command');
-        prompt();
-      });
-
-    } else if (char === '\u007F') { // Backspace
-      if (input.length > 0) {
-        input = input.slice(0, -1);
-        term.write('\b \b');
+    } else if (data === '\u001b[B') { // Down arrow
+      if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+        historyIndex++;
+        replaceInput(commandHistory[historyIndex]);
+      } else if (historyIndex === commandHistory.length - 1) {
+        historyIndex++;
+        replaceInput('');
       }
     } else {
-      input += char;
-      term.write(char);
+      const sanitized = data.replace(/[\x00-\x1F\x7F]/g, '');
+      input += sanitized;
+      term.write(sanitized);
     }
   });
-
-// ** todo paste handler **
 </script>
+
 {% endif %}
 
 
