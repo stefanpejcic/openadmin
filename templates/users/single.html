@@ -187,52 +187,80 @@
   x-init="initTabs()"
 >
 
+
 <script>
 function customMessageComponent(username) {
     return {
         containerName: username.split('_').pop(),
-        fetchCustomMessage() {
+        activeTab: '',
+
+        fetchCustomMessage: function() {
+            var self = this;
             $.ajax({
-                url: `/get_custom_message_for_user/${this.containerName}`,
+                url: '/get_custom_message_for_user/' + this.containerName,
                 type: 'GET',
-                success: (response) => {
+                success: function(response) {
                     if (response.custom_message) {
                         $('#custom_message_for_this_user').val(response.custom_message);
                     } else {
                         $('#custom_message_for_this_user').val('');
                     }
                 },
-                error: (xhr) => {
+                error: function(xhr) {
                     if (xhr.status === 404) {
                         $('#custom_message_for_this_user').val('');
                     } else {
-                        showMessageModal('Error', xhr.responseJSON.error || 'An error occurred while retrieving the custom message.');
+                        showMessageModal('Error', (xhr.responseJSON && xhr.responseJSON.error) || 'An error occurred while retrieving the custom message.');
                     }
                 }
             });
         },
-        initTabs() {
-            if (window.location.hash === '#services') {
-                this.activeTab = 'services';
-            } else if (window.location.hash === '#activity') {
-                this.activeTab = 'activity';
-                this.$nextTick(() => $store.activityStore.fetchLogs());
-            } else if (window.location.hash === '#suspend') {
-                this.activeTab = 'suspend';
-            } else if (window.location.hash === '#unsuspend') {
-                this.activeTab = 'unsuspend';
-            } else if (window.location.hash === '#storage') {
-                this.activeTab = 'storage';
-                this.$nextTick(() => loadDiskUsage());
-            } else if (window.location.hash === '#edit') {
-                this.activeTab = 'edit';
-                this.$nextTick(() => $store.ipStore.fetchIPs());
-            } else if (window.location.hash === '#delete') {
-                this.activeTab = 'delete';
-                this.$nextTick(() => $store.ipStore.fetchIPs());
-            } else if (window.location.hash === '#overview') {
-                this.activeTab = 'info';
-                this.$nextTick(() => this.fetchCustomMessage());
+
+        initTabs: function() {
+            var self = this;
+            var hash = window.location.hash;
+
+            if (hash === '#services') {
+                self.activeTab = 'services';
+            } else if (hash === '#activity') {
+                self.activeTab = 'activity';
+                this.$nextTick(function() {
+                    if ($store && $store.activityStore) {
+                        $store.activityStore.fetchLogs();
+                    }
+                });
+            } else if (hash === '#suspend') {
+                self.activeTab = 'suspend';
+            } else if (hash === '#unsuspend') {
+                self.activeTab = 'unsuspend';
+            } else if (hash === '#storage') {
+                self.activeTab = 'storage';
+                this.$nextTick(function() {
+                    if (typeof loadDiskUsage === 'function') {
+                        loadDiskUsage();
+                    }
+                });
+            } else if (hash === '#edit') {
+                self.activeTab = 'edit';
+                this.$nextTick(function() {
+                    if ($store && $store.ipStore) {
+                        $store.ipStore.fetchIPs();
+                    }
+                });
+            } else if (hash === '#delete') {
+                self.activeTab = 'delete';
+                this.$nextTick(function() {
+                    if ($store && $store.ipStore) {
+                        $store.ipStore.fetchIPs();
+                    }
+                });
+            } else if (hash === '#overview') {
+                self.activeTab = 'info';
+                this.$nextTick(function() {
+                    self.fetchCustomMessage();
+                });
+            } else {
+                self.activeTab = 'stats';
             }
         }
     }
@@ -652,16 +680,26 @@ function customMessageComponent(username) {
                         </div>
                      </div>
                      <div class="grid grid-cols-2 gap-4 p-4">
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Running containers:</span><span class="font-medium"><a href="#" @click="activeTab = 'services'" class="inline-flex items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">{{ stats.stats.Container }}</a></span></div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Disk I/O:</span><span class="font-medium">{{ stats.stats.BlockIO }}</span></div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Network I/O:</span><span class="font-medium">{{ stats.stats.NetIO }}</span></div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">PIDs:</span><a href="/server/processes?sort=owner&owner={{ user.username.split('_')[-1] }}" class="font-medium">{{ stats.stats.PIDs }}</a></div>
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Running containers:</span><span class="font-medium"><a href="#" @click="activeTab = 'services'" class="inline-flex items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">
+{% set container = stats.get('stats', {}).get('Container') if stats is mapping else None %}
+{{ container if container else '?' }}
+
+                            </a></span></div>
+
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Disk I/O:</span><span class="font-medium">
+                            {% set blockio = stats.get('stats', {}).get('BlockIO') if stats is mapping else None %}
+{{ blockio if blockio else '?' }}</span></div>
+
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Network I/O:</span><span class="font-medium">{% set netio = stats.get('stats', {}).get('NetIO') if stats is mapping else None %}
+{{ netio if netio else '?' }}</span></div>
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">PIDs:</span><a href="/server/processes?sort=owner&owner={{ user.username.split('_')[-1] }}" class="font-medium">{% set pids = stats.get('stats', {}).get('PIDs') if stats is mapping else None %}
+{{ pids if pids else '?' }}</a></div>
                      </div>
 
 <div class="flex justify-between mt-4 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-900 dark:bg-gray-950">
   <div>
     <h4 class="text-sm font-medium text-gray-900 dark:text-gray-50">Usage updated hourly</h4>
-    <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-500">                           Docker stats last updated at: {{ stats.date }}<!-- --></p>
+    <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-500">{% set updated_at = stats.date if stats is mapping and stats.date else 'No stats found - run: opencli docker-collect_stats --all' %}Docker stats last updated: <span class="time_ago">{{ updated_at }}</span></p>
   </div>
   <div>
     <button id="get_docker_history_usage" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">
@@ -767,7 +805,7 @@ function customMessageComponent(username) {
           tr.className = "sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900";
 
           tr.innerHTML = `
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${timestamp}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 time_readable">${timestamp}</td>
             <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${usage.Container}</td>
             <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${cpuPercent}</td>
             <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${memPercent}</td>
@@ -776,11 +814,13 @@ function customMessageComponent(username) {
           `;
           tbody.appendChild(tr);
         });
+        updateAllTimestamps();
       })
       .catch(error => {
         console.error(error);
         tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-red-600">Error loading usage data: ${error.message}</td></tr>`;
       });
+
   });
 </script>
 
@@ -1899,7 +1939,7 @@ function updateRamUsage(ramPercentage) {
                   <div class="col-span-full sm:col-span-3">
                   <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="new_ip">IP address</label>
                   <div class="relative w-full mt-2">
-                  <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" id="ipSelect" name="new_ip" disabled>
+                  <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" id="ipSelect" name="new_ip">
                   <option disabled value="">Change IP address</option>
                   </select>
                   </div>
