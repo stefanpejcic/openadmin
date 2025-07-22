@@ -52,8 +52,8 @@
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">{{ user.username.split('_')[-1] }} {% if "SUSPENDED_" in user.username %} <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-700 ring-red-500/30 dark:bg-red-400/10 dark:text-red-300 dark:ring-red-400/20 ml-1">Suspended</span>{% endif %}
-</h1>
+                    <h1 class="mb-1 text-xl font-bold">{{ user.username.split('_')[-1] }} {% if "SUSPENDED_" in user.username %} 
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-700 ring-red-500/30 dark:bg-red-400/10 dark:text-red-300 dark:ring-red-400/20 ml-1">Suspended</span>{% endif %} <span id="transfer-status-message"></span></h1>
                     <h2 class="text-sm font-medium text-slate-500">
                        <span class="inline-flex">
 <!-- IP --> 
@@ -163,10 +163,18 @@
             </li>
 
             <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'transfer'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'transfer'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Transfer</span>
+                </a>
+            </li>
+
+            <li class="flex cursor-pointer">
                 <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'suspend'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'suspend'}">
                     <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Suspend</span>
                 </a>
             </li>
+
+
 {% endif %}                
 
 
@@ -233,6 +241,8 @@ function customMessageComponent(username) {
                 self.activeTab = 'suspend';
             } else if (hash === '#unsuspend') {
                 self.activeTab = 'unsuspend';
+            } else if (hash === '#transfer') {
+                self.activeTab = 'transfer';
             } else if (hash === '#storage') {
                 self.activeTab = 'storage';
                 this.$nextTick(function() {
@@ -478,6 +488,10 @@ function customMessageComponent(username) {
                            :class="{'text-blue-600 dark:text-blue-500': activeTab === 'edit'}" 
                            class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
                         Edit
+                        </a>
+                     </li>
+                     <li>
+                        <a @click="activeTab = 'transfer'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'transfer'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Transfer <span class="inline-flex items-center gap-x-1 whitespace-nowrap text-xs px-2 font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">New</span>
                         </a>
                      </li>
                      <li>
@@ -1851,7 +1865,7 @@ function updateRamUsage(ramPercentage) {
                   <div class="relative w-full mt-2">
                   <input
                      type="text"
-                     class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" min="5" max="16"  minlength="5" maxlength="16" pattern="[a-zA-Z0-9]{3,16}" title="Can only contain letters and numbers. 3 characters min. - 16 max." name="new_username" placeholder="Username" value="{{ user.username.split('_')[-1] }}"/>
+                     class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" min="3" max="20"  minlength="3" maxlength="20" pattern="[a-zA-Z0-9]{3,20}" title="Can only contain letters and numbers. 3 characters min. - 20 max." name="new_username" placeholder="Username" value="{{ user.username.split('_')[-1] }}"/>
                   </div>
                   </div>
                   <div class="col-span-full sm:col-span-3">
@@ -2100,12 +2114,94 @@ function updateRamUsage(ramPercentage) {
                </div>
             </div>
             <!-- END ACTIVITY -->
+
+            <!-- TRANSFER USER -->
+            <div x-show="activeTab === 'transfer'" class="p-4" x-cloak>
+
+               <form method="POST" id="transfer-form" action="/import/transfer/">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
+                    <h3 class="font-semibold text-gray-900 dark:text-gray-50">Transfer account {{ user.username.split('_')[-1] }}</h3>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Transfer the user account along with all its containers and data to another OpenPanel server via SSH.</p>
+                    <div class="mt-6">
+                        <input hidden type="hidden" name="openpanel_username" value="{{ user.username.split('_')[-1] }}">
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+                        <div class="col-span-full">
+                        <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="server">
+                            Server<span class="text-red-500 dark:text-red-500">*</span>
+                        </label>
+                        <div class="flex gap-4 mt-2">
+                            <div class="flex-2">
+                            <input
+                                type="text"
+                                class="block w-full rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+                                name="server"
+                                id="server"
+                                required
+                                autofocus
+                                placeholder="IP address"
+                                {% if server %}value="{{server}}"{% endif %}
+                            />
+                            </div>
+                            <div class="flex-1">
+                            <label class="sr-only" for="port">Port</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="65535"
+                                class="block w-full rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700"
+                                name="port"
+                                id="port"
+                                placeholder="Port"
+                                {% if port %}value="{{port}}"{% endif %}
+                            />
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <p class="text-xs text-gray-500">Insert remote server's IP address or domain name and SSH port (usually <b>22</b>).</p>
+                        </div>
+                        </div>
+
+
+                        <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
+                            <div class="relative w-full mt-2"><input type="text" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" minlength="3" maxlength="25" name="username" placeholder="Username" id="username" required="" autofocus="" {% if username %}value="{{username}}"{% endif %}></div>
+
+                        <div class="mt-4"><p class="text-xs text-gray-500">SSH username for the remote server (usually <b>root</b>).</p></div>
+
+                        </div>
+
+                        <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="password">Password<span class="text-red-500 dark:text-red-500">*</span></label>
+                            <div class="relative w-full mt-2"><input type="password" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="password" id="password" required="" autofocus="" placeholder="Password" {% if password %}value="{{password}}"{% endif %}></div>
+                        </div>
+
+
+
+                        <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="live_transfer">Live Transfer</label><div class="relative w-full mt-2"><div class="mt-2 flex items-start"><input name="live_transfer" id="live_transfer" type="checkbox" tabindex="-1" class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"><label for="live_transfer" class="ml-2 block text-sm text-gray-500">Suspend account on this server and forward DNS to the remote server.</label></div></div></div>
+
+
+
+
+                        </div>
+                    </div>
+                    <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400 mt-4 w-full" type="submit">Start Transfer</button>
+                   </div>
+               </form>
+
+               <div id="existing-transfers" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl"></div>
+
+            </div>
+            <!-- END TRANSFER USER -->
+
+
+
             <!-- SUSPEND USER -->
             <div x-show="activeTab === 'suspend'" class="p-4" x-cloak>
                <form method="POST" action="/user/suspend/{{ user.username.split('_')[-1] }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <div x-data="{ confirmationText: '' }" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
-               <form action="#" method="POST">
                <h3 class="font-semibold text-gray-900 dark:text-gray-50">Suspend user account</h3>
                <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Disable login for OpenPanel user, stop their services and revoke access to websites and emails.</p>
                <div class="mt-6">
@@ -2117,8 +2213,11 @@ function updateRamUsage(ramPercentage) {
                <button x-show="confirmationText === '{{ user.username.split('_')[-1] }}'" x-cloak class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400 mt-4 w-full" type="submit">Suspend account</button>
                </form>
                </div>
-               </form>
+
             </div>
+
+
+
             <!-- END SUSPEND USER -->
             <!-- DELETE USER -->
             <div x-show="activeTab === 'delete'" class="p-4" x-cloak>
@@ -2144,6 +2243,122 @@ function updateRamUsage(ramPercentage) {
       </div>
    </div>
 </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const username = "{{ user.username|e }}";
+  const url = `/json/transfers/${username}`;
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      const inProgress = data.some(item => item.pid && item.status === 'in progress');
+      const success = data.some(item => item.pid && item.status === 'success');
+      const failed = data.some(item => item.pid && item.status === 'failed');
+
+        // hide transfer section!
+        if ((inProgress || success) && username.includes('SUSPENDED_')) {
+            const form = document.getElementById('transfer-form');
+            if (form) form.style.display = 'none';
+        }
+
+      let message = null;
+      let bgColor = '';
+      let borderColor = '';
+
+      if (inProgress) {
+        message = `Transfer to another server in progress`;
+        bgColor = '#d9edf7';    // light blue
+        borderColor = '#31708f';
+      } else if (success) {
+        message = `Transferred to another server`;
+        bgColor = '#dff0d8';    // light green
+        borderColor = '#3c763d';
+      } /*else if (failed) {
+        message = `Failed transfer process to another server.`;
+        bgColor = '#f2dede';    // light red
+        borderColor = '#a94442';
+      }*/
+
+      // transfer-status-message div
+      let messageDiv = document.getElementById('transfer-status-message');
+      if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'transfer-status-message';
+        messageDiv.style.padding = '10px';
+        messageDiv.style.margin = '10px 0';
+        messageDiv.style.borderRadius = '4px';
+        messageDiv.style.fontWeight = 'bold';
+        document.body.prepend(messageDiv);
+      }
+
+function getStatusBadge(status) {
+  switch ((status || '').toLowerCase()) {
+    case 'success':
+    case 'completed':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>Completed
+              </span>`;
+    case 'in progress':
+    case 'running':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>Running
+              </span>`;
+    case 'failed':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-red-600 dark:bg-red-400" aria-hidden="true"></span>Failed
+              </span>`;
+    default:
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Unknown
+              </span>`;
+  }
+}
+
+
+      if (message) {
+        messageDiv.innerHTML = `${message}`;
+        messageDiv.style.backgroundColor = bgColor;
+        messageDiv.style.border = `1px solid ${borderColor}`;
+        messageDiv.style.color = borderColor;
+      } else {
+        messageDiv.innerHTML = '';
+      }
+
+      // Format and display data inside #existing-transfers
+      const transfersDiv = document.getElementById('existing-transfers');
+      if (transfersDiv) {
+        let html = `
+          <h3 class="font-semibold text-gray-900 dark:text-gray-50">Transfer logs:</h3>
+          <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">
+        `;
+
+        if (data.length === 0) {
+          html = '';
+        } else {
+          data.forEach(item => {
+            const statusBadge = getStatusBadge(item.status);
+            html += `<a class="text-blue-600 hover:underline" href="/import/user/log/${encodeURIComponent(item.filename)}" target="_blank">${item.filename || 'N/A'}</a> ${statusBadge}`;
+
+            if (item.details) {
+              html += `, Details: ${item.details}`;
+            }
+            html += '<br>';
+          });
+        }
+
+        html += '</p>';
+        transfersDiv.innerHTML = html;
+      }
+    })
+    .catch(err => {
+      console.error('Failed to fetch transfer status:', err);
+    });
+});
+</script>
+
+
 
 
 {% else %}
@@ -2190,8 +2405,6 @@ function updateRamUsage(ramPercentage) {
 
 
 {% endif %}
-
-
 
 
 

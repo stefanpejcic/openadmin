@@ -1,4 +1,4 @@
-<!-- templates/settings/user.html -->
+<!-- templates/settings/features.html -->
 {% extends 'base.html' %}
 
 {% block content %}
@@ -103,6 +103,73 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+
+
+
+
+
+
+
+
+
+            {% for plugin in plugins %}
+
+                        <tr  x-data="{ enabled: {{ 'true' if plugin.status else 'false' }} }" x-show="searchQuery === '' || '{{ plugin.title }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                                
+                                <div id="tooltip-{{ plugin.title }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+                                    {{ plugin.description }}
+                                    <div class="tooltip-arrow" data-popper-arrow></div>
+                                </div>
+                                
+                                <span class="select-text" data-tooltip-target="tooltip-{{ plugin.title }}" data-tooltip-placement="right">{{ plugin.title }}</span></td>
+                  
+
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 w-10 text-left select-text">
+                                    <span class="flex gap-2 rounded bg-orange-500 text-white dark:bg-orange-700 px-2 py-0.5 text-xs font-medium"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plugin" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 8a7 7 0 1 1 2.898 5.673c-.167-.121-.216-.406-.002-.62l1.8-1.8a3.5 3.5 0 0 0 4.572-.328l1.414-1.415a.5.5 0 0 0 0-.707l-.707-.707 1.559-1.563a.5.5 0 1 0-.708-.706l-1.559 1.562-1.414-1.414 1.56-1.562a.5.5 0 1 0-.707-.706l-1.56 1.56-.707-.706a.5.5 0 0 0-.707 0L5.318 5.975a3.5 3.5 0 0 0-.328 4.571l-1.8 1.8c-.58.58-.62 1.6.121 2.137A8 8 0 1 0 0 8a.5.5 0 0 0 1 0"/>
+</svg> Plugin</span>
+
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">{{ plugin.link }}</td>
+
+                              <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+                  <button @click="enabled = !enabled" :aria-checked="enabled"
+                    :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                    class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+                    {% if disable_toggle %}
+                    disabled aria-disabled="true"
+                    class="opacity-50 cursor-not-allowed {{ 'bg-indigo-300 dark:bg-indigo-900' if plugin.status else 'bg-gray-100 dark:bg-gray-800' }}"
+                    {% endif %}
+                    >
+                    <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
+                      class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"></span>
+                  </button>
+                  <input type="checkbox" x-model="enabled" hidden name="{{ plugin.name }}" value="{{ plugin.name }}" :checked="enabled">
+                              </td>    
+                          </tr>
+
+                {% endfor %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             {% for feature in features %}
     {% set type = feature.type|lower %}
     {% set is_enterprise = (type == "enterprise") %}

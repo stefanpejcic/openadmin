@@ -1,89 +1,146 @@
-<!-- users/add.html -->
 {% extends 'base.html' %}
 
 {% block content %}
 
 
-
-<div>
+<div x-data="{ searchQuery: '' }">
     <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
-                    <h1 id="title" class="mb-1 text-xl font-bold">Import Accounts</h1>
-                    <h2 id="subtitle" class="text-sm font-medium text-slate-500">Import OpenPanel user accounts from another server.</h2>
+                    <h1 id="title" class="mb-1 text-xl font-bold">Review Account Transfers</h1>
+                    <h2 id="subtitle" class="text-sm font-medium text-slate-500">View running and past account transfer logs.</h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-<a href="#" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">View Logs</a>
                 </div>
             </div>
     </header>
     </div>
 
 
-<div id="collapseAddNewUser">
-    <div id="create_user_form" class="sm:mx-auto sm:max-w-2xl" style="display:block;">
-            <form id="userimportForm" class="mt-8" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+    <div class="relative">
+        <div class="pl-2 space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
 
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search logs..." type="search" @input="searchQuery = $event.target.value.trim()">
 
-<div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="server">Server<span class="text-red-500 dark:text-red-500">*</span></label>
-    <div class="relative w-full mt-2"><input type="text" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-  name="server" id="server" required="" autofocus="" {% if server %}value="{{server}}"{% endif %}></div>
-
-<div class="mt-4"><p class="text-xs text-gray-500">Insert remote server's IP address or domain name.</p></div>
-
-
-</div>
-
-<div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
-    <div class="relative w-full mt-2"><input type="text" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" minlength="3" maxlength="20" name="username" id="username" required="" autofocus="" {% if username %}value="{{username}}"{% endif %}></div>
-
-<div class="mt-4"><p class="text-xs text-gray-500">Username used to authenticate with the OpenAdmin API on the remote server.</p></div>
-
-</div>
-
-<div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="password">Password<span class="text-red-500 dark:text-red-500">*</span></label>
-    <div class="relative w-full mt-2"><input type="password" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="password" id="password" required="" autofocus="" {% if password %}value="{{password}}"{% endif %}></div>
-</div>
-
-
-
-
-
-
-
-
-</div>
-
-
-
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-
-            <div class="flex items-center justify-end space-x-4">
-                <a href="/users" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">Go back</a>
-
-<div id="tooltip-community-limit-reached" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-    OpenPanel Community edition has a limit of 3 user accounts. Remove account or upgrade to Enterprise
-    <div class="tooltip-arrow" data-popper-arrow></div>
-</div>
-
-<div id="tooltip-demo" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-    This action is disabled in demo mode.
-    <div class="tooltip-arrow" data-popper-arrow></div>
-</div>
-
-                <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400" {% if users | length >= 3 and license_type == 'Community' %}data-tooltip-target="tooltip-community-limit-reached" type="button" disabled{% else %}type="submit"{% endif %}>{% if server and username and password %}Try Again{% else %}Select Accounts{% endif %}</button>
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </form>
+            <div class="border-t border-gray-200 dark:border-gray-800 relative">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">Log</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div>Status</div></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800" x-data="logWindowHandler()">
+{% if log_files %}
+
+
+{% for log_file in log_files %}
+
+                        <tr x-show="searchQuery === '' || '{{ log_file.status }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ log_file.filename }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+
+    <!-- Link that triggers the modal -->
+    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+        <a 
+            class="text-blue-600 hover:underline"
+            @click.prevent="openLogWindow('/import/user/log/{{ log_file.filename }}')"
+            href="#"
+        >
+            {{ log_file.filename }}
+        </a>
+    </td>
+
+    <!-- Modal -->
+    <div 
+        x-show="isOpen" 
+        x-cloak 
+        class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50"
+    >
+        <div class="bg-white dark:bg-gray-800 w-full max-w-3xl rounded-lg shadow-lg p-6 relative">
+            <button 
+                @click="closeModal"
+                class="absolute top-2 right-2 text-gray-600 hover:text-black dark:text-gray-300"
+            >&times;</button>
+
+            <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4" x-text="logFileName"></h2>
+
+            <pre 
+                id="logContent" 
+                class="text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-900 p-4 rounded overflow-auto max-h-[60vh]"
+                x-text="logContent"
+            ></pre>
+        </div>
     </div>
 </div>
 
+<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+    {% if log_file.status == 'completed' %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full"><span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>Completed</span>
+    {% elif log_file.status == 'running' %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20 rounded-full"><span class="size-1.5 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>Running</span>
+    {% elif log_file.status == 'failed' %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 rounded-full"><span class="size-1.5 shrink-0 rounded-full bg-red-600 dark:bg-red-400" aria-hidden="true"></span>Failed</span>
+    {% else %}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full"><span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Unknown</span>
+    {% endif %}
+</td>
+                        </tr>
 
+
+{% endfor %}
+
+
+<script>
+function logWindowHandler() {
+    return {
+        logWindow: null,
+        openLogWindow(url) {
+            // Open new small fixed window
+            this.logWindow = window.open(url, 'LogWindow', 'width=800,height=600,resizable=no');
+
+            // Start auto-refresh every second
+            const interval = setInterval(() => {
+                if (!this.logWindow || this.logWindow.closed) {
+                    clearInterval(interval);
+                    return;
+                }
+                this.logWindow.location.reload();
+            }, 1000);
+        }
+    };
+}
+</script>
+
+
+
+{% else %}
+
+<tr>
+    <td colspan="2" class="p-6 text-center">
+        No log files found.
+    </td>
+</tr>
+
+{% endif %}
+
+                    </tbody>
+                </table>
+            </div>
 </div>
+</div></div>
 
-  
 {% endblock %}
