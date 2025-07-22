@@ -28,33 +28,30 @@ function updatePublicIP(username, ip) {
 
 
 // DISPLAY USER ONLINE STATUS
-/*
 fetch('/json/user_activity_status')
   .then(response => response.json())
   .then(data => {
     document.querySelectorAll('tbody tr').forEach(row => {
-      const username = row.getAttribute('data-username');
-      const status = data[username];
+      const usernameCell = row.querySelector('td a[href^="/users/"]');
+      if (!usernameCell) return;
 
-      if (status === 'active') {
-        const onlineDiv = document.createElement('div');
-        onlineDiv.classList.add('small', 'mt-1');
+      const username = usernameCell.getAttribute('href').split('/').pop();
+      const isActive = data[username] === 'active';
 
-        const aTag = document.createElement('a');
-        aTag.setAttribute('href', `/users/${username}#nav-activity`);
-        aTag.setAttribute('style', 'text-decoration: none;');
-        onlineDiv.appendChild(aTag);
+      if (isActive) {
+        // Avoid duplicating the green dot
+        if (usernameCell.querySelector('.user-status-dot')) return;
 
-        const spanBadge = document.createElement('span');
-        spanBadge.classList.add('badge', 'bg-green');
-        aTag.appendChild(spanBadge);
+        const dot = document.createElement('span');
+        dot.classList.add('user-status-dot');
+        dot.textContent = ' ●';
+        dot.style.color = 'green';
+        dot.style.fontSize = '0.7rem';
+        dot.style.marginLeft = '4px';
+        dot.style.verticalAlign = 'middle';
 
-        const avatarSpan = row.querySelector('span.avatar.me-2');
-        if (avatarSpan) {
-          avatarSpan.appendChild(onlineDiv);
-        }
+        usernameCell.appendChild(dot);
       }
     });
   })
   .catch(error => console.error('Error fetching user activity status:', error));
-*/

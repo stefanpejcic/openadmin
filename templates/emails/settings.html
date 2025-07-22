@@ -222,7 +222,9 @@
                 <div class="relative w-full mt-2">
 
 
-                                <form id="client-form">
+                                <form method="POST" id="client-form">
+                                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
 
                                     <select id="webmail-software" name="webmail-software" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2">
                                       <option value="" disabled {% if not webmail_services %}selected{% endif %}>Select Webmail Client</option>
@@ -250,8 +252,8 @@
 
 
 
-
-                                <form id="domain-form">
+          <form method="POST" action="/emails/settings">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                
 <input name="webmail-domain" id="webmail-domain" type="text" class="relative block w-full appearance-none truncate rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" placeholder="webmail.example.net" value="{{webmail_domain}}">
@@ -263,12 +265,11 @@
 
 <button type="submit" id="save_domain_webmail_btn" class="mt-2 relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Save Domain</button>
 
-
-                                </form>
+ </form>
+                               
 
 
                   </div>
-
 
             </div>
 
@@ -302,7 +303,9 @@
                     <div class="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                       <div class="flex items-center gap-2">
 
-              <form class="card" id="mailserver-form">
+              <form class="card" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
                 <div class="card-body">
                   <div class="mb-3">
                     <div>
@@ -579,147 +582,6 @@
 </div>
 
 
-
-<script>
-    var csrf_token = $('meta[name="csrf-token"]').attr('content');
-
-
-    // Store the initial state of text inputs
-    const initialRelayStates = {};
-    const relayForm = document.getElementById('relay-form');
-
-    // Store initial values of input fields
-    Array.from(relayForm.querySelectorAll('input[type="text"], input[type="number"], input[type="password"]')).forEach(input => {
-        initialRelayStates[input.name] = input.value; // Use 'name' instead of 'id'
-    });
-
-    relayForm.onsubmit = function(event) {
-        event.preventDefault();
-        
-        const formData = new FormData();
-
-        // Collect only changed values
-        Array.from(relayForm.querySelectorAll('input[type="text"], input[type="number"], input[type="password"]')).forEach(input => {
-            const value = input.value;
-            const name = input.name; // Use 'name' to match FormData structure
-
-            // Check if the state has changed
-            if (initialRelayStates[name] !== value) {
-                // Add the changed value to FormData
-                formData.append(name, value);  // Send the updated value
-            }
-        });
-
-        // Send the form data using Fetch API
-        fetch('/emails/settings', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrf_token  // Include the CSRF token in the header
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Create a new toast element for notifications
-            const toastElement = document.createElement('div');
-            toastElement.className = 'toast';
-            toastElement.role = 'alert';
-            toastElement.ariaLive = 'assertive';
-            toastElement.ariaAtomic = 'true';
-            toastElement.setAttribute('data-bs-autohide', 'false');
-
-            // Create the header
-            const toastHeader = document.createElement('div');
-            toastHeader.className = 'toast-header';
-            const strong = document.createElement('strong');
-            strong.className = 'me-auto';
-            strong.innerText = `Relay Settings Update`;
-            const small = document.createElement('small');
-            small.innerText = new Date().toLocaleTimeString();
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.className = 'ms-2 btn-close';
-            closeButton.setAttribute('data-bs-dismiss', 'toast');
-            closeButton.setAttribute('aria-label', 'Close');
-
-            // Append elements to the header
-            toastHeader.appendChild(strong);
-            toastHeader.appendChild(small);
-            toastHeader.appendChild(closeButton);
-
-            // Create the body
-            const toastBody = document.createElement('div');
-            toastBody.className = 'toast-body';
-            toastBody.innerText = data.success ? data.success : data.error;
-
-            // Append header and body to the toast
-            toastElement.appendChild(toastHeader);
-            toastElement.appendChild(toastBody);
-
-            // Append the toast to the toast container
-            document.querySelector('.toast-container').appendChild(toastElement);
-
-            // Show the toast
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-
-            // Reload the page after 1 second
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            
-            // Create a new toast for errors
-            const toastElement = document.createElement('div');
-            toastElement.className = 'toast';
-            toastElement.role = 'alert';
-            toastElement.ariaLive = 'assertive';
-            toastElement.ariaAtomic = 'true';
-            toastElement.setAttribute('data-bs-autohide', 'false');
-
-            // Create the header
-            const toastHeader = document.createElement('div');
-            toastHeader.className = 'toast-header';
-            const strong = document.createElement('strong');
-            strong.className = 'me-auto';
-            strong.innerText = `Error`;
-            const small = document.createElement('small');
-            small.innerText = new Date().toLocaleTimeString();
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.className = 'ms-2 btn-close';
-            closeButton.setAttribute('data-bs-dismiss', 'toast');
-            closeButton.setAttribute('aria-label', 'Close');
-
-            // Append elements to the header
-            toastHeader.appendChild(strong);
-            toastHeader.appendChild(small);
-            toastHeader.appendChild(closeButton);
-
-            // Create the body
-            const toastBody = document.createElement('div');
-            toastBody.className = 'toast-body';
-            toastBody.innerText = 'An error occurred processing the request. Error message:<br>' + error;
-
-            // Append header and body to the toast
-            toastElement.appendChild(toastHeader);
-            toastElement.appendChild(toastBody);
-
-            // Append the toast to the toast container
-            document.querySelector('.toast-container').appendChild(toastElement);
-
-            // Show the toast
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-        });
-    };
-</script>
-
-
-
-
               </div>
 
 
@@ -732,306 +594,6 @@
     </div>
 </div>
 
-
-
-
-
-
-
-<script>
-    // Store the initial state of the select input
-    const initialClientStates = {};
-    const clientForm = document.getElementById('client-form');
-
-    // Store the initial value of the select field
-    Array.from(clientForm.querySelectorAll('select')).forEach(select => {
-        initialClientStates[select.name] = select.value; // Use 'name' instead of 'id'
-    });
-
-    clientForm.onsubmit = function(event) {
-        event.preventDefault();
-              
-
-        const saveWebmailClientButton = document.getElementById('save_webmail_client');
-        saveWebmailClientButton.disabled = true;
-        saveWebmailClientButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp; Configuring Webmail Client...';
-
-
-
-        const formData = new FormData();
-
-        // Collect only changed values
-        Array.from(clientForm.querySelectorAll('select')).forEach(select => {
-            const value = select.value;
-            const name = select.name; // Use 'name' to match FormData structure
-
-            // Check if the state has changed
-            if (initialClientStates[name] !== value) {
-                // Add the changed value to FormData
-                formData.append(name, value);  // Send the updated value
-            }
-        });
-
-        // Send the form data using Fetch API
-        fetch('/emails/settings', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrf_token  // Include the CSRF token in the header
-            },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-
-        saveWebmailClientButton.disabled = false;
-        saveWebmailClientButton.innerHTML = 'Done, reloading page..';
-
-
-            // Create a new toast element for notifications
-            const toastElement = document.createElement('div');
-            toastElement.className = 'toast';
-            toastElement.role = 'alert';
-            toastElement.ariaLive = 'assertive';
-            toastElement.ariaAtomic = 'true';
-            toastElement.setAttribute('data-bs-autohide', 'false');
-
-            // Create the header
-            const toastHeader = document.createElement('div');
-            toastHeader.className = 'toast-header';
-            const strong = document.createElement('strong');
-            strong.className = 'me-auto';
-            strong.innerText = `Updating webmail domain`;
-            const small = document.createElement('small');
-            small.innerText = new Date().toLocaleTimeString();
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.className = 'ms-2 btn-close';
-            closeButton.setAttribute('data-bs-dismiss', 'toast');
-            closeButton.setAttribute('aria-label', 'Close');
-
-            // Append elements to the header
-            toastHeader.appendChild(strong);
-            toastHeader.appendChild(small);
-            toastHeader.appendChild(closeButton);
-
-            // Create the body
-            const toastBody = document.createElement('div');
-            toastBody.className = 'toast-body';
-            toastBody.innerText = data.success ? data.success : data.error;
-
-            // Append header and body to the toast
-            toastElement.appendChild(toastHeader);
-            toastElement.appendChild(toastBody);
-
-            // Append the toast to the toast container
-            document.querySelector('.toast-container').appendChild(toastElement);
-
-            // Show the toast
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-
-            // Reload the page after 1 second
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            saveWebmailClientButton.disabled = false;
-            saveWebmailClientButton.innerHTML = 'Try again..';
-
-
-            // Create a new toast for errors
-            const toastElement = document.createElement('div');
-            toastElement.className = 'toast';
-            toastElement.role = 'alert';
-            toastElement.ariaLive = 'assertive';
-            toastElement.ariaAtomic = 'true';
-            toastElement.setAttribute('data-bs-autohide', 'false');
-
-            // Create the header
-            const toastHeader = document.createElement('div');
-            toastHeader.className = 'toast-header';
-            const strong = document.createElement('strong');
-            strong.className = 'me-auto';
-            strong.innerText = `Error`;
-            const small = document.createElement('small');
-            small.innerText = new Date().toLocaleTimeString();
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.className = 'ms-2 btn-close';
-            closeButton.setAttribute('data-bs-dismiss', 'toast');
-            closeButton.setAttribute('aria-label', 'Close');
-
-            // Append elements to the header
-            toastHeader.appendChild(strong);
-            toastHeader.appendChild(small);
-            toastHeader.appendChild(closeButton);
-
-            // Create the body
-            const toastBody = document.createElement('div');
-            toastBody.className = 'toast-body';
-            toastBody.innerText = 'An error occurred processing the request. Error message:<br>' + error;
-
-            // Append header and body to the toast
-            toastElement.appendChild(toastHeader);
-            toastElement.appendChild(toastBody);
-
-            // Append the toast to the toast container
-            document.querySelector('.toast-container').appendChild(toastElement);
-
-            // Show the toast
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-        });
-    };
-</script>
-
-<script>
-    // Store the initial state of text inputs
-    const initialDomainStates = {};
-    const domainForm = document.getElementById('domain-form');
-
-    // Store initial values of input fields
-    Array.from(domainForm.querySelectorAll('input[type="text"]')).forEach(input => {
-        initialDomainStates[input.name] = input.value; // Use 'name' instead of 'id'
-    });
-
-    domainForm.onsubmit = function(event) {
-        event.preventDefault();
-        
-        const saveWebmailDomainButton = document.getElementById('save_domain_webmail_btn');
-        saveWebmailDomainButton.disabled = true;
-        saveWebmailDomainButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp; Setting Webmail Domain...';
-
-
-        const formData = new FormData();
-
-        // Collect only changed values
-        Array.from(domainForm.querySelectorAll('input[type="text"]')).forEach(input => {
-            const value = input.value;
-            const name = input.name; // Use 'name' to match FormData structure
-
-            // Check if the state has changed
-            if (initialDomainStates[name] !== value) {
-                // Add the changed value to FormData
-                formData.append(name, value);  // Send the updated value
-            }
-        });
-
-        // Send the form data using Fetch API
-        fetch('/emails/settings', {
-            method: 'POST',
-        headers: {
-            'X-CSRFToken': csrf_token  // Include the CSRF token in the header
-        },
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-
-          saveWebmailDomainButton.disabled = false;
-          saveWebmailDomainButton.innerHTML = 'Done, reloading page..';
-
-            // Create a new toast element for notifications
-            const toastElement = document.createElement('div');
-            toastElement.className = 'toast';
-            toastElement.role = 'alert';
-            toastElement.ariaLive = 'assertive';
-            toastElement.ariaAtomic = 'true';
-            toastElement.setAttribute('data-bs-autohide', 'false');
-
-            // Create the header
-            const toastHeader = document.createElement('div');
-            toastHeader.className = 'toast-header';
-            const strong = document.createElement('strong');
-            strong.className = 'me-auto';
-            strong.innerText = `Updating webmail domain`;
-            const small = document.createElement('small');
-            small.innerText = new Date().toLocaleTimeString();
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.className = 'ms-2 btn-close';
-            closeButton.setAttribute('data-bs-dismiss', 'toast');
-            closeButton.setAttribute('aria-label', 'Close');
-
-            // Append elements to the header
-            toastHeader.appendChild(strong);
-            toastHeader.appendChild(small);
-            toastHeader.appendChild(closeButton);
-
-            // Create the body
-            const toastBody = document.createElement('div');
-            toastBody.className = 'toast-body';
-            toastBody.innerText = data.success ? data.success : data.error;
-
-            // Append header and body to the toast
-            toastElement.appendChild(toastHeader);
-            toastElement.appendChild(toastBody);
-
-            // Append the toast to the toast container
-            document.querySelector('.toast-container').appendChild(toastElement);
-
-            // Show the toast
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-
-            // Reload the page after 1 second
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            
-          saveWebmailDomainButton.disabled = false;
-          saveWebmailDomainButton.innerHTML = 'Try again';
-
-            // Create a new toast for errors
-            const toastElement = document.createElement('div');
-            toastElement.className = 'toast';
-            toastElement.role = 'alert';
-            toastElement.ariaLive = 'assertive';
-            toastElement.ariaAtomic = 'true';
-            toastElement.setAttribute('data-bs-autohide', 'false');
-
-            // Create the header
-            const toastHeader = document.createElement('div');
-            toastHeader.className = 'toast-header';
-            const strong = document.createElement('strong');
-            strong.className = 'me-auto';
-            strong.innerText = `Error`;
-            const small = document.createElement('small');
-            small.innerText = new Date().toLocaleTimeString();
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.className = 'ms-2 btn-close';
-            closeButton.setAttribute('data-bs-dismiss', 'toast');
-            closeButton.setAttribute('aria-label', 'Close');
-
-            // Append elements to the header
-            toastHeader.appendChild(strong);
-            toastHeader.appendChild(small);
-            toastHeader.appendChild(closeButton);
-
-            // Create the body
-            const toastBody = document.createElement('div');
-            toastBody.className = 'toast-body';
-            toastBody.innerText = 'An error occurred processing the request. Error message:<br>' + error;
-
-            // Append header and body to the toast
-            toastElement.appendChild(toastHeader);
-            toastElement.appendChild(toastBody);
-
-            // Append the toast to the toast container
-            document.querySelector('.toast-container').appendChild(toastElement);
-
-            // Show the toast
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-        });
-    };
-</script>
 
 
 {% elif mailserver_status == 'not_installed' %}
