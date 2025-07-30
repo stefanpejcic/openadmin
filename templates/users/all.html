@@ -442,6 +442,7 @@
                 {% for user in users %}
                 
 <tr       x-show="(searchQuery === '' || '{{ user[1] }}'.toLowerCase().includes(searchQuery.toLowerCase())
+|| '{{ user[12] }}'.toLowerCase().includes(searchQuery.toLowerCase())
                 {% if user[4] %} || '{{ user[4] }}'.toLowerCase().includes(searchQuery.toLowerCase()){% endif %})
               &&
               ((filters.active && !'{{ user[1] }}'.includes('SUSPENDED_')) || 
@@ -523,7 +524,7 @@
 
                             <td x-show="columns.cpu_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="CPU cores allocated to the user."><span class="icon icon-tabler"><i class="bi bi-cpu"></i></span> {% if user[15] == 0 or user[15] == '0' %}∞{% else %}{{ user[15] }}{% endif %} Core</p></td>
 
-                            <td x-show="columns.disk_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Disk space allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd"></i></span>{% if user[13] == 0 or user[13] == '0 GB' %}∞{% else %}{{ user[13] }}{% endif %}</p></td>
+                            <td x-show="columns.disk_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Disk space allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd"></i></span> {% if user[13] == 0 or user[13] == '0 GB' %}∞{% else %}{{ user[13] }}{% endif %}</p></td>
 
                             <td x-show="columns.inodes_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{% set inodes = ( (user[14]|int / 1000000) | round(2) ) ~ 'M' if user[14] != 0 else '∞' %}
                                         <p class="m-0" data-bs-toggle="tooltip" data-bs-placement="top" title="Inodes allocated to the user."><span class="icon icon-tabler"><i class="bi bi-hdd-stack"></i></span> {{inodes }}</p></td>
@@ -955,6 +956,12 @@ function userTable() {
         init() {
             this.loadColumns();
             this.initWatchers();
+            // Get ?plan= from URL and assign to searchQuery
+            const params = new URLSearchParams(window.location.search);
+            const plan = params.get('plan');
+            if (plan) {
+                this.searchQuery = plan;
+            }
         },
 
         initWatchers() {
