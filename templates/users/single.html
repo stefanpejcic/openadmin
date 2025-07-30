@@ -1476,8 +1476,93 @@ function updateRamUsage(ramPercentage) {
 <template x-if="!loading && !error">
 
     <div>
-        <!-- Combined Table Format -->
-        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+
+
+        <!-- summary -->
+<div
+  class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] mb-8"
+  x-data="{
+    total: {{ disk.disk_hard }} * 1000,  // convert blocks to bytes
+
+    parseSize(sizeStr) {
+      if (!sizeStr) return 0;
+      const units = { B: 1, KB: 1e3, MB: 1e6, GB: 1e9 };
+      const regex = /^([\d.]+)\s*(B|KB|MB|GB)$/i;
+      const match = sizeStr.match(regex);
+      if (!match) return 0;
+      const value = parseFloat(match[1]);
+      const unit = match[2].toUpperCase();
+      return value * (units[unit] || 1);
+    },
+
+    get usedVolumes() {
+      return volumes.reduce((sum, v) => sum + this.parseSize(v.Size), 0);
+    },
+    get usedContainers() {
+      return containers.reduce((sum, c) => sum + this.parseSize(c.Size), 0);
+    },
+    get usedImages() {
+      return images.reduce((sum, img) => sum + this.parseSize(img.Size), 0);
+    },
+
+    get used() {
+      return this.usedVolumes + this.usedContainers + this.usedImages;
+    },
+    get free() {
+      return this.total - this.used;
+    },
+
+    format(bytes) {
+      if (bytes >= 1e9) return (bytes / 1e9).toFixed(2) + ' GB';
+      if (bytes >= 1e6) return (bytes / 1e6).toFixed(2) + ' MB';
+      if (bytes >= 1e3) return (bytes / 1e3).toFixed(2) + ' KB';
+      return bytes + ' B';
+    },
+    getPercent(part) {
+      if (this.total === 0) return 0;
+      return (part / this.total) * 100;
+    }
+  }"
+>
+  <h1 class="text-sm text-gray-500 dark:text-gray-500">Disk Usage Summary</h1>
+  <p class="mt-1 text-3xl font-semibold text-gray-900 dark:text-gray-50" x-text="format(used) + ' / ' + format(total)"></p>
+
+  <!-- Progress Bar -->
+  <div class="mt-6">
+    <div class="relative flex h-2 w-full items-center">
+      <div class="flex h-full flex-1 items-center gap-0.5 overflow-hidden rounded-full">
+        <div class="h-full bg-blue-500" :style="'width:' + getPercent(usedVolumes) + '%'"></div>
+        <div class="h-full bg-emerald-500" :style="'width:' + getPercent(usedContainers) + '%'"></div>
+        <div class="h-full bg-orange-500" :style="'width:' + getPercent(usedImages) + '%'"></div>
+        <div class="h-full bg-gray-300 dark:bg-gray-700" :style="'width:' + getPercent(free) + '%'"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legends -->
+  <ul class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-500">
+    <li class="flex items-center space-x-2">
+      <span class="size-3 shrink-0 rounded-sm bg-blue-500"></span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(usedVolumes)"></span> Volumes (User Files)</span>
+    </li>
+    <li class="flex items-center space-x-2">
+      <span class="size-3 shrink-0 rounded-sm bg-emerald-500"></span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(usedContainers)"></span> Containers (Changes)</span>
+    </li>
+    <li class="flex items-center space-x-2">
+      <span class="size-3 shrink-0 rounded-sm bg-orange-500"></span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(usedImages)"></span> Images (System)</span>
+    </li>
+    <li class="flex items-center space-x-2">
+      <span class="size-3 shrink-0 rounded-sm bg-gray-300 dark:bg-gray-700"></span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(free)"></span> Free</span>
+    </li>
+  </ul>
+</div>
+
+        
+        <!-- all data -->
+        <table class="w-full caption-bottom border-b border-tborder-gray-200 dark:border-gray-800">
             <thead>
                 <tr class="sm:[&_td:last-child]:pr-6 sm:[&_th:last-child]:pr-6 sm:[&_td:first-child]:pl-6 sm:[&_th:first-child]:pl-6">
                     <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name/ID</th>

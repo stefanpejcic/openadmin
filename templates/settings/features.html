@@ -3,45 +3,67 @@
 
 {% block content %}
 
-<div x-data="{ searchQuery: '' }">
+{% if plan %}
+
+<form method="post">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="action" value="update">
+
+<div x-data="{
+    searchQuery: '',
+    toggleAll: null,
+    applyToAll(state) {
+        this.toggleAll = state;
+        document.querySelectorAll('[data-row]').forEach(el => {
+            el.__x.$data.enabled = state;
+        });
+    }
+}">
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
                     <h1 class="mb-1 text-xl font-bold">Feature Manager</h1>
-                    <h2 class="text-sm font-medium text-slate-500">{% if plan %}Edit features set: {{ plan }}{% else %}Manage feature sets.{% endif %}</h2>
+                    <h2 class="text-sm font-medium text-slate-500">Edit features set: {{ plan }}</h2>
                 </div>
 
-{% if plan and plan != 'default' %}
-<div x-data="{ confirming: false }" class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-    <form method="post" @submit.prevent="if (!confirming) { confirming = true } else { $el.submit(); }">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="delete">
-        <button type="submit"
-            class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 text-red-600 dark:text-red-500 gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-trash-x">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M20 6a1 1 0 0 1 .117 1.993l-.117 .007h-.081l-.919 11a3 3 0 0 1 -2.824 2.995l-.176 .005h-8c-1.598 0 -2.904 -1.249 -2.992 -2.75l-.005 -.167l-.923 -11.083h-.08a1 1 0 0 1 -.117 -1.993l.117 -.007h16zm-9.489 5.14a1 1 0 0 0 -1.218 1.567l1.292 1.293l-1.292 1.293l-.083 .094a1 1 0 0 0 1.497 1.32l1.293 -1.292l1.293 1.292l.094 .083a1 1 0 0 0 1.32 -1.497l-1.292 -1.293l1.292 -1.293l.083 -.094a1 1 0 0 0 -1.497 -1.32l-1.293 1.292l-1.293 -1.292l-.094 -.083z" />
-                <path d="M14 2a2 2 0 0 1 2 2a1 1 0 0 1 -1.993 .117l-.007 -.117h-4l-.007 .117a1 1 0 0 1 -1.993 -.117a2 2 0 0 1 1.85 -1.995l.15 -.005h4z" />
-            </svg>
-            <span x-text="confirming ? 'Confirm' : 'Delete'"></span>
-        </button>
-    </form>
-</div>
+
+
+<div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+    {% if plan and plan != 'default' %}
+    <div x-data="{ confirming: false }">
+        <form method="post" @submit.prevent="if (!confirming) { confirming = true } else { $el.submit(); }">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="delete">
+            <button type="submit"
+                class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 text-red-600 dark:text-red-500 gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-trash-x">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M20 6a1 1 0 0 1 .117 1.993l-.117 .007h-.081l-.919 11a3 3 0 0 1 -2.824 2.995l-.176 .005h-8c-1.598 0 -2.904 -1.249 -2.992 -2.75l-.005 -.167l-.923 -11.083h-.08a1 1 0 0 1 -.117 -1.993l.117 -.007h16zm-9.489 5.14a1 1 0 0 0 -1.218 1.567l1.292 1.293l-1.292 1.293l-.083 .094a1 1 0 0 0 1.497 1.32l1.293 -1.292l1.293 1.292l.094 .083a1 1 0 0 0 1.32 -1.497l-1.292 -1.293l1.292 -1.293l.083 -.094a1 1 0 0 0 -1.497 -1.32l-1.293 1.292l-1.293 -1.292l-.094 -.083z" />
+                    <path d="M14 2a2 2 0 0 1 2 2a1 1 0 0 1 -1.993 .117l-.007 -.117h-4l-.007 .117a1 1 0 0 1 -1.993 -.117a2 2 0 0 1 1.85 -1.995l.15 -.005h4z" />
+                </svg>
+                <span x-text="confirming ? 'Confirm' : 'Delete'"></span>
+            </button>
+        </form>
+    </div>
 {% endif %}
+
+    <button type="submit"
+    class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Save</button>
+
+</div>
 
             </div>
         </header>
     </div>
 
-  {% if plan %}
 
-    <div class="">
-        <div class="space-y-3">
-            <div class="px-6 pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-x-6">
+<div class="">
+  <div class="space-y-3">
+    <div class="px-6 pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-x-6">
                 <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
                     <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search by feature name..." type="search" @input="searchQuery = $event.target.value.trim()">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search features..." type="search" @input="searchQuery = $event.target.value.trim()">
 
                         <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
@@ -53,183 +75,152 @@
                     </div>
                 </div>
 
-                <div class="sm:flex w-full flex-wrap items-center gap-2 sm:justify-end">
-                    <form method="post">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="action" value="enable_all">
-                    <button type="submit" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit&quot; w-full gap-x-1.5 whitespace-nowrap border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Enable All</button>
-                    </form>
-
-                    <form method="post">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="action" value="disable_all">
-                    <button type="submit" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 w-full gap-x-0.5 whitespace-nowrap sm:w-fit  mt-2 sm:mt-0">Disable All</button>
-                    </form>
-
-                </div>
+<div class="flex flex-wrap gap-3 justify-center sm:justify-end">
 
 
+<span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800">
+  <button
+    type="button"
+    @click="applyToAll(true)"
+    class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"
+  ><svg class="remixicon -ml-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C17.5 22 22 17.5 22 12S17.5 2 12 2 2 6.5 2 12s4.5 10 10 10Zm5.5-12.5-6.5 6.5-4.2-4.2L8.2 10.3l2.3 2.3 5.1-5.1 1.4 1.4Z"></path></svg>Enable All
+  </button>
 
+    <span class="h-4 w-px bg-gray-200 dark:bg-gray-800"></span>
 
-            </div>
-            <div class="relative">
+  <button
+    type="button"
+    @click="applyToAll(false)"
+    class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"
+  ><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-red-600 dark:text-red-500"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path></svg>Disable All
+  </button>
+</span>
 
-                <form method="post">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="action" value="update">
+</div>
 
-                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
-                    <thead class="">
-                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
-                                    <span>Name</span>
-                                    <div class="-space-y-2">
-                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
-                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
-                                        </svg>
-                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
-                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
-                                        </svg>
-                                    </div>
-                                </div>
-                            </th>                        
+    </div>
 
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><span>Type</span></th> 
+    <div class="relative">
+        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+          <thead>
+              <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Status</th>
 
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><span>Page</span></th> 
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Name</th>
 
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Enable</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
-
-
-
-
-
-
-
-
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Type</th>
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Page</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 
             {% for plugin in plugins %}
+            <tr x-data="{ enabled: {{ 'true' if plugin.status else 'false' }} }"
+    x-effect="if (typeof toggleAll === 'boolean') enabled = toggleAll"
+    data-row
+    x-show="searchQuery === '' || '{{ plugin.title }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ plugin.description }}'.toLowerCase().includes(searchQuery.toLowerCase())"
+    class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
 
-                        <tr  x-data="{ enabled: {{ 'true' if plugin.status else 'false' }} }" x-show="searchQuery === '' || '{{ plugin.title }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
+              <td class="p-4 text-sm text-right">
+                <button type="button" @click="enabled = !enabled" :aria-checked="enabled"
+                  :class="enabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                  class="inline-flex h-5 w-9 items-center rounded-full p-0.5 transition ring-1 ring-inset ring-black/5 dark:ring-gray-800 focus:outline-none">
+                  <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
+                    class="h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 transition"></span>
+                </button>
+                <input type="checkbox" x-model="enabled" hidden name="{{ plugin.name }}" value="{{ plugin.name }}"
+                  :checked="enabled">
+              </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
-                                
-                                <div id="tooltip-{{ plugin.title }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-                                    {{ plugin.description }}
-                                    <div class="tooltip-arrow" data-popper-arrow></div>
-                                </div>
-                                
-                                <span class="select-text" data-tooltip-target="tooltip-{{ plugin.title }}" data-tooltip-placement="right">{{ plugin.title }}</span></td>
-                  
-
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 w-10 text-left select-text">
-                                    <span class="flex gap-2 rounded bg-orange-500 text-white dark:bg-orange-700 px-2 py-0.5 text-xs font-medium"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plugin" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1 8a7 7 0 1 1 2.898 5.673c-.167-.121-.216-.406-.002-.62l1.8-1.8a3.5 3.5 0 0 0 4.572-.328l1.414-1.415a.5.5 0 0 0 0-.707l-.707-.707 1.559-1.563a.5.5 0 1 0-.708-.706l-1.559 1.562-1.414-1.414 1.56-1.562a.5.5 0 1 0-.707-.706l-1.56 1.56-.707-.706a.5.5 0 0 0-.707 0L5.318 5.975a3.5 3.5 0 0 0-.328 4.571l-1.8 1.8c-.58.58-.62 1.6.121 2.137A8 8 0 1 0 0 8a.5.5 0 0 0 1 0"/>
-</svg> Plugin</span>
-
-                            </td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">{{ plugin.link }}</td>
-
-                              <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
-                  <button @click="enabled = !enabled" :aria-checked="enabled"
-                    :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
-                    class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
-                    {% if disable_toggle %}
-                    disabled aria-disabled="true"
-                    class="opacity-50 cursor-not-allowed {{ 'bg-indigo-300 dark:bg-indigo-900' if plugin.status else 'bg-gray-100 dark:bg-gray-800' }}"
-                    {% endif %}
-                    >
-                    <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
-                      class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"></span>
-                  </button>
-                  <input type="checkbox" x-model="enabled" hidden name="{{ plugin.name }}" value="{{ plugin.name }}" :checked="enabled">
-                              </td>    
-                          </tr>
-
-                {% endfor %}
+<td class="p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+    <div class="flex flex-col gap-1">
+        <span class="font-medium text-gray-900 dark:text-gray-50">{{ plugin.title }}</span>
+        <span class="hidden sm:inline text-xs text-gray-500 dark:text-gray-500">{{ plugin.description }}</span>
+    </div>
+</td>
 
 
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">
+                <span class="inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Plugin</span>
+              </td>
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">{{ plugin.link }}</td>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            </tr>
+            {% endfor %}
 
             {% for feature in features %}
-    {% set type = feature.type|lower %}
-    {% set is_enterprise = (type == "enterprise") %}
-    {% set disable_toggle = is_enterprise and (license_type != "Enterprise") %}
+            {% set type = feature.type|lower %}
+            {% set is_enterprise = (type == "enterprise") %}
+            {% set disable_toggle = is_enterprise and (license_type != "Enterprise") %}
+            <tr x-data="{ enabled: {{ 'true' if feature.status else 'false' }} }"
+                x-effect="if (typeof toggleAll === 'boolean') enabled = toggleAll"
+                data-row
+                x-show="searchQuery === '' || '{{ feature.title }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ feature.description }}'.toLowerCase().includes(searchQuery.toLowerCase())"
+                class="hover:bg-gray-50 dark:hover:bg-gray-900">
+
+              <td class="p-4 text-sm text-right">
+                <button type="button" @click="enabled = !enabled" :aria-checked="enabled"
+                  :class="enabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                  class="inline-flex h-5 w-9 items-center rounded-full p-0.5 transition ring-1 ring-inset ring-black/5 dark:ring-gray-800 focus:outline-none"
+                  {% if disable_toggle %} disabled aria-disabled="true"
+                  class="opacity-50 cursor-not-allowed {{ 'bg-indigo-300 dark:bg-indigo-900' if feature.status else 'bg-gray-100 dark:bg-gray-800' }}"
+                  {% endif %}>
+                  <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
+                    class="h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 transition"></span>
+                </button>
+                <input type="checkbox" x-model="enabled" hidden name="{{ feature.name }}" value="{{ feature.name }}"
+                  :checked="enabled">
+              </td>
 
 
-                        <tr  x-data="{ enabled: {{ 'true' if feature.status else 'false' }} }" x-show="searchQuery === '' || '{{ feature.title }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
-                                
-                                <div id="tooltip-{{ feature.title }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-                                    {{ feature.description }}
-                                    <div class="tooltip-arrow" data-popper-arrow></div>
-                                </div>
-                                
-                                <span class="select-text" data-tooltip-target="tooltip-{{ feature.title }}" data-tooltip-placement="right">{{ feature.title }}</span></td>
-                  
+                <td class="p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+                    <div class="flex flex-col gap-1">
+                        <span class="font-medium text-gray-900 dark:text-gray-50">{{ feature.title }}</span>
+                        <span class="hidden sm:inline text-xs text-gray-500 dark:text-gray-500">{{ feature.description }}</span>
+                    </div>
+                </td>
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">
+                {% if type == "beta" %}
+<span class="inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-orange-500 dark:bg-orange-500" aria-hidden="true"></span>BETA</span>
+                {% elif type == "enterprise" %}
+                        {% if license_type == "Enterprise" %}
+<span class="inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>Enterprise</span>
+                        {% else %}
+<span class="inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-red-500 dark:bg-red-500" aria-hidden="true"></span>Enterprise</span>
+                        {% endif %}
+                {% elif type == "community" %}
+<span class="inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>Community</span>
+                {% else %}
+<span class="inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>{{ type }}</span>
+                {% endif %}
+              </td>
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">{{ feature.link }}</td>
 
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 w-10 text-left select-text">
-                                {% if type == "beta" %}
-                                    <span class="inline-block rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-white px-2 py-0.5 text-xs font-medium w-full text-center uppercase">BETA</span>
-                                {% elif type == "enterprise" %}
-                                    <span class="inline-block rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-white px-2 py-0.5 text-xs font-medium w-full text-center">Enterprise</span>
-                                {% elif type == "community" %}
-                                    <span class="inline-block rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-white px-2 py-0.5 text-xs font-medium w-full text-center">Community</span>
-                                {% else %}
-                                    <span class="inline-block rounded bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100 px-2 py-0.5 text-xs font-medium w-full text-center">{{type}}</span>
-                                {% endif %}
-                            </td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">{{ feature.link }}</td>
-
-                              <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
-                  <button @click="enabled = !enabled" :aria-checked="enabled"
-                    :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
-                    class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
-                    {% if disable_toggle %}
-                    disabled aria-disabled="true"
-                    class="opacity-50 cursor-not-allowed {{ 'bg-indigo-300 dark:bg-indigo-900' if feature.status else 'bg-gray-100 dark:bg-gray-800' }}"
-                    {% endif %}
-                    >
-                    <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
-                      class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"></span>
-                  </button>
-                  <input type="checkbox" x-model="enabled" hidden name="{{ feature.name }}" value="{{ feature.name }}" :checked="enabled">
-
-
-                              </td>    
-                          </tr>
-
-                {% endfor %}
-
-                    </tbody>
-                </table>
-                </form>
-            </div>
-        </div>
     </div>
+  </div>
+</div>
+</form>
   {% else %}
+
+<div x-data="{ searchQuery: '' }">
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Feature Manager</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Manage feature sets.</h2>
+                </div>
+            </div>
+        </header>
+    </div>
+
+
   <form method="post">
   <div class="m-8">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
