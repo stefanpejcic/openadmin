@@ -11,13 +11,19 @@
 <div x-data="{
     searchQuery: '',
     toggleAll: null,
+    filterType: '',
     applyToAll(state) {
         this.toggleAll = state;
         document.querySelectorAll('[data-row]:not([data-locked])').forEach(el => {
             el.__x.$data.enabled = state;
         });
+    },
+    matchesFilter(type, category) {
+        if (!this.filterType) return true;
+        return this.filterType === type || (this.filterType === 'plugin' && category === 'plugin');
     }
 }">
+
 
 
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
@@ -54,6 +60,47 @@
                             </svg>
                         </div>
                     </div>
+
+<div class="flex flex-wrap gap-2 justify-center sm:justify-start">
+  <button type="button"
+    @click="filterType = ''"
+    :class="filterType === '' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'"
+    class="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium transition"
+  >
+    All
+  </button>
+  <button type="button"
+    @click="filterType = 'community'"
+    :class="filterType === 'community' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'"
+    class="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium transition"
+  >
+    Community
+  </button>
+  <button type="button"
+    @click="filterType = 'enterprise'"
+    :class="filterType === 'enterprise' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'"
+    class="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium transition"
+  >
+    Enterprise
+  </button>
+  <button type="button"
+    @click="filterType = 'beta'"
+    :class="filterType === 'beta' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'"
+    class="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium transition"
+  >
+    BETA
+  </button>
+  <button type="button"
+    @click="filterType = 'plugin'"
+    :class="filterType === 'plugin' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'"
+    class="rounded-md border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium transition"
+  >
+    Plugins
+  </button>
+</div>
+
+
+
                 </div>
 
 <div class="flex flex-wrap gap-3 justify-center sm:justify-end">
@@ -98,7 +145,7 @@
     x-effect="if (typeof toggleAll === 'boolean') enabled = toggleAll"
     data-row 
     class="relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden p-0 flex flex-col h-full"
-    x-show="searchQuery === '' || '{{ plugin.title }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ plugin.description }}'.toLowerCase().includes(searchQuery.toLowerCase())"    
+    x-show="(searchQuery === '' || '{{ plugin.title }}'.toLowerCase().includes(searchQuery.toLowerCase())) && matchesFilter('plugin', 'plugin')"  
     >
       <div class="px-4 pb-6 pt-4">
         <span class="text-sm text-gray-500">{{ plugin.link }}</span>
@@ -150,7 +197,7 @@
     <div x-data="{ enabled: {{ 'true' if feature.status else 'false' }} }"
         x-effect="if (typeof toggleAll === 'boolean' && !$el.hasAttribute('data-locked')) enabled = toggleAll"
         data-row
-        x-show="searchQuery === '' || '{{ feature.title }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ feature.description }}'.toLowerCase().includes(searchQuery.toLowerCase())"    
+        x-show="(searchQuery === '' || '{{ feature.title }}'.toLowerCase().includes(searchQuery.toLowerCase())) && matchesFilter('{{ type }}', 'feature')"  
         {% if disable_toggle %} data-locked="true" {% endif %}
         class="relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden p-0 flex flex-col h-full">
       <div class="px-4 pb-6 pt-4">
@@ -216,8 +263,6 @@
         <div class="col-span-full mt-6 flex justify-end"></div>
     </div>
 </div>
-
-<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
 </div>
 
