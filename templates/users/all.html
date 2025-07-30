@@ -115,6 +115,17 @@
                             </label>
                         </div>
                     </li>
+
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.online" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Online (active session)</span>
+                            </label>
+                        </div>
+                    </li>
+
                     <li>
                         <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
                             <label class="inline-flex items-center w-full cursor-pointer">
@@ -296,17 +307,6 @@
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
-                <th class="hidden border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">
-                                <button
-                                    type="button"
-                                    role="checkbox"
-                                    aria-checked="false"
-                                    data-state="unchecked"
-                                    value="on"
-                                    aria-label="Select all"
-                                    class="relative inline-flex size-4 shrink-0 appearance-none items-center justify-center rounded shadow-sm ring-1 ring-inset transition duration-100 enabled:cursor-pointer text-white dark:text-gray-50 bg-white dark:bg-gray-950 ring-gray-300 dark:ring-gray-800 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:ring-gray-300 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 data-[disabled]:dark:ring-gray-700 enabled:data-[state=checked]:bg-indigo-600 enabled:data-[state=checked]:ring-0 enabled:data-[state=checked]:ring-transparent enabled:data-[state=indeterminate]:bg-indigo-600 enabled:data-[state=indeterminate]:ring-0 enabled:data-[state=indeterminate]:ring-transparent outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 translate-y-0.5"
-                                ></button>
-                            </th>
                             <th x-show="columns.username" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span>Username</span>
@@ -326,7 +326,11 @@
                                 </div>
                             </th>         
 
-
+                            <th x-show="columns.online" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left w-10">
+                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Online</span>
+                                </div>
+                            </th>
 
                             <th x-show="columns.twofa" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left w-10">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
@@ -459,6 +463,9 @@
                             </td>
 
                             <td x-show="columns.email" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-600 dark:text-gray-400 first:w-10 text-left select-text">{{ user[3] }}</td>
+
+                            <td x-show="columns.online" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-600 dark:text-gray-400 first:w-10 text-center select-none"></td>
+
 
                             <td x-show="columns.twofa" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums select-text w-10"><span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset {% if user[6] %}bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20{% else %}bg-blue-50 text-blue-900 ring-blue-500/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30{% endif %} rounded-full">
                             
@@ -923,6 +930,7 @@ function userTable() {
         columns: {
             username: true,
             email: false,
+            online: false,
             twofa: false,
             status: true,
             ip: false,

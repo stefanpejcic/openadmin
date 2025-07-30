@@ -31,6 +31,19 @@ function updatePublicIP(username, ip) {
 fetch('/json/user_activity_status')
   .then(response => response.json())
   .then(data => {
+    const headerCells = document.querySelectorAll('thead th');
+    let onlineColIndex = -1;
+    headerCells.forEach((th, idx) => {
+      const span = th.querySelector('span');
+      if (span && span.textContent.trim().toLowerCase() === 'online') {
+        onlineColIndex = idx;
+      }
+    });
+    if (onlineColIndex === -1) {
+      console.warn('No "online" column found');
+      return;
+    }
+
     document.querySelectorAll('tbody tr').forEach(row => {
       const usernameCell = row.querySelector('td a[href^="/users/"]');
       if (!usernameCell) return;
@@ -38,19 +51,19 @@ fetch('/json/user_activity_status')
       const username = usernameCell.getAttribute('href').split('/').pop();
       const isActive = data[username] === 'active';
 
-      if (isActive) {
-        // Avoid duplicating the green dot
-        if (usernameCell.querySelector('.user-status-dot')) return;
+      const onlineCell = row.children[onlineColIndex];
+      if (!onlineCell) return;
 
+      onlineCell.textContent = '';
+
+      if (isActive) {
         const dot = document.createElement('span');
         dot.classList.add('user-status-dot');
-        dot.textContent = ' ●';
+        dot.textContent = '●';
         dot.style.color = 'green';
-        dot.style.fontSize = '0.7rem';
-        dot.style.marginLeft = '4px';
+        dot.style.fontSize = '0.9rem';
         dot.style.verticalAlign = 'middle';
-
-        usernameCell.appendChild(dot);
+        onlineCell.appendChild(dot);
       }
     });
   })
