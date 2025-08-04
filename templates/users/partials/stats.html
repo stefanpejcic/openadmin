@@ -1,0 +1,338 @@
+               <!-- DOCKER STATS -->
+               <div x-show="activeTab === 'stats'">
+                  <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden !p-0 sm:mx-auto">
+                     <div class="p-6">
+                        <h3 class="hidden text-sm font-medium text-gray-900 dark:text-gray-50">Resource usage</h3>
+                        <p class="hidden text-sm text-gray-500 dark:text-gray-500">No activity measured yet.</p>
+                        <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+<!-- DISK -->
+<div 
+  x-data="{ hovered: false }" 
+  class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5"
+>
+  <div class="relative">
+    {% set disk_usage = ((disk.disk_used / disk.disk_hard) * 100) if disk.disk_hard != 0 else 0 %}
+    {% if disk_usage > 90 %}
+    {% set disk_graph_class = 'stroke-red-200 dark:stroke-red-500/40' %}
+    {% elif disk_usage > 80 %}
+    {% set disk_graph_class = 'stroke-orange-200 dark:stroke-orange-500/40' %}
+    {% elif disk_usage > 60 %}
+    {% set disk_graph_class = 'stroke-blue-200 dark:stroke-blue-500/40' %}
+    {% else %}
+    {% set disk_graph_class = 'stroke-gray-200 dark:stroke-gray-500/40' %}
+    {% endif %}
+    {% set disk_usage_clamped = disk_usage if disk_usage < 100 else 100 %}
+    {% set disk_usage_rounded = disk_usage_clamped | round(2) %}
+    <div 
+      @mouseenter="hovered = true" 
+      @mouseleave="hovered = false"
+    >
+      <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{ disk_usage_rounded }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ disk_usage_rounded }}">
+        <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{ disk_graph_class }}"></circle>
+        <!-- Dynamic Circle for Progress -->
+        <circle
+          r="29"
+          cx="32"
+          cy="32"
+          stroke-width="6"
+          stroke-dasharray="182.212373908208 182.212373908208"
+          stroke-dashoffset="{{ 182.212373908208 - (182.212373908208 * disk_usage_rounded / 100) }}"
+          fill="transparent"
+          stroke="currentColor"
+          stroke-linecap="round"
+          class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
+        ></circle>
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <!-- Percentage or Link on Hover -->
+        <template x-if="!hovered">
+          <span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{ disk_usage_rounded }}%</span>
+        </template>
+        <template x-if="hovered">
+            <button type="button" class="relative items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 group hidden h-10 text-sm sm:flex" @click="activeTab = 'storage'; loadDiskUsage()">Explore</button>
+        </template>
+      </div>
+    </div>
+  </div>
+  <div class="mt-0 text-left sm:mt-2 sm:text-center">
+    <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
+      {% if disk.disk_used != 0 %}{{ (disk.disk_used / 1024000) | round(2) }}<!---->GB{% else %}{{disk.disk_used}}<!---->B{% endif %}
+      <!---->/<!---->
+      {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}<!---->GB{% else %}∞{% endif %}
+    </p>
+    <p class="text-sm text-gray-500 dark:text-gray-500">Storage used</p>
+  </div>
+</div>
+                           <!-- END DISK -->
+                           <!-- INODES -->
+                           <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+                              <div class="relative">
+                                 {% set inodes_usage = ((disk.inodes_used / disk.inodes_hard) * 100) if disk.inodes_hard != 0 else 0 %}
+                                 {% if inodes_usage > 90 %}
+                                 {% set inodes_graph_class = 'stroke-red-200 dark:stroke-red-500/40' %}
+                                 {% elif inodes_usage > 80 %}
+                                 {% set inodes_graph_class = 'stroke-orange-200 dark:stroke-orange-500/40' %}
+                                 {% elif inodes_usage > 60 %}
+                                 {% set inodes_graph_class = 'stroke-blue-200 dark:stroke-blue-500/40' %}
+                                 {% else %}
+                                 {% set inodes_graph_class = 'stroke-gray-200 dark:stroke-gray-500/40' %}
+                                 {% endif %}
+                                 {% set inodes_usage_clamped = inodes_usage if inodes_usage < 100 else 100 %}
+                                 {% set inodes_usage_rounded = inodes_usage_clamped | round(2) %}
+
+                                <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{ inodes_usage_rounded }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ inodes_usage_rounded }}">
+                                <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{ inodes_graph_class }}"></circle>
+                                <!-- Dynamic Circle for Progress -->
+                                <circle
+                                    r="29"
+                                    cx="32"
+                                    cy="32"
+                                    stroke-width="6"
+                                    stroke-dasharray="182.212373908208 182.212373908208"
+                                    stroke-dashoffset="{{ 182.212373908208 - (182.212373908208 * inodes_usage_rounded / 100) }}"
+                                    fill="transparent"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
+                                ></circle>
+                                </svg>
+                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{ inodes_usage_rounded }}%</span></div>
+                              </div>
+                              <div class="mt-0 text-left sm:mt-2 sm:text-center">
+                                <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
+                                {% if disk.inodes_used != 0 %}
+                                    {% if disk.inodes_used >= 1000000 %}
+                                    {{ (disk.inodes_used / 1000000) | round(2) }}M
+                                    {% else %}
+                                    {{ disk.inodes_used }}
+                                    {% endif %}
+                                {% else %}
+                                    {{ disk.inodes_used }}
+                                {% endif %}
+                                /
+                                {% if disk.inodes_hard != 0 %}
+                                    {% if disk.inodes_hard >= 1000000 %}
+                                    {{ (disk.inodes_hard / 1000000) | round(2) }}M
+                                    {% else %}
+                                    {{ disk.inodes_hard }}
+                                    {% endif %}
+                                {% else %}
+                                    ∞
+                                {% endif %}
+                                </p>
+                                 <p class="text-sm text-gray-500 dark:text-gray-500">Inodes used</p>
+                              </div>
+                           </div>
+                           <!-- END INODES -->
+                           <!-- CPU -->
+                           <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+                              <div class="relative">
+                                 <svg id="cpu_graph" width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
+                                    <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-200 dark:stroke-gray-500/40"></circle>
+                                    <circle
+                                       r="29"
+                                       cx="32"
+                                       cy="32"
+                                       stroke-width="6"
+                                       stroke-dasharray="182.212373908208 182.212373908208"
+                                       stroke-dashoffset="182.212373908208"
+                                       fill="transparent"
+                                       stroke=""
+                                       stroke-linecap="round"
+                                       class="stroke-gray-500 dark:stroke-gray-500 transform-gpu transition-all duration-300 ease-in-out"
+                                       ></circle>
+                                 </svg>
+                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="cpu_percentage">0%</span></span></div>
+                              </div>
+                              <div class="mt-0 text-left sm:mt-2 sm:text-center">
+                                 <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="global_cpu_usage">0</span> / {{ (env_data.TOTAL_CPU|int * 100) | round(2) if env_data.TOTAL_CPU != 0 else '∞' }}%</p>
+                                 <p class="text-sm text-gray-500 dark:text-gray-500">CPU usage</p>
+                              </div>
+                           </div>
+                           <!-- END CPU -->
+                           <!-- RAM -->
+                           <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+                              <div class="relative">
+                                 <svg id="ram_graph" width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
+                                    <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-200 dark:stroke-gray-500/40"></circle>
+                                    <circle
+                                       r="29"
+                                       cx="32"
+                                       cy="32"
+                                       stroke-width="6"
+                                       stroke-dasharray="182.212373908208 182.212373908208"
+                                       stroke-dashoffset="182.212373908208"
+                                       fill="transparent"
+                                       stroke=""
+                                       stroke-linecap="round"
+                                       class="stroke-gray-500 dark:stroke-gray-500 transform-gpu transition-all duration-300 ease-in-out"
+                                       ></circle>
+                                 </svg>
+                                 <div class="absolute inset-0 flex items-center justify-center">
+                                    <span class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="ram_percentage">0%</span></span>
+                                 </div>
+                              </div>
+                              <div class="mt-0 text-left sm:mt-2 sm:text-center">
+                                 <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><span id="global_ram_usage">0 / {{ (env_data.TOTAL_RAM[:-1]|int * 1024 if env_data.TOTAL_RAM.endswith('g') else '∞') }} MiB</span>
+                                 </p>
+                                 <p class="text-sm text-gray-500 dark:text-gray-500">Memory usage</p>
+                              </div>
+                           </div>
+                           <!-- END RAM -->
+                        </div>
+                     </div>
+                     <div class="grid grid-cols-2 gap-4 p-4">
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Running containers:</span><span class="font-medium"><a href="#" @click="activeTab = 'services'" class="inline-flex items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">
+{% set container = stats.get('stats', {}).get('Container') if stats is mapping else None %}
+{{ container if container else '?' }}
+
+                            </a></span></div>
+
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Disk I/O:</span><span class="font-medium">
+                            {% set blockio = stats.get('stats', {}).get('BlockIO') if stats is mapping else None %}
+{{ blockio if blockio else '?' }}</span></div>
+
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Network I/O:</span><span class="font-medium">{% set netio = stats.get('stats', {}).get('NetIO') if stats is mapping else None %}
+{{ netio if netio else '?' }}</span></div>
+                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">PIDs:</span><a href="/server/processes?sort=owner&owner={{ user.username.split('_')[-1] }}" class="font-medium">{% set pids = stats.get('stats', {}).get('PIDs') if stats is mapping else None %}
+{{ pids if pids else '?' }}</a></div>
+                     </div>
+
+<div class="flex justify-between mt-4 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-900 dark:bg-gray-950">
+  <div>
+    <h4 class="text-sm font-medium text-gray-900 dark:text-gray-50">Usage updated hourly</h4>
+    <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-500">{% set updated_at = stats.date if stats is mapping and stats.date else 'No stats found - run: opencli docker-collect_stats --all' %}Docker stats last updated: <span class="time_ago">{{ updated_at }}</span></p>
+  </div>
+  <div>
+    <button id="get_docker_history_usage" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">
+      Load Docker Usage History
+    </button>
+  </div>
+</div>
+
+
+<div id="docker_stats_history" class="hidden overflow-x-auto">
+  <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+    <table id="usage" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+      <thead>
+        <tr class="bg-gray-50 dark:bg-gray-900 sm:[&amp;_td:last-child]:pr-6 sm:[&amp;_th:last-child]:pr-6 sm:[&amp;_td:first-child]:pl-6 sm:[&amp;_th:first-child]:pl-6">
+<th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+     <div class="inline-flex items-center gap-2">
+            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-calendar-month"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" /><path d="M16 3v4" /><path d="M8 3v4" /><path d="M4 11h16" /><path d="M8 14v4" /><path d="M12 14v4" /><path d="M16 14v4" /></svg> Date
+      </div>
+
+          </th>
+
+<th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+        <div class="inline-flex items-center gap-2">
+            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-box"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5" /><path d="M12 12l8 -4.5" /><path d="M12 12l0 9" /><path d="M12 12l-8 -4.5" /></svg> Containers
+      </div>
+
+          </th>
+
+<th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+     <div class="inline-flex items-center gap-2">
+            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-cpu"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 5m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z" /><path d="M9 9h6v6h-6z" /><path d="M3 10h2" /><path d="M3 14h2" /><path d="M10 3v2" /><path d="M14 3v2" /><path d="M21 10h-2" /><path d="M21 14h-2" /><path d="M14 21v-2" /><path d="M10 21v-2" /></svg> CPU %
+      </div>
+
+          </th>
+<th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+     <div class="inline-flex items-center gap-2">
+            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-database"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0" /><path d="M4 6v6a8 3 0 0 0 16 0v-6" /><path d="M4 12v6a8 3 0 0 0 16 0v-6" /></svg> Memory %
+      </div>
+
+
+          </th>
+<th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+     <div class="inline-flex items-center gap-2">
+            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-network"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 9a6 6 0 1 0 12 0a6 6 0 0 0 -12 0" /><path d="M12 3c1.333 .333 2 2.333 2 6s-.667 5.667 -2 6" /><path d="M12 3c-1.333 .333 -2 2.333 -2 6s.667 5.667 2 6" /><path d="M6 9h12" /><path d="M3 20h7" /><path d="M14 20h7" /><path d="M10 20a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /><path d="M12 15v3" /></svg> Net I/O
+      </div>
+
+          </th>
+<th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+     <div class="inline-flex items-center gap-2">
+
+            <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-device-floppy"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg> Block I/O
+      </div>
+
+          </th>
+        </tr>
+      </thead>
+      <tbody id="usageTableBody" class="divide-y divide-gray-200 dark:divide-gray-800">
+        <!-- Data rows will be injected here -->
+      </tbody>
+    </table>
+  </div>
+</div>
+<script>
+  const username = '{{ user.username.split("_")[-1] }}';
+  const fetchButton = document.getElementById("get_docker_history_usage");
+  const container = document.getElementById("docker_stats_history");
+  const tbody = document.getElementById("usageTableBody");
+
+  let alreadyFetched = false;
+
+  fetchButton.addEventListener("click", () => {
+    if (alreadyFetched) return; // prevent multiple fetches
+    alreadyFetched = true;
+
+    container.classList.remove("hidden");
+
+    fetch(`/get_resource_usage_history/${username}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to fetch resource usage history');
+        return response.text();
+      })
+      .then(text => {
+        const lines = text.trim().split('\n').reverse();
+
+        lines.forEach(line => {
+          const spaceIndex = line.indexOf(' ');
+          if (spaceIndex === -1) return;
+
+          const timestamp = line.slice(0, spaceIndex);
+          const jsonStr = line.slice(spaceIndex + 1);
+
+          let usage;
+          try {
+            usage = JSON.parse(jsonStr);
+          } catch (e) {
+            return;
+          }
+
+          const cpuPercent = parseFloat(usage.CPUPerc.replace('%', '').trim()) || 0;
+          const memPercent = parseFloat(usage.MemPerc.replace('%', '').trim()) || 0;
+
+          const tr = document.createElement('tr');
+          tr.className = "sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900";
+
+          tr.innerHTML = `
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 time_readable">${timestamp}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${usage.Container}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${cpuPercent}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${memPercent}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${usage.NetIO}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${usage.BlockIO}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        updateAllTimestamps();
+      })
+      .catch(error => {
+        console.error(error);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-red-600">Error loading usage data: ${error.message}</td></tr>`;
+      });
+
+  });
+</script>
+
+
+
+<!-- END usage table -->
+
+
+
+
+                  </div>
+               </div>
+               <!-- END DOCKER STATS -->

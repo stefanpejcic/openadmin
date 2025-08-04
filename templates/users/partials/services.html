@@ -1,0 +1,548 @@
+               <!-- DOCKER SERVICES -->
+               <div x-show="activeTab === 'services'" x-cloak 
+                  x-data="Object.assign({ searchQuery: '' }, userTable())" 
+                  x-init="init()">                 
+                 
+                 
+                 
+                  <div class="flex flex-col justify-between gap-2 px-4 py-6 sm:flex-row sm:items-center sm:p-6">
+                     <div class="relative w-full sm:w-64 [&amp;>input]:py-1.5">
+                        <input
+                           x-model="searchQuery"
+                           class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8"
+                           placeholder="Search containers..."
+                           type="search"
+                           />
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                              <path
+                                 d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                 ></path>
+                           </svg>
+                        </div>
+                     </div>
+
+                     <div class="relative w-full sm:w-64 [&amp;>input]:py-1.5">
+                        <!-- Dropdown for Column Visibility -->
+                        <div class="relative">
+                              <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="relative items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer" type="button"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg> Show Columns</button>
+
+                              <!-- Dropdown menu -->
+                              <div id="dropdownToggle" class="z-10 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-72 dark:divide-gray-600 hidden">
+                                 <ul class="p-2 space-y-1" aria-labelledby="dropdownToggleButton">
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.name" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Name</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.image" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Image</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.ports" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Ports</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.env" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Enviroment</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.cpu" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">CPU Usage</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.ram" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Memory Usage</span>
+                                             </label>
+                                          </div>
+                                    </li>
+
+
+                                    <li>
+                                          <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                             <label class="inline-flex items-center w-full cursor-pointer">
+                                                <input type="checkbox" x-model="columns.actions" x-on:change="saveColumns" class="sr-only peer">
+                                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Actions</span>
+                                             </label>
+                                          </div>
+                                    </li>
+                                 </ul>
+                              </div>
+                        </div>
+                     </div>
+
+
+
+                  </div>
+                  <div class="overflow-x-auto">
+                     <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                        <table id="databases-table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                           <thead class="">
+                              <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                                 <th x-show="columns.name" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Name
+                                 </th>
+
+                                 <th x-show="columns.image" scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Image
+                                 </th>
+                                 <th x-show="columns.ports" scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Ports
+                                 </th>
+                                 <th x-show="columns.env" scope="col"  class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Env
+                                 </th>                                 
+                                 <th x-show="columns.cpu" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    CPU
+                                 </th>
+                                 <th x-show="columns.ram" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Memory
+                                 </th>
+                                 <th x-show="columns.actions" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+                                    Actions
+                                 </th>
+                              </tr>
+                           </thead>
+                           <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                              {% if docker_data.services %}
+                              {% for service, details in docker_data.services.items() %}
+                              <tr x-show="searchQuery === '' || '{{ details.container_name }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ service }}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{ details.image }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
+                                 <td x-show="columns.name">
+                                    <div class="flex flex-col gap-1">
+                                       <span class="font-medium text-gray-900 dark:text-gray-50">{{ details.container_name if details.container_name else service }}</span>
+                                    </div>
+                                 </td>
+
+                                 <td x-show="columns.image">
+                                    <div class="flex flex-col gap-1">
+                                       <div class="flex items-center gap-1 text-xs">
+                                          <span class="font-mono font-medium uppercase tabular-nums text-gray-900 dark:text-gray-50">{{ details.image }}</span>
+                                          {% if 'httpd' in details.image or 'busybox' in details.image or 'elasticsearch' in details.image or 'mariadb' in details.image or 'memcached' in details.image or 'mysql' in details.image or 'redis' in details.image or 'nginx' in details.image or '-fpm' in details.image or 'openpanel' in details.image or 'phpmyadmin' in details.image or 'varnish' in details.image %}
+                                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="remixicon size-3 shrink-0 text-emerald-600 dark:text-emerald-400">
+                                             <path d="M12 1L20.2169 2.82598C20.6745 2.92766 21 3.33347 21 3.80217V13.7889C21 15.795 19.9974 17.6684 18.3282 18.7812L12 23L5.6718 18.7812C4.00261 17.6684 3 15.795 3 13.7889V3.80217C3 3.33347 3.32553 2.92766 3.78307 2.82598L12 1ZM16.4524 8.22183L11.5019 13.1709L8.67421 10.3431L7.25999 11.7574L11.5026 16L17.8666 9.63604L16.4524 8.22183Z"></path>
+                                          </svg>
+                                          {% else %}
+                                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="remixicon size-3 shrink-0 text-gray-400 dark:text-gray-600">
+                                             <path d="M12 1L20.2169 2.82598C20.6745 2.92766 21 3.33347 21 3.80217V13.7889C21 15.795 19.9974 17.6684 18.3282 18.7812L12 23L5.6718 18.7812C4.00261 17.6684 3 15.795 3 13.7889V3.80217C3 3.33347 3.32553 2.92766 3.78307 2.82598L12 1ZM16.4524 8.22183L11.5019 13.1709L8.67421 10.3431L7.25999 11.7574L11.5026 16L17.8666 9.63604L16.4524 8.22183Z"></path>
+                                          </svg>
+                                          {% endif %}
+                                       </div>
+                                    </div>
+                                 </td>
+
+
+
+                                 <td x-show="columns.ports" class="px-2">
+        <div class="flex flex-col">
+  {% if details.ports %}
+    {% for port in details.ports %}
+      {% if port.published != '0' %}
+        <span class="text-xs font-medium text-gray-500 dark:text-gray-500">{{ port.host_ip }}:{{ port.published }} → {{ port.target }}</span>
+      {% endif %}
+    {% endfor %}
+  {% endif %}                                    
+         </div>
+                                 </td>
+                                 <td x-show="columns.env" class="px-2">
+  {% if details.environment %}
+        <div class="flex flex-col">
+      {% for key, value in details.environment.items() %}
+        <span class="text-xs text-gray-500 dark:text-gray-500">{{ key }}: <span class="font-medium">{{ value }}</span></span>
+      {% endfor %}
+        </div>
+  {% endif %}                                    
+                                 </td>
+
+
+<td x-show="columns.cpu" x-data="{ editing: false, value: '{{ details.deploy.resources.limits.cpus if details.deploy.resources.limits.cpus else "0" }}' }"
+    class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+    
+    <div class="flex gap-2">
+        <!-- CPU Usage -->
+        <div id="cpu-{{ service }}">
+            <div class="flex items-center gap-x-2.5">
+                <div class="relative" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 dark:stroke-blue-500 transition-all duration-300"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-[11px] font-semibold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text and Edit Icon Section -->
+        <div class="flex flex-col gap-0">
+            <span class="text-gray-900 dark:text-gray-50">
+                <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
+                <span class="font-medium" id="cpu-usage-{{ service }}"></span>
+            </span>
+            <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
+                <input id="cpu-allocated-{{service}}" type="hidden" value="{{ total_cpu }}">
+                Allocated: &nbsp;
+                <span x-show="!editing"><span class="font-medium" x-text="value"></span> cores <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+</svg></a></span>
+            <!-- Editable Input and Save Button -->
+            <form action="/containers/{{ user.username.split('_')[-1] }}/cpu/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+
+                <input x-model="value" name="value" type="number" min="0.10" {% if total_cpu != 0 %} max="{{ total_cpu }}" {% endif %} step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+                <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
+            </form>
+            </span>
+        </div>
+    </div>
+</td>
+
+
+
+
+
+
+<td x-show="columns.ram" x-data="{ editing: false, value: '{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }}{% else %}0{% endif %}' }"
+    class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+    
+    <div class="flex gap-2">
+        <!-- CPU Usage -->
+        <div id="ram-{{ service }}">
+            <div class="flex items-center gap-x-2.5">
+                <div class="relative" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 dark:stroke-blue-500 transition-all duration-300"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-[11px] font-semibold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text and Edit Icon Section -->
+        <div class="flex flex-col gap-0">
+            <span class="text-gray-900 dark:text-gray-50">
+                <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
+                <span class="font-medium" id="ram-usage-{{ service }}"></span>
+            </span>
+            <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
+                Allocated: &nbsp;
+                <span x-show="!editing"><span class="font-medium">{% if details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }} GB{% else %}∞{% endif %} </span> <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><span x-show="!editing"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
+  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+</svg></a></span>
+            <!-- Editable Input and Save Button -->
+            <form action="/containers/{{ user.username.split('_')[-1] }}/ram/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <input x-model="value" name="value" type="number" min="0.10" {% if total_ram != 0 %} max="{{ total_ram }}" {% endif %} step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+
+                <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
+            </form>
+            </span>
+
+            
+            </a>
+        </div>
+    </div>
+</td>
+
+
+                    <td x-show="columns.actions" id="actions-{{ service }}" x-data="{ pullValue: 'false' }" class="py-1">
+                        <form method="POST" action="/containers/{{ user.username.split('_')[-1] }}/start/{{ details.container_name if details.container_name else service }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+    <!-- Hidden input with dynamic value based on mouse click -->
+                            <input type="hidden" name="pull" class="pullInput" :value="pullValue">
+
+                            <button
+                                type="submit"
+                                class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"
+                               
+                                @contextmenu.prevent="pullValue = 'true'; $nextTick(() => $el.closest('form').submit())"
+                            >
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600">
+                                    <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path>
+                                </svg>
+                                Disabled
+                            </button>
+                        </form>
+                    </td>
+                              </tr>
+                              {% endfor %}
+
+<script>
+function userTable() {
+    return {
+        searchQuery: '',
+        filters: {
+            active: true,
+            suspended: true
+        },
+        columns: {
+            name: true,
+            image: false,
+            ports: false,
+            env: false,
+            cpu: true,
+            ram: true,
+            actions: true
+        },
+
+        init() {
+            this.loadColumns();
+        },
+
+
+        saveColumns() {
+            localStorage.setItem('columns-singe-user', JSON.stringify(this.columns));
+        },
+
+        loadColumns() {
+            const saved = localStorage.getItem('columns-singe-user');
+            if (saved) {
+                try {
+                    this.columns = JSON.parse(saved);
+                } catch (e) {
+                    console.warn("Failed to parse columns-singe-user from localStorage", e);
+                }
+            }
+        }
+    };
+}
+</script>
+
+
+
+
+
+                              {% else %}
+                              <tr>
+                                 <td colspan="6" class="p-6 text-center">
+                                    docker-compose.yml file is invalid or missing.
+                                 </td>
+                              </tr>
+                              {% endif %}
+                           </tbody>
+                        </table>
+                     </div>
+                  </div>
+               </div>
+               <!-- JS for stats -->
+               <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+               <script>
+                  $(document).ready(function() {
+                             
+                  // Helper function to update the circle graph based on percentage
+                  function updateProgressBar(elementId, percentage) {
+                      const circle = document.querySelector(`#${elementId} circle:nth-of-type(2)`);
+                      const radius = circle.getAttribute('r');
+                      const circumference = 2 * Math.PI * radius;
+                      
+                      // Calculate the stroke-dashoffset based on the percentage
+                      const offset = circumference - (percentage / 100) * circumference;
+                      
+                      // Update the stroke-dashoffset to visually represent the progress
+                      circle.style.strokeDashoffset = offset;
+                  }
+                  
+                  // Update CPU usage graph
+                  function updateCpuUsage(cpuPercentage) {
+                  
+                      let totalCpuStr = "{{ env_data.TOTAL_CPU }}";
+                  
+                      if (totalCpuStr !== "0") {
+                          const totalCpu= parseFloat(totalCpuStr);
+                          const result = cpuPercentage / totalCpu;
+                          document.getElementById('cpu_percentage').textContent = `${result.toFixed(2)}%`;
+                          updateProgressBar('cpu_graph', result);
+                      } else {
+                          document.getElementById('cpu_percentage').textContent = `${cpuPercentage}%`;
+                          updateProgressBar('cpu_graph', cpuPercentage);
+                      }
+                  
+                  
+                  
+                  
+                  }
+                  
+                  // Update RAM usage graph
+function updateRamUsage(ramPercentage) {
+    let totalRamStr = "{{ env_data.TOTAL_RAM }}";
+
+    if (totalRamStr.toUpperCase().endsWith('G')) {
+        totalRamStr = totalRamStr.slice(0, -1);
+        const totalRam = parseFloat(totalRamStr);
+
+        if (!isNaN(totalRam) && totalRam > 0) {
+            const result = ramPercentage / totalRam;
+            document.getElementById('ram_percentage').textContent = `${result.toFixed(2)}%`;
+            updateProgressBar('ram_graph', result);
+        } else {
+            document.getElementById('ram_percentage').textContent = `${ramPercentage}%`;
+            updateProgressBar('ram_graph', ramPercentage);
+        }
+    } else {
+        document.getElementById('ram_percentage').textContent = `${ramPercentage}%`;
+        updateProgressBar('ram_graph', ramPercentage);
+    }
+}
+
+                  
+                  
+                  
+                  
+                  $.ajax({
+                      url: '/containers/stats/{{ user.username.split('_')[-1] }}',
+                      method: 'GET',
+                      success: function(response) {
+                          let totalCpuUsage = 0;  // Initialize totalCpuUsage
+                          let totalMemUsage = 0;  // Initialize totalMemUsage
+                  
+                          var currentRamUsage = 0; // Total current RAM usage
+                          var totalRamAllocated = 0; // Total RAM allocated across all containers
+                          
+                          if (response.container_stats) {
+                              if (response.container_stats.length === 0) {
+                                  // Case when container stats are available but empty
+                              } else {
+                                  response.container_stats.forEach(function(container) {
+                                      var containerName = container.Name;
+                                      var containerId = containerName.replace(/\./g, '\\.');
+                                      var ramCell = $('#ram-' + containerId);
+                                      var actionsCell = $('#actions-' + containerId);
+                                      var cpuCell = $('#cpu-' + containerId);
+                  
+                                      var ramText = $('#ram-usage-' + containerId);
+                                      var cpuText = $('#cpu-usage-' + containerId);
+                  
+                                      // cpu
+                                      var cpuUsage = parseFloat(container.CPUPerc.replace('%', '')) || 0;
+                                      var memUsage = parseFloat(container.MemPerc.replace('%', '')) || 0;
+                                      totalMemUsage += memUsage;
+                                      totalCpuUsage += cpuUsage;
+                  
+                                      // ram
+                                      var memUsageSingle = container.MemUsage.split(' / '); // Splits "1.68MiB / 102.4MiB"
+                                      var currentMemUsage = parseFloat(memUsageSingle[0].replace(/[A-Za-z]/g, '')) || 0; // Convert to number
+                                      var totalMemAllocated = parseFloat(memUsageSingle[1].replace(/[A-Za-z]/g, '')) || 0; // Convert to number
+                                      currentRamUsage += currentMemUsage;
+                                      totalRamAllocated += totalMemAllocated;
+                                      
+                                      // Calculate stroke-dashoffset (Max circumference of the circle is 78.54)
+                                      var cpuDashOffset = 78.54 * (1 - cpuUsage / 100);
+                                      var memDashOffset = 78.54 * (1 - memUsage / 100);
+                  
+                                      var cpuTextInfo = `${container.CPUPerc}`;
+                                      cpuText.html(cpuTextInfo);
+                  
+                                      var memUsageOnly = container.MemUsage.split('/')[0].trim(); 
+                                      var ramTextInfo = `${memUsageOnly}`;
+                                      ramText.html(ramTextInfo);
+                  
+                                      // Generate stats display with circular progress bars
+                                      var cpuInfo = `
+                                          <div class="flex gap-2">
+                                              <!-- CPU Usage -->
+                                              <div class="flex items-center gap-x-2.5">
+                                                  <div class="relative" role="progressbar" aria-valuenow="${cpuUsage}" aria-valuemin="0" aria-valuemax="100">
+                                                      <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                                                          <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                                                          <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="${cpuDashOffset}" fill="transparent" 
+                                                          class="${cpuUsage < 50 ? 'stroke-blue-500' : cpuUsage < 80 ? 'stroke-green-500' : cpuUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500'} dark:${cpuUsage < 50 ? 'stroke-blue-500' : cpuUsage < 80 ? 'stroke-green-500' : cpuUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500'} transition-all duration-300">
+                                                          </circle>
+                                                      </svg>
+                                                      <div class="absolute inset-0 flex items-center justify-center">
+                                                          <span class="text-[11px] font-semibold">${Math.round(cpuUsage)}</span>
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      `;
+                                      cpuCell.html(cpuInfo);
+                  
+                                      var ramInfo = `
+                                          <div class="flex gap-2">
+                                              <!-- Memory Usage -->
+                                              <div class="flex items-center gap-x-2.5">
+                                                  <div class="relative" role="progressbar" aria-valuenow="${memUsage}" aria-valuemin="0" aria-valuemax="100">
+                                                      <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform">
+                                                          <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                                                          <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="${memDashOffset}" fill="transparent" 
+                                                          class="${memUsage < 50 ? 'stroke-blue-500' : memUsage < 80 ? 'stroke-green-500' : memUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500'} dark:${memUsage < 50 ? 'stroke-blue-500' : memUsage < 80 ? 'stroke-green-500' : memUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500'} transition-all duration-300">                                        
+                                                          </circle>
+                                                      </svg>
+                                                      <div class="absolute inset-0 flex items-center justify-center">
+                                                          <span class="text-[11px] font-semibold">${Math.round(memUsage)}</span>
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      `;
+                                      ramCell.html(ramInfo);
+                  
+                                      var actionsInfo = `
+                                          <form method="POST" action="/containers/{{ user.username.split('_')[-1] }}/stop/${containerId}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="button" class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</button></form>
+                                          <a href="/terminal/{{ user.username.split('_')[-1] }}/${containerId}" class="mt-2 w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-terminal" viewBox="0 0 16 16"> <path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9M3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708z"/>  <path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/></svg>Terminal</a>`;
+                                      actionsCell.html(actionsInfo);
+                  
+                                  });
+                                  $('#total_records_count').text(response.container_stats.length);
+                                  
+                                  // Update the global stats
+                                  const cpuPercentage = Math.round(totalCpuUsage); // total CPU percentage across all containers
+                                  const ramPercentage = Math.round(totalMemUsage); // total RAM percentage across all containers
+                  
+                                  // Update the global CPU and RAM usage
+                                  $('#global_cpu_usage').text(`${Math.round(totalCpuUsage)}`);
+                                  $('#global_ram_usage').text(`${Math.round(currentRamUsage)}MiB / ${Math.round(totalRamAllocated)}MiB`);
+                  
+                                  updateCpuUsage(cpuPercentage);
+                                  updateRamUsage(ramPercentage);
+                              }
+                          }
+                      },
+                      error: function(error) {
+                          console.error("Error fetching container stats:", error);
+                      }
+                  });
+                  
+                  
+                  
+                  });
+                  
+               </script>
+               <!-- END JS for stats -->
+               <!-- END DOCKER SERVICES -->

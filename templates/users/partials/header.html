@@ -1,0 +1,64 @@
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">{{ user.username.split('_')[-1] }} {% if "SUSPENDED_" in user.username %} 
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-700 ring-red-500/30 dark:bg-red-400/10 dark:text-red-300 dark:ring-red-400/20 ml-1">Suspended</span>{% endif %} <span id="transfer-status-message"></span></h1>
+                    <h2 class="text-sm font-medium text-slate-500">
+                       <span class="inline-flex">
+<!-- IP --> 
+{% if country_code %}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{country_code.lower()}}.svg" alt="IP address location: {{country_code}}"></img></span><span>{{server_ip}} / {% endif %} 
+<!-- CPU -->
+{% if env_data.TOTAL_CPU == 0 or env_data.TOTAL_CPU == '0' %}∞{% else %}{{env_data.TOTAL_CPU}}{% endif %} Cores /
+<!-- RAM -->
+{% if env_data.TOTAL_RAM == 0 or env_data.TOTAL_RAM == '0g' %}∞{% else %}{{env_data.TOTAL_RAM[:-1]}} GB{% endif %} Memory /
+<!-- DISK -->
+{% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}<!---->GB{% else %}∞{% endif %} Disk</span>
+
+                    </h2>
+               </div> 
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
+                    {% if "SUSPENDED_" in user.username %}
+                    {% else %}
+
+<div id="tooltip-user-autologin" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Login as {{ user.username.split('_')[-1] }} into OpenPanel
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+<a href="/login/token?username={{ user.username.split('_')[-1] }}" 
+   target="_blank" 
+   data-tooltip-target="tooltip-user-autologin" data-tooltip-placement="left"
+   class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+   x-data="{ spinning: false }"
+   @click="spinning = true; setTimeout(() => spinning = false, 500)">
+    
+    <svg version="1.0" 
+         style="vertical-align:middle; margin-right:5px;" 
+         xmlns="http://www.w3.org/2000/svg" 
+         width="24" height="24" 
+         viewBox="0 0 213.000000 215.000000" 
+         preserveAspectRatio="xMidYMid meet" 
+         :class="{'animate-spin': spinning}">
+        <g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none">
+            <path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path>
+        </g>
+    </svg> 
+    OpenPanel
+</a>
+
+
+
+
+
+
+
+
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </header>
+    </div>

@@ -1,0 +1,72 @@
+<!-- HORIZONTAL NAV FOR MOBILE -->
+<nav class="flex sm:hidden justify-center w-full" aria-label="Actions" data-orientation="horizontal" dir="ltr">
+    <div style="position: relative;">
+        <ul data-orientation="horizontal" class="flex items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800" dir="ltr">
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'stats'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'stats'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Statistics</span>
+                </a>
+            </li>
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'services'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'services'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Services</span>
+                </a>
+            </li>
+            <li class="">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'storage'; loadDiskUsage()"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'storage'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Storage</span>
+                </a>
+            </li>
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'info'; fetchCustomMessage()" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Account</span>
+                </a>
+            </li>
+
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="$store.activityStore.fetchLogs(); activeTab = 'activity'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Activity</span>
+                </a>
+            </li>
+
+{% if "SUSPENDED_" in user.username %} 
+            <li class="flex cursor-pointer">
+
+<form method="POST" action="/user/unsuspend/{{ user.username.split('_')[-1] }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="" type="submit"><span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Unsuspend</span></button>
+</form>
+
+            </li>
+{% else %}
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="$store.ipStore.fetchIPs(); activeTab = 'edit'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'edit'}" >
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Edit</span>
+                </a>
+            </li>
+
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'transfer'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'transfer'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Transfer</span>
+                </a>
+            </li>
+
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'suspend'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'suspend'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Suspend</span>
+                </a>
+            </li>
+
+
+{% endif %}                
+
+
+            <li class="flex cursor-pointer">
+                <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'delete'" :class="{'text-red-600 dark:text-red-500': activeTab === 'delete'}">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Delete</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+<!-- HORIZONTAL NAV FOR MOBILE -->
