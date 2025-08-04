@@ -1,0 +1,81 @@
+         <!-- Sidebar Navigation -->
+         <div class="hidden sm:flex p-4 divide-y divide-gray-200 px-2 dark:divide-gray-800 md:col-span-2">
+            <nav aria-label="core navigation links" class="flex flex-1 flex-col space-y-10">
+               <div>
+                  <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Docker</span>
+                  <ul class="mt-1 space-y-2">
+                     <li>
+                        <a @click="activeTab = 'stats'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'stats'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-column-big size-5 shrink-0" aria-hidden="true">
+                              <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
+                              <rect x="15" y="5" width="4" height="12" rx="1"></rect>
+                              <rect x="7" y="8" width="4" height="9" rx="1"></rect>
+                           </svg>
+                           Statistics
+                        </a>
+                     </li>
+                     <li>
+                        <a @click="activeTab = 'services'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'services'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-compass size-5 shrink-0" aria-hidden="true">
+                              <path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"></path>
+                              <circle cx="12" cy="12" r="10"></circle>
+                           </svg>
+                           Services
+                        </a>
+                     </li>
+                     <li>
+                        <a @click="activeTab = 'storage'; loadDiskUsage()"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'storage'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-table2 size-5 shrink-0" aria-hidden="true">
+                              <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"></path>
+                           </svg>
+                           Storage
+                        </a>
+                     </li>
+                  </ul>
+               </div>
+               <div>
+                  <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Account</span>
+                  <ul class="mt-1 space-y-2">
+                     <li>
+                        <a @click="activeTab = 'info'; fetchCustomMessage()" 
+                           :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}" 
+                           class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                        Overview
+                        </a>
+                     </li>
+                     <li>
+                        <a @click="$store.activityStore.fetchLogs(); activeTab = 'activity'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'activity'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Activity
+                        </a>
+                     </li>
+                     {% if "SUSPENDED_" in user.username %} 
+                     <li>
+                        <form method="POST" action="/user/unsuspend/{{ user.username.split('_')[-1] }}">
+                           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                           <button class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900 w-full" type="submit">Unsuspend</button>
+                        </form>
+                     </li>
+                     {% else %}
+                     <li>
+                        <a @click="$store.ipStore.fetchIPs(); activeTab = 'edit'" 
+                           :class="{'text-blue-600 dark:text-blue-500': activeTab === 'edit'}" 
+                           class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                        Edit
+                        </a>
+                     </li>
+                     <li>
+                        <a @click="activeTab = 'transfer'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'transfer'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Transfer <span class="inline-flex items-center gap-x-1 whitespace-nowrap text-xs px-2 font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">New</span>
+                        </a>
+                     </li>
+                     <li>
+                        <a @click="activeTab = 'suspend'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'suspend'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Suspend
+                        </a>
+                     </li>
+                     {% endif %}
+                     <li>
+                        <a @click="activeTab = 'delete'" :class="{'text-red-600 dark:text-red-500': activeTab === 'delete'}" class="cursor-pointer flex items-center gap-x-2.5 rounded-md p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Delete
+                        </a>
+                     </li>
+                  </ul>
+               </div>
+            </nav>
+         </div>
