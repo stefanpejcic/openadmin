@@ -6,140 +6,93 @@
 
 {% if user %}
 
-<div x-data="{
-    activeTab: 'stats',
-    diskInfo: [],
-    containers: [],
-    images: [],
-    volumes: [],
-    loading: false,
-    error: null,
-    diskLoaded: false,
+<div 
+  x-data="{
+      activeTab: 'stats',
+      diskInfo: [],
+      containers: [],
+      images: [],
+      volumes: [],
+      loading: false,
+      error: null,
+      diskLoaded: false,
+      containerName: '{{ user.username }}'.split('_').pop(),
 
-    loadDiskUsage() {
-        if (this.diskLoaded) return;
-        this.diskLoaded = true;
-        this.loading = true;
-        this.error = null;
+      loadDiskUsage() {
+          if (this.diskLoaded) return;
+          this.diskLoaded = true;
+          this.loading = true;
+          this.error = null;
 
-        fetch(`/client/disk/{{ user.username }}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) {
-                    this.error = data.error;
-                    this.containers = [];
-                    this.images = [];
-                    this.volumes = [];
-                } else {
-                    const payload = data[0] || {};
-                    this.containers = payload.Containers || [];
-                    this.images = payload.Images || [];
-                    this.volumes = payload.Volumes || [];
-                }
-            })
-            .catch(err => {
-                this.error = 'Failed to load disk info';
-                console.error(err);
-            })
-            .finally(() => {
-                this.loading = false;
-            });
-    }
-}">
+          fetch(`/client/disk/{{ user.username }}`)
+              .then(res => res.json())
+              .then(data => {
+                  if (data.error) {
+                      this.error = data.error;
+                      this.containers = [];
+                      this.images = [];
+                      this.volumes = [];
+                  } else {
+                      const payload = data[0] || {};
+                      this.containers = payload.Containers || [];
+                      this.images = payload.Images || [];
+                      this.volumes = payload.Volumes || [];
+                  }
+              })
+              .catch(err => {
+                  this.error = 'Failed to load disk info';
+                  console.error(err);
+              })
+              .finally(() => {
+                  this.loading = false;
+              });
+      },
+
+      fetchCustomMessage() {
+          $.ajax({
+              url: '/get_custom_message_for_user/' + this.containerName,
+              type: 'GET',
+              success: function(response) {
+                  $('#custom_message_for_this_user').val(response.custom_message || '');
+              },
+              error: function(xhr) {
+                  if (xhr.status === 404) {
+                      $('#custom_message_for_this_user').val('');
+                  } else {
+                      showMessageModal('Error', (xhr.responseJSON && xhr.responseJSON.error) || 'An error occurred while retrieving the custom message.');
+                  }
+              }
+          });
+      },
+
+      initTabs() {
+          const hash = window.location.hash;
+
+          if (hash === '#services') this.activeTab = 'services';
+          else if (hash === '#activity') this.activeTab = 'activity';
+          else if (hash === '#suspend') this.activeTab = 'suspend';
+          else if (hash === '#unsuspend') this.activeTab = 'unsuspend';
+          else if (hash === '#transfer') this.activeTab = 'transfer';
+          else if (hash === '#storage') this.activeTab = 'storage';
+          else if (hash === '#edit') this.activeTab = 'edit';
+          else if (hash === '#delete') this.activeTab = 'delete';
+          else if (hash === '#overview') this.activeTab = 'info';
+          else this.activeTab = 'stats';
+
+          this.$nextTick(() => {
+              if (this.activeTab === 'storage') this.loadDiskUsage();
+              else if (this.activeTab === 'activity') $store?.activityStore?.fetchLogs();
+              else if (this.activeTab === 'edit' || this.activeTab === 'delete') $store?.ipStore?.fetchIPs();
+              else if (this.activeTab === 'info') this.fetchCustomMessage();
+          });
+      }
+  }"
+  x-init="initTabs()"
+>
 
   {% include 'users/partials/header.html' %}
 
   {% include 'users/partials/mobile_nav.html' %}
-
-
-
-<div 
-  class="relative w-full p-6 text-left border-b bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0"
-  x-data="customMessageComponent('{{ user.username }}')"
-  x-init="initTabs()"
->
-
-
-<script>
-function customMessageComponent(username) {
-    return {
-        containerName: username.split('_').pop(),
-        activeTab: '',
-
-        fetchCustomMessage: function() {
-            var self = this;
-            $.ajax({
-                url: '/get_custom_message_for_user/' + this.containerName,
-                type: 'GET',
-                success: function(response) {
-                    if (response.custom_message) {
-                        $('#custom_message_for_this_user').val(response.custom_message);
-                    } else {
-                        $('#custom_message_for_this_user').val('');
-                    }
-                },
-                error: function(xhr) {
-                    if (xhr.status === 404) {
-                        $('#custom_message_for_this_user').val('');
-                    } else {
-                        showMessageModal('Error', (xhr.responseJSON && xhr.responseJSON.error) || 'An error occurred while retrieving the custom message.');
-                    }
-                }
-            });
-        },
-
-        initTabs: function() {
-            var self = this;
-            var hash = window.location.hash;
-
-            if (hash === '#services') {
-                self.activeTab = 'services';
-            } else if (hash === '#activity') {
-                self.activeTab = 'activity';
-                this.$nextTick(function() {
-                    if ($store && $store.activityStore) {
-                        $store.activityStore.fetchLogs();
-                    }
-                });
-            } else if (hash === '#suspend') {
-                self.activeTab = 'suspend';
-            } else if (hash === '#unsuspend') {
-                self.activeTab = 'unsuspend';
-            } else if (hash === '#transfer') {
-                self.activeTab = 'transfer';
-            } else if (hash === '#storage') {
-                self.activeTab = 'storage';
-                this.$nextTick(function() {
-                    if (typeof loadDiskUsage === 'function') {
-                        loadDiskUsage();
-                    }
-                });
-            } else if (hash === '#edit') {
-                self.activeTab = 'edit';
-                this.$nextTick(function() {
-                    if ($store && $store.ipStore) {
-                        $store.ipStore.fetchIPs();
-                    }
-                });
-            } else if (hash === '#delete') {
-                self.activeTab = 'delete';
-                this.$nextTick(function() {
-                    if ($store && $store.ipStore) {
-                        $store.ipStore.fetchIPs();
-                    }
-                });
-            } else if (hash === '#overview') {
-                self.activeTab = 'info';
-                this.$nextTick(function() {
-                    self.fetchCustomMessage();
-                });
-            } else {
-                self.activeTab = 'stats';
-            }
-        }
-    }
-}
-</script>
 
 <script>
   document.addEventListener("alpine:init", () => {
