@@ -5,6 +5,8 @@
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
   <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+
 
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
@@ -30,18 +32,28 @@
     </div>
 
 
-<div id="terminal" style="width: 80vw; height: 60vh;" class="px-4"></div>
 
+
+<div id="terminal" style="width: 80vw; height: 60vh;" class="px-4"></div>
 
 {% if terminal_type == 'root' %}
 <script>
   var csrf_token = $('meta[name="csrf-token"]').attr('content');
-  const term = new Terminal({
-    cursorBlink: true
-  });
-  term.open(document.getElementById('terminal'));
 
-  const shellSelect = document.getElementById('shell');  
+  const term = new Terminal({ cursorBlink: true });
+  const fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+
+  const terminalEl = document.getElementById('terminal');
+  term.open(terminalEl);
+
+  // Fit after layout paints
+  queueMicrotask(() => fitAddon.fit());
+  // Keep fitting on container resize & window resize
+  new ResizeObserver(() => fitAddon.fit()).observe(terminalEl);
+  window.addEventListener('resize', () => fitAddon.fit());
+
+  const shellSelect = document.getElementById('shell');
   const username = 'root';
   const promptStr = `${username}@localhost:~$ `;
 
@@ -56,9 +68,7 @@
   }
 
   function clearLine() {
-    for (let i = 0; i < input.length; i++) {
-      term.write('\b \b');
-    }
+    for (let i = 0; i < input.length; i++) term.write('\b \b');
   }
 
   function replaceInput(newInput) {
@@ -74,18 +84,12 @@
       term.write('\r\n');
       const command = input.trim();
 
-      if (command.length > 0) {
-        commandHistory.push(command);
-      }
-
+      if (command.length > 0) commandHistory.push(command);
       input = '';
 
-      if (command.length === 0) {
-        prompt();
-        return;
-      }
+      if (command.length === 0) { prompt(); return; }
 
-      const shell = shellSelect.value || 'sh';
+      const shell = (shellSelect && shellSelect.value) || 'sh';
 
       fetch(`/terminal`, {
         method: 'POST',
@@ -93,15 +97,13 @@
           'Content-Type': 'application/json',
           'X-CSRFToken': csrf_token
         },
-        body: JSON.stringify({
-          command: command,
-          shell: shell
-        })
+        body: JSON.stringify({ command, shell })
       })
-      .then(response => response.json())
+      .then(r => r.json())
       .then(data => {
-        term.write(data.output.replace(/\n/g, '\r\n'));
+        term.write((data.output || '').replace(/\n/g, '\r\n'));
         prompt();
+        fitAddon.fit(); // re-fit in case output wraps
       })
       .catch(() => {
         term.write('Error running command');
@@ -113,12 +115,12 @@
         input = input.slice(0, -1);
         term.write('\b \b');
       }
-    } else if (data === '\u001b[A') { // Up arrow
+    } else if (data === '\u001b[A') { // Up
       if (commandHistory.length > 0 && historyIndex > 0) {
         historyIndex--;
         replaceInput(commandHistory[historyIndex]);
       }
-    } else if (data === '\u001b[B') { // Down arrow
+    } else if (data === '\u001b[B') { // Down
       if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
         historyIndex++;
         replaceInput(commandHistory[historyIndex]);
@@ -137,12 +139,21 @@
 {% elif terminal_type == 'users' %}
 <script>
   var csrf_token = $('meta[name="csrf-token"]').attr('content');
-  const term = new Terminal({
-    cursorBlink: true
-  });
-  term.open(document.getElementById('terminal'));
 
-  const shellSelect = document.getElementById('shell');  
+  const term = new Terminal({ cursorBlink: true });
+  const fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+
+  const terminalEl = document.getElementById('terminal');
+  term.open(terminalEl);
+
+  // Fit after layout paints
+  queueMicrotask(() => fitAddon.fit());
+  // Keep fitting on container resize & window resize
+  new ResizeObserver(() => fitAddon.fit()).observe(terminalEl);
+  window.addEventListener('resize', () => fitAddon.fit());
+
+  const shellSelect = document.getElementById('shell');
   const username = 'root';
   const docker_context = '{{ username }}';
   const container = '{{ container_name }}';
@@ -159,9 +170,7 @@
   }
 
   function clearLine() {
-    for (let i = 0; i < input.length; i++) {
-      term.write('\b \b');
-    }
+    for (let i = 0; i < input.length; i++) term.write('\b \b');
   }
 
   function replaceInput(newInput) {
@@ -177,18 +186,12 @@
       term.write('\r\n');
       const command = input.trim();
 
-      if (command.length > 0) {
-        commandHistory.push(command);
-      }
-
+      if (command.length > 0) commandHistory.push(command);
       input = '';
 
-      if (command.length === 0) {
-        prompt();
-        return;
-      }
+      if (command.length === 0) { prompt(); return; }
 
-      const shell = shellSelect.value || 'sh';
+      const shell = (shellSelect && shellSelect.value) || 'sh';
 
       fetch(`/terminal/${docker_context}/${container}`, {
         method: 'POST',
@@ -196,15 +199,13 @@
           'Content-Type': 'application/json',
           'X-CSRFToken': csrf_token
         },
-        body: JSON.stringify({
-          command: command,
-          shell: shell
-        })
+        body: JSON.stringify({ command, shell })
       })
-      .then(response => response.json())
+      .then(r => r.json())
       .then(data => {
-        term.write(data.output.replace(/\n/g, '\r\n'));
+        term.write((data.output || '').replace(/\n/g, '\r\n'));
         prompt();
+        fitAddon.fit(); // re-fit in case output wraps
       })
       .catch(() => {
         term.write('Error running command');
@@ -216,12 +217,12 @@
         input = input.slice(0, -1);
         term.write('\b \b');
       }
-    } else if (data === '\u001b[A') { // Up arrow
+    } else if (data === '\u001b[A') { // Up
       if (commandHistory.length > 0 && historyIndex > 0) {
         historyIndex--;
         replaceInput(commandHistory[historyIndex]);
       }
-    } else if (data === '\u001b[B') { // Down arrow
+    } else if (data === '\u001b[B') { // Down
       if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
         historyIndex++;
         replaceInput(commandHistory[historyIndex]);
@@ -236,7 +237,6 @@
     }
   });
 </script>
-
 {% endif %}
 
 
