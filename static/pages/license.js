@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     .then(() => {
                         setTimeout(() => {
                             window.location.href = "/license";
-                        }, 5000);
+                        }, 10000);
                     })
                     .catch(error => console.error("Error restarting OpenAdmin:", error));
                 });
