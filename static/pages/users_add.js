@@ -109,7 +109,7 @@ newLink.classList.add('flex', 'items-center');
 
 newLink.innerHTML = `
   <a
-    href="/login/token?username=${encodeURIComponent(username)}"
+    href="/login/token/${encodeURIComponent(username)}"
     target="_blank"
     class="ml-2 relative inline-flex items-center justify-center rounded-md border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
     x-data="{ spinning: false }"
