@@ -3,8 +3,8 @@
 # *                                                                       *
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
-# * Version: 1.5.8                                                        *
-# * Build Date: 2025-08-29 16:40:16                                       *
+# * Version: 1.6.0                                                        *
+# * Build Date: 2025-09-12 12:05:16                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
