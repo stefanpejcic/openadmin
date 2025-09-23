@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.6.0                                                        *
-# * Build Date: 2025-09-23 11:25:03                                       *
+# * Build Date: 2025-09-23 11:28:24                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -871,55 +871,52 @@ def get_container_stats(container_name):
             text=True,
             check=True
         )
-        docker_data = json.loads(result.stdout)  # Parse JSON output
+        container_stats = json.loads(result.stdout)  # Parse JSON output
 
     except subprocess.CalledProcessError as e:
-        docker_data = {"error": "Failed to fetch container data: {str(e)}", "details"}
-            result = subprocess.run(docker_cmd, capture_output=True, text=True, check=True)
+        container_stats = []
 
-            container_stats = json.loads(result.stdout)
+    # Extract necessary information from the stats
+    cpu_percent = container_stats.get('CPUPerc', '0.00').strip('%')
+    
+    # Parse memory usage and limit values, stripping the units
+    mem_usage = container_stats.get('MemUsage', '0/0').split(' / ')[0].strip()
+    mem_limit = container_stats.get('MemUsage', '0/0').split(' / ')[1].strip()
+    mem_percent = container_stats.get('MemPerc', '0.00').strip('%')
 
-            # Extract necessary information from the stats
-            cpu_percent = container_stats.get('CPUPerc', '0.00').strip('%')
-            
-            # Parse memory usage and limit values, stripping the units
-            mem_usage = container_stats.get('MemUsage', '0/0').split(' / ')[0].strip()
-            mem_limit = container_stats.get('MemUsage', '0/0').split(' / ')[1].strip()
-            mem_percent = container_stats.get('MemPerc', '0.00').strip('%')
+    result = {
+        'CPU %': f'{cpu_percent}%',
+        'Memory Usage': f'{mem_usage}',
+        'Memory Limit': f'{mem_limit}',
+        'Memory %': f'{mem_percent}%',
+    }
 
-            result = {
-                'CPU %': f'{cpu_percent}%',
-                'Memory Usage': f'{mem_usage}',
-                'Memory Limit': f'{mem_limit}',
-                'Memory %': f'{mem_percent}%',
-            }
+    print("USERS - Data:", result)
+    return result
 
-            print("USERS - Data:", result)
-            return result
+except subprocess.CalledProcessError as e:
+    error_msg = f"Failed to get stats for container '{container_name}'. Docker command error. Details: {e}"
+    print("USERS - Error:", error_msg)
+    return {
+        "status": "error",
+        "message": error_msg
+    }, 503
 
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Failed to get stats for container '{container_name}'. Docker command error. Details: {e}"
-            print("USERS - Error:", error_msg)
-            return {
-                "status": "error",
-                "message": error_msg
-            }, 503
+except json.JSONDecodeError as e:
+    error_msg = f"Failed to parse Docker stats output. Details: {e}"
+    print("USERS - Parsing error:", error_msg)
+    return {
+        "status": "error",
+        "message": error_msg
+    }, 500
 
-        except json.JSONDecodeError as e:
-            error_msg = f"Failed to parse Docker stats output. Details: {e}"
-            print("USERS - Parsing error:", error_msg)
-            return {
-                "status": "error",
-                "message": error_msg
-            }, 500
-
-        except Exception as e:
-            error_msg = f"An error occurred: {e}"
-            print("USERS - Exception error:", error_msg
-            return {
-                "status": "error",
-                "message": error_msg
-            }, 500
+except Exception as e:
+    error_msg = f"An error occurred: {e}"
+    print("USERS - Exception error:", error_msg
+    return {
+        "status": "error",
+        "message": error_msg
+    }, 500
 
 
 def calculate_cpu_percent(stats):
