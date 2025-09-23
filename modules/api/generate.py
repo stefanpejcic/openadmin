@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.6.0                                                        *
-# * Build Date: 2025-09-12 12:04:56                                       *
+# * Build Date: 2025-09-23 11:17:39                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -39,6 +39,7 @@ import os
 import subprocess
 
 def extract_api_info(file_path):
+    print(f"API.GENERATE - Reading: {file_path}")
     with open(file_path, 'r') as file:
         lines = file.readlines()
 
@@ -81,6 +82,8 @@ def extract_api_info(file_path):
     return endpoints_info
 
 def format_endpoints_info(endpoints_info, protocol, domain):
+    print(f"API.GENERATE - Formating endpoints information..")
+
     output = []
     for endpoint in endpoints_info:
         output.append(f"\nEndpoint: {endpoint['endpoint']}")
@@ -95,13 +98,15 @@ def format_endpoints_info(endpoints_info, protocol, domain):
 
 def read_existing_file(file_path, protocol, domain):
     if os.path.exists(file_path):
+        print(f"API.GENERATE - Reading cached endpoints file: {file_path}")
         with open(file_path, 'r') as file:
             content = file.read()
         return content.replace('http://localhost', f'{protocol}://{domain}')
     else:
-        print(f"No existing file found at {file_path}.")
+        print(f"API.GENERATE - No existing file found at {file_path}.")
         return ""
 
+# TODO: not used anymore!
 def get_force_domain(config_file_path):
     force_domain = None
     if os.path.exists(config_file_path):
@@ -113,7 +118,10 @@ def get_force_domain(config_file_path):
     return force_domain
 
 def get_server_ip():
+    print(f"API.GENERATE - Checking public IPv4 for the server..")
+
     try:
+        print(f"API.GENERATE - Trying: https://ip.openpanel.com")
         result = subprocess.run(
             ['curl', '--silent', '--max-time', '2', '-4', 'https://ip.openpanel.com'],
             capture_output=True,
@@ -123,6 +131,7 @@ def get_server_ip():
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
         
+        print(f"API.GENERATE - Failed, trying: https://ip.openpanel.com")
         result = subprocess.run(
             ['wget', '--timeout=2', '-qO-', 'https://ipv4.openpanel.com'],
             capture_output=True,
@@ -132,6 +141,7 @@ def get_server_ip():
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
 
+        print(f"API.GENERATE - Failed again, trying: https://ifconfig.me")
         result = subprocess.run(
             ['curl', '--silent', '--max-time', '2', '-4', 'https://ifconfig.me'],
             capture_output=True,
@@ -140,10 +150,11 @@ def get_server_ip():
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
-        
+
+        print(f"API.GENERATE - All 3 domains are unreachable - do you have internet access or something blocking outgoing port 443?")
         return "127.0.0.1"
     except Exception as e:
-        print(f"Error retrieving IP address: {e}")
+        print(f"API.GENERATE - Error retrieving IP address: {e}")
         return "127.0.0.1"
 
 def main():
@@ -171,15 +182,15 @@ def main():
         formatted_info = format_endpoints_info(endpoints_info, 'http', 'localhost')
         with open(output_file, 'w') as f:
             f.write(formatted_info)
-        print(f"Endpoint information saved to {output_file}")
+        print(f"API.GENERATE - Endpoint information saved to {output_file}")
     else:
         # Read from existing file
         existing_info = read_existing_file(output_file, protocol, domain)
         if existing_info:
-            print("Available API Endpoints:")
+            print("API.GENERATE - Available API Endpoints:")
             print(existing_info)
         else:
-            print("No information available. Run with --save to generate the file.")
+            print("API.GENERATE - No information available. Run with --save to generate the file.")
 
 if __name__ == "__main__":
     main()
