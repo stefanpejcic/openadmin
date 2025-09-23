@@ -4,7 +4,7 @@ from flask import Flask, send_from_directory, abort
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.6.0                                                        *
-# * Build Date: 2025-09-23 11:22:23                                       *
+# * Build Date: 2025-09-23 11:24:39                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
