@@ -4,7 +4,7 @@ from flask import request, redirect, url_for, jsonify, render_template
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.6.0                                                        *
-# * Build Date: 2025-09-23 11:25:17                                       *
+# * Build Date: 2025-09-23 11:28:38                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
