@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.6.0                                                        *
-# * Build Date: 2025-09-23 11:24:22                                       *
+# * Build Date: 2025-09-23 11:25:03                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -874,7 +874,7 @@ def get_container_stats(container_name):
         docker_data = json.loads(result.stdout)  # Parse JSON output
 
     except subprocess.CalledProcessError as e:
-        docker_data = {"error": "Failed to fetch container data", "details": str(e)}the output
+        docker_data = {"error": "Failed to fetch container data: {str(e)}", "details"}
             result = subprocess.run(docker_cmd, capture_output=True, text=True, check=True)
 
             container_stats = json.loads(result.stdout)
