@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.6.0                                                        *
-# * Build Date: 2025-09-23 11:18:56                                       *
+# * Build Date: 2025-09-23 11:22:08                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -72,6 +72,15 @@ from flask_login import current_user
 from app import app, cache, is_license_valid, login_required_route, connect_to_database
 from modules.helpers import get_all_plans_and_user_count, get_plan_by_id, query_context_by_username, check_if_owner_for_user
 
+def fetch_feature_sets():
+    try:
+        print(f"PLANS - Fetching feature sets..")
+        feature_sets = [f[:-4] for f in os.listdir('/etc/openpanel/openpanel/features/') if f.endswith('.txt')]
+    except FileNotFoundError:
+        print(f"PLANS - No feature sets found!")
+        feature_sets = []
+    return feature_sets
+
 # create plan
 @app.route('/plans/new', methods=['GET', 'POST'])
 @login_required_route
@@ -130,15 +139,6 @@ def create_plan():
 
     return render_template('new_plan.html', title='Create New Package', app=app, current_route=request.path, form_data=form_data,plan_template_data=new_plan_template_content, feature_sets=feature_sets)
 
-
-def fetch_feature_sets():
-    try:
-        print(f"PLANS - Fetching feature sets..")
-        feature_sets = [f[:-4] for f in os.listdir('/etc/openpanel/openpanel/features/') if f.endswith('.txt')]
-    except FileNotFoundError:
-        print(f"PLANS - No feature sets found!")
-        feature_sets = []
-    return feature_sets
 
 @app.route('/plan/apply/<filename>')
 @login_required_route
