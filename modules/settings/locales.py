@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.6.0                                                        *
-# * Build Date: 2025-09-23 11:17:39                                       *
+# * Build Date: 2025-09-23 11:18:56                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -79,7 +79,7 @@ def locales():
 
     if request.method == 'POST':
         locale_to_install = request.form.get('locale') or request.json.get('locale')
-        print(f"LOCALE - Installing locale: {locale}")
+        print(f"LOCALE - Installing locale: {locale_to_install}")
 
         if not locale_to_install:
             print(f"LOCALE - Aborting installation: locale is not provided!")
