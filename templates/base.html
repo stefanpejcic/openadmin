@@ -106,16 +106,19 @@ $(document).ready(function(){
         var searchText = $(this).val().toLowerCase();
         var dropdownItems = '';
 
-        $.when(
-            $.get('/search/pages'),
-            $.get('/search/users'),
-            $.get('/search/websites')
-        ).done(function(jsonData, usersData, websiteData) {
-            jsonData = jsonData[0];
-            usersData = usersData[0];
-            websiteData = websiteData[0];
-                
-            $.each(jsonData, function(index, item) {
+        // Fire off all requests, but don't depend on all succeeding
+        var pagesReq    = $.get('/search/pages').fail(() => []);
+        var usersReq    = $.get('/search/users').fail(() => []);
+        var websitesReq = $.get('/search/websites').fail(() => []);
+
+        $.when(pagesReq, usersReq, websitesReq).always(function(pagesRes, usersRes, websitesRes) {
+            // If a request failed, jQuery passes undefined — normalize
+            var pages    = (pagesRes && pagesRes[0])    ? pagesRes[0]    : [];
+            var users    = (usersRes && usersRes[0])    ? usersRes[0]    : [];
+            var websites = (websitesRes && websitesRes[0]) ? websitesRes[0] : [];
+
+            // Pages
+            $.each(pages, function(index, item) {
                 var itemName = item.name || '';
                 var linkTarget = '';
 
@@ -125,8 +128,12 @@ $(document).ready(function(){
                 }
             });
 
-$.each(usersData, function(index, item) {
-    var itemName = item[0] || '';
+
+if (!Array.isArray(users)) {
+    users = [users];
+}
+
+$.each(users, function(index, itemName) {
     var suspended = itemName.toLowerCase().includes('suspended');
     var iconClass = suspended ? '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"> <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/> <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/> </svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>';
     
@@ -141,11 +148,11 @@ $.each(usersData, function(index, item) {
 });
 
 
-            $.each(websiteData, function(index, item) {
+            $.each(websites, function(index, item) {
                 var itemName = item[0] || ''; // Get the site name from the first element
                 var itemLink = '/domains/' + itemName; // Construct link using site name
                 if (itemName.toLowerCase().includes(searchText)) {
-                    dropdownItems += '<li class="p-1 hover:bg-gray-200  hover:dark:bg-gray-500"><h3 class="m-0"><a class="dropdown-item" href="' + itemLink + '"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"> <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/> </svg> &nbsp;' + itemName + '</a></h3></li>';
+                    dropdownItems += '<li class="p-1 hover:bg-gray-200  hover:dark:bg-gray-500"><h3 class="m-0"><a class="flex dropdown-item" href="' + itemLink + '"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"> <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/> </svg> &nbsp;' + itemName + '</a></h3></li>';
                 }
             });
 
@@ -166,10 +173,7 @@ $.each(usersData, function(index, item) {
     // Hide dropdown when clicking outside
     $(document).on('click', function(event) {
         if (!$(event.target).closest('#searchGroup').length) {
-                $('#filteredDropdown')
-                    .html('')
-                    .hide()
-                    .removeClass('p-1 border');
+                $('#filteredDropdown').html('').hide().removeClass('p-1 border');
         }
     });
 
@@ -219,7 +223,8 @@ $.each(usersData, function(index, item) {
                         <div data-sidebar="group-content" class="w-full text-sm">
                             <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-4">
 
-<li x-data="{ open: false, active: {% if request.path.startswith('/user') and not request.path.startswith('/user/import') %}true{% else %}false{% endif %} || {% if request.path.startswith('/resellers') %}true{% else %}false{% endif %} || {% if request.path.startswith('/administrators') %}true{% else %}false{% endif %} }" class="relative">
+<li x-data="{ open: false, active: {% if request.path.startswith('/user') and not request.path.startswith('/user/import') %}true{% else %}false{% endif %} || {% if request.path.startswith('/resellers') %}true{% else %}false{% endif %} || {% if request.path.startswith('/administrators') %}true{% else %}false{% endif %} || {% if request.path.startswith('/account') %}true{% else %}false{% endif %} }" class="relative">
+    <button @click="open = !open" cl" class="relative">
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Accounts -->
@@ -249,6 +254,12 @@ $.each(usersData, function(index, item) {
             <li>
                 <a data-active="{% if request.path.startswith('/resellers') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/resellers">
                     Resellers
+                </a>
+            </li>
+        {% else %}
+            <li>
+                <a data-active="{% if request.path.startswith('/account') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/account">
+                    Reseller Account
                 </a>
             </li>
         {% endif %}
@@ -286,11 +297,8 @@ $.each(usersData, function(index, item) {
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
         <li><a data-active="{% if request.path.startswith('/plans') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
             href="/plans">User Packages</a></li>
-        {% if not is_reseller %}
         <li><a data-active="{% if request.path.startswith('/features') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
             href="/features">Feature Manager</a></li>
-        {% endif %}
-
     </ul>
 </li>
 
