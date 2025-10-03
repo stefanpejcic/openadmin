@@ -1,8 +1,7 @@
 #!/usr/bin/perl
 ###############################################################################
-# Copyright 2006-2023, Way to the Web Limited
-# URL: http://www.configserver.com
-# Email: sales@waytotheweb.com
+# Copyright (C) 2025 Sentinel Project (https://github.com/sentinelfirewall/sentinel)
+# Copyright (C) 2006-2025 Jonathan Michaelson (https://github.com/waytotheweb/scripts)
 ###############################################################################
 # start main
 use utf8;
