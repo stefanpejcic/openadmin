@@ -1,0 +1,399 @@
+<!-- single_user.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+
+
+{% if user %}
+
+<div 
+  x-data="{
+      activeTab: 'stats',
+      diskInfo: [],
+      containers: [],
+      images: [],
+      volumes: [],
+      loading: false,
+      error: null,
+      diskLoaded: false,
+      containerName: '{{ user.username }}'.split('_').pop(),
+
+      loadDiskUsage() {
+          if (this.diskLoaded) return;
+          this.diskLoaded = true;
+          this.loading = true;
+          this.error = null;
+
+          fetch(`/client/disk/{{ user.username }}`)
+              .then(res => res.json())
+              .then(data => {
+                  if (data.error) {
+                      this.error = data.error;
+                      this.containers = [];
+                      this.images = [];
+                      this.volumes = [];
+                  } else {
+                      const payload = data[0] || {};
+                      this.containers = payload.Containers || [];
+                      this.images = payload.Images || [];
+                      this.volumes = payload.Volumes || [];
+                  }
+              })
+              .catch(err => {
+                  this.error = 'Failed to load disk info';
+                  console.error(err);
+              })
+              .finally(() => {
+                  this.loading = false;
+              });
+      },
+
+      fetchCustomMessage() {
+          $.ajax({
+              url: '/get_custom_message_for_user/' + this.containerName,
+              type: 'GET',
+              success: function(response) {
+                  $('#custom_message_for_this_user').val(response.custom_message || '');
+              },
+              error: function(xhr) {
+                  if (xhr.status === 404) {
+                      $('#custom_message_for_this_user').val('');
+                  } else {
+                      showMessageModal('Error', (xhr.responseJSON && xhr.responseJSON.error) || 'An error occurred while retrieving the custom message.');
+                  }
+              }
+          });
+      },
+
+      initTabs() {
+          const hash = window.location.hash;
+
+          if (hash === '#services') this.activeTab = 'services';
+          else if (hash === '#activity') this.activeTab = 'activity';
+          else if (hash === '#suspend') this.activeTab = 'suspend';
+          else if (hash === '#unsuspend') this.activeTab = 'unsuspend';
+          else if (hash === '#transfer') this.activeTab = 'transfer';
+          else if (hash === '#storage') this.activeTab = 'storage';
+          else if (hash === '#edit') this.activeTab = 'edit';
+          else if (hash === '#delete') this.activeTab = 'delete';
+          else if (hash === '#overview') this.activeTab = 'info';
+          else this.activeTab = 'stats';
+
+          this.$nextTick(() => {
+              if (this.activeTab === 'storage') this.loadDiskUsage();
+              else if (this.activeTab === 'activity') $store?.activityStore?.fetchLogs();
+              else if (this.activeTab === 'edit' || this.activeTab === 'delete') $store?.ipStore?.fetchIPs();
+              else if (this.activeTab === 'info') this.fetchCustomMessage();
+          });
+      }
+  }"
+  x-init="initTabs()"
+>
+
+  {% include 'users/partials/header.html' %}
+
+  {% include 'users/partials/mobile_nav.html' %}
+
+<script>
+  document.addEventListener("alpine:init", () => {
+      Alpine.store("ipStore", {
+          fetchedips: false,
+          fetchIPs() {
+            if (this.fetchedips) return;
+            this.fetchedips = true;
+
+              const ipSelect = document.getElementById('ipSelect');
+              const currentIP = "{{ server_ip }}";
+              const usernameForIP = "{{ user.username }}";
+
+              fetch(`/system/ips/${usernameForIP}?output=json`)
+                  .then(response => response.json())
+                  .then(data => {                     
+                      if (!data.ip_addresses || !Array.isArray(data.ip_addresses)) {
+                          throw new Error("Invalid response format");
+                      }
+  
+                      ipSelect.innerHTML = '<option disabled value="">Change IP address</option>';
+  
+                      data.ip_addresses.forEach(ip => {
+                          const option = document.createElement('option');
+                          option.value = ip;
+                          option.textContent = ip;
+                          if (ip === currentIP) {
+                              option.selected = true;
+                              option.textContent = `${ip} (Current)`;
+                          }
+                          ipSelect.appendChild(option);
+                      });
+                  })
+                  .catch(error => {
+                      console.error('Error fetching IPs:', error);
+                      this.fetchedips = false;
+  
+                      // Fallback: only display the current server IP
+                      ipSelect.innerHTML = '';
+                      const option = document.createElement('option');
+                      option.value = currentIP;
+                      option.textContent = currentIP;
+                      option.selected = true;
+                      ipSelect.appendChild(option);
+                  });
+          }
+      });
+  
+  
+  
+  
+  
+  
+  // Store for Activity Logs
+  Alpine.store("activityStore", {
+      activities: [],
+      fetchedlogs: false,
+      fetchLogs() {
+
+        if (this.fetchedlogs) return;
+        this.fetchedlogs = true;
+
+
+          const username = "{{ user.username }}";
+  
+          fetch(`/user_activity/${username}`)
+              .then(response => response.json())
+              .then(data => {
+  
+                  this.activities = [];  // Reset the activities
+  
+                  if (!data.user_activity || data.user_activity.length === 0) {
+                      // Show "No activity log yet" message if empty
+                      this.activities.push({ noActivity: true });
+                      return;
+                  }
+  
+                  // Iterate over each activity in the user_activity array
+                  data.user_activity.forEach(activity => {
+                      const date = this.formatDateString(activity.timestamp);
+                      const ip = activity.ip_address;
+                      let action = activity.action;
+                      let actionClass = '';
+  
+                      // Handle administrator actions
+                      if (activity.user_type === 'Administrator') {
+                          // Add icon and style for administrator actions
+                          action = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-crown" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4z" /></svg> ` + action;
+  
+                          // Customize action class based on the action content
+                          if (action.includes('unsuspended')) {
+                              actionClass = 'text-green bg-dark';
+                          } else if (action.includes('suspended')) {
+                              actionClass = 'text-red bg-dark';
+                          } else if (action.includes('edit') || action.includes('changed')) {
+                              actionClass = 'text-yellow bg-dark';
+                          } else {
+                              actionClass = 'text-teal bg-dark';
+                          }
+                      }
+  
+                      // Push the activity data into the activities array
+                      this.activities.push({
+                          date: date,
+                          action: action,
+                          ip: ip,
+                          actionClass: actionClass,
+                      });
+                  });
+              })
+              .catch(error => {
+                  this.fetched = false;
+                  console.error('Error fetching activity logs:', error);
+              });
+      },
+  
+      formatDateString(rawDate) {
+          const dateObj = new Date(rawDate);
+          let day = dateObj.getDate();
+          const month = dateObj.toLocaleString('en-US', { month: 'long' });
+          const year = dateObj.getFullYear();
+          const hours = dateObj.getHours();
+          const minutes = dateObj.getMinutes();
+          const seconds = dateObj.getSeconds();
+  
+          day = day < 10 ? '0' + day : day;
+          const formattedHours = hours < 10 ? '0' + hours : hours;
+          const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+          const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
+  
+          const currentDate = new Date();
+          const currentYear = currentDate.getFullYear();
+  
+          if (year !== currentYear) {
+              return `${day}.${month}.${year} ${formattedHours}:${formattedMinutes}`;
+          } else {
+              return `${day}.${month} ${formattedHours}:${formattedMinutes}`;
+          }
+      }
+  });
+  
+  
+  });
+</script>
+
+
+
+
+
+   <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0">
+      <div class="grid-cols-12 divide-y divide-gray-200 dark:divide-gray-800 md:grid md:divide-x md:divide-y-0">
+
+        {% include 'users/partials/desktop_nav.html' %}
+
+         <!-- Content Area -->
+         <div class="md:col-span-10 h-auto">
+            <div class="relative h-full rounded">
+
+              {% include 'users/partials/stats.html' %}
+
+              {% include 'users/partials/services.html' %}
+
+              {% include 'users/partials/storage.html' %}
+
+              {% include 'users/partials/info.html' %}
+
+              {% include 'users/partials/edit.html' %}
+
+              {% include 'users/partials/activity.html' %}
+
+              {% include 'users/partials/transfer.html' %}
+
+              {% include 'users/partials/suspend.html' %}
+
+              {% include 'users/partials/delete.html' %}
+
+            </div>
+          </div>
+      </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const username = "{{ user.username|e }}";
+  const url = `/json/transfers/${username}`;
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      const inProgress = data.some(item => item.pid && item.status === 'in progress');
+      const success = data.some(item => item.pid && item.status === 'success');
+      const failed = data.some(item => item.pid && item.status === 'failed');
+
+        // hide transfer section!
+        if ((inProgress || success) && username.includes('SUSPENDED_')) {
+            const form = document.getElementById('transfer-form');
+            if (form) form.style.display = 'none';
+        }
+
+      let message = null;
+      let bgColor = '';
+      let borderColor = '';
+
+      if (inProgress) {
+        message = `Transfer to another server in progress`;
+        bgColor = '#d9edf7';    // light blue
+        borderColor = '#31708f';
+      } else if (success) {
+        message = `Transferred to another server`;
+        bgColor = '#dff0d8';    // light green
+        borderColor = '#3c763d';
+      } /*else if (failed) {
+        message = `Failed transfer process to another server.`;
+        bgColor = '#f2dede';    // light red
+        borderColor = '#a94442';
+      }*/
+
+      // transfer-status-message div
+      let messageDiv = document.getElementById('transfer-status-message');
+      if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'transfer-status-message';
+        messageDiv.style.padding = '10px';
+        messageDiv.style.margin = '10px 0';
+        messageDiv.style.borderRadius = '4px';
+        messageDiv.style.fontWeight = 'bold';
+        document.body.prepend(messageDiv);
+      }
+
+function getStatusBadge(status) {
+  switch ((status || '').toLowerCase()) {
+    case 'success':
+    case 'completed':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>Completed
+              </span>`;
+    case 'in progress':
+    case 'running':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>Running
+              </span>`;
+    case 'failed':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-red-600 dark:bg-red-400" aria-hidden="true"></span>Failed
+              </span>`;
+    default:
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Unknown
+              </span>`;
+  }
+}
+
+
+      if (message) {
+        messageDiv.innerHTML = `${message}`;
+        messageDiv.style.backgroundColor = bgColor;
+        messageDiv.style.border = `1px solid ${borderColor}`;
+        messageDiv.style.color = borderColor;
+      } else {
+        messageDiv.innerHTML = '';
+      }
+
+      // Format and display data inside #existing-transfers
+      const transfersDiv = document.getElementById('existing-transfers');
+      if (transfersDiv) {
+        let html = `
+          <h3 class="font-semibold text-gray-900 dark:text-gray-50">Transfer logs:</h3>
+          <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">
+        `;
+
+        if (data.length === 0) {
+          html = '';
+        } else {
+          data.forEach(item => {
+            const statusBadge = getStatusBadge(item.status);
+            html += `<a class="text-blue-600 hover:underline" href="/import/user/log/${encodeURIComponent(item.filename)}" target="_blank">${item.filename || 'N/A'}</a> ${statusBadge}`;
+
+            if (item.details) {
+              html += `, Details: ${item.details}`;
+            }
+            html += '<br>';
+          });
+        }
+
+        html += '</p>';
+        transfersDiv.innerHTML = html;
+      }
+    })
+    .catch(err => {
+      console.error('Failed to fetch transfer status:', err);
+    });
+});
+</script>
+
+
+
+
+{% else %}
+  {% include 'users/partials/no_such_user.html' %}
+{% endif %}
+
+
+{% endblock %}

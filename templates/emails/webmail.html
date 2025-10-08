@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div>
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">{{ title }}</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Redirecting to Webmail for {{email}}...</h2>
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <!-- Login form -->
+    <form id="redirectForm" method="POST" action="{{ webmail_domain }}/?_task=login">
+        <input type="hidden" name="_task" value="login">
+        <input type="hidden" name="_action" value="login">
+        <input type="hidden" name="_autologin" value="1" />
+        <noscript><input type="submit" value="Click here to login"></noscript>
+    </form>
+
+    <script>
+        window.onload = function() {
+            const logoutUrl = "{{ webmail_domain }}/?_task=logout";
+
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = logoutUrl;
+            document.body.appendChild(iframe);
+
+            setTimeout(function() {
+                document.getElementById('redirectForm').submit();
+            }, 300);
+        };
+    </script>
+</div>
+
+{% endblock %}

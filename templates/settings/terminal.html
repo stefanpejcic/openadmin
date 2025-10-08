@@ -1,0 +1,246 @@
+<!-- templates/settings/terminal.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+
+
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">{{ title }}</h1>
+                    <h2 class="text-sm font-medium text-slate-500">
+                      {% if terminal_type == 'users' %}
+                      User: <a href="/users/{{ username }}">{{ username }}</a> | Container: {{ container_name}}</h2>
+                      {% elif terminal_type == 'root' %}
+                      Command line access to the server’s “root” account.
+                      {% endif %}
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                 <select id="shell" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                  <option disabled="" selected="" value=""> -- Shell type -- </option>
+                  <option value="sh">sh</option>
+                  <option value="bash">bash</option>
+                </select>
+                </div>
+            </div>
+    </header>
+    </div>
+
+
+
+
+<div id="terminal" style="width: 80vw; height: 60vh;" class="px-4"></div>
+
+{% if terminal_type == 'root' %}
+<script>
+  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+
+  const term = new Terminal({ cursorBlink: true });
+  const fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+
+  const terminalEl = document.getElementById('terminal');
+  term.open(terminalEl);
+
+  // Fit after layout paints
+  queueMicrotask(() => fitAddon.fit());
+  // Keep fitting on container resize & window resize
+  new ResizeObserver(() => fitAddon.fit()).observe(terminalEl);
+  window.addEventListener('resize', () => fitAddon.fit());
+
+  const shellSelect = document.getElementById('shell');
+  const username = 'root';
+  const promptStr = `${username}@localhost:~$ `;
+
+  let input = '';
+  let commandHistory = [];
+  let historyIndex = -1;
+
+  function prompt() {
+    term.write(`\r\n${promptStr}`);
+    input = '';
+    historyIndex = commandHistory.length;
+  }
+
+  function clearLine() {
+    for (let i = 0; i < input.length; i++) term.write('\b \b');
+  }
+
+  function replaceInput(newInput) {
+    clearLine();
+    input = newInput;
+    term.write(input);
+  }
+
+  prompt();
+
+  term.onData(data => {
+    if (data === '\r') { // Enter
+      term.write('\r\n');
+      const command = input.trim();
+
+      if (command.length > 0) commandHistory.push(command);
+      input = '';
+
+      if (command.length === 0) { prompt(); return; }
+
+      const shell = (shellSelect && shellSelect.value) || 'sh';
+
+      fetch(`/terminal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token
+        },
+        body: JSON.stringify({ command, shell })
+      })
+      .then(r => r.json())
+      .then(data => {
+        term.write((data.output || '').replace(/\n/g, '\r\n'));
+        prompt();
+        fitAddon.fit(); // re-fit in case output wraps
+      })
+      .catch(() => {
+        term.write('Error running command');
+        prompt();
+      });
+
+    } else if (data === '\u007F') { // Backspace
+      if (input.length > 0) {
+        input = input.slice(0, -1);
+        term.write('\b \b');
+      }
+    } else if (data === '\u001b[A') { // Up
+      if (commandHistory.length > 0 && historyIndex > 0) {
+        historyIndex--;
+        replaceInput(commandHistory[historyIndex]);
+      }
+    } else if (data === '\u001b[B') { // Down
+      if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+        historyIndex++;
+        replaceInput(commandHistory[historyIndex]);
+      } else if (historyIndex === commandHistory.length - 1) {
+        historyIndex++;
+        replaceInput('');
+      }
+    } else {
+      const sanitized = data.replace(/[\x00-\x1F\x7F]/g, '');
+      input += sanitized;
+      term.write(sanitized);
+    }
+  });
+</script>
+
+{% elif terminal_type == 'users' %}
+<script>
+  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+
+  const term = new Terminal({ cursorBlink: true });
+  const fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+
+  const terminalEl = document.getElementById('terminal');
+  term.open(terminalEl);
+
+  // Fit after layout paints
+  queueMicrotask(() => fitAddon.fit());
+  // Keep fitting on container resize & window resize
+  new ResizeObserver(() => fitAddon.fit()).observe(terminalEl);
+  window.addEventListener('resize', () => fitAddon.fit());
+
+  const shellSelect = document.getElementById('shell');
+  const username = 'root';
+  const docker_context = '{{ username }}';
+  const container = '{{ container_name }}';
+  const promptStr = `${username}@${container}:~$ `;
+
+  let input = '';
+  let commandHistory = [];
+  let historyIndex = -1;
+
+  function prompt() {
+    term.write(`\r\n${promptStr}`);
+    input = '';
+    historyIndex = commandHistory.length;
+  }
+
+  function clearLine() {
+    for (let i = 0; i < input.length; i++) term.write('\b \b');
+  }
+
+  function replaceInput(newInput) {
+    clearLine();
+    input = newInput;
+    term.write(input);
+  }
+
+  prompt();
+
+  term.onData(data => {
+    if (data === '\r') { // Enter
+      term.write('\r\n');
+      const command = input.trim();
+
+      if (command.length > 0) commandHistory.push(command);
+      input = '';
+
+      if (command.length === 0) { prompt(); return; }
+
+      const shell = (shellSelect && shellSelect.value) || 'sh';
+
+      fetch(`/terminal/${docker_context}/${container}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token
+        },
+        body: JSON.stringify({ command, shell })
+      })
+      .then(r => r.json())
+      .then(data => {
+        term.write((data.output || '').replace(/\n/g, '\r\n'));
+        prompt();
+        fitAddon.fit(); // re-fit in case output wraps
+      })
+      .catch(() => {
+        term.write('Error running command');
+        prompt();
+      });
+
+    } else if (data === '\u007F') { // Backspace
+      if (input.length > 0) {
+        input = input.slice(0, -1);
+        term.write('\b \b');
+      }
+    } else if (data === '\u001b[A') { // Up
+      if (commandHistory.length > 0 && historyIndex > 0) {
+        historyIndex--;
+        replaceInput(commandHistory[historyIndex]);
+      }
+    } else if (data === '\u001b[B') { // Down
+      if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+        historyIndex++;
+        replaceInput(commandHistory[historyIndex]);
+      } else if (historyIndex === commandHistory.length - 1) {
+        historyIndex++;
+        replaceInput('');
+      }
+    } else {
+      const sanitized = data.replace(/[\x00-\x1F\x7F]/g, '');
+      input += sanitized;
+      term.write(sanitized);
+    }
+  });
+</script>
+{% endif %}
+
+
+
+
+
+{% endblock %}

@@ -1,0 +1,275 @@
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+
+
+<div class="rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0" x-data="{ activeTab: 'load' }">
+        <div class="p-6 flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div>
+                <h3 class="font-medium text-gray-900 dark:text-gray-50">Resource Usage</h3>
+                <p class="text-sm/6 text-gray-500 dark:text-gray-500">Real-time server resource usage <a href="#" class="hidden  items-center gap-1 text-sm text-blue-500 dark:text-blue-500">Learn more<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a></p>
+            </div>
+
+
+                <div role="tablist" aria-orientation="horizontal" class="inline-flex items-center justify-center p-1 bg-gray-100 dark:bg-gray-900 rounded-md" tabindex="0" data-orientation="horizontal" style="outline:none">
+                    <button @click="activeTab = 'load'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'load' }" type="button" role="tab" aria-selected="true" aria-controls="load" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
+                        <i class="bi bi-bar-chart-fill px-2"></i> <span class="load1min" id="loadIconColor">Load</span>
+                    </button>
+                    <button @click="activeTab = 'ram'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'ram' }" type="button" role="tab" aria-selected="false" aria-controls="ram" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
+                        <i class="bi bi-memory px-2"></i> <span class="ram_usage">RAM</span>
+                    </button>
+                    <button @click="activeTab = 'cpu'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'cpu' }" type="button" role="tab" aria-selected="false" aria-controls="cpu" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
+                        <i class="bi bi-cpu px-2"></i> <span id="cpu_avg-now">CPU</span>
+                    </button>
+                    <button @click="activeTab = 'disk'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'disk' }" type="button" role="tab" aria-selected="false" aria-controls="disk" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
+                        <i class="bi bi-hdd-fill px-2"></i> <span class="home_usage" id="serverduIndicator">Disk</span>
+                    </button>
+
+            <button @click="activeTab = 'network'" :class="{ 'bg-white text-gray-900 shadow dark:bg-gray-950 dark:text-gray-50': activeTab === 'network' }" type="button" role="tab" aria-selected="false" aria-controls="network" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer">
+                <i class="bi bi-activity px-2"></i> <span>Network</span>
+            </button>
+
+
+
+                </div>
+        </div>
+
+
+
+
+    <div class="border-t border-gray-200 px-6 dark:border-gray-900">
+        <div dir="ltr" data-orientation="horizontal">
+
+                <div x-show="activeTab === 'load'" x-cloak data-state="active" data-orientation="horizontal" role="tabpanel" aria-labelledby="load" id="load" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+                                <div>
+
+                                    <div class="d-flex align-items-baseline">
+                                    <div class="me-auto">
+                                                                <a href="/server/processes?sort=cpu" style="text-decoration:none;">
+
+                                                <div class="server-load">
+                                                    <div class="h3 mb-3 me-2 py-2 load">Average Load: <span class="load-indicator" id="load-indicator"></span>&nbsp;<b><span class="load1min">...</span>&nbsp;<span id="load5min">...</span>&nbsp;<span id="load15min">...</span></b></div>
+                                                </div>
+                                                </a>
+                                    </div>
+                                    </div>
+                                    <div id="chart-load" class="chart"></div>
+                                </div>
+                      </div>
+
+
+
+            <div x-show="activeTab === 'cpu'" x-cloak data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="cpu" id="cpu" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+
+                                <div id="cpu_per_core_usage">
+                                    <div class="d-flex align-items-baseline">
+                                    <div class="me-auto">
+                                                <div class="">
+                                                    <div class="h3 mb-3 me-2  py-2 load">CPU usage: <span id="cpu_total">...</span></b></div>
+                                                </div>
+                                    </div>
+                                    </div>
+  
+  
+
+
+
+
+                    <div class="main2">
+                        <a href="/server/processes?sort=cpu">
+                            <div class="container2"></div>
+
+                        </a>
+                    </div>
+
+
+                   <style>
+                        .main2 {
+                            display: flex;
+                            --s: 50px;
+                            --m: 2px;
+                            --f: calc(1.732 * var(--s) + 4 * var(--m) - 1px)
+                        }
+
+                        .container2 {
+                            font-size: 0;
+                            margin-bottom: 2rem
+                        }
+
+                        .container2 div {
+                            position: relative;
+                            width: var(--s);
+                            margin: var(--m);
+                            height: calc(var(--s)*1.1547);
+                            display: inline-block;
+                            font-size: initial;
+                            clip-path: polygon(0 25%, 0 75%, 50% 100%, 100% 75%, 100% 25%, 50% 0);
+                            background: #f0f8ff;
+                            margin-bottom: calc(var(--m) - var(--s)*.2885)
+                        }
+
+                        .container2 div span {
+                            vertical-align: middle;
+                            position: absolute;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            font-size: 12px;
+                            font-weight: 700;
+                            color: #000
+                        }
+
+                        .container2::before {
+                            content: "";
+                            width: calc(var(--s)/ 2 + var(--m));
+                            float: left;
+                            height: 120%;
+                            shape-outside: repeating-linear-gradient(#0000 0 calc(var(--f) - 3px), #000 0 var(--f))
+                        }
+                    </style>
+
+
+
+                        </div>
+                        
+                        
+                        </div>
+
+
+            <div x-show="activeTab === 'ram'" x-cloak data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="ram" id="ram" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+                                 
+                  <div>
+                      
+                    <div class="d-flex align-items-baseline">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div class="h3 mb-3 me-2 py-2 ram-info"><a href="/server/processes?sort=memory" style="text-decoration:none;">Memory usage: <span id="human-readable-info"></span></a> <button class="items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto gap-x-2 px-2 py-1.5 text-sm sm:text-xs cursor-pointer" id="clear-cache">Drop Cache</button> </div>
+                      <div class="h3 mb-3 me-2 py-2 ram-info">SWAP usage: <span id="swap-human-readable-info"></span> <button class="items-center justify-center whitespace-nowrap rounded-md border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto gap-x-2 px-2 py-1.5 text-sm sm:text-xs cursor-pointer" id="clear-swap">Clear Swap</button></div>
+                        </div>
+                      <div class="me-auto">
+                        <span class="bg-primary-lt text-white d-inline-flex align-items-center lh-1"></span>
+                      </div>
+                    </div>
+                    
+                    <div id="chart-ram" class="chart"></div>
+                  </div>
+ 
+                      </div>
+
+            <div x-show="activeTab === 'disk'" x-cloak data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="disk" id="disk" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
+                  <div class="">
+                      <h4 class="font-medium text-gray-900 dark:text-gray-50 mt-2 mb-2">Disk Usage</h4>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+  <!-- Disk Space Info -->
+
+<div class="grid grid-cols-1 gap-4 mt-2">
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+        <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Free Space</span>
+        <span class="font-medium" id="disk_free"></span>
+    </div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+        <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Used Space</span>
+        <span class="font-medium" id="disk_used"></span>
+    </div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+        <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Total Space</span>
+        <span class="font-medium" id="disk_total"></span>
+    </div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+        <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Device</span>
+        <span class="font-medium" id="disk_device"></span>
+    </div>
+    <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+        <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Filesystem Type</span>
+        <span class="font-medium" id="disk_fstype"></span>
+    </div>
+</div>
+
+  <!-- Donut Chart -->
+  <div class="flex flex-col items-center justify-center">
+    <div class="relative w-32 h-32">
+      <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+        <circle class="text-blue-200" cx="50" cy="50" r="45" stroke-width="10" fill="transparent" stroke="currentColor"/>
+        <circle id="donut_fill"
+                class="text-green-500"
+                cx="50" cy="50" r="45"
+                stroke-width="10"
+                fill="transparent"
+                stroke="currentColor"
+                stroke-dasharray="282.6"
+                stroke-dashoffset="282.6"
+                stroke-linecap="round"/>
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <span id="donut_percent" class="text-xl font-semibold text-gray-800 dark:text-white">--%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+                  </div>
+
+
+                <div>
+                    <h4 class="font-medium text-gray-900 dark:text-gray-50 mb-2">Disk IO</h4>
+                    <div id="chart-io" class="chart mb-4"></div>
+                    <div id="io-table-wrapper" class="overflow-x-auto">
+                        <table class="w-full bg-white dark:bg-gray-900 text-sm rounded shadow">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2">Disk</th>
+                                    <th class="px-3 py-2">Read Count</th>
+                                    <th class="px-3 py-2">Write Count</th>
+                                    <th class="px-3 py-2">Read Bytes</th>
+                                    <th class="px-3 py-2">Write Bytes</th>
+                                    <th class="px-3 py-2">Read Time</th>
+                                    <th class="px-3 py-2">Write Time</th>
+                                    <th class="px-3 py-2">Busy Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="io-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+
+
+
+
+                      </div>
+
+
+            <!-- NETWORK TABPANEL -->
+            <div x-show="activeTab === 'network'" x-cloak data-state="inactive" data-orientation="horizontal" role="tabpanel" aria-labelledby="network" id="network" tabindex="0" class="outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 py-4">
+                <div>
+                    <h4 class="font-medium text-gray-900 dark:text-gray-50 mb-2">Network IO</h4>
+                    <div id="chart-net" class="chart mb-4"></div> 
+                    <div id="network-table-wrapper" class="overflow-x-auto">
+                        <table class="w-full bg-white dark:bg-gray-900 text-sm rounded shadow">
+                            <thead>
+                                <tr>
+                                    <th class="px-3 py-2">Interface</th>
+                                    <th class="px-3 py-2">Bytes Sent</th>
+                                    <th class="px-3 py-2">Bytes Recv</th>
+                                    <th class="px-3 py-2">Packets Sent</th>
+                                    <th class="px-3 py-2">Packets Recv</th>
+                                    <th class="px-3 py-2">Err In</th>
+                                    <th class="px-3 py-2">Err Out</th>
+                                    <th class="px-3 py-2">Drop In</th>
+                                    <th class="px-3 py-2">Drop Out</th>
+                                </tr>
+                            </thead>
+                            <tbody id="network-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

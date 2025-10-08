@@ -1,0 +1,232 @@
+<!-- notifications.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <header>
+        <!-- Top Header -->
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-xl font-bold">Notifications</h1>
+                <p class="text-sm text-slate-500">Recorded system alerts.</p>
+            </div>
+            <div>
+                <a href="/settings/notifications" class="inline-flex items-center gap-2 rounded-md border border-black bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900">Edit Settings</a>
+            </div>
+        </div>
+
+    </header>
+</div>
+
+
+
+
+
+<!-- notifications table -->
+<section x-data="{ searchQuery: '' }" aria-label="Notifications Table">
+
+
+  		<form method="POST" action="{{ url_for('mark_notification_as_read', line_number=9999) }}">
+    <div class="flex flex-col border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950 p-4 sm:p-6 lg:p-8 sm:flex-row sm:items-center sm:justify-between">
+      <div class="mt-2 gap-2 sm:mt-0 sm:flex">
+          <div class="relative w-full sm:w-64">
+              <input
+                  x-model="searchQuery"
+                  class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8"
+                  placeholder="Search notifications..."
+                  type="search"
+              />
+              <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                      <path
+                          d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                      ></path>
+                  </svg>
+              </div>
+          </div>
+
+      </div>
+      									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="command" value="mark_all_as_read">
+      <button type="submit" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Acknowledge All</button>
+    </div>
+
+      </form>
+
+		<div class="relative overflow-y-auto">
+			<div class="border-t border-gray-200 dark:border-gray-800">
+				<table tremor-id="tremor-raw" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+					<thead class="">
+						<tr class="sm:[&amp;_td:last-child]:pr-6 sm:[&amp;_th:last-child]:pr-6 sm:[&amp;_td:first-child]:pl-6 sm:[&amp;_th:first-child]:pl-6">
+							<th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Time</th>
+							<th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Status</th>
+							<th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Notification</th>
+							<th class="border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Details</th>
+							<th class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Action</th>
+
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+{% if notifications %}
+
+
+        {% for notification in notifications %}
+
+            {% set parts = notification.split(' MESSAGE: ', 1) %}
+            {% set time_and_status_and_title = parts[0].split(' ', 4) %}
+            {% set time = time_and_status_and_title[0] ~ ' ' ~ time_and_status_and_title[1] %}
+            {% set status = time_and_status_and_title[2] %}
+            {% set title = time_and_status_and_title[3:]|join(' ')|replace('MESSAGE:', '') %}
+            {% set message = parts[1] if parts|length > 1 else '' %}
+
+                    <tr x-show="searchQuery === '' || '{{ title }}'.toLowerCase().includes(searchQuery.toLowerCase())" class="sm:[&amp;_td:last-child]:pr-6 sm:[&amp;_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
+
+								<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{time}}</td>
+
+							<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+              {% if status == "UNREAD" %}
+              <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full" tremor-id="tremor-raw"><span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>New</span>
+              {% elif status == "READ" %}
+              <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full" tremor-id="tremor-raw"><span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Acknowledged</span>
+              {% else %}
+              <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full" tremor-id="tremor-raw"><span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Unknown</span>
+              {% endif %}
+              </td>
+
+
+
+								<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{title}}</td>
+<td class="max-w-[25%] break-words p-4 text-sm text-gray-600 dark:text-gray-400">
+  {% set message_with_links = message | replace('\n', '<br>') %}
+
+{% if message.startswith('Used RAM:') %}
+
+    {% set parts = message.split(',') %}
+    {% set used_ram = parts[0].split(':')[1].strip().split(' ')[0] %}
+    {% set total_ram = parts[1].split(':')[1].strip().split(' ')[0] %}
+    {% set usage_percent = parts[2].split(':')[1].strip().replace('%', '') %}
+
+<div>
+    <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500"><span>{{ usage_percent }}%</span><span>{{ used_ram }} of {{ total_ram }} MB</span></p>
+    <div class="flex w-full items-center mt-1" role="progressbar" aria-label="Progress bar" aria-valuenow="{{ usage_percent }}%" aria-valuemax="100">
+        <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30"><div class="h-full flex-col rounded-full bg-red-500 dark:bg-red-500" style="width: {{ usage_percent }}%;"></div></div>
+    </div>
+</div>
+
+{% elif message.startswith('CPU Usage:') %}
+    {% set usage_line = message.split('|')[0] %}
+    {% set usage_percent = usage_line.split(':')[1].strip().replace('%', '') %}
+    {% set process_lines = message.split('|', 1)[1].strip() %}
+
+<div>
+    <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+        <span>CPU Usage</span>
+        <span>{{ usage_percent }}%</span>
+    </p>
+    <div class="flex w-full items-center mt-1" role="progressbar" aria-label="Progress bar" aria-valuenow="{{ usage_percent }}" aria-valuemax="100">
+        <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
+            <div class="h-full flex-col rounded-full bg-red-500 dark:bg-red-500" style="width: {{ usage_percent }}%;"></div>
+        </div>
+    </div>
+</div>
+
+<div x-data="{ open: false }" class="mt-4">
+    <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+        <span></span>
+        <a href="#" @click.prevent="open = !open" x-text="open ? 'Hide Processes' : 'Display Processes'" class="text-blue-600 underline"></a>
+    </p>
+    <pre class="text-xs mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-auto" x-show="open" x-transition>
+{{ process_lines.replace('\\n', '\n') }}
+    </pre>
+</div>
+
+
+
+
+
+
+{% elif message.startswith('Disk Usage:') %}
+
+
+{% set message_parts = message.split("| Partitions:") %}
+{% set before_disk = message_parts[0]|trim %}
+{% set after_disks = message_parts[1]|trim %}
+
+
+<div x-data="{ open: false }">
+    <div>
+    <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500"><span>{{ before_disk.split(':')[1].strip() }}</span><span><a href="#" @click.prevent="open = !open" x-text="open ? 'Hide Partitions' : 'Show Partitions'" class="text-blue-600 underline"></a></span></p>
+        <div class="flex w-full items-center mt-1" role="progressbar" aria-label="Progress bar" aria-valuenow="{{ before_disk.split(':')[1].strip() }}" aria-valuemax="100">
+            <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30"><div class="h-full flex-col rounded-full bg-red-500 dark:bg-red-500" style="width: {{ before_disk.split(':')[1].strip() }};"></div></div>
+        </div>
+    </div>
+<pre style="width:100%;" class="text-xs" x-show="open" x-transition>{{ after_disks|replace('\\n', '<br>')|safe }}</pre>
+</div>
+
+{% else %}
+
+
+  {% set parts = message_with_links.split('Log file:') %}
+  {% if parts|length > 1 %}
+    {% set log_name = parts[1].strip().split('/')[-1] %}
+    {{ parts[0] }} Log file: <a href="/settings/updates/log/?log_name={{ log_name }}" class="text-blue-600 underline">{{ parts[1].strip() }}</a>
+  {% else %}
+
+    {% set parts = message_with_links.split('detailed report:') %}
+    {% if parts|length > 1 %}
+        {% set log_name = parts[1].strip().split('/')[-1] %}
+        {{ parts[0] }} detailed report: <a href="/services/crashlogs/log/?log_name={{ log_name }}" class="text-blue-600 underline">{{ parts[1].strip() }}</a>
+    {% else %}
+    {{ message_with_links }}
+    {% endif %}
+  {% endif %}
+
+{% endif %}
+
+
+</td>
+							<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                          {% if status == "UNREAD" %}
+                
+								<form method="post" id="notification_{{loop.index}}" action="{{ url_for('mark_notification_as_read', line_number=loop.index) }}"  style="display:inline;">
+									<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+										<a style="cursor: pointer;" onclick="document.getElementById('notification_{{loop.index}}').submit();">
+											<svg
+												xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+												<path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+												<path d="M5 12l5 5l10 -10"></path>
+											</svg>
+										</a>
+									</form>
+                            {% elif status == "READ" %}
+                            {% endif %}
+                        
+								</td>
+						</tr>
+{% endfor %}
+{% else %}
+
+<tr>
+    <td colspan="5" class="p-6 text-center">
+        No notifications yet.
+    </td>
+</tr>
+
+{% endif %}
+                
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</section>
+<!-- END notifications table -->
+
+
+
+
+
+<script src="{{ url_for('static', filename='pages/notifications.js') }}" defer></script>
+
+
+{% endblock %}
