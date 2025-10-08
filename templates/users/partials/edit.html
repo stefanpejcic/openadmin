@@ -23,75 +23,135 @@
                   </div>
                   </div>
                   </div>
-                  <div x-data="passwordManager()" class="col-span-full">
-                  <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="admin_password">Password
-                  </label>
-                  <div class="relative w-full flex mt-2">
-                  <input 
-                     x-ref="passwordInput" 
-                     x-bind:type="passwordVisible ? 'text' : 'password'" 
-                     x-model="password" 
-                     class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                     autocomplete="password" 
-                     name="new_password" 
-                     minlength="6" 
-                     maxlength="30" 
-                     pattern="[^']{6,30}" 
-                     title="Can not contain apostrophe. 6 characters min. - 30 max." 
-                     placeholder="unchanged if empty"
-                     />
-                  <div class="flex">
-                  <button 
-                     @click="generatePassword()" 
-                     class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" 
-                     type="button" 
-                     id="generatePassword" 
-                     tabindex="-1"
-                     >
-                  Generate
-                  </button>
-                  <button 
-                     @click="togglePasswordVisibility()" 
-                     class="relative inline-flex items-center justify-center rounded-r border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" 
-                     tabindex="-1" 
-                     type="button" 
-                     id="togglePassword"
-                     >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" style="margin:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-eye">
-                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                  <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
-                  <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
-                  </svg>
-                  </button>
-                  </div>
-                  </div>
-                  </div>
+                <!-- Password -->
+<div x-data="passwordManager()" class="col-span-full mt-4">
+  <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="admin_password">
+    Password
+  </label>
+
+  <div class="relative w-full flex mt-2">
+    <input
+      x-ref="passwordInput"
+      x-bind:type="passwordVisible ? 'text' : 'password'"
+      x-model="password"
+      @input="checkStrength()"
+      class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700"
+      autocomplete="new-password"
+      name="new_password"
+      minlength="6"
+      maxlength="30"
+      pattern="[^']{6,30}"
+      title="Cannot contain apostrophe. 6 characters min. - 30 max."
+      placeholder="unchanged if empty"
+    />
+
+    <div class="flex">
+      <button
+        @click="generatePassword()"
+        type="button"
+        id="generatePassword"
+        class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium shadow-sm cursor-pointer border-black bg-black text-white hover:bg-gray-800"
+      >
+        Generate
+      </button>
+      <button
+        @click="togglePasswordVisibility()"
+        type="button"
+        id="togglePassword"
+        class="relative inline-flex items-center justify-center rounded-r border px-3 py-2 text-center text-sm font-medium shadow-sm cursor-pointer border-black bg-black text-white hover:bg-gray-800"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+          <path d="M21 12c-2.4 4 -5.4 6 -9 6s-6.6-2-9-6c2.4-4 5.4-6 9-6s6.6 2 9 6" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Password strength bar -->
+  <div class="mt-2 w-full">
+    <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+      <div
+        class="h-2 transition-all duration-300 ease-in-out"
+        :class="{
+          'bg-gray-300 w-0': strength === '',
+          'bg-red-500 w-1/4': strength === 'weak',
+          'bg-yellow-400 w-2/4': strength === 'medium',
+          'bg-green-500 w-full': strength === 'strong'
+        }"
+      ></div>
+    </div>
+
+    <!-- Password strength label -->
+    <p
+      class="mt-1 text-xs font-semibold transition-colors duration-200"
+      :class="{
+        'text-gray-400': strength === '',
+        'text-red-600 dark:text-red-400': strength === 'weak',
+        'text-yellow-600 dark:text-yellow-400': strength === 'medium',
+        'text-green-600 dark:text-green-400': strength === 'strong'
+      }"
+      x-text="strengthText"
+    ></p>
+  </div>
+</div>
+
+<script>
+  function passwordManager() {
+    return {
+      password: '',
+      passwordVisible: false,
+      strength: '',
+      strengthText: '',
+
+      generatePassword() {
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+        let result = "";
+        for (let i = 0; i < 16; i++) {
+          result += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        this.password = result;
+        this.passwordVisible = true;
+        this.checkStrength();
+        this.$nextTick(() => this.$refs.passwordInput.focus());
+      },
+
+      togglePasswordVisibility() {
+        this.passwordVisible = !this.passwordVisible;
+      },
+
+      checkStrength() {
+        const pwd = this.password;
+        if (!pwd) {
+          this.strength = '';
+          this.strengthText = '';
+          return;
+        }
+
+        let score = 0;
+        if (pwd.length >= 8) score++;
+        if (pwd.length >= 12) score++;
+        if (/[A-Z]/.test(pwd)) score++;
+        if (/[a-z]/.test(pwd)) score++;
+        if (/\d/.test(pwd)) score++;
+        if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+        if (score <= 2) {
+          this.strength = 'weak';
+          this.strengthText = 'Weak password';
+        } else if (score <= 4) {
+          this.strength = 'medium';
+          this.strengthText = 'Medium strength';
+        } else {
+          this.strength = 'strong';
+          this.strengthText = 'Strong password';
+        }
+      }
+    };
+  }
+</script>
 
 
-                <script>
-                    function passwordManager() {
-                        return {
-                            password: '',
-                            passwordVisible: false,
-                            generatePassword() {
-                                const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-                                let result = "";
-                                for (let i = 0; i < 16; i++) {
-                                    const randomIndex = Math.floor(Math.random() * charset.length);
-                                    result += charset.charAt(randomIndex);
-                                }
-                                this.password = result;
-                                this.passwordVisible = true;  // Make password visible immediately after generating
-                                this.$nextTick(() => {
-                                    this.$refs.passwordInput.focus();
-                                });
-                            },
-                            togglePasswordVisibility() {
-                                this.passwordVisible = !this.passwordVisible;
-                            }
-                        };
-                    }
-                </script>
 
 
 
