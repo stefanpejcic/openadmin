@@ -32,7 +32,7 @@ $images = "/static/configservercsf";
 
 my $file = $ARGV[0];
 unless (-e $file) {die "Cannot find tempfile [$file]"}
-my (undef,undef,$uuid,$ugid) = getpwnam("openpanel");
+my (undef,undef,$uuid,$ugid) = getpwnam("root");
 my $uid = (stat($file))[4];
 my $gid = (stat($file))[5];
 if ($uid != $uuid or $gid != $ugid) {die "Invalid tempfile ownership [$file]"}
