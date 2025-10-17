@@ -103,69 +103,109 @@
 <script>
 $(document).ready(function(){
     $('#searchInput').on('input', function() {
-        var searchText = $(this).val().toLowerCase();
-        var dropdownItems = '';
+        const searchText = $(this).val().toLowerCase();
+        let dropdownItems = '';
 
-        // Fire off all requests, but don't depend on all succeeding
-        var pagesReq    = $.get('/search/pages').fail(() => []);
-        var usersReq    = $.get('/search/users').fail(() => []);
-        var websitesReq = $.get('/search/websites').fail(() => []);
+        // Helper: always resolve to an array
+        const safeGetJSON = (url) =>
+            $.getJSON(url).then(
+                (data) => Array.isArray(data) ? data : [],
+                () => [] // on fail, return []
+            );
 
-        $.when(pagesReq, usersReq, websitesReq).always(function(pagesRes, usersRes, websitesRes) {
-            // If a request failed, jQuery passes undefined — normalize
-            var pages    = (pagesRes && pagesRes[0])    ? pagesRes[0]    : [];
-            var users    = (usersRes && usersRes[0])    ? usersRes[0]    : [];
-            var websites = (websitesRes && websitesRes[0]) ? websitesRes[0] : [];
+        // Unwrap $.when args (jqXHR gives [data, status, xhr], plain Deferred gives data)
+        const toArray = (x) => {
+            if (Array.isArray(x) && x.length === 3 && typeof x[1] === 'string') x = x[0];
+            return Array.isArray(x) ? x : [];
+        };
+
+        // Only hit endpoints the current role can access (inject a flag from Jinja)
+        const isReseller = {{ 'true' if is_reseller else 'false' }};
+
+        const pagesReq    = isReseller ? $.Deferred().resolve([]) : safeGetJSON('/search/pages');
+        const websitesReq = isReseller ? $.Deferred().resolve([]) : safeGetJSON('/search/websites');
+        const usersReq    = safeGetJSON('/search/users');
+
+        $.when(pagesReq, usersReq, websitesReq).done(function(pagesRes, usersRes, websitesRes) {
+            // Normalize results
+            let pages    = toArray(pagesRes);
+            let users    = toArray(usersRes);
+            let websites = toArray(websitesRes);
+
+            // Inline SVG constants for user icons
+            const PERSON_FILL = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>';
+            const PERSON_FILL_X = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"> <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/> <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/> </svg>';
 
             // Pages
             $.each(pages, function(index, item) {
-                var itemName = item.name || '';
-                var linkTarget = '';
-
+                const itemName = (item && item.name) ? item.name : '';
+                const link = (item && item.link) ? item.link : '#';
+                const desc = (item && item.description) ? item.description : '';
                 if (itemName.toLowerCase().includes(searchText)) {
-                    dropdownItems += '<li class="p-1 hover:bg-gray-200  hover:dark:bg-gray-500" style="border-bottom: 1px solid #e2e5ec;"><h3 class="m-0"><a class="dropdown-item" href="' + item.link + '" ' + linkTarget + '>' + item.name + '<br><p class="dropdown-item-description" style="display:contents; font-size: 0.7em;margin-bottom: 0px;">' + item.description + '</p></a></h3></li>';
-
+                    dropdownItems += `
+<li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500" style="border-bottom:1px solid #e2e5ec;">
+  <h3 class="m-0">
+    <a class="dropdown-item" href="${link}">
+      ${itemName}<br>
+      <p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${desc}</p>
+    </a>
+  </h3>
+</li>`;
                 }
             });
 
+            // Users (array of strings)
+            $.each(users, function(_i, raw) {
+                const itemName = (typeof raw === 'string') ? raw : '';
+                if (!itemName) return;
 
-if (!Array.isArray(users)) {
-    users = [users];
-}
+                const suspended = itemName.toLowerCase().includes('suspended');
+                const iconClass = suspended ? PERSON_FILL_X : PERSON_FILL;
 
-$.each(users, function(index, itemName) {
-    var suspended = itemName.toLowerCase().includes('suspended');
-    var iconClass = suspended ? '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"> <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/> <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/> </svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>';
-    
-    if (itemName.toLowerCase().startsWith('suspended_')) {
-        var displayName = itemName.substring(itemName.lastIndexOf('_') + 1);
-        var itemLink = '/users/' + itemName;
-        dropdownItems += '<li class="p-1 hover:bg-gray-200  hover:dark:bg-gray-500"><h3 class="m-0"><a class="flex text-red" href="' + itemLink + '">' + iconClass + ' &nbsp;<span class="text-sm">' + displayName + '</span></a></h3></li>';
-    } else {
-        var itemLink = '/users/' + itemName;
-        dropdownItems += '<li class="p-1 hover:bg-gray-200  hover:dark:bg-gray-500"><h3 class="m-0 flex justify-between items-center w-full"><a class="flex" href="' + itemLink + '">' + iconClass + ' &nbsp;<span class="text-sm">' + itemName + '</span></a><a href="/login/token/' + itemName + '" title="Login as ' + itemName + ' into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg></a></h3></li>';
-    }
-});
+                if (itemName.toLowerCase().startsWith('suspended_')) {
+                    const displayName = itemName.substring(itemName.lastIndexOf('_') + 1);
+                    dropdownItems += `
+<li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500">
+  <h3 class="m-0">
+    <a class="flex text-red" href="/users/${itemName}">${iconClass} &nbsp;<span class="text-sm">${displayName}</span></a>
+  </h3>
+</li>`;
+                } else if (itemName.toLowerCase().includes(searchText)) {
+                    dropdownItems += `
+<li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500">
+  <h3 class="m-0 flex justify-between items-center w-full">
+    <a class="flex" href="/users/${itemName}">
+      ${iconClass} &nbsp;<span class="text-sm">${itemName}</span>
+    </a>
+    <a href="/login/token/${itemName}" title="Login as ${itemName} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">
+      <svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg>
+    </a>
+  </h3>
+</li>`;
+                }
+            });
 
-
-            $.each(websites, function(index, item) {
-                var itemName = item[0] || ''; // Get the site name from the first element
-                var itemLink = '/domains/' + itemName; // Construct link using site name
-                if (itemName.toLowerCase().includes(searchText)) {
-                    dropdownItems += '<li class="p-1 hover:bg-gray-200  hover:dark:bg-gray-500"><h3 class="m-0"><a class="flex dropdown-item" href="' + itemLink + '"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"> <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/> </svg> &nbsp;' + itemName + '</a></h3></li>';
+            // Websites: returned as list of tuples/arrays like [["site.name"], ...]
+            $.each(websites, function(_i, row) {
+                const itemName = Array.isArray(row) ? (row[0] || '') : '';
+                if (itemName && itemName.toLowerCase().includes(searchText)) {
+                    dropdownItems += `
+<li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500">
+  <h3 class="m-0">
+    <a class="flex dropdown-item" href="/domains/${itemName}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16">
+        <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/>
+      </svg> &nbsp;${itemName}
+    </a>
+  </h3>
+</li>`;
                 }
             });
 
             if (dropdownItems) {
-                $('#filteredDropdown')
-                    .html(dropdownItems)
-                    .show()
-                    .addClass('p-1 border');
+                $('#filteredDropdown').html(dropdownItems).show().addClass('p-1 border');
             } else {
-                $('#filteredDropdown')
-                    .html('')
-                    .hide()
-                    .removeClass('p-1 border');
+                $('#filteredDropdown').html('').hide().removeClass('p-1 border');
             }
         });
     });
@@ -173,12 +213,12 @@ $.each(users, function(index, itemName) {
     // Hide dropdown when clicking outside
     $(document).on('click', function(event) {
         if (!$(event.target).closest('#searchGroup').length) {
-                $('#filteredDropdown').html('').hide().removeClass('p-1 border');
+            $('#filteredDropdown').html('').hide().removeClass('p-1 border');
         }
     });
-
 });
 </script>
+
 
 
 
@@ -256,7 +296,7 @@ $.each(users, function(index, itemName) {
                     Resellers
                 </a>
             </li>
-        {% else %}
+        {% elif is_reseller %}
             <li>
                 <a data-active="{% if request.path.startswith('/account') %}true{% else %}false{% endif %}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/account">
                     Reseller Account
