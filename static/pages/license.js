@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 <div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md'>
                                     <p>License key saved successfully! 
                                     <a href="#" id="restartOpenAdmin" class='text-blue-500 underline'>Click here to restart OpenAdmin</a> 
-                                    interface and apply Enterprise features.</p>
+                                    interface and apply Enterprise features (may take up to 30sec).</p>
                                 </div>
                             </div>`;
 
