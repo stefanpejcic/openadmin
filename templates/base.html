@@ -11,16 +11,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>OpenAdmin [{% if force_domain_value %}{{ force_domain_value }}{% elif server_hostname %}{{ server_hostname }}{% else %}{{public_ip}}{% endif %}] {% if title %}{{title}}{%endif%}</title>
+  <title>OpenAdmin [{% if force_domain_value %}{{ force_domain_value }}{% elif server_hostname %}{{ server_hostname }}{% else %}{{public_ip}}{% endif %}] {% if title %}{{title}}{%endif%}</title>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.svg') }}">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
-
   <meta name="robots" content="noindex,nofollow">
-  <!-- CSRF protection -->
   <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <script>
-    // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+    // On page load or when changing themes, inline in `head` to avoid FOUC
     if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
     } else {
@@ -88,147 +86,147 @@
 
 
                 <div data-sidebar="content" class="flex flex-1 flex-col gap-2 overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
-                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-3">
+                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2">
                         <div data-sidebar="group-content" class="w-full text-sm">
-                          <form action="./" method="get" autocomplete="off" novalidate="">
-                            <div class="relative w-full [&amp;>input]:sm:py-1.5">
-                              <input type="search" autofocus id="searchInput" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:[border-inline-end-width:1px] file:[margin-inline-end:0.75rem] file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search...">
-                                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg></div>
-            <ul class="relative z-50 overflow-hidden rounded-md shadow-xl shadow-black/[2.5%] min-w-48 bg-white dark:bg-[#090E1A] text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade" style="top: 100%; width: 100%; right: 0px; overflow-x: hidden; overflow-y: overlay; max-height: 90vh;" aria-labelledby="searchInput" id="filteredDropdown">
-            </ul>
-                            </div>
-                          </form>
 
+<form x-data="searchDropdown()" x-init="init()" @click.away="closeDropdown()" action="./" method="get" autocomplete="off" novalidate="">
+  <div class="relative w-full [&>input]:sm:py-1.5">
+    <input
+      type="search"
+      x-model="query"
+      @input.debounce.300ms="handleInput()"
+      autofocus
+      id="searchInput"
+      class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 pl-8"
+      placeholder="Search..."
+    >
+    <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor">
+        <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/>
+      </svg>
+    </div>
+    <ul
+      x-show="dropdownOpen"
+      x-transition
+      class="relative z-50 overflow-hidden rounded-md shadow-xl shadow-black/[2.5%] min-w-48 bg-white dark:bg-[#090E1A] text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"
+      style="top: 100%; width: 100%; right: 0px; overflow-x: hidden; overflow-y: overlay; max-height: 90vh;"
+      id="filteredDropdown"
+    >
+      <template x-for="item in filteredItems" :key="item.id">
+        <li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500 border-b border-gray-200 dark:border-gray-800">
+          <h3 class="m-0" x-html="item.html"></h3>
+        </li>
+      </template>
+    </ul>
+  </div>
+</form>
 
 <script>
-$(document).ready(function(){
-    $('#searchInput').on('input', function() {
-        const searchText = $(this).val().toLowerCase();
-        let dropdownItems = '';
+function searchDropdown() {
+  return {
+    query: '',
+    dropdownOpen: false,
+    filteredItems: [],
+    isReseller: false,
+    PERSON_FILL: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>',
+    PERSON_FILL_X: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"> <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/> <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/> </svg>',
 
-        // Helper: always resolve to an array
-        const safeGetJSON = (url) =>
-            $.getJSON(url).then(
-                (data) => Array.isArray(data) ? data : [],
-                () => [] // on fail, return []
-            );
 
-        // Unwrap $.when args (jqXHR gives [data, status, xhr], plain Deferred gives data)
-        const toArray = (x) => {
-            if (Array.isArray(x) && x.length === 3 && typeof x[1] === 'string') x = x[0];
-            return Array.isArray(x) ? x : [];
-        };
+    async fetchJSON(url) {
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    },
 
-        // Only hit endpoints the current role can access (inject a flag from Jinja)
-        const isReseller = {{ 'true' if is_reseller else 'false' }};
+    async handleInput() {
+      const searchText = this.query.toLowerCase();
+      let dropdownItems = [];
 
-        const pagesReq    = isReseller ? $.Deferred().resolve([]) : safeGetJSON('/search/pages');
-        const websitesReq = isReseller ? $.Deferred().resolve([]) : safeGetJSON('/search/websites');
-        const usersReq    = safeGetJSON('/search/users');
+      const pagesReq = this.isReseller ? [] : await this.fetchJSON('/search/pages');
+      const usersReq = await this.fetchJSON('/search/users');
+      const websitesReq = this.isReseller ? [] : await this.fetchJSON('/search/websites');
 
-        $.when(pagesReq, usersReq, websitesReq).done(function(pagesRes, usersRes, websitesRes) {
-            // Normalize results
-            let pages    = toArray(pagesRes);
-            let users    = toArray(usersRes);
-            let websites = toArray(websitesRes);
-
-            // Inline SVG constants for user icons
-            const PERSON_FILL = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>';
-            const PERSON_FILL_X = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"> <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/> <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/> </svg>';
-
-            // Pages
-            $.each(pages, function(index, item) {
-                const itemName = (item && item.name) ? item.name : '';
-                const link = (item && item.link) ? item.link : '#';
-                const desc = (item && item.description) ? item.description : '';
-                if (itemName.toLowerCase().includes(searchText)) {
-                    dropdownItems += `
-<li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500" style="border-bottom:1px solid #e2e5ec;">
-  <h3 class="m-0">
-    <a class="dropdown-item" href="${link}">
-      ${itemName}<br>
-      <p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${desc}</p>
-    </a>
-  </h3>
-</li>`;
-                }
-            });
-
-            // Users (array of strings)
-            $.each(users, function(_i, raw) {
-                const itemName = (typeof raw === 'string') ? raw : '';
-                if (!itemName) return;
-
-                const suspended = itemName.toLowerCase().includes('suspended');
-                const iconClass = suspended ? PERSON_FILL_X : PERSON_FILL;
-
-                if (itemName.toLowerCase().startsWith('suspended_')) {
-                    const displayName = itemName.substring(itemName.lastIndexOf('_') + 1);
-                    dropdownItems += `
-<li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500">
-  <h3 class="m-0">
-    <a class="flex text-red" href="/users/${itemName}">${iconClass} &nbsp;<span class="text-sm">${displayName}</span></a>
-  </h3>
-</li>`;
-                } else if (itemName.toLowerCase().includes(searchText)) {
-                    dropdownItems += `
-<li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500">
-  <h3 class="m-0 flex justify-between items-center w-full">
-    <a class="flex" href="/users/${itemName}">
-      ${iconClass} &nbsp;<span class="text-sm">${itemName}</span>
-    </a>
-    <a href="/login/token/${itemName}" title="Login as ${itemName} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">
-      <svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg>
-    </a>
-  </h3>
-</li>`;
-                }
-            });
-
-            // Websites: returned as list of tuples/arrays like [["site.name"], ...]
-            $.each(websites, function(_i, row) {
-                const itemName = Array.isArray(row) ? (row[0] || '') : '';
-                if (itemName && itemName.toLowerCase().includes(searchText)) {
-                    dropdownItems += `
-<li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500">
-  <h3 class="m-0">
-    <a class="flex dropdown-item" href="/domains/${itemName}">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16">
-        <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/>
-      </svg> &nbsp;${itemName}
-    </a>
-  </h3>
-</li>`;
-                }
-            });
-
-            if (dropdownItems) {
-                $('#filteredDropdown').html(dropdownItems).show().addClass('p-1 border');
-            } else {
-                $('#filteredDropdown').html('').hide().removeClass('p-1 border');
-            }
-        });
-    });
-
-    // Hide dropdown when clicking outside
-    $(document).on('click', function(event) {
-        if (!$(event.target).closest('#searchGroup').length) {
-            $('#filteredDropdown').html('').hide().removeClass('p-1 border');
+      // Pages
+      pagesReq.forEach(item => {
+        const itemName = item?.name ?? '';
+        const link = item?.link ?? '#';
+        const desc = item?.description ?? '';
+        if (itemName.toLowerCase().includes(searchText)) {
+          dropdownItems.push({
+            id: `page-${itemName}`,
+            html: `<a class="dropdown-item" href="${link}">${itemName}<br><p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${desc}</p></a>`
+          });
         }
-    });
-});
+      });
+
+      // Users
+      usersReq.forEach(itemName => {
+        if (!itemName) return;
+        const suspended = itemName.toLowerCase().includes('suspended');
+        const icon = suspended ? this.PERSON_FILL_X : this.PERSON_FILL;
+        if (itemName.toLowerCase().startsWith('suspended_')) {
+          const displayName = itemName.split('_').pop();
+          dropdownItems.push({
+            id: `user-${itemName}`,
+            html: `<a class="flex text-red" href="/users/${itemName}">${icon} &nbsp;<span class="text-sm">${displayName}</span></a>`
+          });
+        } else if (itemName.toLowerCase().includes(searchText)) {
+          dropdownItems.push({
+            id: `user-${itemName}`,
+            html: `<div class="flex justify-between items-center w-full">
+                    <a class="flex" href="/users/${itemName}">${icon} &nbsp;<span class="text-sm">${itemName}</span></a>
+                    <a href="/login/token/${itemName}" title="Login as ${itemName} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded-md border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">
+                      <svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet">
+                        <g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none">
+                          <path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/>
+                        </g>
+                      </svg>
+                    </a>
+                  </div>`
+          });
+        }
+      });
+
+
+      // Websites
+      websitesReq.forEach(row => {
+        const itemName = Array.isArray(row) ? row[0] : '';
+        if (itemName && itemName.toLowerCase().includes(searchText)) {
+          dropdownItems.push({
+            id: `website-${itemName}`,
+            html: `<a class="flex dropdown-item" href="/domains/${itemName}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16">
+                      <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/>
+                    </svg> &nbsp;${itemName}
+                  </a>`
+          });
+        }
+      });
+
+      this.filteredItems = dropdownItems;
+      this.dropdownOpen = dropdownItems.length > 0;
+    },
+
+    closeDropdown() {
+      this.dropdownOpen = false;
+    },
+
+    init() {
+      this.isReseller = {{ 'true' if is_reseller else 'false' }};
+    }
+  };
+}
 </script>
-
-
-
-
-
                         </div>
                     </div>
 
 {% if not is_reseller %}
 
-                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-3 pt-0">
+                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2 pt-0">
                         <div data-sidebar="group-content" class="w-full text-sm">
                             <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-1">
 
@@ -259,12 +257,11 @@ $(document).ready(function(){
                             <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
                         </div>
                     </div>
-                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-3">
+                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2">
                         <div data-sidebar="group-content" class="w-full text-sm">
                             <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-4">
 
 <li x-data="{ open: false, active: {% if request.path.startswith('/user') and not request.path.startswith('/user/import') %}true{% else %}false{% endif %} || {% if request.path.startswith('/resellers') %}true{% else %}false{% endif %} || {% if request.path.startswith('/administrators') %}true{% else %}false{% endif %} || {% if request.path.startswith('/account') %}true{% else %}false{% endif %} }" class="relative">
-    <button @click="open = !open" cl" class="relative">
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Accounts -->
@@ -780,71 +777,11 @@ $(document).ready(function(){
                                 <li><a data-active="{% if request.path.startswith('/license') %}true{% else %}false{% endif %}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/license"><span class="flex items-center gap-x-2.5"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg>License & Support</span></a></li>
 {% endif %}
 
-{% if license_type == "Community" %}
-<div class="mt-4 relative rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-950">
-    <div class="flex justify-center"><span class="absolute top-0 -translate-y-1/2 rounded-md bg-blue-500 px-3 py-1 text-sm font-medium tracking-wide text-white dark:bg-blue-500 dark:text-white">1 month free trial</span></div>
-    <h3 class="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-gray-50">Enterprise Edition</h3>
-    <p class="px-4 text-sm text-gray-500 dark:text-gray-500">no credit card needed</p>
-    <div class="mx-auto my-3 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-    <ul role="list" class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-        <li class="flex items-center space-x-2 py-1.5">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-blue-500 dark:text-blue-500">
-                <path
-                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"
-                ></path>
-            </svg>
-            <span>Unlimited Accounts</span>
-        </li>
-        <li class="flex items-center space-x-2 py-1.5">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-blue-500 dark:text-blue-500">
-                <path
-                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"
-                ></path>
-            </svg>
-            <span>Emails and FTP</span>
-        </li>
-        <li class="flex items-center space-x-2 py-1.5">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-blue-500 dark:text-blue-500">
-                <path
-                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"
-                ></path>
-            </svg>
-            <span>WHMCS Integration</span>
-        </li>
-        <li class="flex items-center space-x-2 py-1.5">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-blue-500 dark:text-blue-500">
-                <path
-                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"
-                ></path>
-            </svg>
-            <span>Import cPanel backup</span>
-        </li>
-        <li class="flex items-center space-x-2 py-1.5">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-blue-500 dark:text-blue-500">
-                <path
-                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"
-                ></path>
-            </svg>
-            <span>OpenLitespeed</span>
-        </li>
-    </ul>
-    <a
-        href="https://my.openpanel.com/cart.php?a=add&pid=1&carttpl=standard_cart&promocode=TRIAL&skipconfig=1" target="_blank"
-        class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400 mt-2 h-10 w-full"
-    >
-        Get started
-    </a>
-</div>
-
-{% endif %}
-
-
-
                             </ul>
                         </div>
                     </div>
                 </div>
-                <div data-sidebar="footer" class="flex flex-col gap-2 p-3">
+                <div data-sidebar="footer" class="flex flex-col gap-2 p-2">
 
                     <div class="border-t border-gray-200 dark:border-gray-800"></div>
                     
@@ -1006,10 +943,8 @@ $(document).ready(function(){
                 <div class="mr-2 h-4 w-px bg-gray-200 dark:bg-gray-800"></div>
                 <nav aria-label="Breadcrumb" class="ml-2">
                 <ol role="list" class="flex items-center space-x-3 text-sm">
-                    <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="/dashboard">Home</a></li>
 
                     {% if title %}
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
 
                     {% if title == 'Users' or title == 'Resellers' or title == 'Administrators' or 'SUSPENDED_' in title or 'User:' in title %}
 
