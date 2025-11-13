@@ -31,11 +31,24 @@
                 <h2 class="text-sm font-medium text-slate-500" x-text="message"></h2>
             </div>
 
+
+            {% if is_reseller %}
+            <!-- RESELER USAGE -->
+            <div class="items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                {% if user.last_ip %}
+                <p class="font-medium text-gray-900 dark:text-gray-50">Last Login: <a href="https://www.abuseipdb.com/check/{{user.last_ip}}" target="_blank">{{user.last_ip}}</a></p>
+                <p class="text-sm/6 text-gray-500 dark:text-gray-500">{{user.last_login}}</p>
+                {% endif %}
+            </div>
+            <!-- END RESELER USAGE -->
+            {% else %}
             <!-- STATISTICS -->
                 {% if server_data %}
                     {% include 'dashboard/server_data.html' %}
                 {% endif %}
             <!-- END STATISTICS -->
+            {% endif %}
+
 
         </div>
     </header>
@@ -44,6 +57,83 @@
                 <div>
                     <main>
                         <div class="p-4 sm:p-6 lg:p-8">
+
+
+{% if is_reseller %}
+<dl class="my-4 grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+    <div class="relative w-full border p-6 text-left shadow-xs bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 hidden flex-col justify-between rounded-md sm:flex">
+        <div>
+            <p class="text-sm text-gray-500 dark:text-gray-500">OpenPanel Accounts</p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{ user.current_accounts }}</p>
+        </div>
+        <div>
+            <p class="mt-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+                <span>
+                    {% if user.current_accounts | int != 0 and user.max_accounts | int != 0 %}
+                        {{ (user.current_accounts | int / user.max_accounts | int) * 100 }}%
+                        {% else %}
+                        0
+                    {% endif %}%
+                </span>
+                <span>
+                {{ user.current_accounts | default(0, true) }}
+                of
+                {% if user.max_accounts == 'unlimited' %}
+                    ∞
+                {% else %}
+                    {{ user.max_accounts | default('∞', true) }}
+                {% endif %}
+                </span>                
+            </p>
+
+            <div class="flex w-full items-center mt-2" role="progressbar"
+                aria-label="Progress bar"
+                aria-valuenow="0"
+                aria-valuemax="100">
+                <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
+                    <div class="h-full flex-col rounded-full bg-blue-500 dark:bg-blue-500" style="width: {% if user.current_accounts | int != 0 and user.max_accounts | int != 0 %}{{ (user.current_accounts | int / user.max_accounts | int) * 100 }}{% else %}0{% endif %}%;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="relative w-full border p-6 text-left shadow-xs bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 hidden flex-col justify-between rounded-md sm:flex">
+        <div>
+            <p class="text-sm text-gray-500 dark:text-gray-500">Disk Space Used</p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{ user.current_disk_gb }} GB</p>
+        </div>
+        <div>
+            <p class="mt-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+                <span>
+                    {% if user.current_disk_gb and user.current_disk_gb %}
+                        {% if user.current_disk_gb | int != 0 and user.max_disk_gb | int != 0 %}
+                            {{ (user.current_disk_gb | int / user.max_accounts | int) * 100 }}%
+                            {% else %}
+                            0
+                        {% endif %}
+                    {% else %}0
+                    {% endif %}%
+                </span>
+                <span>{{ user.current_disk_gb | default(0, true) }} of {{ user.max_disk_gb | default('∞', true) }}</span>
+            </p>
+
+            <div class="flex w-full items-center mt-2" role="progressbar"
+                aria-label="Progress bar"
+                aria-valuenow="0"
+                aria-valuemax="100">
+                <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
+                    <div class="h-full flex-col rounded-full bg-blue-500 dark:bg-blue-500" style="width: 
+                    {% if user.current_disk_gb and user.current_disk_gb %}{% if user.current_disk_gb | int != 0 and user.max_disk_gb | int != 0 %}{{ (user.current_disk_gb | int / user.max_disk_gb | int) * 100 }}{% else %}0{% endif %}{% else %}0{% endif %}%;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</dl>
+{% endif %}
 
 
 <dl class="my-4 grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
@@ -119,7 +209,7 @@
 
 
     {% if license_type == "Community" %}
-        {% if try_enterprise %}
+        {% if try_enterprise%}
             <!-- Include the try_enterprise.html template -->
             <div class="">
             {% include 'dashboard/try_enterprise.html' %}
