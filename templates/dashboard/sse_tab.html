@@ -72,6 +72,7 @@
 
 </div>
 
+
 <script>
 const cachedData = JSON.parse(localStorage.getItem("sseData") || "{}");
 
@@ -83,11 +84,10 @@ function formatBytes(bytes) {
 }
 
 function updateSSEUI(data) {
-    // CPU Average
+    // CPU
     if (data.cpu !== undefined) {
         const cpuAvg = Object.values(data.cpu).reduce((a,b)=>a+b,0)/Object.values(data.cpu).length;
         document.getElementById("sse_cpu").textContent = cpuAvg.toFixed(1) + "%";
-
         const cpuTooltip = document.getElementById("tooltip-sse_cpu");
         cpuTooltip.innerHTML = "CPU Usage per core:<br>" + 
             Object.entries(data.cpu)
@@ -96,23 +96,21 @@ function updateSSEUI(data) {
             `<div class="tooltip-arrow" data-popper-arrow></div>`;
     }
 
-    // Memory
+    // RAM
     if (data.memory !== undefined) {
         const mem = data.memory.human_readable;
         document.getElementById("sse_memory").textContent = mem.ram.percent;
-
         const memTooltip = document.getElementById("tooltip-sse_memory");
         memTooltip.innerHTML = `
-            RAM: ${mem.ram.used} / ${mem.ram.total} (${mem.ram.percent})<br>
+            RAM:  ${mem.ram.used} / ${mem.ram.total} (${mem.ram.percent})<br>
             Swap: ${mem.swap.used} / ${mem.swap.total} (${mem.swap.percent})<br>
             <div class="tooltip-arrow" data-popper-arrow></div>
         `;
     }
 
-    // Load
+    // LOAD
     if (data.load !== undefined) {
         document.getElementById("sse_load").textContent = data.load.load1min.toFixed(2);
-
         const loadTooltip = document.getElementById("tooltip-sse_load");
         loadTooltip.innerHTML = `
             Load 1 min: ${data.load.load1min.toFixed(2)}<br>
@@ -122,41 +120,52 @@ function updateSSEUI(data) {
         `;
     }
 
-    // Disk
+    // DU
     if (data.disk !== undefined) {
         const filteredDisks = data.disk.filter(d => !d.mountpoint.startsWith("/mnt"));
-
         const diskUsages = filteredDisks.map(d => d.percent).filter(p => p !== undefined);
         const diskAvg = diskUsages.reduce((a, b) => a + b, 0) / diskUsages.length;
         document.getElementById("sse_disk").textContent = diskAvg.toFixed(1) + "%";
-
         const diskTooltip = document.getElementById("tooltip-sse_disk");
         diskTooltip.innerHTML = filteredDisks.map(d => `
             ${d.device} mounted on ${d.mountpoint} (${d.fstype}):<br>
             Used: ${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)<br>
         `).join("<br>") + `<div class="tooltip-arrow" data-popper-arrow></div>`;
     }
-
 }
 
-// Initial load
+// Show cached data immediately
 if (Object.keys(cachedData).length) {
     updateSSEUI(cachedData);
 }
 
-// SSE listener
-const evtSource = new EventSource("/sse/usage");
-evtSource.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-    updateSSEUI(data);
-    localStorage.setItem("sseData", JSON.stringify(data));
-};
+// fetch function
+function fetchResource(resource) {
+    fetch(`/json/${resource}`)
+        .then(res => res.json())
+        .then(data => {
+            updateSSEUI({[resource]: data});
+            cachedData[resource] = data;
+            localStorage.setItem("sseData", JSON.stringify(cachedData));
+        })
+        .catch(err => console.error(`Error fetching ${resource}:`, err));
+}
 
-evtSource.onerror = function(err) {
-    console.error("SSE error:", err);
-};
+// wait until page fully loaded for polling
+window.addEventListener("load", () => {
+    // set intervals
+    setInterval(() => fetchResource('cpu'), 15 * 1000);        // 15s
+    setInterval(() => fetchResource('memory'), 30 * 1000);     // 30s
+    setInterval(() => fetchResource('load'), 15 * 60 * 1000);  // 15min
+    setInterval(() => fetchResource('disk'), 5 * 60 * 1000);   // 5min
+
+    // initial fetch after load
+    fetchResource('cpu');
+    fetchResource('memory');
+    fetchResource('load');
+    fetchResource('disk');
+});
 </script>
-
 
 
 <!-- END sse tab -->
