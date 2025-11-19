@@ -16,7 +16,7 @@
                 <div class="toast-container position-fixed bottom-0 end-0 p-2">
 </div>
                 
-                <a href="/services/edit" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Edit services</a>
+                <a href="/services/edit" class="gap-1 relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-settings"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg> Edit services</a>
                 </div>
             </div>
         </header>
@@ -47,7 +47,7 @@
                     </div>
                 </div>
             </div>
-            <div class="relative overflow-y-auto">
+            <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
@@ -151,7 +151,7 @@
                             </td>
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 select-text">
-                           {% if details.type == 'docker' %}container{% else %}{{ details.type }}{% endif %}
+                           {% if details.type == 'docker' %}<span title="View logs with: docker logs -f {{details.real_name}}">container</span>{% else %}<span title="View logs with: journalctl -u {{details.real_name}}">{{ details.type }}</span>{% endif %}
                             </td>
 
 
@@ -196,7 +196,7 @@
       if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return true;
       return monitoredServices.includes(realName);
     },
-    monitoredMsg: 'This service is being monitored and will be restarted by OpenPanel on failure.'
+    monitoredMsg: 'This service is being monitored and will be restarted on failure.'
   }"
   class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-left"
   x-bind:title="isMonitored('{{ details.real_name }}') ? monitoredMsg : ''"
@@ -230,6 +230,7 @@
       <input type="hidden" name="action" value="stop">
       <button
         type="button"
+        title="Stop {{ details.real_name }}"
         class="btn btn-outline-danger cursor-pointer"
         @click="showToast('Service {{ details.real_name }} stopping..', 'warning'); $el.closest('form').submit()"
       >
@@ -244,6 +245,7 @@
       <input type="hidden" name="action" value="start">
       <button
         type="button"
+        title="Start {{ details.real_name }}"
         class="btn btn-outline-success cursor-pointer"
         @click="showToast('Service {{ details.real_name }} starting..', 'info'); $el.closest('form').submit()"
       >
@@ -268,6 +270,7 @@
 
     <button
       type="button"
+        title="Restart {{ details.real_name }}"
       class="btn btn-outline-warning cursor-pointer"
       @click="showToast('Service {{ details.real_name }} restarting..', 'info'); $el.closest('form').submit()"
     >
