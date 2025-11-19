@@ -30,9 +30,72 @@ function fetchLog() {
         });
 }
 
+
+function updateURLParams() {
+    const logName = document.getElementById('log-select').value;
+    const linesValue = document.getElementById('lines-select').value;
+
+    const url = new URL(window.location);
+    url.searchParams.set('log_name', logName);
+
+    if (linesValue !== 'ALL') {
+        url.searchParams.set('lines', linesValue);
+    } else {
+        url.searchParams.delete('lines');
+    }
+
+    // Update URL without reloading the page
+    history.replaceState(null, '', url.toString());
+}
+
+function getURLParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+}
+
+
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('log-select').addEventListener('change', fetchLog);
-    document.getElementById('lines-select').addEventListener('change', fetchLog);
+    // Handle log_name
+    const logNameFromURL = getURLParam('log_name');
+    if (logNameFromURL) {
+        const logSelect = document.getElementById('log-select');
+        const options = logSelect.getElementsByTagName('option');
+        for (let option of options) {
+            if (option.value === logNameFromURL) {
+                option.selected = true;
+                break;
+            }
+        }
+        fetchLog();
+    }
+
+    // Handle lines (optional)
+    const linesFromURL = getURLParam('lines');
+    if (linesFromURL) {
+        const linesSelect = document.getElementById('lines-select');
+        const options = linesSelect.getElementsByTagName('option');
+        for (let option of options) {
+            if (option.value === linesFromURL) {
+                option.selected = true;
+                break;
+            }
+        }
+    }
+
+
+// Update URL when selects change
+document.getElementById('log-select').addEventListener('change', function() {
+    fetchLog();
+    updateURLParams();
+});
+
+document.getElementById('lines-select').addEventListener('change', function() {
+    fetchLog();
+    updateURLParams();
+});
+
+
+
 });
 
 // DOWNLOAD LOG FILE
