@@ -11,7 +11,11 @@
   class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5"
 >
   <div class="relative">
-    {% set disk_usage = ((disk.disk_used / disk.disk_hard) * 100) if disk.disk_hard != 0 else 0 %}
+{% set disk_used = disk.disk_used if disk is mapping and 'disk_used' in disk else 0 %}
+{% set disk_hard = disk.disk_hard if disk is mapping and 'disk_hard' in disk else 0 %}
+
+{% set disk_usage = ((disk_used / disk_hard) * 100) if disk_hard != 0 else 0 %}
+
     {% if disk_usage > 90 %}
     {% set disk_graph_class = 'stroke-red-200 dark:stroke-red-500/40' %}
     {% elif disk_usage > 80 %}
@@ -56,9 +60,16 @@
   </div>
   <div class="mt-0 text-left sm:mt-2 sm:text-center">
     <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
-      {% if disk.disk_used != 0 %}{{ (disk.disk_used / 1024000) | round(2) }}<!---->GB{% else %}{{disk.disk_used}}<!---->B{% endif %}
+      {% if disk_used != 0 %}{{ (disk_used / 1024000) | round(2) }}<!---->GB{% else %}{{disk_used}}<!---->B{% endif %}
       <!---->/<!---->
-      {% if disk.disk_hard != 0 %}{{ (disk.disk_hard / 1024000) | round(2) }}<!---->GB{% else %}∞{% endif %}
+
+
+{% if disk is mapping and disk_hard %}
+    {{ (disk_hard / 1024000) | round(2) }}GB
+{% else %}
+    ∞
+{% endif %}
+
     </p>
     <p class="text-sm text-gray-500 dark:text-gray-500">Storage used</p>
   </div>
@@ -67,7 +78,12 @@
                            <!-- INODES -->
                            <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
                               <div class="relative">
-                                 {% set inodes_usage = ((disk.inodes_used / disk.inodes_hard) * 100) if disk.inodes_hard != 0 else 0 %}
+
+{% set inodes_used = disk.inodes_used if disk is mapping and 'inodes_used' in disk else 0 %}
+{% set inodes_hard = disk.inodes_hard if disk is mapping and 'inodes_hard' in disk else 0 %}
+
+{% set inodes_usage = ((inodes_used / disk_hard) * 100) if disk_hard != 0 else 0 %}
+
                                  {% if inodes_usage > 90 %}
                                  {% set inodes_graph_class = 'stroke-red-200 dark:stroke-red-500/40' %}
                                  {% elif inodes_usage > 80 %}
@@ -100,21 +116,21 @@
                               </div>
                               <div class="mt-0 text-left sm:mt-2 sm:text-center">
                                 <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
-                                {% if disk.inodes_used != 0 %}
-                                    {% if disk.inodes_used >= 1000000 %}
-                                    {{ (disk.inodes_used / 1000000) | round(2) }}M
+                                {% if inodes_used != 0 %}
+                                    {% if inodes_used >= 1000000 %}
+                                    {{ (inodes_used / 1000000) | round(2) }}M
                                     {% else %}
-                                    {{ disk.inodes_used }}
+                                    {{ inodes_used }}
                                     {% endif %}
                                 {% else %}
-                                    {{ disk.inodes_used }}
+                                    {{ inodes_used }}
                                 {% endif %}
                                 /
-                                {% if disk.inodes_hard != 0 %}
-                                    {% if disk.inodes_hard >= 1000000 %}
-                                    {{ (disk.inodes_hard / 1000000) | round(2) }}M
+                                {% if inodes_hard != 0 %}
+                                    {% if inodes_hard >= 1000000 %}
+                                    {{ (inodes_hard / 1000000) | round(2) }}M
                                     {% else %}
-                                    {{ disk.inodes_hard }}
+                                    {{ inodes_hard }}
                                     {% endif %}
                                 {% else %}
                                     ∞
