@@ -199,10 +199,12 @@
 
 <td x-data="{
     editing: false,
-    rawValue: '{% if details.deploy and details.deploy.resources and details.deploy.resources.limits and details.deploy.resources.limits.cpus %}{{ details.deploy.resources.limits.cpus }}{% else %}{% endif %}',
+    rawValue: '{{ details.deploy.resources.limits.cpus if details.deploy.resources.limits.cpus else '' }}',
+    CPUinputValue: '{{ details.deploy.resources.limits.cpus if details.deploy.resources.limits.cpus else '' }}',
     get isUnlimited() { return this.rawValue === '' || this.rawValue === '0'; },
-    get value() { return this.isUnlimited ? '∞' : this.rawValue }
-}"
+    get value() { return this.isUnlimited ? '∞' : this.rawValue; },
+    set value(val) { this.rawValue = val; this.CPUinputValue = val; }
+}" 
     class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
     
     <div class="flex gap-2">
@@ -244,7 +246,8 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
 
-                <input x-model="value" name="value" type="number" min="0.10" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+                <input x-model="CPUinputValue" name="value" type="number" min="0.10" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+
                 <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
             </form>
             </template>
@@ -257,8 +260,10 @@
 <td x-data="{
     editing: false,
     rawValue: '{% if details.deploy and details.deploy.resources and details.deploy.resources.limits and details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }}{% else %}{% endif %}',
+    RAMinputValue: '{% if details.deploy and details.deploy.resources and details.deploy.resources.limits and details.deploy.resources.limits.memory %}{{ (details.deploy.resources.limits.memory | int / (1024 ** 3)) | round(2) }}{% else %}{% endif %}',
     get isUnlimited() { return this.rawValue === '' || this.rawValue === '0'; },
-    get value() { return this.isUnlimited ? '∞' : this.rawValue + ' GB' }
+    get value() { return this.isUnlimited ? '∞' : this.rawValue + ' GB'; },
+    set value(val) { this.rawValue = val; this.RAMinputValue = val; }
 }"
     class="relative group cursor-pointer p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
     
@@ -293,7 +298,7 @@
             <form action="/containers/{{ user.username.split('_')[-1] }}/ram/{{ service }}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-    <input x-model="value" name="value" type="number" min="0.10" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
+    <input x-model="RAMinputValue" name="value" type="number" min="0.10" step=".01" class="w-20 px-2 py-1 border rounded-md dark:bg-gray-700 dark:text-white" />
                 <button type="submit" class="px-2 py-1 text-white bg-blue-500 rounded-md hover:bg-blue-600">Save</button>
             </form>
             </template>
