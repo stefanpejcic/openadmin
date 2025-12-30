@@ -46,7 +46,7 @@ function updateUserActivityTable() {
                                 </a>
                                 <div>
                                     <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><a href="/users/${username}">${ip}</a></p>
-                                    <p class="text-xs text-gray-600 dark:text-gray-400">${userAndActivity.replace(/user (\w+)/i, 'User <strong>$1</strong>')}</p>
+                                    <p class="text-xs text-gray-600 dark:text-gray-400 truncate">${userAndActivity.replace(/user (\w+)/i, 'User <strong>$1</strong>')}</p>
                                 </div>
                             </div>
                             <div class="flex w-full items-center gap-3 sm:w-fit">
