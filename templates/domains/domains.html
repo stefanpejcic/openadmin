@@ -16,9 +16,91 @@
                     <h2 class="text-sm font-medium text-slate-500">All domains hosted on this OpenPanel server.</h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Add Domain</a>
                 </div>
             </div>
         </header>
+
+            <div :class="{ 'hidden': !showSection }" class="mt-8 w-full md:items-stretch md:space-x-4 hidden">
+
+
+
+
+                <div id="create_user_form" class="sm:mx-auto" style="display:block;" x-data="userSearch()">
+
+                    <form method="POST" action="/domains/add">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                            <div class="col-span-full sm:col-span-2">
+                                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="domain">
+                                    Domain<span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative w-full mt-2">
+                                    <input type="text" name="domain" id="domain" placeholder="example.net" required autofocus
+                                        class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                                </div>
+                            </div>
+
+                            <div class="col-span-full sm:col-span-2" x-data @click.away="show = false">
+                                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">
+                                    Username<span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative w-full mt-2">
+                                    <input type="text" name="username" id="username" placeholder="username" required
+                                        x-model="query" @input.debounce.300ms="searchUsers"
+                                        @focus="show = true"
+                                        class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700"
+                                        autocomplete="off">
+                                    
+                                    <ul x-show="show && users.length > 0" class="absolute z-10 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 w-full mt-1 rounded-md shadow-lg max-h-60 overflow-auto text-gray-900 dark:text-gray-50">
+                                        <template x-for="user in users" :key="user">
+                                            <li @click="selectUser(user)" class="px-3 py-2 cursor-pointer hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600">
+                                                <span x-text="user"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-span-full sm:col-span-2 flex flex-col justify-end h-full">
+                                <div class="relative w-full mt-2">
+                                    <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">
+                                        Add Domain
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <script>
+                function userSearch() {
+                    return {
+                        query: '',
+                        users: [],
+                        show: false,
+                        searchUsers() {
+                            if (this.query.length < 1) {
+                                this.users = [];
+                                return;
+                            }
+                            fetch(`/search/users/${encodeURIComponent(this.query)}`)
+                                .then(res => res.json())
+                                .then(data => {
+                                    this.users = data;
+                                    this.show = true;
+                                });
+                        },
+                        selectUser(user) {
+                            this.query = user;
+                            this.show = false;
+                        }
+                    }
+                }
+                </script>
+            </div>
+
     </div>
 
 
@@ -237,16 +319,16 @@ if (!sslStatusSpan) {
             })
             .then(data => {
 
+                if (data.coraza) {
+                    corazaStatusSpan.textContent = data.coraza.toUpperCase();
 
-                if (data.coraza === "on") {
-                    corazaStatusSpan.textContent = `Enabled`;
-                } else if (data.coraza === "off") {
-                    corazaStatusSpan.textContent = `Disabled`;
+                    if (data.coraza.toLowerCase() !== "on") {
+                        corazaStatusSpan.classList.add("text-gray-600", "dark:text-gray-400");
+                    }
                 } else {
-                    corazaStatusSpan.textContent = `Unknown`;
+                    corazaStatusSpan.textContent = "UNKNOWN";
+                    corazaStatusSpan.classList.add("text-gray-600", "dark:text-gray-400");
                 }
-
-
 
                 if (data.status === "active") {
                     suspensionStatusSpan.innerHTML = `<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>`;
