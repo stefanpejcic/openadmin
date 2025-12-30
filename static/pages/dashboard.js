@@ -4,11 +4,9 @@ function updateUserActivityTable() {
         type: 'GET',
         dataType: 'json',
         success: function (data) {
-            // Clear existing list items
             $('#activity-list').empty();
 
             if (data.combined_logs.length > 0) {
-                // Hide the placeholder
                 $('#shouldbehidden').hide();
                 
                 data.combined_logs.forEach(function (log) {
@@ -18,8 +16,26 @@ function updateUserActivityTable() {
                     var userAndActivity = parts.slice(4).join(' ');
                     var usernameMatch = parts[4] === 'Administrator' ? parts[5].match(/(\w+)/) : userAndActivity.match(/User (\w+)/);
                     var username = usernameMatch ? usernameMatch[1] : '';
-                    var formattedDate = moment(date, 'YYYY-MM-DD HH:mm:ss').format('D.M.Y H:mm:ss');
+
+                    var logMoment = moment(date, 'YYYY-MM-DD HH:mm:ss');
                     var now = moment();
+
+                    var daysDiff = now.clone().startOf('day')
+                        .diff(logMoment.clone().startOf('day'), 'days');
+
+                    var dateLabel;
+                    if (daysDiff === 0) {
+                        dateLabel = 'Today';
+                    } else if (daysDiff === 1) {
+                        dateLabel = 'Yesterday';
+                    } else if (daysDiff > 1 && daysDiff <= 6) {
+                        dateLabel = `${daysDiff} days ago`;
+                    } else {
+                        dateLabel = logMoment.format('D.M.Y');
+                    }
+
+                    var formattedDate = `${dateLabel} ${logMoment.format('H:mm:ss')}`;
+
                     var isOnline = Math.abs(now.diff(moment(date, 'YYYY-MM-DD HH:mm:ss'), 'minutes')) <= 90;
 
                     var avatarClass = parts[4] === 'Administrator' 
@@ -39,18 +55,22 @@ function updateUserActivityTable() {
                     var listItem = `
                         <li class="flex flex-col items-center justify-between gap-4 pl-1 py-4 sm:flex-row sm:py-3 hover:bg-gray-50 hover:dark:bg-gray-900">
                             <div class="flex w-full items-center gap-4">
-                                <a href="${hreflink}">
+                                <a href="${hreflink}" title="Click to view User">
                                     <span class="inline-flex size-9 items-center justify-center rounded-full ${avatarClass} p-1.5 text-xs font-medium ring-1 ring-gray-300 dark:ring-gray-700" aria-hidden="true">
                                         ${avatarContent}
                                     </span>
                                 </a>
                                 <div>
-                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><a href="/users/${username}">${ip}</a></p>
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><a href="/users/${username}#activity" title="Click to view the Activity Log">${ip}</a></p>
                                     <p class="text-xs text-gray-600 dark:text-gray-400 truncate">${userAndActivity.replace(/user (\w+)/i, 'User <strong>$1</strong>')}</p>
                                 </div>
                             </div>
                             <div class="flex w-full items-center gap-3 sm:w-fit">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">${formattedDate}</div>
+                                <div class="text-xs text-gray-600 dark:text-gray-400">
+                                    <span title="${logMoment.format('D.M.Y H:mm:ss')}" class="cursor-help">
+                                        ${formattedDate}
+                                    </span>
+                                </div>
                             </div>
                         </li>`;
 
