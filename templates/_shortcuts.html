@@ -1,0 +1,96 @@
+<div x-data="openadminShortcuts" x-init="init()">
+
+  <!-- Display available shortcuts -->
+  <div
+    x-show="showHelp"
+    x-transition
+    @keydown.escape.window="if (showHelp) showHelp = false"
+    class="fixed inset-0 z-50 flex items-center justify-center"
+  >
+    <div
+      @click.outside="showHelp = false"
+      class="bg-white rounded-lg shadow-lg p-6"
+    >
+      <h2 class="text-lg font-semibold mb-4">
+        Keyboard Shortcuts
+      </h2>
+
+      <ul class="space-y-2">
+        <template x-for="(url, combo) in shortcuts" :key="combo">
+          <li class="flex justify-between text-sm">
+            <span class="font-mono" x-text="combo"></span>
+            <span class="text-gray-500" x-text="url"></span>
+          </li>
+        </template>
+      </ul>
+
+      <p class="text-xs text-gray-400 mt-4">
+        Press Esc to close
+      </p>
+    </div>
+  </div>
+
+</div>
+
+
+
+<script>
+// https://github.com/stefanpejcic/OpenPanel/issues/834
+document.addEventListener('alpine:init', () => {
+  Alpine.data('openadminShortcuts', () => ({
+    shortcuts: null,
+    showHelp: false,
+
+    async init() {
+      try {
+        const res = await fetch('/static/src/shortcuts.json', {
+          cache: 'no-store'
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!data || typeof data !== 'object') return;
+
+        this.shortcuts = data;
+        window.addEventListener('keydown', this.handleKeydown.bind(this));
+      } catch {
+        return;
+      }
+    },
+
+    handleKeydown(event) {
+      // not when typing
+      if (
+        ['INPUT', 'TEXTAREA'].includes(event.target.tagName) ||
+        event.target.isContentEditable
+      ) return;
+
+      // Ctrl/Cmd + K
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.showHelp = true;
+        return;
+      }
+
+      const combo = this.normalize(event);
+      const target = this.shortcuts?.[combo];
+
+      if (!target) return;
+
+      event.preventDefault();
+      window.location.href = target;
+    },
+
+    normalize(event) {
+      const keys = [];
+      if (event.ctrlKey || event.metaKey) keys.push('ctrl');
+      if (event.shiftKey) keys.push('shift');
+      if (event.altKey) keys.push('alt');
+      keys.push(event.key.toLowerCase());
+      return keys.join('+');
+    }
+  }));
+});
+
+</script>
