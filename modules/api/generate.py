@@ -1,10 +1,10 @@
-################################################################################
+
 # *************************************************************************
 # *                                                                       *
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.7.4                                                        *
-# * Build Date: 2025-12-30 16:12:24                                       *
+# * Build Date: 2026-01-26 12:43:14                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -31,37 +31,13 @@
 # * Please see the EULA file for the full End User License Agreement.     *
 # *                                                                       *
 # *************************************************************************
-# Author:   Stefan Pejcic <stefan@pejcic.rs>
-# Created:  11.07.2023
-# Modified: 10.10.2025
-# Project:  www.openpanel.com
-# Copyright (c) Stefan Pejcic
-# 
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-# 
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-# 
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-################################################################################
-
 """
 generate a list of available api endpoints for enterprise edition
 must be used before encoding with pyarmor
 """
 import argparse
 import os
+import re
 import subprocess
 
 def extract_api_info(file_path):
@@ -132,16 +108,25 @@ def read_existing_file(file_path, protocol, domain):
         print(f"API.GENERATE - No existing file found at {file_path}.")
         return ""
 
-# TODO: not used anymore!
-def get_force_domain(config_file_path):
-    force_domain = None
-    if os.path.exists(config_file_path):
-        with open(config_file_path, 'r') as file:
-            for line in file:
-                if line.strip().startswith("force_domain="):
-                    force_domain = line.strip().split("=", 1)[1].strip()
-                    break
-    return force_domain
+
+def get_openpanel_domain():
+    print(f"APP - Checking if a custom domain is set for panel access.. (data is cached for 360s)")
+    try:
+        print(f"APP - Executing: opencli domain")
+        result = subprocess.run(["opencli", "domain"], capture_output=True, text=True, check=True)
+        domain = result.stdout.strip()
+        if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", domain):
+            return None
+        return domain
+    except subprocess.CalledProcessError as e:
+        print(f"APP - Error running opencli domain: {e}")
+        return None
+    except FileNotFoundError:
+        print("APP - opencli command not found.")
+        return None
+
+
+
 
 def get_server_ip():
     print(f"API.GENERATE - Checking public IPv4 for the server..")
@@ -177,7 +162,7 @@ def get_server_ip():
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
 
-        print(f"API.GENERATE - All 3 domains are unreachable - do you have internet access or something blocking outgoing port 443?")
+        print(f"API.GENERATE - All IP check domains are unreachable - do you have internet access or something blocking outgoing port 443?")
         return "127.0.0.1"
     except Exception as e:
         print(f"API.GENERATE - Error retrieving IP address: {e}")
@@ -192,7 +177,7 @@ def main():
     output_file = '/usr/local/admin/modules/api/available_endpoints.txt'
     config_file_path = '/etc/openpanel/openpanel/conf/openpanel.config'
 
-    force_domain = get_force_domain(config_file_path)
+    force_domain = get_openpanel_domain()
     server_ip = get_server_ip()
 
     if force_domain:
@@ -201,9 +186,10 @@ def main():
     else:
         protocol = 'http'
         domain = server_ip
+    
+    print("API.GENERATE - Using {protocol}://{domain}")
 
     if args.save:
-        # Extract and format information, then save to file
         endpoints_info = extract_api_info(file_path)
         formatted_info = format_endpoints_info(endpoints_info, 'http', 'localhost')
         with open(output_file, 'w') as f:
