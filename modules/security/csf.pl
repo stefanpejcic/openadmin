@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 ###############################################################################
-# Copyright (C) 2025 Sentinel Project (https://github.com/sentinelfirewall/sentinel)
+# Copyright (C) 2025-2026 Sentinel Project (https://github.com/sentinelfirewall/sentinel)
 # Copyright (C) 2006-2025 Jonathan Michaelson (https://github.com/waytotheweb/scripts)
 ###############################################################################
 # start main
