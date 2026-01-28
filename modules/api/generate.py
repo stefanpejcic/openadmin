@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.7.4                                                        *
-# * Build Date: 2026-01-27 18:08:20                                       *
+# * Build Date: 2026-01-28 17:02:14                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -40,7 +40,6 @@ import re
 import subprocess
 
 def extract_api_info(file_path):
-    print(f"API.GENERATE - Reading: {file_path}")
     with open(file_path, 'r') as file:
         lines = file.readlines()
 
@@ -83,7 +82,6 @@ def extract_api_info(file_path):
     return endpoints_info
 
 def format_endpoints_info(endpoints_info, protocol, domain):
-    print(f"API.GENERATE - Formating endpoints information..")
 
     output = []
     for endpoint in endpoints_info:
@@ -99,39 +97,31 @@ def format_endpoints_info(endpoints_info, protocol, domain):
 
 def read_existing_file(file_path, protocol, domain):
     if os.path.exists(file_path):
-        print(f"API.GENERATE - Reading cached endpoints file: {file_path}")
         with open(file_path, 'r') as file:
             content = file.read()
         return content.replace('http://localhost', f'{protocol}://{domain}')
     else:
-        print(f"API.GENERATE - No existing file found at {file_path}.")
         return ""
 
 
 def get_openpanel_domain():
-    print(f"APP - Checking if a custom domain is set for panel access.. (data is cached for 360s)")
     try:
-        print(f"APP - Executing: opencli domain")
         result = subprocess.run(["opencli", "domain"], capture_output=True, text=True, check=True)
         domain = result.stdout.strip()
         if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", domain):
             return None
         return domain
     except subprocess.CalledProcessError as e:
-        print(f"APP - Error running opencli domain: {e}")
         return None
     except FileNotFoundError:
-        print("APP - opencli command not found.")
         return None
 
 
 
 
 def get_server_ip():
-    print(f"API.GENERATE - Checking public IPv4 for the server..")
 
     try:
-        print(f"API.GENERATE - Trying: https://ip.openpanel.com")
         result = subprocess.run(
             ['curl', '--silent', '--max-time', '2', '-4', 'https://ip.openpanel.com'],
             capture_output=True,
@@ -141,7 +131,6 @@ def get_server_ip():
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
         
-        print(f"API.GENERATE - Failed, trying: https://ip.openpanel.com")
         result = subprocess.run(
             ['wget', '--timeout=2', '-qO-', 'https://ipv4.openpanel.com'],
             capture_output=True,
@@ -151,7 +140,6 @@ def get_server_ip():
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
 
-        print(f"API.GENERATE - Failed again, trying: https://ifconfig.me")
         result = subprocess.run(
             ['curl', '--silent', '--max-time', '2', '-4', 'https://ifconfig.me'],
             capture_output=True,
@@ -161,10 +149,8 @@ def get_server_ip():
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
 
-        print(f"API.GENERATE - All IP check domains are unreachable - do you have internet access or something blocking outgoing port 443?")
         return "127.0.0.1"
     except Exception as e:
-        print(f"API.GENERATE - Error retrieving IP address: {e}")
         return "127.0.0.1"
 
 def main():
@@ -186,22 +172,18 @@ def main():
         protocol = 'http'
         domain = server_ip
     
-    print("API.GENERATE - Using {protocol}://{domain}")
-
     if args.save:
         endpoints_info = extract_api_info(file_path)
         formatted_info = format_endpoints_info(endpoints_info, 'http', 'localhost')
         with open(output_file, 'w') as f:
             f.write(formatted_info)
-        print(f"API.GENERATE - Endpoint information saved to {output_file}")
     else:
         # Read from existing file
         existing_info = read_existing_file(output_file, protocol, domain)
         if existing_info:
-            print("API.GENERATE - Available API Endpoints:")
             print(existing_info)
         else:
-            print("API.GENERATE - No information available. Run with --save to generate the file.")
+            print("API.GENERATE - No information available. Run 'opencli api list --save' to generate the file.")
 
 if __name__ == "__main__":
     main()
