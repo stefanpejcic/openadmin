@@ -85,11 +85,14 @@
                                 this.users = [];
                                 return;
                             }
+
                             fetch(`/search/users/${encodeURIComponent(this.query)}`)
                                 .then(res => res.json())
                                 .then(data => {
-                                    this.users = data;
-                                    this.show = true;
+                                    this.users = data.filter(
+                                        user => !user.startsWith('SUSPENDED_')
+                                    );
+                                    this.show = this.users.length > 0;
                                 });
                         },
                         selectUser(user) {
@@ -99,6 +102,7 @@
                     }
                 }
                 </script>
+
             </div>
 
     </div>
