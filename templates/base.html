@@ -264,10 +264,15 @@ function searchDropdown() {
 <script>
 function saveRecentPage() {
     const MAX_ITEMS = 5;
+    const rawTitle = document.title?.trim();
+    if (!rawTitle) return;
 
-    let rawTitle = document.title || "Untitled";
     let titleParts = rawTitle.split(']');
-    let title = titleParts.length > 1 ? titleParts.slice(-1)[0].trim() : rawTitle.trim();
+    let title = titleParts.length > 1
+        ? titleParts.slice(-1)[0].trim()
+        : rawTitle;
+
+    if (!title || title.toLowerCase() === 'untitled') return;
 
     const url = window.location.pathname + window.location.search + window.location.hash;
     let recent = JSON.parse(localStorage.getItem("recent_pages") || "[]");
@@ -287,6 +292,7 @@ function saveRecentPage() {
 
 saveRecentPage();
 </script>
+
 
 <script>
 function loadRecentPages() {
