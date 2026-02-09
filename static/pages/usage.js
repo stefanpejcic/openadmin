@@ -247,7 +247,7 @@ function formatDecimal(num) {
 function getServerLoad() {
     fetch('/json/load').then(res => res.json()).then(load => {
         const l1 = +load.load1min, l5 = +load.load5min, l15 = +load.load15min;
-        //$('.load1min').text(formatDecimal(l1));
+        $('#load1min').text(formatDecimal(l1));
         $('#load5min').text(formatDecimal(l5));
         $('#load15min').text(formatDecimal(l15));
         updateLoadChart({ load1min: l1, load5min: l5, load15min: l15 });
