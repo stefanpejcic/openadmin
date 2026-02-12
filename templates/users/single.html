@@ -142,11 +142,7 @@
           }
       });
   
-  
-  
-  
-  
-  
+
   // Store for Activity Logs
   Alpine.store("activityStore", {
       activities: [],
@@ -235,7 +231,33 @@
       }
   });
   
-  
+
+      // Store for Plans (lazy-loaded on Edit tab)
+      Alpine.store("planStore", {
+          plans: [],
+          selectedPlan: parseInt("{{ user.plan_id }}"),
+          plansLoaded: false,
+
+          fetchPlans() {
+              if (this.plansLoaded) return;
+
+              fetch('/plans?output=json')
+                  .then(res => res.json())
+                  .then(data => {
+                      this.plans = data.plans.map(p => ({ ...p, showDetails: false }));
+                      this.plansLoaded = true;
+                  })
+                  .catch(err => {
+                      console.error('Failed to fetch plans:', err);
+                  });
+          },
+
+          selectPlan(planId) {
+              this.selectedPlan = planId;
+          }
+      });
+
+
   });
 </script>
 
