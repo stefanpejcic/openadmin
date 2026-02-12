@@ -8,6 +8,7 @@ function updatePublicIP(username, ip) {
         element.textContent = ip;
 
         const span = document.createElement('span');
+        span.title = "Dedicated IP";
         span.className = "flex size-4 shrink-0 items-center justify-center rounded-full bg-blue-500 ring-2 ring-white dark:bg-blue-500 dark:ring-[#090E1A]";
 
         span.innerHTML = `

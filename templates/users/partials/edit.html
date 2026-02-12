@@ -162,92 +162,73 @@
                   </div>
                   </div>
                   <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-                  <div class="col-span-full">
-                  <div role="radiogroup" aria-required="false" dir="ltr" class="grid gap-2" tabindex="0" style="outline: none;">
-
-{{ macros.tooltip('selectedPlan', 'Select a package', 'Change the user’s hosting plan to adjust account limits or available features.', required=False) }}
 
 
-                  <div x-data="{ selectedPlan: '{{ user.plan_id }}' }" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  {% for plan in plans %}
-                  <button type="button" role="radio" 
-                     :aria-checked="selectedPlan === '{{ plan.id }}' ? 'true' : 'false'" 
-                     :data-state="selectedPlan === '{{ plan.id }}' ? 'checked' : ''" 
-                     value="{{ plan.name }}" 
-                     class="group relative w-full rounded-md border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 data-[disabled]:border-gray-100 data-[disabled]:dark:border-gray-800 data-[disabled]:bg-gray-50 data-[disabled]:shadow-none data-[disabled]:dark:bg-gray-900 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 flex items-start justify-between" 
-                     :id="plan.id" tabindex="0"
-                     @click="selectedPlan = '{{ plan.id }}'">
-                  <div x-show="'{{ plan.id }}' === '{{ user.plan_id }}'" class="absolute -top-3 flex"><span class="inline-flex items-center rounded-full bg-gray-300 text-black text-xs font-semibold py-1 px-3">Current Plan</span></div>
-                  <div class="flex w-full flex-col justify-between">
-                  <div>
-                  <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{ plan.id }}" aria-describedby="{{ plan.id }}-description">
-                  {{ plan.name }}
-                  </label>
-                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">{{ plan.description }}</p>
-                  </div>
-                  <div class="mt-4" x-data="{ showDetails: false }">
-                  <span @click="showDetails = !showDetails" class="text-sm font-medium text-gray-900 dark:text-gray-50">Display Limits</span>
-                  <span :class="{ 'hidden': !showDetails }">
 
-<p class="mt-6 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.cpu == 0 or plan.cpu == '0' else plan.cpu }} Cores
-</p>
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.ram|lower == '0g' or plan.ram == 0 else plan.ram }} Memory
-</p>
+<!-- Plan Selection -->
+<div class="col-span-full mt-4">
+  {{ macros.tooltip('selectedPlan', 'Select a package', 'Change the user’s hosting plan to adjust account limits or available features.', required=False) }}
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.disk_limit == '0 GB' else plan.disk_limit }} Storage
-</p>
+  <div x-show="$store.planStore.plansLoaded" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.inodes_limit == 0 else plan.inodes_limit }} Inodes
-</p>
+    <template x-for="plan in $store.planStore.plans" :key="plan.id">
+      <button 
+        type="button"
+        role="radio"
+        :aria-checked="$store.planStore.selectedPlan === plan.id ? 'true' : 'false'"
+        :data-state="$store.planStore.selectedPlan === plan.id ? 'checked' : ''"
+        @click="$store.planStore.selectPlan(plan.id)"
+        class="group relative w-full rounded-md border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800
+               data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 flex items-start justify-between"
+        tabindex="0">
+        <div x-show="plan.id === $store.planStore.selectedPlan" class="absolute -top-3 flex">
+          <span class="inline-flex items-center rounded-full bg-gray-300 text-black text-xs font-semibold py-1 px-3">Current Plan</span>
+        </div>
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.bandwidth == 0 else plan.bandwidth }} Mbps
-</p>
+        <div class="flex w-full flex-col justify-between">
+          <div>
+            <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" x-text="plan.name"></label>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-500" x-text="plan.description"></p>
+          </div>
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.domains_limit == 0 else plan.domains_limit }} Domains
-</p>
+          <div class="mt-4">
+            <span @click="plan.showDetails = !plan.showDetails" class="text-sm font-medium text-gray-900 dark:text-gray-50 cursor-pointer">Display Limits</span>
+            <div x-show="plan.showDetails">
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.cpu == 0 ? '∞ Cores' : plan.cpu + ' Cores'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.ram.toLowerCase() === '0g' ? '∞ Memory' : plan.ram + ' Memory'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.disk_limit === '0 GB' ? '∞ Storage' : plan.disk_limit + ' Storage'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.inodes_limit === 0 ? '∞ Inodes' : plan.inodes_limit + ' Inodes'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.bandwidth === 0 ? '∞ Mbps' : plan.bandwidth + ' Mbps'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.domains_limit === 0 ? '∞ Domains' : plan.domains_limit + ' Domains'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.websites_limit === 0 ? '∞ Websites' : plan.websites_limit + ' Websites'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.email_limit === 0 ? '∞ Email accounts' : plan.email_limit + ' Email accounts'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.ftp_limit === 0 ? '∞ FTP accounts' : plan.ftp_limit + ' FTP accounts'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.db_limit === 0 ? '∞ MySQL DBs' : plan.db_limit + ' MySQL DBs'"></p>
+            </div>
+          </div>
+        </div>
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.websites_limit == 0 else plan.websites_limit }} Websites
-</p>
+        <div class="relative flex shrink-0 items-center justify-center rounded-full border shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
+             :class="$store.planStore.selectedPlan === plan.id ? 'border-0 bg-blue-500' : ''">
+          <span x-show="$store.planStore.selectedPlan === plan.id" class="flex items-center justify-center">
+            <div class="w-3 h-3 rounded-full bg-white"></div>
+          </span>
+        </div>
+      </button>
+    </template>
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.email_limit == 0 else plan.email_limit }} Email accounts
-</p>
+  </div>
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.ftp_limit == 0 else plan.ftp_limit }} FTP accounts
-</p>
+  <input type="hidden" name="plan_id" :value="$store.planStore.selectedPlan">
+</div>
 
-<p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-  {{ '∞' if plan.db_limit == 0 else plan.db_limit }} MySQL Databases
-</p>
-                  </span>
-                  </div>
-                  </div>
-                  <div class="relative flex size-4 shrink-0 appearance-none items-center justify-center rounded-full border shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 group-data-[state=checked]:border-0 group-data-[state=checked]:border-transparent group-data-[state=checked]:bg-blue-500 group-data-[disabled]:border-gray-300 group-data-[disabled]:bg-gray-100 group-data-[disabled]:text-gray-400 group-data-[disabled]:dark:border-gray-700 group-data-[disabled]:dark:bg-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
-                  <span x-show="selectedPlan === '{{ plan.id }}'" class="flex items-center justify-center">
-                  <div class="size size-1.5 shrink-0 rounded-full bg-white group-data-[disabled]:bg-gray-400 group-data-[disabled]:dark:bg-gray-500"></div>
-                  </span>
-                  </div>
-                  </button>
-                  <!-- Hidden radio input to track the selected plan -->
-                  <input type="radio" value="{{ plan.id }}" aria-hidden="true" style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 213.328px; height: 146px;" tabindex="-1" name="plan_id" :checked="selectedPlan === '{{ plan.id }}'" />
-                  {% endfor %}
-                  </div>
-                  </div>
-                  </div>
+
                   </div>
                   <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
                   <div class="flex items-center justify-end space-x-4">
                   <a href="/users" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">Go back</a>
-                  <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">Save</button>
+                  <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400 cursor-pointer">Save</button>
                   </div>
                   </form>
                   </div>

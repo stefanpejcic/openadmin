@@ -53,14 +53,14 @@ function updateUserActivityTable() {
                         : username[0].toUpperCase();
 
                     var listItem = `
-                        <li class="flex flex-col items-center justify-between gap-4 pl-1 py-4 sm:flex-row sm:py-3 hover:bg-gray-50 hover:dark:bg-gray-900">
+                        <li class="flex flex-col items-center justify-between gap-4 pl-1 py-4 sm:flex-row sm:py-3 hover:bg-gray-50 hover:dark:bg-gray-900 truncate">
                             <div class="flex w-full items-center gap-4">
                                 <a href="${hreflink}" title="Click to view User">
                                     <span class="inline-flex size-9 items-center justify-center rounded-full ${avatarClass} p-1.5 text-xs font-medium ring-1 ring-gray-300 dark:ring-gray-700" aria-hidden="true">
                                         ${avatarContent}
                                     </span>
                                 </a>
-                                <div>
+                                <div class="truncate">
                                     <p class="text-sm font-medium text-gray-900 dark:text-gray-50"><a href="/users/${username}#activity" title="Click to view the Activity Log">${ip}</a></p>
                                     <p class="text-xs text-gray-600 dark:text-gray-400 truncate">${userAndActivity.replace(/user (\w+)/i, 'User <strong>$1</strong>')}</p>
                                 </div>
