@@ -71,10 +71,10 @@
             </div>
         </section>
         <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
-        <section aria-labelledby="billing-overview">
+        <section aria-labelledby="info">
             <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
                 <div>
-                    <h2 id="billing-overview" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Information</h2>
+                    <h2 id="info" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Information</h2>
                     <p class="mt-1 text-sm leading-6 text-gray-500">View current certificate information.</p>
                 </div>
                 <div class="md:col-span-2">
@@ -177,10 +177,10 @@
             <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
         </div>
 
-        <section aria-labelledby="billing-overview">
+        <section aria-labelledby="files">
             <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
                 <div>
-                    <h2 id="billing-overview" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Files</h2>
+                    <h2 id="files" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Files</h2>
                     <p class="mt-1 text-sm leading-6 text-gray-500">View current certificate files.</p>
                 </div>
                 <div class="md:col-span-2">
@@ -217,11 +217,98 @@
         <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500">
             <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
         </div>
-        <section aria-labelledby="add-ons">
+
+
+
+
+<section aria-labelledby="logs" x-data="logViewer()">
+  <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+
+    <div>
+      <h2 id="logs" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Logs</h2>
+      <p class="mt-1 text-sm leading-6 text-gray-500">View logs for the service.</p>
+    </div>
+
+    <div class="space-y-6 md:col-span-2">
+      <div
+        class="p-4 relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden">
+        <div class="flex justify-between items-center">
+          <button @click="fetchLogs" x-text="buttonText" :disabled="loading" class="relative inline-flex items-center justify-center rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 gap-x-0.5 whitespace-nowrap sm:w-fit" id="service-log"></button>
+
+          <span class="text-sm text-gray-500">docker logs --tail 1000 caddy 2>&1  | grep "{{ domain_name }}" | grep -Ei 'tls|acme|certificate|renew|obtain|challenge'</span>
+        </div>
+
+        <div
+          x-show="showLogs"
+          x-transition
+          class="p-4 mt-4 border-2 border-dashed rounded-lg border-gray-300 dark:border-gray-600 h-full max-h-64 overflow-y-auto"
+          id="log-container"
+        >
+          <pre id="log-content" x-text="logContent"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const domainName = "{{ domain_name }}";
+
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('logViewer', () => ({
+        showLogs: false,
+        logContent: '',
+        buttonText: "View SSL logs",
+        loading: false,
+
+        async fetchLogs() {
+        this.loading = true;
+        this.buttonText = "Loading...";
+        
+        try {
+            const response = await fetch(`/domains/ssl/${domainName}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: new URLSearchParams({ action: 'logs' })
+            });
+
+            if (!response.ok) throw new Error('Request failed');
+
+            const data = await response.json();
+
+            const filteredLines = data.logs
+            .split('\n')
+            .filter(line => line.trim().startsWith('{'));
+
+            this.logContent = filteredLines.join('\n') || "No logs available.";
+            this.buttonText = "Click to refresh";
+        } catch (error) {
+            console.error("Fetch error:", error);
+            this.logContent = "No logs.";
+            this.buttonText = "Click to retry";
+        } finally {
+            this.showLogs = true;
+            this.loading = false;
+        }
+        }
+      }));
+    });
+  </script>
+
+</section>
+
+
+
+        <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500">
+            <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+        </div>
+        <section aria-labelledby="custom">
                 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
 
                     <div>
-                        <h2 id="add-ons" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Configure custom SSL</h2>
+                        <h2 id="custom" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Configure custom SSL</h2>
                         <p class="mt-1 text-sm leading-6 text-gray-500">Insert paths to certificate files to be used for this domain. Files must already be uploaded to user's files (under <code>/var/www/html/</code>)</p>
                     </div>
 

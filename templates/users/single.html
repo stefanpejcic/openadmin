@@ -71,6 +71,7 @@
 
           if (hash === '#services') this.activeTab = 'services';
           else if (hash === '#activity') this.activeTab = 'activity';
+          else if (hash === '#logins') this.activeTab = 'logins';
           else if (hash === '#suspend') this.activeTab = 'suspend';
           else if (hash === '#unsuspend') this.activeTab = 'unsuspend';
           else if (hash === '#transfer') this.activeTab = 'transfer';
@@ -83,6 +84,7 @@
           this.$nextTick(() => {
               if (this.activeTab === 'storage') this.loadDiskUsage();
               else if (this.activeTab === 'activity') $store?.activityStore?.fetchLogs();
+              else if (this.activeTab === 'logins') $store?.loginsStore?.fetchloginLogs();
               else if (this.activeTab === 'edit' || this.activeTab === 'delete') $store?.ipStore?.fetchIPs();
               else if (this.activeTab === 'info') this.fetchCustomMessage();
           });
@@ -143,19 +145,21 @@
       });
   
 
+
+
   // Store for Activity Logs
   Alpine.store("activityStore", {
       activities: [],
-      fetchedlogs: false,
+      fetchedactivitylogs: false,
       fetchLogs() {
 
-        if (this.fetchedlogs) return;
-        this.fetchedlogs = true;
+        if (this.fetchedactivitylogs) return;
+        this.fetchedactivitylogs = true;
 
 
           const username = "{{ user.username }}";
   
-          fetch(`/user_activity/${username}`)
+          fetch(`/json/user-activity/${username}`)
               .then(response => response.json())
               .then(data => {
   
@@ -203,6 +207,79 @@
               .catch(error => {
                   this.fetched = false;
                   console.error('Error fetching activity logs:', error);
+              });
+      },
+  
+      formatDateString(rawDate) {
+          const dateObj = new Date(rawDate);
+          let day = dateObj.getDate();
+          const month = dateObj.toLocaleString('en-US', { month: 'long' });
+          const year = dateObj.getFullYear();
+          const hours = dateObj.getHours();
+          const minutes = dateObj.getMinutes();
+          const seconds = dateObj.getSeconds();
+  
+          day = day < 10 ? '0' + day : day;
+          const formattedHours = hours < 10 ? '0' + hours : hours;
+          const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+          const formattedSeconds = seconds < 10 ? '0' + seconds : seconds;
+  
+          const currentDate = new Date();
+          const currentYear = currentDate.getFullYear();
+  
+          if (year !== currentYear) {
+              return `${day}.${month}.${year} ${formattedHours}:${formattedMinutes}`;
+          } else {
+              return `${day}.${month} ${formattedHours}:${formattedMinutes}`;
+          }
+      }
+  });
+
+
+
+  // Store for Login Logs
+  Alpine.store("loginsStore", {
+      logins: [],
+      fetchedloginslogs: false,
+      fetchloginLogs() {
+
+        if (this.fetchedloginslogs) return;
+        this.fetchedloginslogs = true;
+
+          const username = "{{ user.username }}";
+  
+          fetch(`/json/user-logins/${username}`)
+              .then(response => response.json())
+              .then(data => {
+                  // Reset the logins array
+                  this.logins = []; 
+
+                  // Check the correct key from our refactored backend ('user_logins')
+                  if (!data.user_logins || data.user_logins.length === 0) {
+                      this.logins.push({ noLogins: true });
+                      return;
+                  }
+
+                  // Iterate over each login entry
+                  data.user_logins.forEach(login => {
+                      // We use 'login_time' as the date and include 'country' for extra context
+                      const date = this.formatDateString(login.login_time);
+                      const ip = login.ip;
+                      const country = login.country || 'Unknown';
+                                            
+                      // Logins usually look good with a consistent "success" style
+
+                      // Push to the logins array (using the same structure your template expects)
+                      this.logins.push({
+                          date: date,
+                          ip: ip,
+                          country: country
+                      });
+                  });
+              })
+              .catch(error => {
+                  this.fetched = false;
+                  console.error('Error fetching login logs:', error);
               });
       },
   
@@ -285,6 +362,8 @@
               {% include 'users/partials/edit.html' %}
 
               {% include 'users/partials/activity.html' %}
+
+              {% include 'users/partials/loginlog.html' %}
 
               {% include 'users/partials/transfer.html' %}
 
