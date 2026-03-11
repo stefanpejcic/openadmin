@@ -3,8 +3,8 @@
 # *                                                                       *
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
-# * Version: 1.7.44                                                        *
-# * Build Date: 2026-02-20 23:44:02                                       *
+# * Version: 1.7.45                                                        *
+# * Build Date: 2026-03-11 16:17:18                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -81,7 +81,7 @@ def extract_api_info(file_path):
 
     return endpoints_info
 
-def format_endpoints_info(endpoints_info, protocol, domain):
+def format_endpoints_info(endpoints_info, protocol, domain, port):
 
     output = []
     for endpoint in endpoints_info:
@@ -90,16 +90,16 @@ def format_endpoints_info(endpoints_info, protocol, domain):
         output.append(f"Type: {endpoint['type']}")
         output.append("Examples:")
         for example in endpoint['examples']:
-            formatted_example = example.replace('http://localhost', f'{protocol}://{domain}')
+            formatted_example = example.replace('http://localhost:2087', f'{protocol}://{domain}:{port}')
             output.append(f"  {formatted_example}")
         output.append("\n" + "-" * 80)  # Separator line
     return "\n".join(output)
 
-def read_existing_file(file_path, protocol, domain):
+def read_existing_file(file_path, protocol, domain, port):
     if os.path.exists(file_path):
         with open(file_path, 'r') as file:
             content = file.read()
-        return content.replace('http://localhost', f'{protocol}://{domain}')
+        return content.replace('http://localhost:2087', f'{protocol}://{domain}:{port}')
     else:
         return ""
 
@@ -116,6 +116,17 @@ def get_openpanel_domain():
     except FileNotFoundError:
         return None
 
+def get_openadmin_port():
+    try:
+        result = subprocess.run(["opencli", "admin", "port"], capture_output=True, text=True, check=True)
+        port = result.stdout.strip()
+        if not re.match(r"^([0-9]{1,5})$", port) or not (0 <= int(port) <= 65535):
+            return None
+        return port
+    except subprocess.CalledProcessError as e:
+        return 2087
+    except FileNotFoundError:
+        return 2087
 
 
 
@@ -164,6 +175,7 @@ def main():
 
     force_domain = get_openpanel_domain()
     server_ip = get_server_ip()
+    port = get_openadmin_port()
 
     if force_domain:
         protocol = 'https'
@@ -174,12 +186,12 @@ def main():
     
     if args.save:
         endpoints_info = extract_api_info(file_path)
-        formatted_info = format_endpoints_info(endpoints_info, 'http', 'localhost')
+        formatted_info = format_endpoints_info(endpoints_info, 'http', 'localhost', port)
         with open(output_file, 'w') as f:
             f.write(formatted_info)
     else:
         # Read from existing file
-        existing_info = read_existing_file(output_file, protocol, domain)
+        existing_info = read_existing_file(output_file, protocol, domain, port)
         if existing_info:
             print(existing_info)
         else:
