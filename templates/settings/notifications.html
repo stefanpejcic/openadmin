@@ -31,11 +31,19 @@
 
 
 
-
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
     <div>
-        <h2 id="email" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Email</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">All alerts and a Daily Usage report are sent to this address. Leave empty to disable emails.</p>
+        <h2 id="email" class="flex justify-between scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-1" for="{{ id }}" x-data="{tooltip: false}">
+            <a href="#email">Email</a>
+            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                    <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                </svg>
+                <div x-show="tooltip" x-transition class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">Leave empty to disable.<br>Daily Reports can be disabled by editing the cron schedule from <b>Advanced > System Cron Jobs</b> page.</div>
+            </span>
+        </h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Send notifications and Daily Usage reports to this address.</p>
     </div>
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4">
@@ -51,70 +59,103 @@
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
 
-
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
     <div>
-        <h2 id="services" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Services</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when a service is down or not responding. Services are checked every 5 minutes.</p>
+        <h2 id="webhook_url" class="flex justify-between scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-1" for="{{ id }}" x-data="{tooltip: false}">
+            <span><a href="#webhook_url">Webhook</a> <span class="inline-flex items-center gap-x-1 rounded-md px-2 py-1 text-xs font-semibold text-emerald-500 ring-1 ring-inset dark:text-emerald-500 dark:ring-gray-800">new</span></span>
+            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                    <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                </svg>
+                <div x-show="tooltip" x-transition class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">Example payload:<br>
+<code class="text-xs">{
+  "text": "High CPU usage detected",
+  "username": "OpenAdmin-myhost",
+  "content": "High CPU usage detected"
+}</code>
+<br>Leave empty to disable.
+</div>
+            </span>
+        </h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Send notifications to a webhook URL.</p>
     </div>
     <div class="md:col-span-2">
-<div x-data="{
-        serviceStates: {
-            {% for service in ['panel', 'admin', 'caddy', 'mysql', 'docker', 'named', 'csf'] %}
-                '{{ service }}': {{ 'true' if service in config_data['DEFAULT']['services'].split(',') else 'false' }},
-            {% endfor %}
-        },
-        get selectedServices() {
-            return Object.entries(this.serviceStates)
-                        .filter(([_, v]) => v)
-                        .map(([k, _]) => k)
-                        .join(',');
-        }
-    }">
-
-    <input type="hidden" name="services" :value="selectedServices">
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-        {% set service_info = {
-            'panel': {'name': 'OpenPanel', 'desc': 'Receive a notification when OpenPanel UI fails.'},
-            'admin': {'name': 'OpenAdmin', 'desc': 'Receive a notification when OpenAdmin UI fails.'},
-            'caddy': {'name': 'Caddy', 'desc': 'Receive a notification when webserver is not responding.'},
-            'mysql': {'name': 'MySQL', 'desc': 'Receive a notification when database is unreachable.'},
-            'docker': {'name': 'Docker', 'desc': 'Receive a notification when Docker service is down.'},
-            'named': {'name': 'BIND9', 'desc': 'Receive a notification when DNS service is down or not responding to requests.'},
-            'csf': {'name': 'Sentinel Firewall', 'desc': 'Receive a notification when CSF is disabled.'},
-        } %}
-
-        {% for service in service_info %}
-            <div class="col-span-full sm:col-span-3">
-                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{service}}">
-                    {{ service_info[service].name }}
-                </label>
-                <div class="relative w-full mt-2">
-                    <div class="flex items-center space-x-2">
-                        <button
-                            type="button"
-                            @click="serviceStates['{{ service }}'] = !serviceStates['{{ service }}']"
-                            :aria-checked="serviceStates['{{ service }}']"
-                            role="switch"
-                            :class="serviceStates['{{ service }}'] ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
-                            class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
-                        >
-                            <span
-                                :class="serviceStates['{{ service }}'] ? 'translate-x-4' : 'translate-x-0'"
-                                class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"
-                            ></span>
-                        </button>
-                        <span class="text-sm" x-text="serviceStates['{{ service }}'] ? 'Enabled' : 'Disabled'"></span>
-                    </div>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ service_info[service].desc }}</p>
-                </div>
+        <div class="grid grid-cols-1 gap-4">
+            <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="webhook_url">Webhook URL:</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="webhook_url" placeholder="" value="{{ config_data['DEFAULT']['webhook_url'] }}" type="url"></div>
             </div>
-        {% endfor %}
+        </div>
     </div>
 </div>
 
 
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="services" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#services">Services</a></h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when a service is down or not responding.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div x-data="{
+                serviceStates: {
+                    {% for service in ['panel', 'admin', 'caddy', 'mysql', 'docker', 'named', 'csf'] %}
+                        '{{ service }}': {{ 'true' if service in config_data['DEFAULT']['services'].split(',') else 'false' }},
+                    {% endfor %}
+                },
+                get selectedServices() {
+                    return Object.entries(this.serviceStates)
+                                .filter(([_, v]) => v)
+                                .map(([k, _]) => k)
+                                .join(',');
+                }
+            }">
+
+            <input type="hidden" name="services" :value="selectedServices">
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                {% set service_info = {
+                    'panel': {'name': 'OpenPanel', 'desc': 'Receive a notification when OpenPanel UI fails.'},
+                    'admin': {'name': 'OpenAdmin', 'desc': 'Receive a notification when OpenAdmin UI fails.'},
+                    'caddy': {'name': 'Caddy', 'desc': 'Receive a notification when webserver is not responding.'},
+                    'mysql': {'name': 'MySQL', 'desc': 'Receive a notification when database is unreachable.'},
+                    'docker': {'name': 'Docker', 'desc': 'Receive a notification when Docker service is down.'},
+                    'named': {'name': 'BIND9', 'desc': 'Receive a notification when DNS service is down or not responding to requests.'},
+                    'csf': {'name': 'Sentinel Firewall', 'desc': 'Receive a notification when CSF is disabled.'},
+                } %}
+
+                {% for service in service_info %}
+                    <div class="col-span-full sm:col-span-3">
+                        <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{service}}">
+                            {{ service_info[service].name }}
+                        </label>
+                        <div class="relative w-full mt-2">
+                            <div class="flex items-center space-x-2">
+                                <button
+                                    type="button"
+                                    @click="serviceStates['{{ service }}'] = !serviceStates['{{ service }}']"
+                                    :aria-checked="serviceStates['{{ service }}']"
+                                    role="switch"
+                                    :class="serviceStates['{{ service }}'] ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                                    class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+                                >
+                                    <span
+                                        :class="serviceStates['{{ service }}'] ? 'translate-x-4' : 'translate-x-0'"
+                                        class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"
+                                    ></span>
+                                </button>
+                                <span class="text-sm" x-text="serviceStates['{{ service }}'] ? 'Enabled' : 'Disabled'"></span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ service_info[service].desc }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 
@@ -124,8 +165,8 @@
 
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
     <div>
-        <h2 id="thresholds" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Resource Usage</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when resource usage exceeds the defined threshold. Usage is monitored every 5 minutes.</p>
+        <h2 id="thresholds" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#thresholds">Resource Usage</a></h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when resource usage exceeds a threshold.</p>
     </div>
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
@@ -149,46 +190,47 @@
 
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
-
-
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
     <div>
-        <h2 id="actions" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Actions</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when a certain action is performed: new ssh login, system reboot, and more.</p>
+        <h2 id="server-actions" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#server-actions">Server actions</a></h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when a certain action is detected on the server.</p>
     </div>
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
 
-        {% for key, label in {
-            'reboot': 'Server was rebooted',
-            'attack': 'Website is under attack',
-            'limit': 'User reaches plan limits',
-            'login': 'OpenAdmin is accessed from a new IP address',
-            'ssh': 'SSH for root user accessed from a new IP address',
-            'update': 'New OpenPanel update is available',
-            'dns': 'Panel domain or nameservers not resolving to this server'
+        {% for key, data in {
+            'reboot': {'label': 'Server reboot', 'tooltip': 'Triggered when the server is restarted.'},
+            'attack': {'label': 'Website is under attack', 'tooltip': 'Fires when suspicious traffic or DDoS attacks are detected.'},
+            'limit': {'label': 'User reaches plan limits', 'tooltip': 'Fires when a user reaches storage, or other plan limits.'},
+                        'dns': {'label': 'DNS issue detected', 'tooltip': 'Triggered when the panel domain or nameservers are misconfigured or not resolving to this server. Disable if using external nameservers or Cloudflare proxy.'},
+
+            'login': {'label': 'OpenAdmin login from new IP', 'tooltip': 'Triggered when the OpenAdmin panel is accessed from an unrecognized IP address.'},
+            'ssh': {'label': 'SSH login from new IP', 'tooltip': 'Triggered when root SSH access is detected from an unknown IP address. IP can be whitelisted in "SSH Allowlist" below.'},
+            'update': {'label': 'New update available', 'tooltip': 'Triggered when a new version of OpenPanel is available for update.'}
         }.items() %}
 
             <div class="col-span-full sm:col-span-3">
-                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{service}}">{{display_name}}</label>
-                <div class="relative w-full mt-2">
-
-            <label class="flex items-center space-x-2">
-                <input type="checkbox" name="{{ key }}" id="{{ key }}" class="toggle-checkbox" {% if config_data['DEFAULT'][key] == 'yes' %}checked{% endif %}>
-                <span>{{ label }}</span>
-            </label>
-
+                <label for="{{ key }}" class="text-gray-900 dark:text-gray-50 font-medium flex justify-between items-center" x-data="{tooltip: false}">
+                    <span><input type="checkbox" name="{{ key }}" id="{{ key }}" class="toggle-checkbox" {% if config_data['DEFAULT'][key] == 'yes' %}checked{% endif %}> {{ data.label }}</span>
+                    
+                    <!-- Tooltip icon -->
+                    <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                        </svg>
+                        <div x-show="tooltip" x-transition class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">
+                            {{ data.tooltip }}
                         </div>
+                    </span>
+                </label>
             </div>
-                                {% endfor %}
 
-
+        {% endfor %}
 
         </div>
     </div>
 </div>
-
-
 
 
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
@@ -197,7 +239,108 @@
 
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
     <div>
-        <h2 id="thresholds" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">SMTP</h2>
+        <h2 id="user-actions" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#user-actions">User actions</a> <span class="inline-flex items-center gap-x-1 rounded-md px-2 py-1 text-xs font-semibold text-emerald-500 ring-1 ring-inset dark:text-emerald-500 dark:ring-gray-800">new</span></h2>
+
+        <p class="mt-1 text-sm leading-6 text-gray-500">Get notified whenever an action occurs in the admin or user panels.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+        {% for key, data in {
+            'admin_status': {'label': 'OpenAdmin enabled/disabled', 'tooltip': 'Triggered when OpenAdmin is toggled on or off from "OpenAdmin > Settings > Disable OpenAdmin" page.'},
+            'admin_api': {'label': 'API access enabled/disabled', 'tooltip': 'Fires when API status changes on "OpenAdmin > Settings > API Access" page.'},
+            'admin_create': {'label': 'Admin account created', 'tooltip': 'Triggered when a new OpenAdmin account is created.'},
+            'reseller_create': {'label': 'Reseller account created', 'tooltip': 'Triggered when a new reseller account is created.'},
+            'admin_password': {'label': 'Admin password changed', 'tooltip': 'Fires when password is changed for an Administrator or Reseller accounts.'},
+            'admin_rename': {'label': 'Admin/Reseller renamed', 'tooltip': 'Fires when an Administrator or Reseller account is renamed.'},
+            'admin_suspend': {'label': 'Admin/Reseller suspended', 'tooltip': 'Fires when an Administrator or Reseller account is suspended.'},
+            'admin_unsuspend': {'label': 'Admin/Reseller unsuspended', 'tooltip': 'Fires when an Administrator or Reseller account is unsuspended.'},
+
+            'waf_domain': {'label': 'WAF enabled/disabled for a domain', 'tooltip': 'Triggered when WAF is toggled for a domain.'},
+            'waf_status': {'label': 'WAF enabled/disabled on the server', 'tooltip': 'Fires when WAF status changes on the server.'},
+
+            'user_create': {'label': 'User added', 'tooltip': 'Fires when a new OpenPanel user is added.'},
+            'user_delete': {'label': 'User deleted', 'tooltip': 'Fires when a OpenPanel user is deleted.'},
+            'user_status': {'label': 'User suspended/unsuspended', 'tooltip': 'Fires when a user is suspended or unsuspended.'},
+            'user_email': {'label': 'User email changed', 'tooltip': 'Triggered when email is updated for an OpenPanel user.'},
+            'user_ip': {'label': 'User IP changed', 'tooltip': 'Fires when IP is changed for OpenPanel user.'},
+            'user_password': {'label': 'User password changed', 'tooltip': 'Fires when password is changed for an OpenPanel user.'},
+            'user_rename': {'label': 'User renamed', 'tooltip': 'Fires when the username is changed for an OpenPanel account.'},
+
+            'ftp_create': {'label': 'FTP account created', 'tooltip': 'Fires when a new FTP account is added.'},
+            'ftp_delete': {'label': 'FTP account deleted', 'tooltip': 'Fires when an FTP account is deleted.'},
+            'ftp_password': {'label': 'FTP account password change', 'tooltip': 'Triggered when an FTP password changes.'},
+
+            'domains_add': {'label': 'Domain added', 'tooltip': 'Fires when a new domain is added.'},
+            'domains_delete': {'label': 'Domain deleted', 'tooltip': 'Fires when a domain is deleted.'},
+            'domains_status': {'label': 'Domain suspended/unsuspended', 'tooltip': 'Triggered when a domain status changes.'},
+            'domains_ssl': {'label': 'SSL type changed', 'tooltip': 'Fires when SSL type is changed to AutoSSL or Custom SSL is configured.'},
+            'domains_hsts': {'label': 'HSTS enabled/disabled', 'tooltip': 'Triggered when HSTS is toggled for a domain name.'}
+        }.items() %}
+
+            <div class="col-span-full sm:col-span-3">
+                <label for="{{ key }}" class="text-gray-900 dark:text-gray-50 font-medium flex justify-between items-center" x-data="{tooltip: false}">
+                    <span><input type="checkbox" name="{{ key }}" id="{{ key }}" class="toggle-checkbox" {% if config_data['ACTIONS'][key] == 'yes' %}checked{% endif %}> {{ data.label }}</span>
+                    
+                    <!-- Tooltip icon -->
+                    <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                        </svg>
+                        <div x-show="tooltip" x-transition class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">
+                            {{ data.tooltip }}
+                        </div>
+                    </span>
+                </label>
+            </div>
+
+        {% endfor %}
+
+
+
+        </div>
+    </div>
+</div>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="ssh_allowlist" class="flex justify-between scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-1" for="{{ id }}" x-data="{tooltip: false}">
+            <a href="#ssh_allowlist">SSH Allowlist</a>
+            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                    <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                </svg>
+                <div x-show="tooltip" x-transition class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">Supports both IP addresses and CIDR ranges. Enter one per line.</div>
+            </span>
+        </h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Specify IP addresses that will be exempt from SSH login checks.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <div class="col-span-full">
+                <div class="relative w-full mt-2">
+                    <div class="row form-selectgroup form-selectgroup-boxes d-flex">
+                        <div class="mt-4 grid grid-cols-1 gap-4">
+                            <textarea name="ssh_whitelist" class="flex min-h-[4rem] w-full rounded-md border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" rows="5" cols="50">{{ ssh_whitelist }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="smtp" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#smtp">SMTP</a></h2>
         <p class="mt-1 text-sm leading-6 text-gray-500">Set up an SMTP server to send email notifications to administrators and OpenPanel user accounts. If left unconfigured, emails will be sent from the default address: no-reply@openpanel.org.</p>
     </div>
     <div class="md:col-span-2">
@@ -319,7 +462,7 @@
         <!-- Hidden input -->
         <input type="hidden" name="mail_debug" :value="mail_debug ? 'True' : 'False'">
     </div>
-    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 pb-6">If enabled, sent emails are also stored as files in <code>/var/log/openpanel/admin/emails</code>.</p>
+    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 pb-6">If enabled, sent emails are also stored as files in <code>/var/log/openpanel/admin/emails/</code></p>
 </div>
 
 

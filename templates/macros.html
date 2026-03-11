@@ -12,34 +12,40 @@
 </label>
 {% endmacro %}
 
-{% macro domain_selector(domains, redirect_base) %}
+{% macro domain_selector(domains, redirect_base, include_username=False) %}
     {% if domains %}
         {% if domains == -1 %}
             {% include 'system/_mysql_error.html' %}
         {% else %}
-            <select 
-                id="domains"
-                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg 
-                       focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 
-                       dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 
-                       dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                onchange="redirectToSelectedVersion(this, '{{ redirect_base }}')">
-
+            <select id="domains" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" onchange="redirectToSelectedVersion(this, '{{ redirect_base }}')">
                 <option value="" disabled selected>Select domain</option>
-
                 {% for domain in domains %}
-                    <option value="{{ domain.domain_url }}">{{ domain.domain_url }}</option>
+                    <option 
+                        value="{{ domain.domain_url }}" {% if include_username %}data-username="{{ domain.username }}"{% endif %}>
+                        {{ domain.domain_url }}
+                    </option>
                 {% endfor %}
             </select>
 
             <script>
                 function redirectToSelectedVersion(selectElement, baseUrl) {
-                    const selected = selectElement.value;
-                    if (selected) {
-                        window.location.href = baseUrl + selected;
+                    const selectedOption = selectElement.options[selectElement.selectedIndex];
+                    const domain = selectedOption.value;
+                    const username = selectedOption.dataset.username;
+
+                    if (domain) {
+                        let url = baseUrl;
+
+                        if (username) {
+                            url += username + "/";
+                        }
+
+                        url += domain;
+                        window.location.href = url;
                     }
                 }
             </script>
         {% endif %}
     {% endif %}
 {% endmacro %}
+
