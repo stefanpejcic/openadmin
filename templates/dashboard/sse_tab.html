@@ -84,16 +84,20 @@ function updateSSEUI(data) {
 
     // DU
     if (data.disk !== undefined) {
+        const rootDisk = data.disk.find(d => d.mountpoint === "/");
+
+        if (rootDisk) {
+            document.getElementById("sse_disk").textContent = rootDisk.percent.toFixed(1) + "%";
+        }
+
         const filteredDisks = data.disk.filter(d => !d.mountpoint.startsWith("/mnt"));
-        const diskUsages = filteredDisks.map(d => d.percent).filter(p => p !== undefined);
-        const diskAvg = diskUsages.reduce((a, b) => a + b, 0) / diskUsages.length;
-        document.getElementById("sse_disk").textContent = diskAvg.toFixed(1) + "%";
         const diskTooltip = document.getElementById("tooltip-sse_disk");
         diskTooltip.innerHTML = filteredDisks.map(d => `
             ${d.device} mounted on ${d.mountpoint} (${d.fstype}):<br>
             Used: ${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)<br>
         `).join("<br>") + `<div class="tooltip-arrow" data-popper-arrow></div>`;
     }
+
 }
 
 if (Object.keys(cachedData).length) {

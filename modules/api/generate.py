@@ -3,8 +3,8 @@
 # *                                                                       *
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
-# * Version: 1.7.45                                                        *
-# * Build Date: 2026-03-11 16:17:18                                       *
+# * Version: 1.7.47                                                        *
+# * Build Date: 2026-03-20 00:25:20                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -143,7 +143,7 @@ def get_server_ip():
             return result.stdout.strip()
         
         result = subprocess.run(
-            ['wget', '--timeout=2', '-qO-', 'https://ipv4.openpanel.com'],
+            ['wget', '--timeout=2', '-qO-', 'https://ip.openpanel.com'],
             capture_output=True,
             text=True,
             timeout=2
