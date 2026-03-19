@@ -10,20 +10,22 @@ $(document).ready(function() {
     $('#userimportForm').on('submit', function(event) {
         event.preventDefault(); // Prevent the default form submission
 
-        const formData = $(this).serialize(); // Serialize form data
+        const backupType = $('input[name="backup_type"]:checked').val(); 
 
+        const formData = $(this).serialize();
+ 
         $.ajax({
             type: 'POST',
-            url: $(this).attr('action'),
+            url: '/import/' + backupType, // cpanel or cyberpanel
             headers: {
-                'X-CSRFToken': csrfToken  // Add CSRF token to headers
+                'X-CSRFToken': csrfToken
             },
             data: formData,
             success: function(response) {
                 if (response.status === 'success') {
-                    window.location.href = '/import/cpanel'; // Redirect on success
+                    window.location.href = '/import/' + backupType;
                 } else {
-                    alert(response.message); // Show error message
+                    alert(response.message);
                 }
             },
             error: function(xhr, status, error) {
