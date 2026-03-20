@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.7.47                                                        *
-# * Build Date: 2026-03-20 00:35:10                                       *
+# * Build Date: 2026-03-20 11:25:33                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -133,30 +133,15 @@ def get_openadmin_port():
 def get_server_ip():
 
     try:
-        result = subprocess.run(
-            ['curl', '--silent', '--max-time', '2', '-4', 'https://ip.openpanel.com'],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
+        result = subprocess.run(['curl', '--silent', '--max-time', '2', '-4', 'https://ip.openpanel.com'], capture_output=True, text=True, timeout=2)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
         
-        result = subprocess.run(
-            ['wget', '--timeout=2', '-qO-', 'https://ip.openpanel.com'],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
+        result = subprocess.run(['wget', '--timeout=2', '-qO-', 'https://ip.openpanel.com'], capture_output=True, text=True, timeout=2)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
 
-        result = subprocess.run(
-            ['curl', '--silent', '--max-time', '2', '-4', 'https://ifconfig.me'],
-            capture_output=True,
-            text=True,
-            timeout=2
-        )
+        result = subprocess.run(['curl', '--silent', '--max-time', '2', '-4', 'https://ifconfig.me'], capture_output=True, text=True, timeout=2)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
 
