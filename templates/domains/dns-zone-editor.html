@@ -20,12 +20,32 @@
             </header>
         </div>
 
+        <!-- Restore from tmp file banner -->
+        {% if tmp_file_content %}
+        <div x-data="{ showTmp: true }" x-show="showTmp" class="my-4 bg-yellow-50 p-4 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200 flex items-start justify-between">
+            <div>
+                <strong>Unsaved changes found!</strong> You have a temporary version of this zone file.
+            </div>
+            <div class="flex gap-2">
+                <button type="button"
+                        @click='
+                            document.getElementById("bind_content").value = {{ tmp_file_content | tojson | safe }};
+                            showTmp=false;
+                        '
+                        class="rounded bg-yellow-500 px-3 py-1 text-sm font-medium text-white hover:bg-yellow-600 dark:hover:bg-yellow-700">
+                    Restore
+                </button>
+                <button type="button" @click="showTmp=false" class="text-yellow-700 dark:text-yellow-200 hover:text-yellow-900 dark:hover:text-yellow-400">Dismiss</button>
+            </div>
+        </div>
+        {% endif %}
+
+
         <div class="mt-2 gap-2 sm:mt-0 sm:flex">
             <textarea name="bind_content" id="bind_content" rows="25" class="flex min-h-[4rem] w-full border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">{{bind_content}}</textarea>
         </div>
     </form>
 </div>
-
 
 {% else %}
 

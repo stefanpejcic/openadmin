@@ -20,13 +20,32 @@
             </header>
         </div>
 
-
-<div class="m-6 rounded-lg bg-gray-50 p-6 ring-1 ring-inset ring-gray-200 dark:bg-gray-400/10 dark:ring-gray-800">
-  <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Warning!</h4>
-  <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
-    Directly editing the Caddyfile is not recommended. Misconfigurations may cause the entire web server and all hosted websites to go down. </p>
-  <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">For tasks like setting up redirects, SSL, or traffic limits, use the <a href="/domains/vhost" class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-500">Edit VirtualHost<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg></a>  instead.</p>
-</div>
+        <!-- Restore from tmp file banner -->
+        {% if tmp_file_content %}
+        <div x-data="{ showTmp: true }" x-show="showTmp" class="my-4 bg-yellow-50 p-4 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200 flex items-start justify-between">
+            <div>
+                <strong>Unsaved changes found!</strong> You have a temporary version of this zone file.
+            </div>
+            <div class="flex gap-2">
+                <button type="button"
+                        @click='
+                            document.getElementById("bind_content").value = {{ tmp_file_content | tojson | safe }};
+                            showTmp=false;
+                        '
+                        class="rounded bg-yellow-500 px-3 py-1 text-sm font-medium text-white hover:bg-yellow-600 dark:hover:bg-yellow-700">
+                    Restore
+                </button>
+                <button type="button" @click="showTmp=false" class="text-yellow-700 dark:text-yellow-200 hover:text-yellow-900 dark:hover:text-yellow-400">Dismiss</button>
+            </div>
+        </div>
+        {% else %}
+        <div class="m-6 rounded-lg bg-gray-50 p-6 ring-1 ring-inset ring-gray-200 dark:bg-gray-400/10 dark:ring-gray-800">
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Warning!</h4>
+        <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">
+            Directly editing the Caddyfile is not recommended. Misconfigurations may cause the entire web server and all hosted websites to go down. </p>
+        <p class="mt-1 max-w-2xl text-sm leading-6 text-gray-500">For tasks like setting up redirects, SSL, or traffic limits, use the <a href="/domains/vhost" class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-500">Edit VirtualHost<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg></a>  instead.</p>
+        </div>
+        {% endif %}
 
 
 
