@@ -34,7 +34,7 @@
 
                 <div id="create_user_form" class="sm:mx-auto" style="display:block;" x-data="userSearch()">
 
-                    <form method="POST" action="/domains/add">
+                    <form method="POST" action="/domains/add" @submit.prevent="submitForm">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
@@ -43,15 +43,13 @@
                                     Domain<span class="text-red-500">*</span>
                                 </label>
                                 <div class="relative w-full mt-2">
-                                    <input type="text" name="domain" id="domain" placeholder="example.net" required autofocus
-                                        class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                                    <input type="text" name="domain" id="domain" placeholder="example.net" required
+                x-model="domain" autofocus class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
                                 </div>
                             </div>
 
                             <div class="col-span-full sm:col-span-2" x-data @click.away="show = false">
-                                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">
-                                    Username<span class="text-red-500">*</span>
-                                </label>
+                                <label for="username" class="text-sm font-medium">Username<span class="text-red-500">*</span></label>
                                 <div class="relative w-full mt-2">
                                     <input type="text" name="username" id="username" placeholder="username" required
                                         x-model="query" @input.debounce.300ms="searchUsers"
@@ -59,7 +57,7 @@
                                         class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700"
                                         autocomplete="off">
                                     
-                                    <ul x-show="show && users.length > 0" class="absolute z-10 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-800 w-full mt-1 rounded-md shadow-lg max-h-60 overflow-auto text-gray-900 dark:text-gray-50">
+                                    <ul x-show="show && users.length > 0" class="absolute z-10 bg-white dark:bg-gray-950 border w-full mt-1 rounded-md shadow-lg max-h-60 overflow-auto">
                                         <template x-for="user in users" :key="user">
                                             <li @click="selectUser(user)" class="px-3 py-2 cursor-pointer hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600">
                                                 <span x-text="user"></span>
@@ -80,34 +78,57 @@
                     </form>
                 </div>
 
-                <script>
-                function userSearch() {
-                    return {
-                        query: '',
-                        users: [],
-                        show: false,
-                        searchUsers() {
-                            if (this.query.length < 1) {
-                                this.users = [];
-                                return;
-                            }
+<script>
+function userSearch() {
+    return {
+        query: '',
+        users: [],
+        show: false,
+        validUser: null,
+        domain: '',
 
-                            fetch(`/search/users/${encodeURIComponent(this.query)}`)
-                                .then(res => res.json())
-                                .then(data => {
-                                    this.users = data.filter(
-                                        user => !user.startsWith('SUSPENDED_')
-                                    );
-                                    this.show = this.users.length > 0;
-                                });
-                        },
-                        selectUser(user) {
-                            this.query = user;
-                            this.show = false;
-                        }
-                    }
-                }
-                </script>
+        searchUsers() {
+            if (this.query.length < 1) {
+                this.users = [];
+                return;
+            }
+
+            fetch(`/search/users/${encodeURIComponent(this.query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    this.users = data.filter(u => !u.startsWith('SUSPENDED_'));
+                    this.show = this.users.length > 0;
+                    this.validUser = null;
+                });
+        },
+
+        selectUser(user) {
+            this.query = user;
+            this.validUser = user;
+            this.show = false;
+        },
+
+        validateDomain(domain) {
+            const domainRegex = /^[^.\s]+(\.[^.\s]+)+$/;
+            return domainRegex.test(domain);
+        },
+
+        submitForm(event) {
+            if (!this.validUser || this.validUser !== this.query) {
+                showToast("Error, please select a valid username from the list.", 'error');
+                return;
+            }
+
+            if (!this.validateDomain(this.domain)) {
+                showToast("Error, please enter a valid domain (e.g., example.com).", 'error');
+                return;
+            }
+
+            event.target.submit();
+        }
+    }
+}
+</script>
 
             </div>
 

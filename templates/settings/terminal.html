@@ -3,263 +3,220 @@
 
 {% block content %}
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
-  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
 
-    <div x-data="{ showSection: false, tooltip: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
-        <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
-                <div class="grow">
-                    <h1 class="flex gap-2 mb-1 text-xl font-bold items-center">{{ title }}
-
-        <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16">
-            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/>
-            </svg>
-            <template x-if="tooltip">
+  <div x-data="{ showSection: false, tooltip: false }"
+       class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <header>
+      <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+        <div class="grow">
+          <h1 class="flex gap-2 mb-1 text-xl font-bold items-center">
+            {{ title }}
+            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                   class="bi bi-info-circle-fill" viewBox="0 0 16 16">
+                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194
+                         0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703
+                         0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381
+                         2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/>
+              </svg>
+              <template x-if="tooltip">
                 <div x-transition
                      class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg"
                      style="top: 100%; left: 0;">
-                      {% if terminal_type == 'users' %}
-                      The terminal is <b>non-interactive</b> and executes commands as 'root' user inside the container.
-                      {% elif terminal_type == 'root' %}The terminal is <b>non-interactive</b> and runs commands as the 'root' system user.
-                      {% endif %}
-                      <br>Each command has an execution timeout of <b>{{ terminal_timeout }}</b> seconds.
+                  {% if terminal_type == 'users' %}
+                    The terminal is <b>interactive</b> and executes commands as 'root' inside the container.
+                  {% elif terminal_type == 'root' %}
+                    The terminal is <b>interactive</b> and runs commands as the 'root' system user.
+                  {% endif %}
+                  <br>Inactivity timeout: <b>{{ terminal_timeout }}</b> seconds.
                 </div>
-            </template>
-        </span>
+              </template>
+            </span>
+          </h1>
+          <h2 class="text-sm font-medium text-slate-500">
+            {% if terminal_type == 'users' %}
+              User: <a href="/users/{{ username }}">{{ username }}</a> | Container: {{ container_name }}
+            {% elif terminal_type == 'root' %}
+              Command line access to the server's "root" account.
+            {% endif %}
+          </h2>
+        </div>
 
+        <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+          <select id="shell"
+                  class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate
+                         rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm
+                         border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50
+                         bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50
+                         focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30
+                         focus:border-blue-500 focus:dark:border-blue-700">
+            <option disabled selected value=""> -- Shell type -- </option>
+            <option value="sh">sh</option>
+            <option value="bash">bash</option>
+          </select>
 
-                    </h1>
-                    <h2 class="text-sm font-medium text-slate-500">
-                      {% if terminal_type == 'users' %}
-                      User: <a href="/users/{{ username }}">{{ username }}</a> | Container: {{ container_name}}</h2>
-                      {% elif terminal_type == 'root' %}
-                      Command line access to the server’s “root” account.
-                      {% endif %}
-                </div>
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                 <select id="shell" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
-                  <option disabled="" selected="" value=""> -- Shell type -- </option>
-                  <option value="sh">sh</option>
-                  <option value="bash">bash</option>
-                </select>
-                </div>
-            </div>
+          <!-- Reconnect button shown when connection drops -->
+          <button id="reconnect-btn"
+                  style="display:none"
+                  onclick="connectTerminal()"
+                  class="px-3 py-2 rounded-md border border-blue-500 text-blue-600 dark:text-blue-400 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/30 transition">Reconnect
+          </button>
+        </div>
+      </div>
     </header>
-    </div>
+  </div>
 
+  <!-- status bar -->
+  <div id="term-status"
+       class="flex items-center gap-2 px-4 py-1 text-xs bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
+    <span id="status-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+    <span id="status-text">Connecting…</span>
+  </div>
 
+  <div id="terminal" style="width:100%; height:calc(60vh - 2rem); background:#1a1b26;"></div>
 
+  <script>
+    // ── config injected by Flask ────────────────────────────────────────────
+    const TERMINAL_TYPE = {{ terminal_type | tojson }};
+    {% if terminal_type == 'users' %}
+    const WS_PATH = `/ws/terminal/{{ username }}/{{ container_name }}`;
+    {% else %}
+    const WS_PATH = `/ws/terminal`;
+    {% endif %}
 
-<div id="terminal" style="width: 100%; height: 60vh;"></div>
+    // ── xterm setup ─────────────────────────────────────────────────────────
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
+      theme: {
+        background:   '#1a1b26',
+        foreground:   '#c0caf5',
+        cursor:       '#c0caf5',
+        black:        '#15161e',
+        red:          '#f7768e',
+        green:        '#9ece6a',
+        yellow:       '#e0af68',
+        blue:         '#7aa2f7',
+        magenta:      '#bb9af7',
+        cyan:         '#7dcfff',
+        white:        '#a9b1d6',
+        brightBlack:  '#414868',
+        brightRed:    '#f7768e',
+        brightGreen:  '#9ece6a',
+        brightYellow: '#e0af68',
+        brightBlue:   '#7aa2f7',
+        brightMagenta:'#bb9af7',
+        brightCyan:   '#7dcfff',
+        brightWhite:  '#c0caf5',
+      },
+      scrollback: 5000,
+      allowTransparency: false,
+    });
 
-{% if terminal_type == 'root' %}
-<script>
-  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.loadAddon(new WebLinksAddon.WebLinksAddon());
 
-  const term = new Terminal({ cursorBlink: true });
-  const fitAddon = new FitAddon.FitAddon();
-  term.loadAddon(fitAddon);
+    const terminalEl = document.getElementById('terminal');
+    term.open(terminalEl);
 
-  const terminalEl = document.getElementById('terminal');
-  term.open(terminalEl);
-
-  // Fit after layout paints
-  queueMicrotask(() => fitAddon.fit());
-  // Keep fitting on container resize & window resize
-  new ResizeObserver(() => fitAddon.fit()).observe(terminalEl);
-  window.addEventListener('resize', () => fitAddon.fit());
-
-  const shellSelect = document.getElementById('shell');
-  const username = 'root';
-  const promptStr = `${username}@localhost:~$ `;
-
-  let input = '';
-  let commandHistory = [];
-  let historyIndex = -1;
-
-  function prompt() {
-    term.write(`\r\n${promptStr}`);
-    input = '';
-    historyIndex = commandHistory.length;
-  }
-
-  function clearLine() {
-    for (let i = 0; i < input.length; i++) term.write('\b \b');
-  }
-
-  function replaceInput(newInput) {
-    clearLine();
-    input = newInput;
-    term.write(input);
-  }
-
-  prompt();
-
-  term.onData(data => {
-    if (data === '\r') { // Enter
-      term.write('\r\n');
-      const command = input.trim();
-
-      if (command.length > 0) commandHistory.push(command);
-      input = '';
-
-      if (command.length === 0) { prompt(); return; }
-
-      const shell = (shellSelect && shellSelect.value) || 'sh';
-
-      fetch(`/terminal`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrf_token
-        },
-        body: JSON.stringify({ command, shell })
-      })
-      .then(r => r.json())
-      .then(data => {
-        term.write((data.output || '').replace(/\n/g, '\r\n'));
-        prompt();
-        fitAddon.fit(); // re-fit in case output wraps
-      })
-      .catch(() => {
-        term.write('Error running command');
-        prompt();
-      });
-
-    } else if (data === '\u007F') { // Backspace
-      if (input.length > 0) {
-        input = input.slice(0, -1);
-        term.write('\b \b');
+    // ── fit helpers ─────────────────────────────────────────────────────────
+    function fitAndReport() {
+      fitAddon.fit();
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'resize', rows: term.rows, cols: term.cols }));
       }
-    } else if (data === '\u001b[A') { // Up
-      if (commandHistory.length > 0 && historyIndex > 0) {
-        historyIndex--;
-        replaceInput(commandHistory[historyIndex]);
-      }
-    } else if (data === '\u001b[B') { // Down
-      if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
-        historyIndex++;
-        replaceInput(commandHistory[historyIndex]);
-      } else if (historyIndex === commandHistory.length - 1) {
-        historyIndex++;
-        replaceInput('');
-      }
-    } else {
-      const sanitized = data.replace(/[\x00-\x1F\x7F]/g, '');
-      input += sanitized;
-      term.write(sanitized);
     }
-  });
-</script>
 
-{% elif terminal_type == 'users' %}
-<script>
-  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+    new ResizeObserver(() => fitAndReport()).observe(terminalEl);
+    window.addEventListener('resize', () => fitAndReport());
 
-  const term = new Terminal({ cursorBlink: true });
-  const fitAddon = new FitAddon.FitAddon();
-  term.loadAddon(fitAddon);
+    // ── status helpers ──────────────────────────────────────────────────────
+    const dot  = document.getElementById('status-dot');
+    const txt  = document.getElementById('status-text');
+    const rBtn = document.getElementById('reconnect-btn');
 
-  const terminalEl = document.getElementById('terminal');
-  term.open(terminalEl);
-
-  // Fit after layout paints
-  queueMicrotask(() => fitAddon.fit());
-  // Keep fitting on container resize & window resize
-  new ResizeObserver(() => fitAddon.fit()).observe(terminalEl);
-  window.addEventListener('resize', () => fitAddon.fit());
-
-  const shellSelect = document.getElementById('shell');
-  const username = 'root';
-  const docker_context = '{{ username }}';
-  const container = '{{ container_name }}';
-  const promptStr = `${username}@${container}:~$ `;
-
-  let input = '';
-  let commandHistory = [];
-  let historyIndex = -1;
-
-  function prompt() {
-    term.write(`\r\n${promptStr}`);
-    input = '';
-    historyIndex = commandHistory.length;
-  }
-
-  function clearLine() {
-    for (let i = 0; i < input.length; i++) term.write('\b \b');
-  }
-
-  function replaceInput(newInput) {
-    clearLine();
-    input = newInput;
-    term.write(input);
-  }
-
-  prompt();
-
-  term.onData(data => {
-    if (data === '\r') { // Enter
-      term.write('\r\n');
-      const command = input.trim();
-
-      if (command.length > 0) commandHistory.push(command);
-      input = '';
-
-      if (command.length === 0) { prompt(); return; }
-
-      const shell = (shellSelect && shellSelect.value) || 'sh';
-
-      fetch(`/terminal/${docker_context}/${container}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrf_token
-        },
-        body: JSON.stringify({ command, shell })
-      })
-      .then(r => r.json())
-      .then(data => {
-        term.write((data.output || '').replace(/\n/g, '\r\n'));
-        prompt();
-        fitAddon.fit(); // re-fit in case output wraps
-      })
-      .catch(() => {
-        term.write('Error running command');
-        prompt();
-      });
-
-    } else if (data === '\u007F') { // Backspace
-      if (input.length > 0) {
-        input = input.slice(0, -1);
-        term.write('\b \b');
-      }
-    } else if (data === '\u001b[A') { // Up
-      if (commandHistory.length > 0 && historyIndex > 0) {
-        historyIndex--;
-        replaceInput(commandHistory[historyIndex]);
-      }
-    } else if (data === '\u001b[B') { // Down
-      if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
-        historyIndex++;
-        replaceInput(commandHistory[historyIndex]);
-      } else if (historyIndex === commandHistory.length - 1) {
-        historyIndex++;
-        replaceInput('');
-      }
-    } else {
-      const sanitized = data.replace(/[\x00-\x1F\x7F]/g, '');
-      input += sanitized;
-      term.write(sanitized);
+    function setStatus(state) {
+      dot.className = 'inline-block w-2.5 h-2.5 rounded-full ' + {
+        connecting: 'bg-yellow-500',
+        open:       'bg-green-500',
+        closed:     'bg-red-500',
+      }[state];
+      txt.textContent = { connecting: 'Connecting…', open: 'Connected', closed: 'Disconnected' }[state];
+      rBtn.style.display = state === 'closed' ? 'inline-flex' : 'none';
     }
-  });
-</script>
-{% endif %}
 
+    // ── WebSocket ───────────────────────────────────────────────────────────
+    let ws = null;
+    let onDataDispose = null;   // track the xterm onData listener so we can remove it on reconnect
 
+    function connectTerminal() {
+      if (ws) { try { ws.close(); } catch (_) {} }
+      if (onDataDispose) { onDataDispose.dispose(); onDataDispose = null; }
 
+      const shell = document.getElementById('shell').value || 'bash';
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      const url   = `${proto}://${location.host}${WS_PATH}`;
 
+      setStatus('connecting');
+      term.reset();
+      term.focus();
+
+      ws = new WebSocket(url);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        // ① fit first so we know the real dimensions
+        fitAddon.fit();
+
+        // ② send init with shell + current terminal size
+        ws.send(JSON.stringify({
+          type:  'init',
+          shell: shell,
+          rows:  term.rows,
+          cols:  term.cols,
+        }));
+
+        setStatus('open');
+        term.focus();
+      };
+
+      ws.onmessage = (evt) => {
+        if (evt.data instanceof ArrayBuffer) {
+          term.write(new Uint8Array(evt.data));
+        } else {
+          term.write(evt.data);
+        }
+      };
+
+      ws.onerror = () => {
+        term.write('\r\n\x1b[31m[WebSocket error]\x1b[0m\r\n');
+      };
+
+      ws.onclose = (evt) => {
+        term.write(`\r\n\x1b[33m[Connection closed${evt.reason ? ': ' + evt.reason : ''}]\x1b[0m\r\n`);
+        setStatus('closed');
+      };
+
+      onDataDispose = term.onData(data => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(data);
+        }
+      });
+    }
+
+    document.getElementById('shell').addEventListener('change', () => connectTerminal());
+
+    queueMicrotask(() => {
+      const shellEl = document.getElementById('shell');
+      if (!shellEl.value) shellEl.value = 'bash';  // pre-select bash
+      connectTerminal();
+    });
+  </script>
 
 {% endblock %}
