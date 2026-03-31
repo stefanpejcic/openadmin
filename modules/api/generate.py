@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.7.49                                                        *
-# * Build Date: 2026-03-31 13:30:20                                       *
+# * Build Date: 2026-03-31 18:13:24                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -104,7 +104,7 @@ def read_existing_file(file_path, protocol, domain, port):
         return ""
 
 
-def get_openpanel_domain():
+def get_domain():
     try:
         result = subprocess.run(["opencli", "domain"], capture_output=True, text=True, check=True)
         domain = result.stdout.strip()
@@ -158,7 +158,7 @@ def main():
     output_file = '/usr/local/admin/modules/api/available_endpoints.txt'
     config_file_path = '/etc/openpanel/openpanel/conf/openpanel.config'
 
-    force_domain = get_openpanel_domain()
+    force_domain = get_domain()
     server_ip = get_server_ip()
     port = get_openadmin_port()
 
