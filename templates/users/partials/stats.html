@@ -144,10 +144,31 @@
 
 
 
+{% if stats is mapping %}
+    {% set cpu = stats.cpu if stats.cpu is defined else {} %}
+    {% set memory = stats.memory if stats.memory is defined else {} %}
 
-{# --- CPU --- #}
-{% set percent_cpu = stats.cpu.usage.pct %}
-{% set total_cpu = stats.cpu.total.pct if stats.cpu.total.pct else 100 %}
+    {% set percent_cpu = cpu.usage.pct if cpu.usage is defined and cpu.usage.pct is defined else 0 %}
+    {% set total_cpu = cpu.total.pct if cpu.total is defined and cpu.total.pct is defined else 100 %}
+    {% set human_cpu_usage = stats.cpu.usage.human if cpu.usage is defined and cpu.usage.human is defined else 0 %}
+    {% set human_cpu_total = stats.cpu.total.human if cpu.total is defined and cpu.total.human is defined else 0 %}
+
+    {% set percent_mem = memory.usage_pct if memory.usage_pct is defined else 0 %}
+    {% set human_memory_usage = stats.memory.used.human if memory.used is defined and memory.used.human is defined else '0B' %}
+    {% set human_memory_total = stats.memory.total.human if memory.total is defined and memory.total.human is defined else '0B' %}
+
+{% else %}
+    {% set percent_cpu = 0 %}
+    {% set total_cpu = 100 %}
+    {% set percent_mem = 0 %}
+    {% set human_cpu_usage = '0 cores' %}
+    {% set human_cpu_total = '0 cores' %}
+    {% set human_memory_usage = '0B' %}
+    {% set human_memory_total = '0B' %}
+
+{% endif %}
+
+
 {% set ratio_cpu = (percent_cpu / total_cpu) * 100 %}
 {% set color_class = 'gray' %}
 {% if percent_cpu >= 90 %} {% set color_class = 'red' %}
@@ -159,7 +180,6 @@
 {% set radius = 29 %}
 {% set circumference = 2 * 3.1416 * radius %}
 {% set offset_cpu = circumference - (ratio_cpu / 100) * circumference %}
-
 
 
 <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
@@ -184,7 +204,7 @@
         </div>
     </div>
     <div class="mt-0 text-left sm:mt-2 sm:text-center">
-        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">{{ stats.cpu.usage.human }} / {{ stats.cpu.total.human }}</p>
+        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">{{ human_cpu_usage }} / {{ human_cpu_total }}</p>
         <p class="text-sm text-gray-500 dark:text-gray-500">CPU usage</p>
     </div>
 </div>
@@ -192,7 +212,7 @@
                            <!-- RAM -->
 
 {# --- RAM --- #}
-{% set percent_mem = stats.memory.usage_pct %}
+
 {% set radius = 29 %}
 {% set circumference = 2 * 3.1416 * radius %}
 {% set offset_mem = circumference - (percent_mem / 100) * circumference %}
@@ -229,7 +249,7 @@
         </div>
     </div>
     <div class="mt-0 text-left sm:mt-2 sm:text-center">
-        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">{{ stats.memory.used.human }} / {{ stats.memory.total.human }}</p>
+        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">{{ human_memory_usage }} / {{ human_memory_total }}</p>
         <p class="text-sm text-gray-500 dark:text-gray-500">Memory usage</p>
     </div>
 </div>
