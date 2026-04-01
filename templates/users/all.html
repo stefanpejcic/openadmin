@@ -499,15 +499,19 @@
 
 <td x-show="columns.usage" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
     <span class="font-medium">
-        <div class="flex items-end gap-x-2.5">
+        <div class="flex items-end gap-x-2.5 justify-end">
 
 
 
-            {% if stat %}
                 {# --- Memory --- #}
-                {% set used_memory = stat.memory.used.bytes %}
-                {% set total_memory = stat.memory.total.bytes %}
-                {% set percent_mem = (stat.memory.usage_pct) if total_memory else 0 %}
+{% set used_memory = stat.memory.used.bytes if stat else 0 %}
+{% set human_used_memory = stat.memory.used.human if stat else '0 B' %}
+
+{% set total_memory = stat.memory.total.bytes if stat else 0 %}
+{% set human_total_memory = stat.memory.total.human if stat else '0 B' %}
+
+{% set percent_mem = stat.memory.usage_pct if stat and stat.memory.total.bytes else 0 %}
+
 
                 {% set color_class = 'gray' %}
                 {% if percent_mem >= 90 %} {% set color_class = 'red' %}
@@ -516,13 +520,15 @@
                 {% elif percent_mem > 0 %} {% set color_class = 'blue' %}
                 {% endif %}
 
-                <div id="tooltip-ram-{{ stat.user }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-                    Memory usage: {{ stat.memory.used.human }} / {{ stat.memory.total.human }}
+                {% set color_class = 'gray' %}
+
+                <div id="tooltip-ram-{{ user[1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+                    Memory usage: {{ human_used_memory }} / {{ human_total_memory }}
                     <div class="tooltip-arrow" data-popper-arrow></div>
                 </div>
 
-                <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=memory&owner={{ stat.user }}">
-                    <div class="relative" data-tooltip-target="tooltip-ram-{{ stat.user }}" role="progressbar" aria-label="Memory usage" aria-valuenow="{{ percent_mem | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_mem | round(0) }}">
+                <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=memory&owner={{ user[1].split('_')[-1] }}">
+                    <div class="relative" data-tooltip-target="tooltip-ram-{{ user[1] }}" role="progressbar" aria-label="Memory usage" aria-valuenow="{{ percent_mem | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_mem | round(0) }}">
                         <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                             <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                             <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent_mem / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -534,7 +540,7 @@
                 </a>
 
                 {# --- CPU --- #}
-                {% set percent_cpu = stat.cpu.usage.pct %}
+                {% set percent_cpu = stat.cpu.usage.pct if stat else 0 %}
                 {% set color_class = 'gray' %}
                 {% if percent_cpu >= 90 %} {% set color_class = 'red' %}
                 {% elif percent_cpu >= 80 %} {% set color_class = 'orange' %}
@@ -542,13 +548,13 @@
                 {% elif percent_cpu > 0 %} {% set color_class = 'blue' %}
                 {% endif %}
 
-                <div id="tooltip-cpu-{{ stat.user }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+                <div id="tooltip-cpu-{{ user[1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
                     CPU usage: {{ percent_cpu }}%
                     <div class="tooltip-arrow" data-popper-arrow></div>
                 </div>
 
-                <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=cpu&owner={{ stat.user }}">
-                    <div class="relative" data-tooltip-target="tooltip-cpu-{{ stat.user }}" role="progressbar" aria-label="CPU usage" aria-valuenow="{{ percent_cpu | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_cpu | round(0) }}">
+                <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=cpu&owner={{ user[1].split('_')[-1] }}">
+                    <div class="relative" data-tooltip-target="tooltip-cpu-{{ user[1] }}" role="progressbar" aria-label="CPU usage" aria-valuenow="{{ percent_cpu | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_cpu | round(0) }}">
                         <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
                             <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
                             <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent_cpu / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
@@ -558,10 +564,6 @@
                         </div>
                     </div>
                 </a>
-
-            {% else %}
-                <span class="text-gray-400 text-xs">No data yet</span>
-            {% endif %}
 
 
             {% if du %}
