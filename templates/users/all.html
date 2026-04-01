@@ -236,24 +236,6 @@
                     <li>
                         <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
                             <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.netio" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Network I/O</span>
-                            </label>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.pids" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">PIDs</span>
-                            </label>
-                        </div>
-                    </li>
-                    <li>
-                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
-                            <label class="inline-flex items-center w-full cursor-pointer">
                                 <input type="checkbox" x-model="columns.date" x-on:change="saveColumns" class="sr-only peer">
                                 <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
                                 <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Created Date</span>
@@ -391,8 +373,6 @@
 
 
                             <th x-show="columns.containers" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Containers</div></th>
-                            <th x-show="columns.netio" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Net I/O</div></th>
-                            <th x-show="columns.pids" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">PIDs</div></th>
 
                             <th x-show="columns.date" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
@@ -521,117 +501,68 @@
     <span class="font-medium">
         <div class="flex items-end gap-x-2.5">
 
-            {% if stat %}
-                {% set mem_usage = stat.stats.MemUsage.split(' / ') %}
-                {% set used_memory = mem_usage[0].replace('MiB', '').strip()|float %}
-                {% set total_memory = mem_usage[1].replace('MiB', '').strip()|float %}
 
-                {% set percent = 0 %}
-                
-                {% if used_memory > 0 and total_memory > 0 %}
-                    {% set percent = (used_memory / total_memory) * 100 %}
+
+            {% if stat %}
+                {# --- Memory --- #}
+                {% set used_memory = stat.memory.used.bytes %}
+                {% set total_memory = stat.memory.total.bytes %}
+                {% set percent_mem = (stat.memory.usage_pct) if total_memory else 0 %}
+
+                {% set color_class = 'gray' %}
+                {% if percent_mem >= 90 %} {% set color_class = 'red' %}
+                {% elif percent_mem >= 80 %} {% set color_class = 'orange' %}
+                {% elif percent_mem >= 60 %} {% set color_class = 'green' %}
+                {% elif percent_mem > 0 %} {% set color_class = 'blue' %}
                 {% endif %}
 
-{% set color_class = 'gray' %}
-{% if percent >= 90 %}
-    {% set color_class = 'red' %}
-{% elif percent >= 80 %}
-    {% set color_class = 'orange' %}
-{% elif percent >= 60 %}
-    {% set color_class = 'green' %}
-{% elif percent > 0 %}
-    {% set color_class = 'blue' %}
-{% endif %}
-
-
-
-<div id="tooltip-ram-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-    Memory usage: {{ stat.stats.MemUsage }}
-    <div class="tooltip-arrow" data-popper-arrow></div>
-</div>
-
-<a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=memory&owner={{ user[1].split('_')[-1] }}">
-
-                <div class="relative" data-tooltip-target="tooltip-ram-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="Memory usage" aria-valuenow="{{ percent | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent | round(0) }}">
-                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
-                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
-                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
-                    </svg>
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="text-[11px] font-semibold">{{ percent | round(0) | int }}</span>
-                    </div>
+                <div id="tooltip-ram-{{ stat.user }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+                    Memory usage: {{ stat.memory.used.human }} / {{ stat.memory.total.human }}
+                    <div class="tooltip-arrow" data-popper-arrow></div>
                 </div>
-</a>
 
-
-{% set percent_cpu = (stat.stats.CPUPerc|replace(" ", "")|replace("%", "")|float / user[15]|float) if (user[15] != 0 and user[15] != '0') else (stat.stats.CPUPerc|replace(" ", "")|replace("%", "")|float) %}
-{% set percent_total = (100 * user[15]|float) if (user[15] != 0 and user[15] != '0') else 100 %}
-
-
-{% set color_class = 'gray' %}
-{% if percent_cpu >= 90 %}
-    {% set color_class = 'red' %}
-{% elif percent_cpu >= 80 %}
-    {% set color_class = 'orange' %}
-{% elif percent_cpu >= 60 %}
-    {% set color_class = 'green' %}
-{% elif percent_cpu > 0 %}
-    {% set color_class = 'blue' %}
-{% endif %}
-
-
-
-
-<div id="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-    CPU usage: {{ stat.stats.CPUPerc|replace(" ", "") }} / {{ percent_total }}%
-    <div class="tooltip-arrow" data-popper-arrow></div>
-</div>
-                                <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=cpu&owner={{ user[1].split('_')[-1] }}">
-
-                <div class="relative" data-tooltip-target="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="CPU usage" aria-valuenow="{{ percent_cpu | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_cpu | round(0) }}">
-                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
-                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
-                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent_cpu / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
-                    </svg>
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="text-[11px] font-semibold">{{ percent_cpu | round(0) | int }}
-</span>
+                <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=memory&owner={{ stat.user }}">
+                    <div class="relative" data-tooltip-target="tooltip-ram-{{ stat.user }}" role="progressbar" aria-label="Memory usage" aria-valuenow="{{ percent_mem | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_mem | round(0) }}">
+                        <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
+                            <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                            <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent_mem / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-[11px] font-semibold">{{ percent_mem | round(0) }}</span>
+                        </div>
                     </div>
+                </a>
+
+                {# --- CPU --- #}
+                {% set percent_cpu = stat.cpu.usage.pct %}
+                {% set color_class = 'gray' %}
+                {% if percent_cpu >= 90 %} {% set color_class = 'red' %}
+                {% elif percent_cpu >= 80 %} {% set color_class = 'orange' %}
+                {% elif percent_cpu >= 60 %} {% set color_class = 'green' %}
+                {% elif percent_cpu > 0 %} {% set color_class = 'blue' %}
+                {% endif %}
+
+                <div id="tooltip-cpu-{{ stat.user }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+                    CPU usage: {{ percent_cpu }}%
+                    <div class="tooltip-arrow" data-popper-arrow></div>
                 </div>
-            </a>
+
+                <a class="hover:text-gray-900 dark:hover:text-gray-50" href="/server/processes?sort=cpu&owner={{ stat.user }}">
+                    <div class="relative" data-tooltip-target="tooltip-cpu-{{ stat.user }}" role="progressbar" aria-label="CPU usage" aria-valuenow="{{ percent_cpu | round(0) }}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{ percent_cpu | round(0) }}">
+                        <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
+                            <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                            <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="{{ 78.53981633974483 * (1 - percent_cpu / 100) }}" fill="transparent" stroke="" stroke-linecap="round" class="stroke-{{ color_class }}-500 dark:stroke-{{ color_class }}-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-[11px] font-semibold">{{ percent_cpu | round(0) }}</span>
+                        </div>
+                    </div>
+                </a>
 
             {% else %}
-
-<div id="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-    No CPU usage data yet - no containers started.
-    <div class="tooltip-arrow" data-popper-arrow></div>
-</div>
-
-                <div class="relative" data-tooltip-target="tooltip-cpu-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
-                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
-                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
-                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="78.53981633974483" fill="transparent" stroke="" stroke-linecap="round" class="stroke-blue-500 dark:stroke-blue-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
-                    </svg>
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="text-[11px] font-semibold">0</span>
-                    </div>
-                </div>
-
-<div id="tooltip-ram-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-    No Memory usage data yet - no containers started.
-    <div class="tooltip-arrow" data-popper-arrow></div>
-</div>
-
-                <div class="relative" data-tooltip-target="tooltip-ram-{{ user[1].split('_')[-1] }}" role="progressbar" aria-label="progress bar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="0">
-                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
-                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" stroke="" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-100 dark:stroke-gray-500/30"></circle>
-                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.53981633974483 78.53981633974483" stroke-dashoffset="78.53981633974483" fill="transparent" stroke="" stroke-linecap="round" class="stroke-blue-500 dark:stroke-blue-500 transform-gpu transition-all duration-300 ease-in-out"></circle>
-                    </svg>
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="text-[11px] font-semibold">0</span>
-                    </div>
-                </div>
+                <span class="text-gray-400 text-xs">No data yet</span>
             {% endif %}
+
 
             {% if du %}
                 {% set percent_disk = ((du.disk_used / du.disk_hard) * 100) if du.disk_hard != 0 else 0 %}
@@ -724,22 +655,9 @@
 
 <td x-show="columns.containers" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">
     <a href="/users/{{ user[1] }}#services" class="hover:text-gray-900 dark:hover:text-gray-50 flex gap-1 items-center">
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-box" viewBox="0 0 16 16"> <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/> </svg> {% if stat %}{{ stat.stats.Container }}{% else %}0{% endif %}
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-box" viewBox="0 0 16 16"> <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5 8 5.961 14.154 3.5zM15 4.239l-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464z"/> </svg> 0
     </a>
 </td>
-
-<td x-show="columns.netio" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">
-<spa class="flex gap-1 items-center"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-reception-4" viewBox="0 0 16 16"> <path d="M0 11.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5zm4-3a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5zm4-3a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5zm4-3a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5z"/> </svg> {% if stat %}{{ stat.stats.NetIO }}{% else %}0 / 0{% endif %}</span>
-</td>
-
-<td x-show="columns.pids" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">
-<a class="hover:text-gray-900 dark:hover:text-gray-50 flex gap-1 items-center" href="/server/processes?sort=owner&owner={{ user[1].split('_')[-1] }}">
-<svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-list-task" viewBox="0 0 16 16"> <path fill-rule="evenodd" d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5zM3 3H2v1h1z"/> <path d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1z"/> <path fill-rule="evenodd" d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5zM2 7h1v1H2zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm1 .5H2v1h1z"/> </svg> {% if stat %}{{ stat.stats.PIDs }}{% else %}0{% endif %}
-</a>
-</td>   
-
-
-
 
        
                             <td x-show="columns.date" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums select-text">{{ user[9].strftime('%d.%m.%Y %H:%M') }}</td>
@@ -890,8 +808,6 @@ function userTable() {
             usage: true,
             context: false,
             containers: false,
-            netio: false,
-            pids: false,
             date: true,
             owner: false,
             login: true,
