@@ -37,7 +37,53 @@
 
     <style>
         [x-cloak] { display: none !important;}
-    </style>    
+    </style>
+
+
+<script>
+// progress cursor while working
+(function() {
+  let activeRequests = 0;
+
+  function updateCursor() {
+    document.body.style.cursor = activeRequests > 0 ? "progress" : "default";
+  }
+
+  // --- Wrap fetch ---
+  const originalFetch = window.fetch;
+  window.fetch = async function(...args) {
+    activeRequests++;
+    updateCursor();
+    try {
+      const response = await originalFetch.apply(this, args);
+      return response;
+    } finally {
+      activeRequests--;
+      updateCursor();
+    }
+  };
+
+  // --- Wrap XMLHttpRequest ---
+  const OriginalXHR = window.XMLHttpRequest;
+  function CustomXHR() {
+    const xhr = new OriginalXHR();
+
+    xhr.addEventListener("loadstart", () => {
+      activeRequests++;
+      updateCursor();
+    });
+
+    xhr.addEventListener("loadend", () => {
+      activeRequests--;
+      updateCursor();
+    });
+
+    return xhr;
+  }
+  window.XMLHttpRequest = CustomXHR;
+})();
+</script>
+
 </head>
 
 <body 
