@@ -10,22 +10,17 @@
                 <h1 class="mb-1 text-xl font-bold">SSH Access</h1>
             </div>
             <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-
-
-<div class="flex text-center  sm:text-start items-center gap-2"><dt class="text-sm text-gray-500 dark:text-gray-500">SSH service status:</dt><div class="flex gap-0.5">
-	{% if status == 'active' %}
-	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
-	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
-	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
-	</div><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">active </p></div>
-	{% else %}
-	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
-	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
-	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
-	</div><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{ status }} </p></div>
-	{% endif %}
+                <div class="flex text-center  sm:text-start items-center gap-2">
+                    <dt class="text-sm text-gray-500 dark:text-gray-500">SSH service status:</dt>
+                    <div class="flex gap-0.5">
+                        {% for _ in range(3) %}
+                        <div class="h-3.5 w-1 rounded-sm {{ 'bg-emerald-500 dark:bg-emerald-500' if status == 'active' else 'bg-gray-500 dark:bg-gray-500' }}"></div>
+                        {% endfor %}
+                    </div>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{ status }} </p>
+                </div>
+                </div>
             </div>
-        </div>
     </header>
 </div>
 
@@ -36,49 +31,26 @@
 
 
 			<li class="flex">
-				<a 
-					@click="tab = 'basic'"
-					:class="tab === 'basic' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
-					class="group relative flex shrink-0 select-none items-center justify-center"
-					role="tab">
-						<span
-							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
-						>
-							Basic
-						</span>
+				<a @click="tab = 'basic'" :class="tab === 'basic' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Basic</span>
 				</a>
 			</li>
 
 
 			{% if pubkey_auth == 'yes' %}
 				<li class="flex">
-					<button 
-						@click="tab = 'keys'"
-						:class="tab === 'keys' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
-						class="group relative flex shrink-0 select-none items-center justify-center"
-						role="tab">
+					<button @click="tab = 'keys'" :class="tab === 'keys' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
 						<span
-							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
-						>
-							Authorized Keys
-						</span>
+							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Authorized Keys</span>
 					</button>
 				</li>
 			{% endif %}
 
 				<li class="flex">
-				<button 
-					@click="tab = 'advanced'; fetchFullConfig();"
-					:class="tab === 'advanced' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
-					class="group relative flex shrink-0 select-none items-center justify-center"
-					role="tab">
-	<span
-							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
-						>
-							Advanced
-						</span>            </button>                    
+				<button  @click="tab = 'advanced'; fetchFullConfig();" :class="tab === 'advanced' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+                    <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Advanced</span>
+                </button>                    
 				</li>
-
 			</ul>
 		</div>
 	</nav>
@@ -165,10 +137,13 @@
                 {% if keys %}
                     {% for key in keys %}
                     <li class="bg-gray-100 dark:bg-gray-400/10 p-2 rounded">
-                        <pre class="whitespace-pre-wrap break-words">{{ key }}</pre>
+                        {% if key.comment %}
+                            <p class="text-xs text-gray-500">{{ key.comment }}</p>
+                        {% endif %}
+                        <pre class="whitespace-pre-wrap break-words">{{ key.key }}</pre>
                         <form method="POST" class="inline">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="key_to_remove" value="{{ key }}">
+                            <input type="hidden" name="key_to_remove" value="{{ key.key }}">
                             <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Remove</button>
                         </form>
                     </li>
