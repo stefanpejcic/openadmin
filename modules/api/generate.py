@@ -4,7 +4,7 @@
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
 # * Version: 1.7.53                                                        *
-# * Build Date: 2026-04-15 13:17:49                                       *
+# * Build Date: 2026-04-15 16:21:06                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -38,6 +38,7 @@ import argparse
 import os
 import re
 import subprocess
+from app import public_ip
 
 def extract_api_info(file_path):
     with open(file_path, 'r') as file:
@@ -129,26 +130,6 @@ def get_openadmin_port():
         return 2087
 
 
-
-def get_server_ip():
-
-    try:
-        result = subprocess.run(['curl', '--silent', '--max-time', '2', '-4', 'https://ip.openpanel.com'], capture_output=True, text=True, timeout=2)
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-        
-        result = subprocess.run(['wget', '--timeout=2', '-qO-', 'https://ip.openpanel.com'], capture_output=True, text=True, timeout=2)
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-
-        result = subprocess.run(['curl', '--silent', '--max-time', '2', '-4', 'https://ifconfig.me'], capture_output=True, text=True, timeout=2)
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-
-        return "127.0.0.1"
-    except Exception as e:
-        return "127.0.0.1"
-
 def main():
     parser = argparse.ArgumentParser(description="Process API endpoint information.")
     parser.add_argument('--save', action='store_true', help='Save the output to available_endpoints.txt')
@@ -159,7 +140,7 @@ def main():
     config_file_path = '/etc/openpanel/openpanel/conf/openpanel.config'
 
     force_domain = get_domain()
-    server_ip = get_server_ip()
+    server_ip = public_ip
     port = get_openadmin_port()
 
     if force_domain:
