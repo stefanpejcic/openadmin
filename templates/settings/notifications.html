@@ -170,7 +170,7 @@
     </div>
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-        {% for key, label in {'load': 'Load Avg.', 'cpu': 'CPU', 'ram': 'RAM', 'du': 'Disk Usage', 'swap': 'SWAP'}.items() %}
+        {% for key, label in {'load': 'Load Avg.', 'cpu': 'CPU', 'ram': 'Memory', 'du': 'Disk Usage', 'swap': 'SWAP'}.items() %}
 
             <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{ key }}">{{ label }}</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center">
@@ -187,6 +187,7 @@
 </div>
 
 
+<div x-data="{ attackEnabled: {{ 'true' if config_data['DEFAULT']['attack'] == 'yes' else 'false' }} }">
 
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
@@ -200,8 +201,8 @@
 
         {% for key, data in {
             'reboot': {'label': 'Server reboot', 'tooltip': 'Triggered when the server is restarted.'},
-            'attack': {'label': 'Website is under attack', 'tooltip': 'Fires when suspicious traffic or DDoS attacks are detected.'},
-            'limit': {'label': 'User reaches plan limits', 'tooltip': 'Fires when a user reaches storage, or other plan limits.'},
+            'attack': {'label': 'Unusual traffic or SYN flood', 'tooltip': 'Fires when suspicious traffic or DDoS attacks are detected.'},
+            'limit': {'label': 'Out of Memory (OOM) errors', 'tooltip': 'Check journal logs for system services and user processes killed by OOM in the last 24 hours.'},
                         'dns': {'label': 'DNS issue detected', 'tooltip': 'Triggered when the panel domain or nameservers are misconfigured or not resolving to this server. Disable if using external nameservers or Cloudflare proxy.'},
 
             'login': {'label': 'OpenAdmin login from new IP', 'tooltip': 'Triggered when the OpenAdmin panel is accessed from an unrecognized IP address.'},
@@ -211,8 +212,8 @@
 
             <div class="col-span-full sm:col-span-3">
                 <label for="{{ key }}" class="text-gray-900 dark:text-gray-50 font-medium flex justify-between items-center" x-data="{tooltip: false}">
-                    <span><input type="checkbox" name="{{ key }}" id="{{ key }}" class="toggle-checkbox" {% if config_data['DEFAULT'][key] == 'yes' %}checked{% endif %}> {{ data.label }}</span>
-                    
+                    <span><input type="checkbox" name="{{ key }}" id="{{ key }}" class="toggle-checkbox" {% if config_data['DEFAULT'][key] == 'yes' %}checked{% endif %} {% if key == 'attack' %}@change="attackEnabled = $event.target.checked"{% endif %}> {{ data.label }}</span>
+                   
                     <!-- Tooltip icon -->
                     <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
@@ -230,6 +231,44 @@
 
         </div>
     </div>
+</div>
+
+
+<div x-show="attackEnabled" x-cloak>
+
+    <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500">
+        <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Website traffic</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when unusual traffic / attacks are detected.</p>
+        </div>
+
+        <div class="md:col-span-2">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                <!-- max_total_conn -->
+                <div>
+                    <label class="text-sm font-medium text-gray-900 dark:text-gray-50">Max total connections</label>
+                    <input type="number" name="max_total_conn" min="1" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value="{{ config_data['HTTP']['max_total_conn'] if config_data['HTTP'].get('max_total_conn') else 5000 }}">
+                    <p class="text-xs text-gray-500 mt-1">Receive a notification when concurrent connections on ports 80|443 reach this threshold.</p>
+                </div>
+
+                <!-- max_conn_per_ip -->
+                <div>
+                    <label class="text-sm font-medium text-gray-900 dark:text-gray-50">Max connections per IP</label>
+                    <input type="number" name="max_conn_per_ip" min="1" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value="{{ config_data['HTTP']['max_conn_per_ip'] if config_data['HTTP'].get('max_conn_per_ip') else 200 }}">
+                    <p class="text-xs text-gray-500 mt-1">Receive a notification when concurrent connections from a single IP reach this threshold.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
 </div>
 
 

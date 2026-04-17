@@ -1,5 +1,4 @@
 
-
 <div style="background: var(--color-background-secondary); padding: 1.5rem; border-radius: var(--border-radius-lg);">
   <div style="background: var(--color-background-primary); border: 1px solid #eaeaea; border-radius: 5px; margin: 0 auto; max-width: 600px; padding: 40px;">
 
@@ -32,19 +31,120 @@
         Password: <code style="color: rgb(189,16,224); font-family: Menlo, Monaco, 'Lucida Console', monospace; font-size: 0.9em;">{{ password }}</code>
       </p>
 
-    {% elif 'High CPU Usage!' in title %}
-      {% set message_parts = message.split("| Top Processes:") %}
+    {% elif 'cpu usage' in title.lower() %}
+      {% set message_parts = message.split("|", 1) %}
       {% set percentage_cpu = message_parts[0]|trim %}
+  
+      {% set percentage_num = percentage_cpu.split(':')[1].replace('%', '').strip() | int %}
+      {% if percentage_num < 80 %}{% set color = "#28a745" %}{% elif percentage_num < 90 %}{% set color = "#ff6c2c" %}{% else %}{% set color = "#dc3545" %}{% endif %}
+      {% set white_num = 100 - percentage_num %}
+
       {% set cpu_process_list = message_parts[1]|trim %}
 
       <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 12px;">
-        Current CPU usage: <b>{{ percentage_cpu.split(':')[1].strip() }}</b>
+        Current CPU usage: <b>{{ percentage_num }}%</b>
       </p>
+
+      <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 12px;">
+        <table style="border:2px solid #293a4a;margin:1px;padding:0" cellpadding="0" cellspacing="0" width="100%">
+            <tbody>
+              <tr>
+                <td style="background-color:{{color}};color:white" align="center" width="{{percentage_num}}%">{{percentage_num}}%</td>
+                <td style="background-color:#ffffff" width="{{white_num}}%"></td>
+              </tr>
+            </tbody>
+        </table>
+      </p>
+
       <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 8px;">
         Processes with the highest CPU usage:
       </p>
       <pre style="width: 100%; box-sizing: border-box; color: #fcfdfe; background: #182433; padding: 1rem; font-size: 85.714285%; overflow-x: auto; margin: 0;">{{ cpu_process_list|replace('\\n', '\n')|safe }}</pre>
+  {% elif 'memory usage' in title.lower() %}
+    {% set message_parts = message.split("|", 1) %}
+    {% set mem_ratio = message_parts[0]|trim %}
+    {% set mem_process_list = message_parts[1]|trim %}
 
+    {# Extract percentage from "(15%)" #}
+    {% set percentage_mem = mem_ratio.split('(')[1].replace('%)','').strip() | int %}
+
+    {% if percentage_mem < 80 %}
+      {% set color = "#28a745" %}
+    {% elif percentage_mem < 90 %}
+      {% set color = "#ff6c2c" %}
+    {% else %}
+      {% set color = "#dc3545" %}
+    {% endif %}
+
+    {% set white_num = 100 - percentage_mem %}
+
+    <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 12px;">
+      {{ mem_ratio }}
+    </p>
+
+    <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 12px;">
+      <table style="border:2px solid #293a4a;margin:1px;padding:0" cellpadding="0" cellspacing="0" width="100%">
+        <tbody>
+          <tr>
+            <td style="background-color:{{color}};color:white" align="center" width="{{percentage_mem}}%">
+              {{ percentage_mem }}%
+            </td>
+            <td style="background-color:#ffffff" width="{{white_num}}%"></td>
+          </tr>
+        </tbody>
+      </table>
+    </p>
+
+    <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 8px;">
+      Processes with the highest Memory usage:
+    </p>
+
+    <pre style="width: 100%; box-sizing: border-box; color: #fcfdfe; background: #182433; padding: 1rem; font-size: 85.714285%; overflow-x: auto; margin: 0;">
+      {{ mem_process_list|replace('\\n', '\n')|safe }}
+    </pre>
+  {% elif 'disk space' in title.lower() %}
+    {% set message_parts = message.split(" | ") %}
+    {% set disk_usage = message_parts[0]|trim %}
+    {% set partitions_part = message_parts[1]|trim %}
+    {% set partitions = partitions_part.split(':')[1].strip() %}
+
+    {# Extract percentage #}
+    {% set percentage_disk = disk_usage.split(':')[1].replace('%','').strip() | int %}
+
+    {% if percentage_disk < 80 %}
+      {% set color = "#28a745" %}
+    {% elif percentage_disk < 90 %}
+      {% set color = "#ff6c2c" %}
+    {% else %}
+      {% set color = "#dc3545" %}
+    {% endif %}
+
+    {% set white_num = 100 - percentage_disk %}
+
+    <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 12px;">
+      Current Disk usage: <b>{{ percentage_disk }}%</b>
+    </p>
+
+    <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 12px;">
+      <table style="border:2px solid #293a4a;margin:1px;padding:0" cellpadding="0" cellspacing="0" width="100%">
+        <tbody>
+          <tr>
+            <td style="background-color:{{color}};color:white" align="center" width="{{percentage_disk}}%">
+              {{ percentage_disk }}%
+            </td>
+            <td style="background-color:#ffffff" width="{{white_num}}%"></td>
+          </tr>
+        </tbody>
+      </table>
+    </p>
+
+    <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0 0 8px;">
+      Recorded disk usage by partition:
+    </p>
+
+    <pre style="width: 100%; box-sizing: border-box; color: #fcfdfe; background: #182433; padding: 1rem; font-size: 85.714285%; overflow-x: auto; margin: 0;">
+      {{ partitions|replace('\\n', '\n')|safe }}
+    </pre>
     {% else %}
       <p style="color: var(--color-text-primary); font-size: 14px; line-height: 24px; margin: 0;">
         {{ message }}
