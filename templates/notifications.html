@@ -56,12 +56,7 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="command" value="delete_all">
 
-                        <button
-                            type="button"
-                            @click="if(confirm){ $el.closest('form').submit() } else { confirm=true; setTimeout(()=>confirm=false,3000) }"
-                            :class="confirm ? 'bg-red-600 hover:bg-red-700' : 'bg-black hover:bg-gray-800'"
-                            class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black text-white sm:mt-0"
-                        >
+                        <button type="button" @click="if(confirm){ $el.closest('form').submit() } else { confirm=true; setTimeout(()=>confirm=false,3000) }" :class="confirm ? 'bg-red-600 hover:bg-red-700' : 'bg-black hover:bg-gray-800'" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black text-white sm:mt-0">
                             <span x-text="confirm ? 'Click to confirm' : 'Delete All'"></span>
                         </button>
                 </form>
@@ -122,14 +117,21 @@
   {% set message_with_links = message | replace('\n', '<br>') %}
 
 {% if message.startswith('Used RAM:') %}
-    {% set parts = message.split(',') %}
-    {% set used_ram = (parts[0].split(':')[1].strip().split(' ')[0]) if parts|length > 0 and ':' in parts[0] else 'N/A' %}
-    {% set total_ram = (parts[1].split(':')[1].strip().split(' ')[0]) if parts|length > 1 and ':' in parts[1] else 'N/A' %}
-    {% set usage_percent = (parts[2].split(':')[1].strip().replace('%','')) if parts|length > 2 and ':' in parts[2] else '0' %}
+    {% set parts = message.split('|') %}
+    {% set ratio = parts[0].strip() %}
+    {% set process_lines = parts[1].strip() if parts|length > 1 else '' %}
 
+    {% set ram_part = ratio.split(':')[1].strip() if ':' in ratio else '' %}
+
+    {% set ram_split = ram_part.split('/') %}
+
+    {% set used_ram = ram_split[0].strip() if ram_split|length > 0 else 'N/A' %}
+    {% set total_ram = ram_split[1].split('(')[0].strip() if ram_split|length > 1 else 'N/A' %}
+
+    {% set usage_percent = ram_part.split('(')[1].replace('%)','').strip() if '(' in ram_part else '0' %}
     <div>
         <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
-            <span>{{ usage_percent }}%</span><span>{{ used_ram }} of {{ total_ram }} MB</span>
+            <span>{{ usage_percent }}%</span><span>{{ used_ram }} of {{ total_ram }} </span>
         </p>
         <div class="flex w-full items-center mt-1" role="progressbar" aria-label="Progress bar" aria-valuenow="{{ usage_percent }}%" aria-valuemax="100">
             <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
@@ -137,6 +139,17 @@
             </div>
         </div>
     </div>
+
+    {% if process_lines %}
+    <div x-data="{ open: false }" class="mt-4">
+        <p class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+            <span></span>
+            <a href="#" @click.prevent="open = !open" x-text="open ? 'Hide Processes' : 'Display Processes'" class="text-blue-600 underline"></a>
+        </p>
+        <pre class="text-xs mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-auto" x-show="open" x-transition>{{ process_lines.replace('\\n', '\n') }}</pre>
+    </div>
+    {% endif %}
+
 {% elif message.startswith('CPU:') %}
     {% set usage_line = message.split('|')[0] %}
     {% set usage_percent = (usage_line.split(':')[1].strip().replace('%','')) if ':' in usage_line else '0' %}
@@ -160,9 +173,69 @@
             <span></span>
             <a href="#" @click.prevent="open = !open" x-text="open ? 'Hide Processes' : 'Display Processes'" class="text-blue-600 underline"></a>
         </p>
-        <pre class="text-xs mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-auto" x-show="open" x-transition>{{ process_lines.replace('|', '\n') }}</pre>
+        <pre class="text-xs mt-2 bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-auto" x-show="open" x-transition>{{ process_lines.replace('\\n', '\n') }}</pre>
     </div>
     {% endif %}
+
+
+
+{% elif 'killed by OOM' in message %}
+    {% set segments = message.split(' | ') %}
+
+    <div x-cloak x-data="{ open: false }">
+        <p class="text-sm text-gray-500 dark:text-gray-500 flex items-center justify-between">
+            <span>OOM kills detected</span>
+            <a href="#" @click.prevent="open = !open" x-text="open ? 'Hide details' : 'Show details'" class="text-blue-600 underline"></a>
+        </p>
+
+        <div x-show="open" x-transition class="mt-3 space-y-2">
+
+            {% set sys_segs = [] %}
+            {% for seg in segments %}
+                {% set s = seg.strip() %}
+                {% if s and (s[0].isdigit() or s.startswith('20')) %}
+                    {% set _ = sys_segs.append(s) %}
+                {% endif %}
+            {% endfor %}
+
+            {% if sys_segs %}
+            <div class="bg-gray-50 p-3 dark:bg-gray-800/50">
+                <p class="text-xs font-semibold text-red-700 dark:text-red-400 mb-2">System services</p>
+                {% for entry in sys_segs %}
+                <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all mb-1">{{ entry }}</pre>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% set usernames = [] %}
+            {% for seg in segments %}
+                {% set s = seg.strip() %}
+                {% if s and not s[0].isdigit() and ':' in s %}
+                    {% set uname = s.split(':')[0].strip() %}
+                    {% if uname not in usernames %}
+                        {% set _ = usernames.append(uname) %}
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% for uname in usernames %}
+            <div class="bg-gray-50 p-3 dark:bg-gray-800/50">
+                <p class="text-xs font-semibold mb-2">User processes: {{ uname }}</p>
+                {% for seg in segments %}
+                    {% set s = seg.strip() %}
+                    {% if s.startswith(uname ~ ':') %}
+                        {% set entry = s[uname|length + 1:].strip() %}
+                        <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all mb-1">{{ entry }}</pre>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+
+
+    
 {% elif 'disk usage:' in message.lower() %}
     {% set message_parts = message.split("| Partitions:") %}
     {% set before_disk = message_parts[0]|trim %}
@@ -226,9 +299,7 @@
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                                     <div class="relative inline-block">
-                                        <a
-                                            title="Click to Delete notification"
-                                            style="cursor:pointer;"
+                                        <a title="Click to Delete notification" style="cursor:pointer;"
                                             @click.prevent="
                                                 if (confirm) {
                                                     $el.closest('form').submit()
@@ -237,35 +308,12 @@
                                                     setTimeout(() => confirm = false, 3000)
                                                 }
                                             "
-                                            :class="confirm ? 'text-red-600' : ''"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg"
-                                                class="icon"
-                                                width="24"
-                                                height="24"
-                                                viewBox="0 0 24 24"
-                                                stroke-width="2"
-                                                stroke="currentColor"
-                                                fill="none"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round">
-                                                <path stroke="none" d="M0 0h24v24H0z"/>
-                                                <path d="M4 7h16"/>
-                                                <path d="M10 11v6"/>
-                                                <path d="M14 11v6"/>
-                                                <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/>
-                                                <path d="M9 7v-3h6v3"/>
-                                            </svg>
+                                            :class="confirm ? 'text-red-600' : ''">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"> <path stroke="none" d="M0 0h24v24H0z"/> <path d="M4 7h16"/> <path d="M10 11v6"/> <path d="M14 11v6"/> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/> <path d="M9 7v-3h6v3"/> </svg>
                                         </a>
 
                                         <!-- Tooltip -->
-                                        <div
-                                            x-show="confirm"
-                                            x-transition
-                                    class="absolute top-1/2 -translate-y-1/2 -left-28 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap pointer-events-none"
-                                        >
-                                            Confirm
-                                        </div>
+                                        <div x-show="confirm" x-transition class="absolute top-1/2 -translate-y-1/2 -left-28 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap pointer-events-none">Confirm</div>
                                     </div>
                                 </form>
 
