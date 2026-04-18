@@ -5,7 +5,7 @@
 
 <form method="post" id="general_form" action="">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<div x-data="{ searchQuery: '' }">
+<div>
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
@@ -40,49 +40,22 @@
 
 <div class="col-span-full">
 
-  <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="first-name">Both panels are accessible on:</label>
   <div class="relative w-full mt-2">
     
-                <div x-data="{ selectedOption: '{{ 'domain_name' if force_domain else 'ip_address' }}', forceDomainContent: '{{ force_domain if force_domain else '' }}'}" class="row form-selectgroup form-selectgroup-boxes d-flex">
 
-<div x-data="{ selectedOption: '{% if force_domain %}domain_name{% elif not force_domain %}ip_address{% endif %}' }" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
   
-  <button type="button" role="radio" :aria-checked="selectedOption === 'domain_name' ? 'true' : 'false'" :data-state="selectedOption === 'domain_name' ? 'checked' : ''" value="domain_name" class="group relative w-full rounded border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 data-[disabled]:border-gray-100 data-[disabled]:dark:border-gray-800 data-[disabled]:bg-gray-50 data-[disabled]:shadow-none data-[disabled]:dark:bg-gray-900 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 flex items-start justify-between"
-        tabindex="0" @click="selectedOption = 'domain_name'" aria-checked="true" data-state="checked" id="">
-        <div x-show="'{% if force_domain %}domain_name{% endif %}' === 'domain_name'" class="absolute -top-3 flex right-20"><span class="inline-flex items-center rounded-full bg-gray-300 text-black text-xs font-semibold py-1 px-3">Current Setting</span>
-        </div>
-
         <div class="flex w-full flex-col justify-between"><div>
 
-            <span class="flex">{{ macros.tooltip('domain_name', 'Domain name', 'Set a custom domain on which OpenPanel and OpenAdmin will be accessible with https://DOMAIN:PORT/', required=False) }}</span>
+            <span class="flex">{{ macros.tooltip('domain_name', 'Hostname', 'Set a custom domain or IP address on which OpenPanel and OpenAdmin will be accessible with https://DOMAIN_OR_IP:PORT/', required=True) }}</span>
 
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-500"><input type="text" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="force_domain" x-bind:value="forceDomainContent" placeholder="srv.example.net" {% if force_domain and force_domain is not none %} value="{{ force_domain }}" {% endif %}></p>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-500"><input type="text" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="force_domain" placeholder="srv.example.net" {% if force_domain %} value="{{ force_domain }}" {% endif %}></p>
         
-        </div><div class="mt-4"><p class="text-xs text-gray-500">Make sure to point the domain's A record to the server's IP address in order to generate an SSL certificate and use HTTPS. Otherwise, the IP address and HTTP will be used instead.</p></div></div><div class="relative flex size-4 shrink-0 appearance-none items-center justify-center rounded-full border shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 group-data-[state=checked]:border-0 group-data-[state=checked]:border-transparent group-data-[state=checked]:bg-blue-500 group-data-[disabled]:border-gray-300 group-data-[disabled]:bg-gray-100 group-data-[disabled]:text-gray-400 group-data-[disabled]:dark:border-gray-700 group-data-[disabled]:dark:bg-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"><span x-show="selectedOption === '1'" class="flex items-center justify-center"><div class="size size-1.5 shrink-0 rounded-full bg-white group-data-[disabled]:bg-gray-400 group-data-[disabled]:dark:bg-gray-500"></div></span></div></button>
-
-    <input type="radio" value="1" aria-hidden="true" style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 213.328px; height: 146px;" tabindex="-1" id="customDomain" value="domain_name" x-model="selectedOption" :checked="selectedOption === 'domain_name'">
-
-    <button type="button" role="radio" :aria-checked="selectedOption === 'ip_address' ? 'true' : 'false'" :data-state="selectedOption === 'ip_address' ? 'checked' : ''" value="ip_address" class="group relative w-full rounded border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 data-[disabled]:border-gray-100 data-[disabled]:dark:border-gray-800 data-[disabled]:bg-gray-50 data-[disabled]:shadow-none data-[disabled]:dark:bg-gray-900 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 flex items-start justify-between"
-        tabindex="0" @click="selectedOption = 'ip_address'; forceDomainContent = ''" aria-checked="false" data-state="" id="">
-
-        <div x-show="'{% if not force_domain %}ip_address{% endif %}' === 'ip_address'" class="absolute -top-3 flex right-20"><span class="inline-flex items-center rounded-full bg-gray-300 text-black text-xs font-semibold py-1 px-3">Current Setting</span>
-        </div>
-        <div class="flex w-full flex-col justify-between">
-            <div>
-            <span class="flex">{{ macros.tooltip('ip_address', 'IP address', 'Select IP address to make OpenPanel and OpenAdmin accessible via http://IP_ADDRESS:PORT/', required=False) }}</span>
-
-
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-500"><input type="text" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="force_domain_is_empty" value="{{ public_ip }}" disabled=""></p>
-            </div>
-        </div>
-        <div class="relative flex size-4 shrink-0 appearance-none items-center justify-center rounded-full border shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 group-data-[state=checked]:border-0 group-data-[state=checked]:border-transparent group-data-[state=checked]:bg-blue-500 group-data-[disabled]:border-gray-300 group-data-[disabled]:bg-gray-100 group-data-[disabled]:text-gray-400 group-data-[disabled]:dark:border-gray-700 group-data-[disabled]:dark:bg-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"><span x-show="selectedOption === 'ip_address'" class="flex items-center justify-center" style="display: none;"><div class="size size-1.5 shrink-0 rounded-full bg-white group-data-[disabled]:bg-gray-400 group-data-[disabled]:dark:bg-gray-500"></div></span></div>
-        </button>
-
-    <input type="radio" value="2" aria-hidden="true" style="transform: translateX(-100%); position: absolute; pointer-events: none; opacity: 0; margin: 0px; width: 213.328px; height: 146px;" tabindex="-1" name="form-domain-name-not-set-use-shared-ip" value="ip_address" x-model="selectedOption" :checked="selectedOption === 'ip_address'"></div>
-
+        </div></div>
                 </div>
     
-    </div></div>
+    </div>
+</div>
 
 
         </div>
