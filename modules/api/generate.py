@@ -3,8 +3,8 @@
 # *                                                                       *
 # * OpenAdmin                                                             *
 # * Copyright (c) OpenPanel. All Rights Reserved.                         *
-# * Version: 1.7.55                                                        *
-# * Build Date: 2026-04-18 16:23:04                                       *
+# * Version: 1.7.56                                                        *
+# * Build Date: 2026-04-29 14:08:22                                       *
 # *                                                                       *
 # *************************************************************************
 # *                                                                       *
@@ -38,7 +38,28 @@ import argparse
 import os
 import re
 import subprocess
-from app import public_ip
+import requests
+
+
+def get_server_ip():
+    urls = [
+        ("https://ip.openpanel.com", "ip.openpanel.com"),
+        ("https://ifconfig.me/ip", "ifconfig.me"),
+    ]
+
+    for url, name in urls:
+        try:
+            response = requests.get(url, timeout=1)
+            if response.status_code == 200:
+                ip = response.text.strip()
+                return ip
+        except requests.exceptions.RequestException as e:
+            print(f"Error checking IPv4 from {name}: {e}")
+
+    caddyfile_path = "/etc/openpanel/caddy/Caddyfile"
+    print(f"INIT - Falling back to 'default_bind' in {caddyfile_path}")
+
+    return '127.0.0.1'
 
 def extract_api_info(file_path):
     with open(file_path, 'r') as file:
@@ -140,7 +161,7 @@ def main():
     config_file_path = '/etc/openpanel/openpanel/conf/openpanel.config'
 
     force_domain = get_domain()
-    server_ip = public_ip
+    server_ip = get_server_ip()
     port = get_openadmin_port()
 
     if force_domain:
