@@ -48,9 +48,15 @@ function updateUserActivityTable() {
                         ? '/administrators' 
                         : `/users/${username}`;
 
-                    var avatarContent = parts[4] === 'Administrator' 
-                        ? '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-crown" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4z"></path></svg>' 
-                        : username[0].toUpperCase();
+                    var avatarContent;
+
+                    if (parts[4] === 'Administrator') {
+                        avatarContent = '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-crown" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4z"></path></svg>';
+                    } else {
+                        avatarContent = username && username.length > 0
+                            ? username[0].toUpperCase()
+                            : '?';
+                    }
 
                     var listItem = `
                         <li class="flex flex-col items-center justify-between gap-4 pl-1 py-4 sm:flex-row sm:py-3 hover:bg-gray-50 hover:dark:bg-gray-900 truncate">
