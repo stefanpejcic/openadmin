@@ -291,6 +291,91 @@
 
 
 
+<div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 my-10">
+    <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+</div>
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" x-data="emailStorage('{{ email_storage_location }}', {{ emails }})">
+
+    <div>
+        <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Storage</h2>
+
+        <p class="mt-2 text-sm leading-6 text-gray-500">Configure email storage location.</p>
+    </div>
+
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+
+            <form method="POST" action="/emails/settings">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- STORAGE TYPE -->
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Email storage location</label>
+
+                    <div class="relative w-full mt-2">
+
+                        <select x-model="type" :disabled="locked" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm text-sm border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 disabled:opacity-50 disabled:cursor-not-allowed" name="storage_type">
+                            <option value="user_dir">docker volume (legacy)</option>
+                            <option value="custom">custom path</option>
+                        </select>
+
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3 mt-4" x-show="type === 'user_dir'" x-transition>
+
+                <p class="mt-2 text-xs text-gray-500">
+                  Emails will be stored in the home directory for each user, for example: <code>/home/&lt;username&gt;/docket-data/volumes/&lt;username&gt;_mail_data/_data/&lt;domain&gt;/&lt;email&gt;/</code>
+                  <br>
+                  This is <b>NOT</b> recommended because any domain add or removal will require the mail server to restart.
+                </p>
+                </div>
+                
+                <div class="col-span-full sm:col-span-3 mt-4" x-show="type === 'custom'" x-transition>
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Custom path</label>
+
+                    <div class="relative w-full mt-2">
+                        <input type="text" name="email_storage_location" x-model="customPath" :disabled="locked" placeholder="/var/mail/" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm text-sm border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 disabled:opacity-50 disabled:cursor-not-allowed">
+                    </div>
+
+                    <p class="mt-2 text-xs text-gray-500">Example: <code>/var/mail/</code>, <code>/email</code>, <code>/storage</code></p>
+                </div>
+
+                <!-- WARNING -->
+                <div class="mt-4 text-xs text-gray-500" x-show="locked">Storage location is locked because email accounts already exist.</div>
+
+                <!-- SUBMIT -->
+                <button type="submit" :disabled="locked" id="save_path_btn" class="mt-4 relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all border-transparent text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">Save Storage</button>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function emailStorage(current, count) {
+    return {
+        locked: count > 0,
+
+        type: current === 'user_dir' ? 'user_dir' : 'custom',
+        customPath: current === 'user_dir' ? '' : current,
+
+        init() {
+            if (this.type === 'user_dir') {
+                this.customPath = ''
+            }
+        }
+    }
+}
+</script>
+
+
+
+    
+
+
 
 
         <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 my-10"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>

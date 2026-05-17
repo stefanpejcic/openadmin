@@ -1,0 +1,620 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div x-data="rateLimits()" x-init="init()">
+
+  <!-- Page header -->
+  <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+      <header>
+          <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+              <div class="grow">
+                  <h1 class="mb-1 text-xl font-bold">Email Rate Limits</h1>
+                  <h2 class="text-sm font-medium text-slate-500">Manage per-domain hourly send limits via <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">postfwd</code></h2>
+              </div>
+              <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <a href="?mode=gui"
+                   class="px-3 py-1.5 rounded-md text-sm font-medium transition
+                          {% if mode == 'gui' %}bg-blue-600 text-white shadow
+                          {% else %}bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
+                  <i class="ph ph-table mr-1"></i>GUI
+                </a>
+                <a href="?mode=raw"
+                   class="px-3 py-1.5 rounded-md text-sm font-medium transition
+                          {% if mode == 'raw' %}bg-blue-600 text-white shadow
+                          {% else %}bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
+                  <i class="ph ph-code mr-1"></i>Raw
+                </a>
+              </div>
+          </div>
+      </header>
+  </div>
+
+<div class="max-w-7xl mx-auto px-4 py-8">
+
+
+    
+  <div
+    x-show="toast.visible"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0 translate-y-2"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    :class="toast.ok
+      ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
+      : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'"
+    class="fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-lg border shadow-lg text-sm"
+    style="display:none"
+  >
+    <div class="flex items-start gap-2">
+      <i :class="toast.ok ? 'ph ph-check-circle text-green-500' : 'ph ph-x-circle text-red-500'" class="text-lg mt-0.5 shrink-0"></i>
+      <div>
+        <p class="font-medium" x-text="toast.ok ? 'Success' : 'Error'"></p>
+        <p class="text-xs mt-0.5 whitespace-pre-wrap break-words" x-text="toast.msg"></p>
+      </div>
+      <button @click="toast.visible=false" class="ml-auto shrink-0 opacity-60 hover:opacity-100">
+        <i class="ph ph-x"></i>
+      </button>
+    </div>
+  </div>
+
+  {% if mode == 'raw' %}
+  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Direct file editor</span>
+        <span class="ml-2 text-xs text-gray-400 font-mono">{{ postfwd_cf }}</span>
+      </div>
+      <span class="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-2 py-0.5 rounded">
+        <i class="ph ph-warning mr-1"></i>Edit with care
+      </span>
+    </div>
+    <form action="/emails/domain-limits/save-raw" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <textarea
+        name="raw_content"
+        class="w-full font-mono text-xs text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 p-4 focus:outline-none resize-y min-h-[420px]"
+        spellcheck="false"
+        autocomplete="off"
+      >{{ raw_content }}</textarea>
+      <div class="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+        <a href="?mode=gui" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+          Cancel
+        </a>
+        <button type="submit" class="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition shadow-sm">
+          <i class="ph ph-floppy-disk mr-1"></i>Save & Reload postfwd
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {% else %}
+
+  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-4 p-4">
+    <div class="flex flex-wrap items-end gap-3">
+
+      <!-- Search — left side -->
+      <div class="relative w-full sm:max-w-[250px]">
+        <input type="search"
+               x-model="search"
+               placeholder="Filter domain / user…"
+               class="relative block w-full appearance-none rounded border px-2.5 py-2 pl-8 shadow-sm outline-none transition sm:text-sm
+                      border-gray-300 dark:border-gray-800
+                      text-gray-900 dark:text-gray-50
+                      placeholder-gray-400 dark:placeholder-gray-500
+                      bg-white dark:bg-gray-950
+                      focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30
+                      focus:border-blue-500 focus:dark:border-blue-700
+                      [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden">
+        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-[1.125rem] shrink-0">
+            <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="h-8 w-px bg-gray-200 dark:bg-gray-700 self-end hidden sm:block"></div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Regenerate from DB</span>
+        <div class="flex gap-2">
+          <button @click="bulkAction('reset-all')"
+                  :disabled="busy"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition disabled:opacity-50">
+            <i class="ph ph-arrows-clockwise"></i>All users
+          </button>
+          <div class="flex gap-1">
+            <select x-model="selectedUser"
+                    class="text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option value="">— user —</option>
+              {% for u in usernames %}
+              <option value="{{ u }}">{{ u }}</option>
+              {% endfor %}
+            </select>
+            <button @click="bulkAction('reset-user')"
+                    :disabled="busy || !selectedUser"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition disabled:opacity-50">
+              <i class="ph ph-arrows-clockwise"></i>User
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-8 w-px bg-gray-200 dark:bg-gray-700 self-end hidden sm:block"></div>
+
+      <div class="flex flex-col gap-1">
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Remove rules</span>
+        <div class="flex gap-2">
+          <button @click="confirmDelete('delete-all')"
+                  :disabled="busy"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50">
+            <i class="ph ph-trash"></i>All
+          </button>
+          <div class="flex gap-1">
+            <select x-model="selectedUserDelete"
+                    class="text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option value="">— user —</option>
+              {% for u in usernames %}
+              <option value="{{ u }}">{{ u }}</option>
+              {% endfor %}
+            </select>
+            <button @click="confirmDelete('delete-user')"
+                    :disabled="busy || !selectedUserDelete"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50">
+              <i class="ph ph-trash"></i>User
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    {% if rules %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Domain</th>
+            <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Owner</th>
+            <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Usage / hour</th>
+            <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Rule ID</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in rules %}
+          <tr
+            x-show="matchesSearch('{{ rule.domain }}', '{{ rule.username }}')"
+            x-data="ruleRow({
+              id:       '{{ rule.id }}',
+              domain:   '{{ rule.domain }}',
+              username: '{{ rule.username }}',
+              limit:    {{ rule.limit }},
+              current:  {{ rule.current if rule.current is not none else 'null' }}
+            })"
+            class="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
+          >
+            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+              {{ rule.domain }}
+            </td>
+
+            <td class="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
+              {{ rule.username }}
+            </td>
+
+            <td class="px-4 py-3 min-w-[200px]">
+              <template x-if="!editing">
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center justify-between text-xs">
+                    <span>
+                      <span x-show="current !== null" class="font-semibold" :class="usageColor()" x-text="current"></span>
+                      <span x-show="current === null" class="text-gray-400">—</span>
+                      <span class="text-gray-400"> / <span x-text="limit"></span>/hr</span>
+                    </span>
+                    <span x-show="hitLimit()"
+                          @click="showHits()"
+                          title="Limit was hit — click to view log"
+                          class="cursor-pointer inline-flex items-center gap-1 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-1.5 py-0.5 rounded text-xs font-medium hover:bg-red-100 transition">
+                      <i class="ph ph-warning"></i>Limit hit
+                    </span>
+                  </div>
+                  <div x-show="current !== null" class="h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-300"
+                         :class="usageBarColor()"
+                         :style="`width: ${Math.min(100, Math.round(current / limit * 100))}%`"></div>
+                  </div>
+                </div>
+              </template>
+              <template x-if="editing">
+                <div class="flex items-center gap-1.5">
+                  <input type="number"
+                         x-model.number="editLimit"
+                         min="1" max="100000"
+                         @keydown.enter="saveLimit()"
+                         @keydown.escape="cancelEdit()"
+                         class="w-24 px-2 py-1 text-sm rounded-lg border border-blue-400 dark:border-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         x-ref="editInput"
+                         x-init="$nextTick(() => $refs.editInput && $refs.editInput.focus())">
+                  <span class="text-xs text-gray-500 dark:text-gray-400">/hr</span>
+                </div>
+              </template>
+            </td>
+
+            <td class="px-4 py-3 font-mono text-xs text-gray-400 dark:text-gray-500">
+              {{ rule.id }}
+            </td>
+
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-1.5">
+
+                <template x-if="!editing">
+                  <button @click="startEdit()"
+                          title="Edit limit"
+                          class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
+                    <i class="ph ph-pencil-simple text-base"></i>
+                  </button>
+                </template>
+                <template x-if="editing">
+                  <div class="flex items-center gap-1">
+                    <button @click="saveLimit()"
+                            :disabled="busy"
+                            title="Save"
+                            class="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition disabled:opacity-50">
+                      <i class="ph ph-check text-base"></i>
+                    </button>
+                    <button @click="cancelEdit()"
+                            title="Cancel"
+                            class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                      <i class="ph ph-x text-base"></i>
+                    </button>
+                  </div>
+                </template>
+
+                <button @click="resetDomain()"
+                        :disabled="busy"
+                        title="Regenerate from DB"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition disabled:opacity-50">
+                  <i class="ph ph-arrows-clockwise text-base"></i>
+                </button>
+
+                <button @click="deleteDomain()"
+                        :disabled="busy"
+                        title="Remove rule for this domain"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50">
+                  <i class="ph ph-trash text-base"></i>
+                </button>
+
+                <span x-show="busy" class="ml-1">
+                  <i class="ph ph-circle-notch text-blue-500 animate-spin text-base"></i>
+                </span>
+
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+
+          <tr x-show="filteredCount === 0 && search !== ''">
+            <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
+              No rules match <span class="font-medium" x-text="'«' + search + '»'"></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="px-4 py-2.5 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500">
+      {{ rules|length }} rule{{ 's' if rules|length != 1 else '' }} total
+    </div>
+
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-6 text-center">
+      <i class="ph ph-envelope-open text-5xl text-gray-300 dark:text-gray-600 mb-3"></i>
+      <p class="text-gray-500 dark:text-gray-400 font-medium">No rate-limit rules configured</p>
+      <p class="text-sm text-gray-400 dark:text-gray-500 mt-1 mb-4">Generate rules from your users' plan settings</p>
+      <button @click="bulkAction('reset-all')"
+              :disabled="busy"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition shadow-sm disabled:opacity-50">
+        <i class="ph ph-arrows-clockwise"></i>Generate all rules now
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div
+    x-show="confirm.open"
+    x-transition:enter="ease-out duration-150"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="ease-in duration-100"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    style="display:none"
+    @keydown.escape.window="confirm.open=false"
+  >
+    <div
+      @click.outside="confirm.open=false"
+      class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm w-full mx-4"
+    >
+      <div class="flex items-center gap-3 mb-3">
+        <div class="p-2 rounded-full bg-red-100 dark:bg-red-900/30">
+          <i class="ph ph-trash text-red-600 dark:text-red-400 text-xl"></i>
+        </div>
+        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Confirm removal</h3>
+      </div>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-5" x-text="confirm.msg"></p>
+      <div class="flex justify-end gap-2">
+        <button @click="confirm.open=false"
+                class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+          Cancel
+        </button>
+        <button @click="confirm.run()"
+                :disabled="busy"
+                class="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition shadow-sm disabled:opacity-50">
+          <span x-show="!busy">Delete</span>
+          <span x-show="busy"><i class="ph ph-circle-notch animate-spin"></i> Deleting…</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    x-show="hits.open"
+    x-transition:enter="ease-out duration-150"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="ease-in duration-100"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+    style="display:none"
+    @keydown.escape.window="hits.open=false"
+  >
+    <div
+      @click.outside="hits.open=false"
+      class="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-2xl mx-4 flex flex-col max-h-[80vh]"
+    >
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 rounded-full bg-red-100 dark:bg-red-900/30">
+            <i class="ph ph-warning text-red-600 dark:text-red-400"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Rate limit hits</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400" x-text="hits.domain"></p>
+          </div>
+        </div>
+        <button @click="hits.open=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto p-4 flex-1">
+        <div x-show="hits.loading" class="flex justify-center py-8">
+          <i class="ph ph-circle-notch animate-spin text-2xl text-gray-400"></i>
+        </div>
+        <template x-if="!hits.loading && hits.lines.length === 0">
+          <div class="text-center py-8 text-sm text-gray-400 dark:text-gray-500">
+            <i class="ph ph-check-circle text-3xl text-green-400 block mb-2"></i>
+            No rate limit hits found in the mail log for this domain.
+          </div>
+        </template>
+        <template x-if="!hits.loading && hits.lines.length > 0">
+          <div class="space-y-1">
+            <template x-for="line in hits.lines" :key="line">
+              <div class="font-mono text-xs bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded border border-gray-100 dark:border-gray-700 break-all" x-text="line"></div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 shrink-0 flex justify-between items-center">
+        <span x-show="!hits.loading" x-text="hits.lines.length + ' log line' + (hits.lines.length !== 1 ? 's' : '') + ' (last 30)'"></span>
+        <span class="font-mono" x-text="hits.domain"></span>
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+
+<script>
+// Read CSRF token once from the meta tag set by Flask-WTF in base.html
+function getCsrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+}
+
+function rateLimits() {
+  return {
+    search:             '',
+    selectedUser:       '',
+    selectedUserDelete: '',
+    busy:               false,
+    filteredCount:      {{ rules|length }},
+    toast:   { visible: false, ok: true, msg: '' },
+    confirm: { open: false, msg: '', run: () => {} },
+    hits:    { open: false, loading: false, domain: '', lines: [] },
+
+    init() {
+      this.$watch('search', () => this._countFiltered());
+    },
+
+    _countFiltered() {
+      const q = this.search.toLowerCase();
+      if (!q) { this.filteredCount = {{ rules|length }}; return; }
+      this.filteredCount = document.querySelectorAll('tbody tr[x-data]').length;
+    },
+
+    matchesSearch(domain, user) {
+      const q = this.search.toLowerCase();
+      return !q || domain.toLowerCase().includes(q) || user.toLowerCase().includes(q);
+    },
+
+    showToast(ok, msg) {
+      this.toast = { visible: true, ok, msg };
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => this.toast.visible = false, 5000);
+    },
+
+    async openHits(domain) {
+      this.hits = { open: true, loading: true, domain, lines: [] };
+      try {
+        const res  = await fetch(`/emails/domain-limits/hits?domain=${encodeURIComponent(domain)}`, {
+          headers: { 'X-CSRFToken': getCsrfToken() },
+        });
+        const data = await res.json();
+        this.hits.lines   = data.lines || [];
+        this.hits.loading = false;
+      } catch (e) {
+        this.hits.lines   = [];
+        this.hits.loading = false;
+      }
+    },
+
+    async _api(payload) {
+      this.busy = true;
+      try {
+        const res  = await fetch('/emails/domain-limits/api', {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken':  getCsrfToken(),
+          },
+          body:    JSON.stringify(payload),
+        });
+        const data = await res.json();
+        this.showToast(data.ok, data.msg);
+        if (data.ok) setTimeout(() => location.reload(), 800);
+      } catch (e) {
+        this.showToast(false, e.message);
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    async bulkAction(action) {
+      const payload = { action };
+      if (action === 'reset-user') {
+        if (!this.selectedUser) return;
+        payload.username = this.selectedUser;
+      }
+      await this._api(payload);
+    },
+
+    confirmDelete(action) {
+      const msgs = {
+        'delete-all':  'This will remove ALL rate-limit rules for every domain. This cannot be undone.',
+        'delete-user': `Remove all rules for user «${this.selectedUserDelete}»?`,
+      };
+      this.confirm = {
+        open: true,
+        msg:  msgs[action] || 'Are you sure?',
+        run:  async () => {
+          this.confirm.open = false;
+          const payload = { action };
+          if (action === 'delete-user') payload.username = this.selectedUserDelete;
+          await this._api(payload);
+        },
+      };
+    },
+  };
+}
+
+function ruleRow({ id, domain, username, limit, current }) {
+  return {
+    id, domain, username,
+    limit,
+    current,
+    editLimit: limit,
+    editing:   false,
+    busy:      false,
+
+    hitLimit() {
+      return this.current !== null && this.current >= this.limit;
+    },
+
+    usageColor() {
+      if (this.current === null) return '';
+      const pct = this.current / this.limit;
+      if (pct >= 1)   return 'text-red-600 dark:text-red-400';
+      if (pct >= 0.8) return 'text-yellow-600 dark:text-yellow-400';
+      return 'text-green-600 dark:text-green-400';
+    },
+
+    usageBarColor() {
+      if (this.current === null) return '';
+      const pct = this.current / this.limit;
+      if (pct >= 1)   return 'bg-red-500';
+      if (pct >= 0.8) return 'bg-yellow-400';
+      return 'bg-green-500';
+    },
+
+    showHits() {
+      this.$root.__x.$data.openHits(this.domain);
+    },
+
+    startEdit() {
+      this.editLimit = this.limit;
+      this.editing   = true;
+    },
+
+    cancelEdit() {
+      this.editing = false;
+    },
+
+    async _api(payload) {
+      this.busy = true;
+      const page = this.$root.__x.$data;
+      page.busy  = true;
+      try {
+        const res  = await fetch('/emails/domain-limits/api', {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken':  getCsrfToken(),
+          },
+          body:    JSON.stringify(payload),
+        });
+        const data = await res.json();
+        page.showToast(data.ok, data.msg);
+        if (data.ok) setTimeout(() => location.reload(), 800);
+      } catch (e) {
+        page.showToast(false, e.message);
+      } finally {
+        this.busy = false;
+        page.busy = false;
+      }
+    },
+
+    async saveLimit() {
+      if (!this.editLimit || this.editLimit < 1) return;
+      this.editing = false;
+      this.limit   = this.editLimit;
+      await this._api({ action: 'update-domain', domain: this.domain, username: this.username, limit: this.editLimit });
+    },
+
+    async resetDomain() {
+      await this._api({ action: 'reset-domain', domain: this.domain });
+    },
+
+    async deleteDomain() {
+      const page = this.$root.__x.$data;
+      page.confirm = {
+        open: true,
+        msg:  `Remove rate-limit rule for «${this.domain}»?`,
+        run:  async () => {
+          page.confirm.open = false;
+          await this._api({ action: 'delete-domain', domain: this.domain });
+        },
+      };
+    },
+  };
+}
+</script>
+</div>
+
+{% endblock %}

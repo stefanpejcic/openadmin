@@ -265,6 +265,40 @@
 </div>
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
+	  
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="autostart-services" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Autostart services</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Set which services should autostart for new users when account is created.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <div class="col-span-full">
+                <div class="relative w-full mt-2">
+                    <div class="row form-selectgroup form-selectgroup-boxes d-flex">
+                        <div class="mt-4 grid grid-cols-1 gap-4">	
+							<div x-data="{ active: new Set(JSON.parse(document.getElementById('autostart-data').textContent)) }" class="flex flex-wrap gap-2">
+							  <script id="autostart-data" type="application/json">{{ autostart_active_services | tojson }}</script>
+							  <input type="hidden" name="services" :value="[...active].join(',')">
+							  {% for svc in autostart_available_services %}
+							  <button type="button" role="radio" :aria-checked="active.has('{{ svc }}') ? 'true' : 'false'" :data-state="active.has('{{ svc }}') ? 'checked' : ''" @click="active.has('{{ svc }}') ? (active.delete('{{ svc }}'), active = new Set(active)) : (active.add('{{ svc }}'), active = new Set(active))" class="group relative rounded border px-4 py-2 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 data-[state=checked]:ring-2 data-[state=checked]:ring-blue-200 data-[state=checked]:dark:ring-blue-700/30">
+							    <div class="flex items-center justify-center text-sm text-gray-900 dark:text-gray-50">
+							      <span class="font-medium">{{ svc }}</span>
+							    </div>
+							  </button>
+							  {% else %}
+							  <p class="text-sm text-gray-400">No services found in compose file.</p>
+							  {% endfor %}
+							</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
 
 
   <!-- PHP_FPM versioned keys -->
