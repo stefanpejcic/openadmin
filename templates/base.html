@@ -23,54 +23,9 @@
     <style>[x-cloak] { display: none !important;}</style>
     <script>(function(){const sidebarState=sessionStorage.getItem('sidebarOpen');const isMobile=window.innerWidth<768;let isOpen=sidebarState===null?!isMobile:sidebarState==='true';if(isOpen){document.documentElement.classList.add('sidebar-open');}else{document.documentElement.classList.remove('sidebar-open');}})();</script>
     <style>#sidebar{display:none;width:16rem}#header,#no_margin_for_iframe{margin-left:0;transition:margin .2s ease-in-out}.sidebar-open #sidebar{display:block}.sidebar-open #header,.sidebar-open #no_margin_for_iframe{margin-left:16rem}@media (max-width:767px){.sidebar-open #header,.sidebar-open #no_margin_for_iframe{margin-left:0}} html.sidebar-open button[onclick="toggleSidebar()"] {cursor: w-resize;} html:not(.sidebar-open) button[onclick="toggleSidebar()"] {cursor: e-resize;}</style>
-
-
-    <script>
-    // progress cursor while working
-    (function() {
-    let activeRequests = 0;
-
-    function updateCursor() {
-        document.body.style.cursor = activeRequests > 0 ? "progress" : "default";
-    }
-
-    // --- Wrap fetch ---
-    const originalFetch = window.fetch;
-    window.fetch = async function(...args) {
-        activeRequests++;
-        updateCursor();
-        try {
-        const response = await originalFetch.apply(this, args);
-        return response;
-        } finally {
-        activeRequests--;
-        updateCursor();
-        }
-    };
-
-    // --- Wrap XMLHttpRequest ---
-    const OriginalXHR = window.XMLHttpRequest;
-    function CustomXHR() {
-        const xhr = new OriginalXHR();
-
-        xhr.addEventListener("loadstart", () => {
-        activeRequests++;
-        updateCursor();
-        });
-
-        xhr.addEventListener("loadend", () => {
-        activeRequests--;
-        updateCursor();
-        });
-
-        return xhr;
-    }
-    window.XMLHttpRequest = CustomXHR;
-    })();
-    </script>
-
+    
+    <script>(function(){let a=0;function u(){document.body.style.cursor=a>0?"progress":"default"}const f=window.fetch;window.fetch=async function(...args){a++;u();try{return await f.apply(this,args)}finally{a--;u()}};const X=window.XMLHttpRequest;function C(){const x=new X();x.addEventListener("loadstart",()=>{a++;u()});x.addEventListener("loadend",()=>{a--;u()});return x}window.XMLHttpRequest=C})();</script>
     <script src="{{ url_for('static', filename='dist/js/jquery361.min.js') }}"></script>
-
     <link rel="stylesheet" href="{{ url_for('static', filename='dist/output.css') }}">
     <script defer src="{{ url_for('static', filename='dist/js/alpinejs3xx.min.js') }}"></script>
 </head>
@@ -79,297 +34,61 @@
     <script defer src="{{ url_for('static', filename='dist/js/flowbite312.min.js') }}"></script>
 
 <div class="flex min-h-svh w-full">
-    <div x-show="sidebarOpen" 
-         :class="{'hidden': !sidebarOpen}" 
-         @click.away="isMobile && (sidebarOpen = false)" 
-         class="group peer md:block" 
-         data-state="expanded" 
-         data-collapsible="false">
-
-
+    <div x-show="sidebarOpen" :class="{'hidden': !sidebarOpen}" @click.away="isMobile && (sidebarOpen = false)" class="group peer md:block" data-state="expanded" data-collapsible="false">
         <div class="relative h-svh max-w-[16rem] bg-transparent transition-[width] duration-150 ease-in-out will-change-transform group-data-[collapsible=true]:w-0"></div>
         <div id="sidebar" class="fixed inset-y-0 z-50 h-svh transition-[left,right,width] duration-150 ease-in-out will-change-transform md:flex left-0 bg-gray-50 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800">
       
             <div data-sidebar="sidebar" class="flex h-full w-full flex-col" style="max-width: 16em;">
                 <div data-sidebar="header" class="truncate flex flex-col gap-2 p-2 px-3 py-4 h-16">
                     <div class="flex items-center gap-3"><span class="flex size-9 items-center justify-center rounded bg-white p-1.5 shadow-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"><svg version="1.0" class="text-black dark:text-white" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg></span>
-                        <div><span class="block text-sm font-semibold text-gray-900 dark:text-gray-50">
-
-                          <a href="/" id="hostname" class="truncate">{% if force_domain_value %}{{ force_domain_value }}{% else %}{{ public_ip }}{% endif %}</a>
-
-</span><span class="block text-xs text-gray-900 dark:text-gray-50">OpenPanel {{ license_type }} license</span></div>
-                    </div>
-                </div>
-
-
-<div class=""><div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 my-0 py-0"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div></div>
-
-
-                <div data-sidebar="content" class="flex flex-1 flex-col gap-2 overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
-                    <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2">
-                        <div data-sidebar="group-content" class="w-full text-sm">
-
-<form x-data="searchDropdown()" x-init="init()" @click.away="closeDropdown()" action="./" method="get" autocomplete="off" novalidate="">
-  <div class="relative w-full [&>input]:sm:py-1.5">
-    <input
-      type="search"
-      x-model="query"
-      @input.debounce.300ms="handleInput()"
-      autofocus
-      id="searchInput"
-      class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 pl-8"
-      placeholder="Search..."
-    >
-    <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor">
-        <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/>
-      </svg>
-    </div>
-    <ul
-      x-show="dropdownOpen"
-      x-transition
-      class="relative z-50 overflow-hidden rounded shadow-xl shadow-black/[2.5%] min-w-48 bg-white dark:bg-[#090E1A] text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"
-      style="top: 100%; width: 100%; right: 0px; overflow-x: hidden; overflow-y: overlay; max-height: 90vh;"
-      id="filteredDropdown"
-    >
-      <template x-for="item in filteredItems" :key="item.id">
-        <li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500 border-b border-gray-200 dark:border-gray-800">
-          <h3 class="m-0" x-html="item.html"></h3>
-        </li>
-      </template>
-    </ul>
-  </div>
-</form>
-
-<script>
-function searchDropdown() {
-  return {
-    query: '',
-    dropdownOpen: false,
-    filteredItems: [],
-    isReseller: false,
-    PERSON_FILL: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>',
-    PERSON_FILL_X: '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"> <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/> <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/> </svg>',
-
-
-    async fetchJSON(url) {
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        return Array.isArray(data) ? data : [];
-      } catch {
-        return [];
-      }
-    },
-
-    async handleInput() {
-      const searchText = this.query.toLowerCase();
-      let dropdownItems = [];
-
-      const pagesReq = this.isReseller ? [] : await this.fetchJSON('/search/pages');
-      const usersReq = await this.fetchJSON('/search/users');
-      const websitesReq = this.isReseller ? [] : await this.fetchJSON('/search/websites');
-
-      // Pages
-      pagesReq.forEach(item => {
-        const itemName = item?.name ?? '';
-        const link = item?.link ?? '#';
-        const desc = item?.description ?? '';
-        if (itemName.toLowerCase().includes(searchText)) {
-          dropdownItems.push({
-            id: `page-${itemName}`,
-            html: `<a class="dropdown-item flex w-full" href="${link}">${itemName}<br><p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${desc}</p></a>`
-          });
-        }
-      });
-
-      // Users
-      usersReq.forEach(itemName => {
-        if (!itemName) return;
-        const suspended = itemName.toLowerCase().includes('suspended');
-        const icon = suspended ? this.PERSON_FILL_X : this.PERSON_FILL;
-        if (itemName.toLowerCase().startsWith('suspended_')) {
-          const displayName = itemName.split('_').pop();
-          dropdownItems.push({
-            id: `user-${itemName}`,
-            html: `<a class="flex text-red" href="/users/${itemName}">${icon} &nbsp;<span class="text-sm">${displayName}</span></a>`
-          });
-        } else if (itemName.toLowerCase().includes(searchText)) {
-          dropdownItems.push({
-            id: `user-${itemName}`,
-            html: `<div class="flex justify-between items-center w-full">
-                    <a class="flex" href="/users/${itemName}">${icon} &nbsp;<span class="text-sm">${itemName}</span></a>
-                    <a href="/login/token/${itemName}" title="Login as ${itemName} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">
-                      <svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet">
-                        <g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none">
-                          <path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/>
-                        </g>
-                      </svg>
-                    </a>
-                  </div>`
-          });
-        }
-      });
-
-
-      // Websites
-      websitesReq.forEach(row => {
-        const itemName = Array.isArray(row) ? row[0] : '';
-        if (itemName && itemName.toLowerCase().includes(searchText)) {
-          dropdownItems.push({
-            id: `website-${itemName}`,
-            html: `<a class="flex dropdown-item" href="/domains/${itemName}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16">
-                      <path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/>
-                    </svg> &nbsp;${itemName}
-                  </a>`
-          });
-        }
-      });
-
-      this.filteredItems = dropdownItems;
-      this.dropdownOpen = dropdownItems.length > 0;
-    },
-
-    closeDropdown() {
-      this.dropdownOpen = false;
-    },
-
-    init() {
-      this.isReseller = {{ 'true' if is_reseller else 'false' }};
-    }
-  };
-}
-</script>
+                        <div>
+                            <span class="block text-sm font-semibold text-gray-900 dark:text-gray-50"><a href="/" id="hostname" class="truncate">{% if force_domain_value %}{{ force_domain_value }}{% else %}{{ public_ip }}{% endif %}</a></span>
+                            <span class="block text-xs text-gray-900 dark:text-gray-50">OpenPanel {{ license_type }} license</span></div>
                         </div>
                     </div>
 
+                    <div class=""><div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 my-0 py-0"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div></div>
 
+                    <div data-sidebar="content" class="flex flex-1 flex-col gap-2 overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+                        <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2">
+                            <div data-sidebar="group-content" class="w-full text-sm">
+                                <form x-data="searchDropdown()" x-init="init()" @click.away="closeDropdown()" action="./" method="get" autocomplete="off" novalidate="">
+                                  <div class="relative w-full [&>input]:sm:py-1.5">
+                                    <input type="search" x-model="query" @input.debounce.300ms="handleInput()" autofocus id="searchInput" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 pl-8" placeholder="Search...">
+                                    <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                                      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor">
+                                        <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/>
+                                      </svg>
+                                    </div>
+                                    <ul x-show="dropdownOpen" x-transition class="relative z-50 overflow-hidden rounded shadow-xl shadow-black/[2.5%] min-w-48 bg-white dark:bg-[#090E1A] text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800" style="top: 100%; width: 100%; right: 0px; overflow-x: hidden; overflow-y: overlay; max-height: 90vh;" id="filteredDropdown">
+                                      <template x-for="item in filteredItems" :key="item.id">
+                                        <li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500 border-b border-gray-200 dark:border-gray-800">
+                                          <h3 class="m-0" x-html="item.html"></h3>
+                                        </li>
+                                      </template>
+                                    </ul>
+                                  </div>
+                                </form>
+                                <script>function searchDropdown(){return{query:'',dropdownOpen:false,filteredItems:[],isReseller:false,PERSON_FILL:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>',PERSON_FILL_X:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/><path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/></svg>',async fetchJSON(url){try{const r=await fetch(url),d=await r.json();return Array.isArray(d)?d:[]}catch{return[]}},async handleInput(){const s=this.query.toLowerCase(),items=[],pagesReq=this.isReseller?[]:await this.fetchJSON('/search/pages'),usersReq=await this.fetchJSON('/search/users'),websitesReq=this.isReseller?[]:await this.fetchJSON('/search/websites');pagesReq.forEach(item=>{const n=item?.name??'',l=item?.link??'#',d=item?.description??'';if(n.toLowerCase().includes(s))items.push({id:`page-${n}`,html:`<a class="dropdown-item flex w-full" href="${l}">${n}<br><p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${d}</p></a>`})});usersReq.forEach(n=>{if(!n)return;const sus=n.toLowerCase().includes('suspended'),icon=sus?this.PERSON_FILL_X:this.PERSON_FILL;if(n.toLowerCase().startsWith('suspended_')){const dn=n.split('_').pop();items.push({id:`user-${n}`,html:`<a class="flex text-red" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${dn}</span></a>`})}else if(n.toLowerCase().includes(s)){items.push({id:`user-${n}`,html:`<div class="flex justify-between items-center w-full"><a class="flex" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${n}</span></a><a href="/login/token/${n}" title="Login as ${n} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/></g></svg></a></div>`})}});websitesReq.forEach(row=>{const n=Array.isArray(row)?row[0]:'';if(n&&n.toLowerCase().includes(s))items.push({id:`website-${n}`,html:`<a class="flex dropdown-item" href="/domains/${n}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/></svg> &nbsp;${n}</a>`})});this.filteredItems=items;this.dropdownOpen=items.length>0},closeDropdown(){this.dropdownOpen=false},init(){this.isReseller={{ 'true' if is_reseller else 'false' }}}}}</script>
+                        </div>
+                    </div>
 
                     <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2 pt-0">
                         <div data-sidebar="group-content" class="w-full text-sm">
                             <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-1">
-
-
                                 <li><a data-active="{% if request.path.startswith('/dashboard') or request.path == ('/') %}true{% else %}false{% endif %}" class="flex items-center justify-between rounded p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/dashboard"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house size-[18px] shrink-0" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Dashboard</span></a></li>
-
-
-{% if not is_reseller %}
-
-                                <li><a data-active="{% if request.path.startswith('/notifications') or request.path == ('/notifications') %}true{% else %}false{% endif %}" class="flex items-center justify-between rounded p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="{{ url_for('view_notifications') }}"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-notification" width="18" height="18"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 6h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3"></path><path d="M17 7m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path></svg>Notifications</span>
-
-
-{% if unread_notifications %}
-    <span class="inline-flex size-5 items-center justify-center rounded bg-blue-100 text-sm font-medium text-blue-600 sm:text-xs dark:bg-blue-500/10 dark:text-blue-500">
-        {% if unread_notifications > 4 %}
-            5+
-        {% else %}
-            {{ unread_notifications }}
-        {% endif %}
-    </span>
-{% endif %}
-
-                                        </a></li>
-
-<li x-data="{ open: true, active: false }" class="relative">
-  <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
-    <div class="flex items-center gap-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-star"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 18a6 6 0 1 0 0 -12h-11" /><path d="M7 9l-3 -3l3 -3" /><path d="M8 20h2a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-2v-3h3" /></svg> Recent</div>
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600 rotate-180" :class="{ 'rotate-180': open }"><path d="M12 16L6 10H18L12 16Z"></path></svg>
-  </button>
-  <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
-    <div id="recent-list" class="relative z-50 overflow-hidden min-w-48 text-gray-900 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade"></div>
-  </ul>
-</li>
-
-<script>
-function saveRecentPage() {
-    const MAX_ITEMS = 5;
-    const rawTitle = document.title?.trim();
-    if (!rawTitle) return;
-
-    let titleParts = rawTitle.split(']');
-    let title = titleParts.length > 1
-        ? titleParts.slice(-1)[0].trim()
-        : rawTitle;
-
-    if (!title || title.toLowerCase() === 'untitled') return;
-
-    const url = window.location.pathname + window.location.search + window.location.hash;
-    let recent = JSON.parse(localStorage.getItem("recent_pages") || "[]");
-
-    let existing = recent.find(item => item.url === url);
-    if (!existing || !existing.pinned) {
-        recent = recent.filter(item => item.url !== url || item.pinned);
-        recent.unshift({ title, url, pinned: false });
-    }
-
-    let pinned = recent.filter(item => item.pinned);
-    let unpinned = recent.filter(item => !item.pinned).slice(0, MAX_ITEMS);
-    recent = [...pinned, ...unpinned];
-
-    localStorage.setItem("recent_pages", JSON.stringify(recent));
-}
-
-saveRecentPage();
-</script>
-
-
-<script>
-function loadRecentPages() {
-    const recentList = document.getElementById('recent-list'); 
-    recentList.innerHTML = '';
-
-    let recent = JSON.parse(localStorage.getItem("recent_pages") || "[]");
-
-    const bannerItem = document.createElement('span');
-    bannerItem.className = `absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800`.trim();
-    recentList.appendChild(bannerItem);
-
-    recent.forEach((item, index) => {
-        const listItem = document.createElement('li');
-        listItem.className = `relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50`.trim();
-
-        const linkItem = document.createElement('a');
-        linkItem.href = item.url;
-        linkItem.textContent = item.title;
-
-        const pinButton = document.createElement('button');
-        pinButton.innerHTML = item.pinned ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-pin"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15.113 3.21l.094 .083l5.5 5.5a1 1 0 0 1 -1.175 1.59l-3.172 3.171l-1.424 3.797a1 1 0 0 1 -.158 .277l-.07 .08l-1.5 1.5a1 1 0 0 1 -1.32 .082l-.095 -.083l-2.793 -2.792l-3.793 3.792a1 1 0 0 1 -1.497 -1.32l.083 -.094l3.792 -3.793l-2.792 -2.793a1 1 0 0 1 -.083 -1.32l.083 -.094l1.5 -1.5a1 1 0 0 1 .258 -.187l.098 -.042l3.796 -1.425l3.171 -3.17a1 1 0 0 1 1.497 -1.26z" /></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-pin"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4" /><path d="M9 15l-4.5 4.5" /><path d="M14.5 4l5.5 5.5" /></svg>';
-        pinButton.className = 'ml-auto';
-        pinButton.title = item.pinned ? 'Unpin' : 'Pin';
-        pinButton.style.background = 'none';
-        pinButton.style.border = 'none';
-        pinButton.style.cursor = 'pointer';
-        pinButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            item.pinned = !item.pinned;
-            localStorage.setItem("recent_pages", JSON.stringify(recent));
-            loadRecentPages();
-        });
-
-        listItem.appendChild(linkItem);
-        listItem.appendChild(pinButton);
-        recentList.appendChild(listItem);
-    });
-}
-
-loadRecentPages();
-</script>
-
-{% endif %}
-
-
+                                {% if not is_reseller %}
+                                <li><a data-active="{% if request.path.startswith('/notifications') or request.path == ('/notifications') %}true{% else %}false{% endif %}" class="flex items-center justify-between rounded p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="{{ url_for('view_notifications') }}"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-notification" width="18" height="18"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 6h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3"></path><path d="M17 7m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path></svg>Notifications</span>{% if unread_notifications %}<span class="inline-flex size-5 items-center justify-center rounded bg-blue-100 text-sm font-medium text-blue-600 sm:text-xs dark:bg-blue-500/10 dark:text-blue-500">{% if unread_notifications > 4 %}5+{% else %}{{ unread_notifications }}{% endif %}</span>{% endif %}</a></li>
+                                <li x-data="{ open: true, active: false }" class="relative"><button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer"><div class="flex items-center gap-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-star"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 18a6 6 0 1 0 0 -12h-11" /><path d="M7 9l-3 -3l3 -3" /><path d="M8 20h2a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-2v-3h3" /></svg> Recent</div><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600 rotate-180" :class="{ 'rotate-180': open }"><path d="M12 16L6 10H18L12 16Z"></path></svg></button><ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent"><div id="recent-list" class="relative z-50 overflow-hidden min-w-48 text-gray-900 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade"></div></ul></li>
+                                <script>function saveRecentPage(){const M=5,r=document.title?.trim();if(!r)return;const p=r.split(']'),t=p.length>1?p.slice(-1)[0].trim():r;if(!t||t.toLowerCase()==='untitled')return;const u=window.location.pathname+window.location.search+window.location.hash;let a=JSON.parse(localStorage.getItem("recent_pages")||"[]"),e=a.find(i=>i.url===u);if(!e||!e.pinned){a=a.filter(i=>i.url!==u||i.pinned);a.unshift({title:t,url:u,pinned:false})}localStorage.setItem("recent_pages",JSON.stringify([...a.filter(i=>i.pinned),...a.filter(i=>!i.pinned).slice(0,M)]))}saveRecentPage();</script>
+                                <script>function loadRecentPages(){const l=document.getElementById('recent-list');l.innerHTML='';let r=JSON.parse(localStorage.getItem("recent_pages")||"[]");const b=document.createElement('span');b.className='absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800';l.appendChild(b);r.forEach((item)=>{const li=document.createElement('li');li.className='relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50';const a=document.createElement('a');a.href=item.url;a.textContent=item.title;const btn=document.createElement('button');btn.innerHTML=item.pinned?'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-pin"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15.113 3.21l.094 .083l5.5 5.5a1 1 0 0 1 -1.175 1.59l-3.172 3.171l-1.424 3.797a1 1 0 0 1 -.158 .277l-.07 .08l-1.5 1.5a1 1 0 0 1 -1.32 .082l-.095 -.083l-2.793 -2.792l-3.793 3.792a1 1 0 0 1 -1.497 -1.32l.083 -.094l3.792 -3.793l-2.792 -2.793a1 1 0 0 1 -.083 -1.32l.083 -.094l1.5 -1.5a1 1 0 0 1 .258 -.187l.098 -.042l3.796 -1.425l3.171 -3.17a1 1 0 0 1 1.497 -1.26z"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-pin"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/></svg>';btn.className='ml-auto';btn.title=item.pinned?'Unpin':'Pin';btn.style.cssText='background:none;border:none;cursor:pointer';btn.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();item.pinned=!item.pinned;localStorage.setItem("recent_pages",JSON.stringify(r));loadRecentPages()});li.appendChild(a);li.appendChild(btn);l.appendChild(li)})}loadRecentPages();</script>
+                                {% endif %}
                             </ul>
                         </div>
                     </div>
 
+                    <div><div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 my-0 py-0"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div></div>
 
-                    <div>
-                        <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 my-0 py-0">
-                            <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
-                        </div>
-                    </div>
                     <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2">
                         <div data-sidebar="group-content" class="w-full text-sm">
                             <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-4">
@@ -1278,48 +997,9 @@ loadRecentPages();
 
 
 </body>
-<script>
-var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
-var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
 
-// Change the icons inside the button based on previous settings
-if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    themeToggleLightIcon.classList.remove('hidden');
-} else {
-    themeToggleDarkIcon.classList.remove('hidden');
-}
-
-var themeToggleBtn = document.getElementById('theme-toggle');
-
-themeToggleBtn.addEventListener('click', function() {
-
-    // toggle icons inside button
-    themeToggleDarkIcon.classList.toggle('hidden');
-    themeToggleLightIcon.classList.toggle('hidden');
-
-    // if set via local storage previously
-    if (localStorage.getItem('color-theme')) {
-        if (localStorage.getItem('color-theme') === 'light') {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('color-theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('color-theme', 'light');
-        }
-
-    // if NOT set via local storage previously
-    } else {
-        if (document.documentElement.classList.contains('dark')) {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('color-theme', 'light');
-        } else {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('color-theme', 'dark');
-        }
-    }
-    
-});
-</script>
+    <!-- Dark Mode toggle -->
+    <script>const D=document.getElementById('theme-toggle-dark-icon'),L=document.getElementById('theme-toggle-light-icon');(localStorage.getItem('color-theme')==='dark'||(!('color-theme' in localStorage)&&window.matchMedia('(prefers-color-scheme: dark)').matches))?L.classList.remove('hidden'):D.classList.remove('hidden');document.getElementById('theme-toggle').addEventListener('click',function(){D.classList.toggle('hidden');L.classList.toggle('hidden');const t=localStorage.getItem('color-theme'),d=document.documentElement.classList;t?(t==='light'?(d.add('dark'),localStorage.setItem('color-theme','dark')):(d.remove('dark'),localStorage.setItem('color-theme','light'))):(d.contains('dark')?(d.remove('dark'),localStorage.setItem('color-theme','light')):(d.add('dark'),localStorage.setItem('color-theme','dark')))});</script>
 
     <!-- Toasts JS -->
     <script defer src="/static/pages/showtoasts.min.js?ver=1.1.2"></script>
