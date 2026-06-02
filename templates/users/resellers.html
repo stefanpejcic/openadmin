@@ -173,11 +173,9 @@ document.getElementById("togglePassword").addEventListener("click", function() {
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Login Time</div></th>
 
 
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Current Accounts</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Max Accounts</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Accounts</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Storage</div></th>
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Hosting Plans</div></th>
-
-
 
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Edit</th>
                         </tr>
@@ -211,19 +209,33 @@ document.getElementById("togglePassword").addEventListener("click", function() {
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{ user_data.last_login }}</td>
 
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/users?reseller={{ user_data.username }}">{{ user_data.current_accounts }}</a></td>
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/resellers/update/{{ user_data.username }}">{{ user_data.max_accounts }}</a></td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/users?reseller={{ user_data.username }}">{{ user_data.current_accounts }}</a>/<a href="/resellers/update/{{ user_data.username }}">{{ user_data.max_accounts }}</a></td>
+                            
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"
+                                x-data="{
+                                    current: {{ user_data.current_disk_blocks | default(0) }},
+                                    max: {{ user_data.max_disk_blocks | default(0) }},
+                                    get percentage() { return this.max > 0 ? Math.min((this.current / this.max) * 100, 100) : 0; },
+                                    get label() { return this.max > 0 ? this.max : '∞'; },
+                                    progressBarClass(p) { return p >= 90 ? 'bg-red-500 dark:bg-red-500' : p >= 70 ? 'bg-yellow-500 dark:bg-yellow-500' : 'bg-blue-500 dark:bg-blue-500'; }
+                                }">
+                                <div class="w-full">
+                                    <div class="flex w-full items-center mt-2 [&>*]:h-1.5">
+                                        <div class="relative flex h-2 w-full items-center bg-blue-100 dark:bg-blue-500/30" aria-label="progress bar" :aria-valuenow="percentage" aria-valuemax="100">
+                                            <div class="h-full flex-col" :style="'width: ' + percentage + '%'" :class="progressBarClass(percentage)"></div>
+                                        </div>
+                                    </div>
+                                    <p class="mt-1 flex items-center justify-between text-xs text-gray-500"><span x-text="current"></span><span x-text="label"></span></p>
+                                </div>
+                            </td>
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/resellers/update/{{ user_data.username }}">{% if user_data.allowed_plans %}{{ user_data.allowed_plans|length }}{% endif %}</a></td>
 
-                              <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
-
-                              
-<button id="{{ user_data.username }}" data-dropdown-toggle="dropdown-{{ user_data.username }}" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer" type="button"> 
-  <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
-    <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
-  </svg>
-</button>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+                                <button id="{{ user_data.username }}" data-dropdown-toggle="dropdown-{{ user_data.username }}" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer" type="button"> 
+                                  <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
+                                    <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
+                                  </svg>
+                                </button>
 
 <!-- Dropdown menu -->
 <div id="dropdown-{{ user_data.username }}" class="relative z-50 hidden rounded border p-1 shadow-xl shadow-black/[2.5%] max-h-[var(--radix-popper-available-height)] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade min-w-40 text-left">

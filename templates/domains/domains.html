@@ -571,13 +571,7 @@ function userSearch() {
                     </li>
 
                     <li class="flex">
-                        <button 
-                            type="button"
-                            @click="openDeleteModal('{{ domain.domain_url }}')"
-                            class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900"
-                        >
-                            Delete domain
-                        </button>
+                        <button type="button" @click="openDeleteModal('{{ domain.domain_url }}')" class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">Delete domain</button>
                     </li>
 
 
@@ -617,46 +611,71 @@ function userSearch() {
 
 
                 <!-- Delete Confirmation Modal -->
-                <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center" @keydown.escape.window="showDeleteModal = false">
-                    <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false"></div>
-
-                    <div @click.stop x-transition x-data="{ confirmationText: '' }" x-effect="if(!showDeleteModal) confirmationText = ''" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl border border-gray-200 dark:border-gray-800">
+                <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" @keydown.escape.window="showDeleteModal = false">
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showDeleteModal = false"></div>
+                
+                    <!-- Modal -->
+                    <div @click.stop x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95 translate-y-2" x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100 translate-y-0" x-transition:leave-end="opacity-0 scale-95 translate-y-2" x-data="{ confirmationText: '' }" x-effect="if (!showDeleteModal) confirmationText = ''" class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#090E1A]">
+                        <!-- Header -->
+                        <div class="border-b border-gray-200 px-6 py-5 dark:border-white/10">
+                            <div class="flex items-start gap-4">
+                                <div class="flex h-11 w-11 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/10">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" /></svg>
+                                </div>
+                
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Delete Domain</h3>
+                                    <p class="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">You are about to permanently remove <span class="font-semibold text-red-600 dark:text-red-400" x-text="domainToDelete"></span> and all associated configuration.</p>
+                                </div>
+                            </div>
+                        </div>
+                
+                        <!-- Content -->
                         <form method="POST" action="/domains/delete/toggle">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="domain_name" :value="domainToDelete">
-                            <h3 class="font-semibold text-gray-900 dark:text-gray-50">Delete Domain</h3>
-                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                This will permanently delete the domain <span class="font-semibold text-red-600" x-text="domainToDelete"></span> and all of its configuration, including VHost files, Caddyfile, SSL certificate, Email accounts and redirects. The docroot directory and website files will NOT be removed.
-                                <br><br>
-                                <span class="font-semibold">If you add this domain again in the future, default configurations will be set.</span>
-                                <br><br>
-                                Please note: the domain cannot be deleted while it still has websites attached. Make sure to remove all websites from Site Manager first.
-                                <br>
-                            </p>
-
-                            <div class="mt-6">
-                                <label class="text-sm font-medium text-gray-900 dark:text-gray-50">Type "<span x-text="domainToDelete"></span>" to confirm:</label>
-                                <input type="text" x-model="confirmationText" class="mt-2 w-full rounded border px-2.5 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                
+                            <div class="space-y-5 px-6 py-5">
+                                <!-- Warning Box -->
+                                <div class="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/5">
+                                    <ul class="space-y-2 text-sm text-red-900 dark:text-red-200">
+                                        <li>• VHost configuration files</li>
+                                        <li>• Caddyfile entries</li>
+                                        <li>• SSL certificates</li>
+                                        <li>• Email accounts & redirects</li>
+                                    </ul>
+                
+                                    <p class="mt-4 text-sm text-red-800 dark:text-red-300">Website files and the docroot directory will NOT be deleted.</p>
+                                </div>
+                
+                                <!-- Additional Info -->
+                                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                                    <p class="text-sm leading-6 text-gray-600 dark:text-gray-400">If this domain is added again later, default configurations will be recreated.<br><br>Domains with attached websites cannot be deleted. Remove all websites from Site Manager first.</p>
+                                </div>
+                
+                                <!-- Confirmation -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-900 dark:text-white">Type "<span x-text="domainToDelete"></span>" to confirm</label>
+                
+                                    <input type="text" x-model="confirmationText" autocomplete="off" class="mt-2 w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-500/10 dark:border-white/10 dark:bg-black/20 dark:text-white">
+                                </div>
                             </div>
-
-                            <div class="mt-6 flex gap-3">
-                                <button type="button" @click="showDeleteModal = false" class="w-full px-3 py-2 text-sm rounded bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-50">Cancel</button>
-                                <button type="submit" x-show="confirmationText === domainToDelete" x-cloak class="w-full px-3 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700">Delete permanently</button>
+                
+                            <!-- Footer -->
+                            <div class="flex gap-3 border-t border-gray-200 px-6 py-5 dark:border-white/10">
+                                <button type="button" @click="showDeleteModal = false" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200 dark:hover:bg-white/[0.05]">Cancel</button>
+                                <button type="submit" x-show="confirmationText === domainToDelete" x-cloak x-transition class="w-full rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-red-600/20 transition hover:bg-red-700">Delete Permanently</button>
                             </div>
                         </form>
                     </div>
                 </div>
-
 
                 <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
             </div>
             <div class="px-6 py-2 flex items-center justify-between">
                 <div></div>
                 <div class="flex items-center gap-x-6 lg:gap-x-8">
-                    <p class="text-sm tabular-nums text-gray-500 sm:block">
-                    Showing 
-                    <span class="font-medium text-gray-900 dark:text-gray-50" x-text="count"></span> of <span class="font-medium text-gray-900 dark:text-gray-50">{{ domains|length }}</span>
-                    </p>
+                    <p class="text-sm tabular-nums text-gray-500 sm:block">Showing <span class="font-medium text-gray-900 dark:text-gray-50" x-text="count"></span> of <span class="font-medium text-gray-900 dark:text-gray-50">{{ domains|length }}</span></p>
                 </div>
             </div>
 
