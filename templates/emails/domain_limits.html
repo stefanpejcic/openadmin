@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 
-<div x-data="rateLimits()" x-init="init()">
+<div x-data="rateLimits()" x-init="init()"
+     @open-hits.window="openHits($event.detail.domain)">
 
   <!-- Page header -->
   <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
@@ -12,88 +14,118 @@
                   <h1 class="mb-1 text-xl font-bold">Email Rate Limits</h1>
                   <h2 class="text-sm font-medium text-slate-500">Manage per-domain hourly send limits via <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">postfwd</code></h2>
               </div>
-              <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                <a href="?mode=gui"
-                   class="px-3 py-1.5 rounded-md text-sm font-medium transition
-                          {% if mode == 'gui' %}bg-blue-600 text-white shadow
-                          {% else %}bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
-                  <i class="ph ph-table mr-1"></i>GUI
-                </a>
-                <a href="?mode=raw"
-                   class="px-3 py-1.5 rounded-md text-sm font-medium transition
-                          {% if mode == 'raw' %}bg-blue-600 text-white shadow
-                          {% else %}bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
-                  <i class="ph ph-code mr-1"></i>Raw
-                </a>
+
+
+              <div class="hidden items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <a href="?mode=gui" class="px-3 py-1.5 rounded-md text-sm font-medium transition {% if mode == 'gui' %}bg-blue-600 text-white shadow {% else %}bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}"><i class="bi bi-table mr-1"></i>GUI</a>
+                <a href="?mode=raw" class="px-3 py-1.5 rounded-md text-sm font-medium transition {% if mode == 'raw' %}bg-blue-600 text-white shadow {% else %}bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}"><i class="bi bi-code mr-1"></i>Raw</a>
               </div>
+        
+              <div class="flex gap-3">
+        
+              <div class="flex flex-col gap-1">
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Restore from plan</span>
+                <div class="flex gap-2">
+                  <button @click="bulkAction('reset-all')" :disabled="busy" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition disabled:opacity-50">
+                    <i class="bi bi-arrow-clockwise"></i>All users
+                  </button>
+                  <div class="flex gap-1">
+                    <select x-model="selectedUser" class="text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                      <option value="">— user —</option>
+                      {% for u in usernames %}
+                      <option value="{{ u }}">{{ u }}</option>
+                      {% endfor %}
+                    </select>
+                    <button @click="bulkAction('reset-user')" :disabled="busy || !selectedUser" class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition disabled:opacity-50">
+                      <i class="bi bi-arrow-clockwise"></i>User
+                    </button>
+                  </div>
+                </div>
+              </div>
+        
+              <div class="h-8 w-px bg-gray-200 dark:bg-gray-700 self-end hidden sm:block"></div>
+        
+              <div class="flex flex-col gap-1">
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Remove rules</span>
+                <div class="flex gap-2">
+                  <button @click="confirmDelete('delete-all')"
+                          :disabled="busy"
+                          class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50">
+                    <i class="bi bi-trash3"></i>All
+                  </button>
+                  <div class="flex gap-1">
+                    <select x-model="selectedUserDelete"
+                            class="text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                      <option value="">— user —</option>
+                      {% for u in usernames %}
+                      <option value="{{ u }}">{{ u }}</option>
+                      {% endfor %}
+                    </select>
+                    <button @click="confirmDelete('delete-user')"
+                            :disabled="busy || !selectedUserDelete"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50">
+                      <i class="bi bi-trash3"></i>User
+                    </button>
+                  </div>
+                </div>
+              </div>
+        
+              </div>
+
           </div>
       </header>
   </div>
 
-<div class="max-w-7xl mx-auto px-4 py-8">
+<div>
 
-
-    
   <div
-    x-show="toast.visible"
+    x-show="$store.page.toast.visible"
     x-transition:enter="transition ease-out duration-200"
     x-transition:enter-start="opacity-0 translate-y-2"
     x-transition:enter-end="opacity-100 translate-y-0"
     x-transition:leave="transition ease-in duration-150"
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
-    :class="toast.ok
+    :class="$store.page.toast.ok
       ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
       : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'"
-    class="fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-lg border shadow-lg text-sm"
-    style="display:none"
-  >
+    class="fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded border shadow-lg text-sm" style="display:none">
     <div class="flex items-start gap-2">
       <i :class="toast.ok ? 'ph ph-check-circle text-green-500' : 'ph ph-x-circle text-red-500'" class="text-lg mt-0.5 shrink-0"></i>
       <div>
-        <p class="font-medium" x-text="toast.ok ? 'Success' : 'Error'"></p>
-        <p class="text-xs mt-0.5 whitespace-pre-wrap break-words" x-text="toast.msg"></p>
+        <p class="font-medium" x-text="$store.page.toast.ok ? 'Success' : 'Error'"></p>
+        <p class="text-xs mt-0.5 whitespace-pre-wrap break-words" x-text="$store.page.toast.msg"></p>
       </div>
-      <button @click="toast.visible=false" class="ml-auto shrink-0 opacity-60 hover:opacity-100">
-        <i class="ph ph-x"></i>
+      <button @click="$store.page.toast.visible=false" class="ml-auto shrink-0 opacity-60 hover:opacity-100">
+        <i class="bi bi-x-lg"></i>
       </button>
     </div>
   </div>
 
   {% if mode == 'raw' %}
-  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+  <div class="space-y-3">
+    <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
       <div>
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Direct file editor</span>
-        <span class="ml-2 text-xs text-gray-400 font-mono">{{ postfwd_cf }}</span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Editing file:</span><span class="ml-2 text-xs text-gray-400 font-mono">{{ postfwd_cf }}</span>
       </div>
       <span class="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-2 py-0.5 rounded">
-        <i class="ph ph-warning mr-1"></i>Edit with care
+        <i class="bi bi-exclamation-circle-fill mr-1"></i>Edit with care
       </span>
     </div>
     <form action="/emails/domain-limits/save-raw" method="POST">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <textarea
-        name="raw_content"
-        class="w-full font-mono text-xs text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 p-4 focus:outline-none resize-y min-h-[420px]"
-        spellcheck="false"
-        autocomplete="off"
-      >{{ raw_content }}</textarea>
+      <textarea name="raw_content" class="w-full font-mono text-xs text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 p-4 focus:outline-none resize-y min-h-[90vh]" spellcheck="false" autocomplete="off">{{ raw_content }}</textarea>
       <div class="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <a href="?mode=gui" class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-          Cancel
-        </a>
-        <button type="submit" class="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition shadow-sm">
-          <i class="ph ph-floppy-disk mr-1"></i>Save & Reload postfwd
-        </button>
+        <a href="?mode=gui" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 cursor-pointer">Cancel</a>
+        <button type="submit" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"><i class="bi bi-floppy2 mr-1"></i>Save & Reload postfwd</button>
       </div>
     </form>
   </div>
 
   {% else %}
 
-  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-4 p-4">
-    <div class="flex flex-wrap items-end gap-3">
+  <div class="space-y-3">
+    <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
 
       <!-- Search — left side -->
       <div class="relative w-full sm:max-w-[250px]">
@@ -115,74 +147,69 @@
         </div>
       </div>
 
-      <div class="h-8 w-px bg-gray-200 dark:bg-gray-700 self-end hidden sm:block"></div>
-
-      <div class="flex flex-col gap-1">
-        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Regenerate from DB</span>
-        <div class="flex gap-2">
-          <button @click="bulkAction('reset-all')"
-                  :disabled="busy"
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition disabled:opacity-50">
-            <i class="ph ph-arrows-clockwise"></i>All users
-          </button>
-          <div class="flex gap-1">
-            <select x-model="selectedUser"
-                    class="text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="">— user —</option>
-              {% for u in usernames %}
-              <option value="{{ u }}">{{ u }}</option>
-              {% endfor %}
-            </select>
-            <button @click="bulkAction('reset-user')"
-                    :disabled="busy || !selectedUser"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition disabled:opacity-50">
-              <i class="ph ph-arrows-clockwise"></i>User
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="h-8 w-px bg-gray-200 dark:bg-gray-700 self-end hidden sm:block"></div>
-
-      <div class="flex flex-col gap-1">
-        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Remove rules</span>
-        <div class="flex gap-2">
-          <button @click="confirmDelete('delete-all')"
-                  :disabled="busy"
-                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50">
-            <i class="ph ph-trash"></i>All
-          </button>
-          <div class="flex gap-1">
-            <select x-model="selectedUserDelete"
-                    class="text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="">— user —</option>
-              {% for u in usernames %}
-              <option value="{{ u }}">{{ u }}</option>
-              {% endfor %}
-            </select>
-            <button @click="confirmDelete('delete-user')"
-                    :disabled="busy || !selectedUserDelete"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-sm hover:bg-red-100 dark:hover:bg-red-900/40 transition disabled:opacity-50">
-              <i class="ph ph-trash"></i>User
-            </button>
-          </div>
-        </div>
-      </div>
-
+      <!-- right -->
     </div>
-  </div>
 
-  <div class="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+
+  <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden">
     {% if rules %}
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+      <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
         <thead>
-          <tr class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Domain</th>
-            <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Owner</th>
-            <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Usage / hour</th>
-            <th class="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">Rule ID</th>
-            <th class="px-4 py-3"></th>
+          <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                      <span>Domain</span>
+                      <div class="-space-y-2">
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                              <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                          </svg>
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                              <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                          </svg>
+                      </div>
+                  </div>
+              </th>        
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                      <span>Owner</span>
+                      <div class="-space-y-2">
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                              <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                          </svg>
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                              <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                          </svg>
+                      </div>
+                  </div>
+              </th>      
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                      <span>Usage / hour</span>
+                      <div class="-space-y-2">
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                              <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                          </svg>
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                              <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                          </svg>
+                      </div>
+                  </div>
+              </th>  
+               <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                      <span>Rule ID</span>
+                      <div class="-space-y-2">
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                              <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                          </svg>
+                          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                              <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                          </svg>
+                      </div>
+                  </div>
+              </th>  
+              <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Actions</div></th>
           </tr>
         </thead>
         <tbody>
@@ -195,31 +222,29 @@
               username: '{{ rule.username }}',
               limit:    {{ rule.limit }},
               current:  {{ rule.current if rule.current is not none else 'null' }}
-            })"
-            class="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition"
-          >
-            <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">
+            })" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900">
+            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
               {{ rule.domain }}
             </td>
 
-            <td class="px-4 py-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
+            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
               {{ rule.username }}
             </td>
 
-            <td class="px-4 py-3 min-w-[200px]">
+            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
               <template x-if="!editing">
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center justify-between text-xs">
                     <span>
                       <span x-show="current !== null" class="font-semibold" :class="usageColor()" x-text="current"></span>
-                      <span x-show="current === null" class="text-gray-400">—</span>
+                      <span x-show="current === null" class="text-gray-400">?</span>
                       <span class="text-gray-400"> / <span x-text="limit"></span>/hr</span>
                     </span>
                     <span x-show="hitLimit()"
                           @click="showHits()"
                           title="Limit was hit — click to view log"
                           class="cursor-pointer inline-flex items-center gap-1 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-1.5 py-0.5 rounded text-xs font-medium hover:bg-red-100 transition">
-                      <i class="ph ph-warning"></i>Limit hit
+                      <i class="bi bi-exclamation-circle-fill"></i>Limit hit
                     </span>
                   </div>
                   <div x-show="current !== null" class="h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -236,7 +261,7 @@
                          min="1" max="100000"
                          @keydown.enter="saveLimit()"
                          @keydown.escape="cancelEdit()"
-                         class="w-24 px-2 py-1 text-sm rounded-lg border border-blue-400 dark:border-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         class="w-24 px-2 py-1 text-sm rounded border border-blue-400 dark:border-blue-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                          x-ref="editInput"
                          x-init="$nextTick(() => $refs.editInput && $refs.editInput.focus())">
                   <span class="text-xs text-gray-500 dark:text-gray-400">/hr</span>
@@ -244,54 +269,46 @@
               </template>
             </td>
 
-            <td class="px-4 py-3 font-mono text-xs text-gray-400 dark:text-gray-500">
+            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
               {{ rule.id }}
             </td>
 
-            <td class="px-4 py-3">
+            <td class="flex p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
               <div class="flex items-center justify-end gap-1.5">
 
                 <template x-if="!editing">
                   <button @click="startEdit()"
                           title="Edit limit"
-                          class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
-                    <i class="ph ph-pencil-simple text-base"></i>
+                          class="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
+                    <i class="bi bi-pencil"></i>
                   </button>
                 </template>
                 <template x-if="editing">
                   <div class="flex items-center gap-1">
                     <button @click="saveLimit()"
-                            :disabled="busy"
+                            :disabled="$store.page.busy"
                             title="Save"
-                            class="p-1.5 rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition disabled:opacity-50">
-                      <i class="ph ph-check text-base"></i>
+                            class="p-1.5 rounded text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition disabled:opacity-50">
+                      <i class="bi bi-pencil-fill"></i>
                     </button>
                     <button @click="cancelEdit()"
                             title="Cancel"
-                            class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                      <i class="ph ph-x text-base"></i>
+                            class="p-1.5 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                      <i class="bi bi-pencil"></i>
                     </button>
                   </div>
                 </template>
 
-                <button @click="resetDomain()"
-                        :disabled="busy"
-                        title="Regenerate from DB"
-                        class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition disabled:opacity-50">
-                  <i class="ph ph-arrows-clockwise text-base"></i>
+                <button @click="resetDomain()" :disabled="$store.page.busy" title="Restore to plan defaults" class="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition disabled:opacity-50">
+                  <i class="bi bi-arrow-clockwise"></i>
                 </button>
 
                 <button @click="deleteDomain()"
-                        :disabled="busy"
+                        :disabled="$store.page.busy"
                         title="Remove rule for this domain"
-                        class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50">
-                  <i class="ph ph-trash text-base"></i>
+                        class="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50">
+                  <i class="bi bi-trash3"></i>
                 </button>
-
-                <span x-show="busy" class="ml-1">
-                  <i class="ph ph-circle-notch text-blue-500 animate-spin text-base"></i>
-                </span>
-
               </div>
             </td>
           </tr>
@@ -312,14 +329,10 @@
 
     {% else %}
     <div class="flex flex-col items-center justify-center py-6 text-center">
-      <i class="ph ph-envelope-open text-5xl text-gray-300 dark:text-gray-600 mb-3"></i>
+      <i class="bi bi-envelope-open text-5xl text-gray-300 dark:text-gray-600 mb-3"></i>
       <p class="text-gray-500 dark:text-gray-400 font-medium">No rate-limit rules configured</p>
       <p class="text-sm text-gray-400 dark:text-gray-500 mt-1 mb-4">Generate rules from your users' plan settings</p>
-      <button @click="bulkAction('reset-all')"
-              :disabled="busy"
-              class="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition shadow-sm disabled:opacity-50">
-        <i class="ph ph-arrows-clockwise"></i>Generate all rules now
-      </button>
+      <button @click="bulkAction('reset-all')" :disabled="$store.page.busy" class="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition shadow-sm disabled:opacity-50"><i class="bi bi-arrow-clockwise"></i>Generate all rules now</button>
     </div>
     {% endif %}
   </div>
@@ -342,21 +355,21 @@
     >
       <div class="flex items-center gap-3 mb-3">
         <div class="p-2 rounded-full bg-red-100 dark:bg-red-900/30">
-          <i class="ph ph-trash text-red-600 dark:text-red-400 text-xl"></i>
+          <i class="bi bi-trash3 text-red-600 dark:text-red-400 text-xl"></i>
         </div>
         <h3 class="text-base font-semibold text-gray-900 dark:text-white">Confirm removal</h3>
       </div>
       <p class="text-sm text-gray-600 dark:text-gray-400 mb-5" x-text="confirm.msg"></p>
       <div class="flex justify-end gap-2">
         <button @click="confirm.open=false"
-                class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                class="px-4 py-2 text-sm rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
           Cancel
         </button>
         <button @click="confirm.run()"
                 :disabled="busy"
-                class="px-4 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition shadow-sm disabled:opacity-50">
+                class="px-4 py-2 text-sm rounded bg-red-600 hover:bg-red-700 text-white font-medium transition shadow-sm disabled:opacity-50">
           <span x-show="!busy">Delete</span>
-          <span x-show="busy"><i class="ph ph-circle-notch animate-spin"></i> Deleting…</span>
+          <span x-show="busy"><i class="bi bi-slash-circle-fill animate-spin"></i> Deleting…</span>
         </button>
       </div>
     </div>
@@ -381,7 +394,7 @@
       <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
         <div class="flex items-center gap-2">
           <div class="p-1.5 rounded-full bg-red-100 dark:bg-red-900/30">
-            <i class="ph ph-warning text-red-600 dark:text-red-400"></i>
+            <i class="bi bi-exclamation-circle-fill text-red-600 dark:text-red-400"></i>
           </div>
           <div>
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Rate limit hits</h3>
@@ -389,17 +402,17 @@
           </div>
         </div>
         <button @click="hits.open=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
-          <i class="ph ph-x text-lg"></i>
+          <i class="bi bi-x-lg text-lg"></i>
         </button>
       </div>
 
       <div class="overflow-y-auto p-4 flex-1">
         <div x-show="hits.loading" class="flex justify-center py-8">
-          <i class="ph ph-circle-notch animate-spin text-2xl text-gray-400"></i>
+          <i class="bi bi-check-circle text-2xl text-gray-400"></i>
         </div>
         <template x-if="!hits.loading && hits.lines.length === 0">
           <div class="text-center py-8 text-sm text-gray-400 dark:text-gray-500">
-            <i class="ph ph-check-circle text-3xl text-green-400 block mb-2"></i>
+            <i class="bi bi-check-circle-fill text-3xl text-green-400 block mb-2"></i>
             No rate limit hits found in the mail log for this domain.
           </div>
         </template>
@@ -418,12 +431,21 @@
       </div>
     </div>
   </div>
-
+  </div>
   {% endif %}
 </div>
 
 <script>
-// Read CSRF token once from the meta tag set by Flask-WTF in base.html
+document.addEventListener('alpine:init', () => {
+  Alpine.store('page', {
+    busy:    false,
+    toast:   { visible: false, ok: true, msg: '' },
+    confirm: { open: false, msg: '', run: () => {} },
+    hits:    { open: false, loading: false, domain: '', lines: [] },
+  });
+});
+
+ 
 function getCsrfToken() {
   return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 }
@@ -433,12 +455,7 @@ function rateLimits() {
     search:             '',
     selectedUser:       '',
     selectedUserDelete: '',
-    busy:               false,
     filteredCount:      {{ rules|length }},
-    toast:   { visible: false, ok: true, msg: '' },
-    confirm: { open: false, msg: '', run: () => {} },
-    hits:    { open: false, loading: false, domain: '', lines: [] },
-
     init() {
       this.$watch('search', () => this._countFiltered());
     },
@@ -455,28 +472,28 @@ function rateLimits() {
     },
 
     showToast(ok, msg) {
-      this.toast = { visible: true, ok, msg };
+      this.$store.page.toast = { visible: true, ok, msg };
       clearTimeout(this._toastTimer);
-      this._toastTimer = setTimeout(() => this.toast.visible = false, 5000);
+      this._toastTimer = setTimeout(() => this.$store.page.toast.visible = false, 5000);
     },
 
     async openHits(domain) {
-      this.hits = { open: true, loading: true, domain, lines: [] };
+      this.$store.page.hits = { open: true, loading: true, domain, lines: [] };
       try {
         const res  = await fetch(`/emails/domain-limits/hits?domain=${encodeURIComponent(domain)}`, {
           headers: { 'X-CSRFToken': getCsrfToken() },
         });
         const data = await res.json();
-        this.hits.lines   = data.lines || [];
-        this.hits.loading = false;
+        this.$store.page.hits.lines   = data.lines || [];
+        this.$store.page.hits.loading = false;
       } catch (e) {
-        this.hits.lines   = [];
-        this.hits.loading = false;
+        this.$store.page.hits.lines   = [];
+        this.$store.page.hits.loading = false;
       }
     },
 
     async _api(payload) {
-      this.busy = true;
+      this.$store.page.busy = true;
       try {
         const res  = await fetch('/emails/domain-limits/api', {
           method:  'POST',
@@ -492,7 +509,7 @@ function rateLimits() {
       } catch (e) {
         this.showToast(false, e.message);
       } finally {
-        this.busy = false;
+        this.$store.page.busy = false;
       }
     },
 
@@ -554,7 +571,7 @@ function ruleRow({ id, domain, username, limit, current }) {
     },
 
     showHits() {
-      this.$root.__x.$data.openHits(this.domain);
+      this.$dispatch('open-hits', { domain: this.domain });
     },
 
     startEdit() {
@@ -568,8 +585,7 @@ function ruleRow({ id, domain, username, limit, current }) {
 
     async _api(payload) {
       this.busy = true;
-      const page = this.$root.__x.$data;
-      page.busy  = true;
+      this.$store.page.busy = true;
       try {
         const res  = await fetch('/emails/domain-limits/api', {
           method:  'POST',
@@ -580,13 +596,16 @@ function ruleRow({ id, domain, username, limit, current }) {
           body:    JSON.stringify(payload),
         });
         const data = await res.json();
-        page.showToast(data.ok, data.msg);
+        const t = this.$store.page.toast;
+        this.$store.page.toast = { visible: true, ok: data.ok, msg: data.msg };
+        setTimeout(() => this.$store.page.toast.visible = false, 5000);
         if (data.ok) setTimeout(() => location.reload(), 800);
       } catch (e) {
-        page.showToast(false, e.message);
+        this.$store.page.toast = { visible: true, ok: false, msg: e.message };
+        setTimeout(() => this.$store.page.toast.visible = false, 5000);
       } finally {
         this.busy = false;
-        page.busy = false;
+        this.$store.page.busy = false;
       }
     },
 
@@ -602,12 +621,11 @@ function ruleRow({ id, domain, username, limit, current }) {
     },
 
     async deleteDomain() {
-      const page = this.$root.__x.$data;
-      page.confirm = {
+      this.$store.page.confirm = {
         open: true,
         msg:  `Remove rate-limit rule for «${this.domain}»?`,
         run:  async () => {
-          page.confirm.open = false;
+          this.$store.page.confirm.open = false;
           await this._api({ action: 'delete-domain', domain: this.domain });
         },
       };
