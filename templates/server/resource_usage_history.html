@@ -1,0 +1,666 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- START templates/server/resource_usage_history.html -->
+
+<div class="min-h-screen">
+
+  <!-- Page Header -->
+  <div class="border-b flex flex-col border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950 p-4 sm:p-6 lg:p-8 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="mb-1 text-xl font-bold">Resource Usage History</h1>
+      <p class="text-sm font-medium text-slate-500">Last {{ period_label }}</p>
+    </div>
+    <div class="mt-3 sm:mt-0 flex flex-wrap items-center gap-2">
+
+      <!-- Time range selector -->
+      <select onchange="location.href='?minutes='+this.value+'&view={{ view }}'"
+              class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+        {% set periods = [
+          (5,    'Last 5 minutes'),
+          (15,   'Last 15 minutes'),
+          (30,   'Last 30 minutes'),
+          (60,   'Last 1 hour'),
+          (180,  'Last 3 hours'),
+          (360,  'Last 6 hours'),
+          (720,  'Last 12 hours'),
+          (1440, 'Last 24 hours'),
+          (2880, 'Last 2 days'),
+          (10080,'Last 7 days'),
+          (43200,'Last 30 days')
+        ] %}
+        {% for mins, label in periods %}
+        <option value="{{ mins }}" {% if minutes == mins %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <!-- View toggle -->
+      <div class="flex items-center gap-1">
+        <a href="?minutes={{ minutes }}&view=line"
+           title="Line chart"
+           class="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition-colors
+                  {% if view == 'line' %}border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900{% else %}border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 20h18"/>
+          </svg>
+        </a>
+        <a href="?minutes={{ minutes }}&view=grid"
+           title="Grid / table"
+           class="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition-colors
+                  {% if view == 'grid' %}border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900{% else %}border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800{% endif %}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
+          </svg>
+        </a>
+      </div>
+
+      <!-- Refresh button -->
+      <button onclick="location.reload()"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- No data state -->
+  <div id="no-data" class="hidden p-8 text-center">
+    <div class="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+      <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+    </div>
+    <p class="text-sm font-medium text-gray-900 dark:text-gray-50">No snapshots found</p>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">No data for the selected time range. Try a longer period.</p>
+  </div>
+
+  <!-- Content area -->
+  <div id="content-area" class="space-y-6">
+
+    <!-- ── LINE VIEW ── -->
+    <div id="view-line" class="{% if view != 'line' %}hidden{% endif %} space-y-4 p-4 sm:p-6 lg:p-8">
+
+      <!-- CPU + Load chart -->
+      <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">CPU &amp; Load Average</h2>
+          <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-blue-500 inline-block rounded"></span>CPU %</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-orange-400 inline-block rounded"></span>1m load</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-amber-300 inline-block rounded"></span>5m load</span>
+          </div>
+        </div>
+        <div style="position:relative;height:200px"><canvas id="chart-cpu"></canvas></div>
+      </div>
+
+      <!-- Memory + Swap chart -->
+      <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Memory &amp; Swap</h2>
+          <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-violet-500 inline-block rounded"></span>RAM %</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-pink-400 inline-block rounded"></span>Swap %</span>
+          </div>
+        </div>
+        <div style="position:relative;height:180px"><canvas id="chart-mem"></canvas></div>
+      </div>
+
+      <!-- Disk + Web connections chart -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50 mb-3">Disk Usage %</h2>
+          <div style="position:relative;height:160px"><canvas id="chart-disk"></canvas></div>
+        </div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50 mb-3">Web Connections</h2>
+          <div style="position:relative;height:160px"><canvas id="chart-conn"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Check results over time -->
+      <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Health Checks</h2>
+          <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-emerald-500 inline-block rounded"></span>Pass</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-400 inline-block rounded"></span>Warn</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-red-500 inline-block rounded"></span>Fail</span>
+          </div>
+        </div>
+        <div style="position:relative;height:160px"><canvas id="chart-checks"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── GRID VIEW ── -->
+    <div id="view-grid" class="{% if view != 'grid' %}hidden{% endif %} -mx-4 sm:-mx-6 lg:-mx-8" x-data="snapshotTable()" x-init="init()">
+      <div class="space-y-3">
+
+        <!-- Toolbar: search + columns toggle -->
+        <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+          <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+            <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+              <input x-model="searchQuery" type="search" placeholder="Search snapshots..."
+                     class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8">
+              <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Columns dropdown -->
+            <div class="relative" x-data="{ open: false }" @click.away="open = false">
+              <button @click="open = !open" type="button"
+                      class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg>
+                Show Columns
+              </button>
+
+              <div x-show="open" x-transition
+                   class="absolute right-0 z-10 mt-1 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-72 dark:divide-gray-600">
+                <ul class="p-2 space-y-1">
+                  <template x-for="col in columnList" :key="col.key">
+                    <li>
+                      <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                        <label class="inline-flex items-center w-full cursor-pointer">
+                          <input type="checkbox" :checked="columns[col.key]" @change="columns[col.key] = $event.target.checked; saveColumns()" class="sr-only peer">
+                          <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                          <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300" x-text="col.label"></span>
+                        </label>
+                      </div>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500 h-screen">
+          <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+            <thead>
+              <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+
+                <th x-show="columns.ts" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('ts')">
+                    <span>Timestamp</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='ts' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='ts' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.cpu" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('cpu')">
+                    <span>CPU %</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='cpu' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='cpu' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.load1" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('load1')">
+                    <span>Load 1m</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load1' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load1' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.load5" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('load5')">
+                    <span>Load 5m</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load5' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load5' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.load15" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('load15')">
+                    <span>Load 15m</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load15' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load15' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.mem" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('mem')">
+                    <span>RAM %</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='mem' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='mem' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.memused" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('memused')">
+                    <span>RAM Used</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='memused' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='memused' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.swap" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('swap')">
+                    <span>Swap %</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='swap' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='swap' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.disk" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('disk')">
+                    <span>Disk %</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='disk' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='disk' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.conn" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('conn')">
+                    <span>Web Conn</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='conn' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='conn' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.status" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('status')">
+                    <span>Status</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='status' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='status' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.pass" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('pass')">
+                    <span>Pass</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='pass' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='pass' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.warn" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('warn')">
+                    <span>Warn</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='warn' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='warn' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+                <th x-show="columns.fail" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('fail')">
+                    <span>Fail</span>
+                    <div class="-space-y-2">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='fail' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='fail' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
+                    </div>
+                  </div>
+                </th>
+
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+
+              <template x-for="(s, i) in filteredSorted" :key="s.ts + i">
+                <tr class="[&_td:last-child]:pr-4 [&_td:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+
+                  <td x-show="columns.ts" class="p-4 text-sm relative whitespace-nowrap py-1 font-mono text-gray-500 dark:text-gray-400 first:w-10 text-left" x-text="s.ts"></td>
+
+                  <td x-show="columns.cpu" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium first:w-10 text-left"
+                      :class="s.cpu_pct > 80 ? 'text-red-600 dark:text-red-400' : s.cpu_pct > 60 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-gray-50'"
+                      x-text="s.cpu_pct + '%'"></td>
+
+                  <td x-show="columns.load1"  class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['1m']"></td>
+                  <td x-show="columns.load5"  class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['5m']"></td>
+                  <td x-show="columns.load15" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['15m']"></td>
+
+                  <td x-show="columns.mem" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium first:w-10 text-left"
+                      :class="s.mem.pct > 85 ? 'text-red-600 dark:text-red-400' : s.mem.pct > 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-gray-50'"
+                      x-text="s.mem.pct + '%'"></td>
+
+                  <td x-show="columns.memused" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 first:w-10 text-left" x-text="fmtMb(s.mem.used_mb)"></td>
+
+                  <td x-show="columns.swap"   class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.swap.pct + '%'"></td>
+
+                  <td x-show="columns.disk" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium first:w-10 text-left"
+                      :class="s.disk_pct > 90 ? 'text-red-600 dark:text-red-400' : s.disk_pct > 75 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-gray-50'"
+                      x-text="s.disk_pct + '%'"></td>
+
+                  <td x-show="columns.conn"   class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.web_conn"></td>
+
+                  <td x-show="columns.status" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1"
+                          :class="{
+                            'bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20': s.status === 0,
+                            'bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20': s.status === 1,
+                            'bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20': s.status === 2
+                          }"
+                          x-text="['OK','Warning','Critical'][s.status] ?? 'Unknown'"></span>
+                  </td>
+
+                  <td x-show="columns.pass" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-emerald-600 dark:text-emerald-400 first:w-10 text-left" x-text="s.pass"></td>
+                  <td x-show="columns.warn" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-yellow-600 dark:text-yellow-400 first:w-10 text-left" x-text="s.warn"></td>
+                  <td x-show="columns.fail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-red-600 dark:text-red-400 first:w-10 text-left" x-text="s.fail"></td>
+
+                </tr>
+              </template>
+
+              <tr x-show="filteredSorted.length === 0">
+                <td colspan="14" class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">No snapshots match your search.</td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-2 flex items-center justify-between">
+          <div></div>
+          <div class="flex items-center gap-x-6 lg:gap-x-8">
+            <p class="text-sm tabular-nums text-gray-500 sm:block">Showing <span class="font-medium text-gray-900 dark:text-gray-50" x-text="filteredSorted.length"></span> of <span class="font-medium text-gray-900 dark:text-gray-50" x-text="allRows.length"></span></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<script>
+(function () {
+  // ── Data from server ──────────────────────────────────────────────
+  const RAW = {{ snapshots_json | safe }};
+  const VIEW = "{{ view }}";
+
+  function fmtTs(ts) {
+    // "2026-06-09 11:17:51"
+    // For ranges > 1 day show date+time, otherwise just time
+    const mins = {{ minutes }};
+    if (mins > 1440) return ts.replace(" ", " ").slice(5, 16); // "MM-DD HH:MM"
+    return ts.split(" ")[1] || ts; // "HH:MM:SS"
+  }
+  function fmtMb(mb) {
+    return mb >= 1024 ? (mb / 1024).toFixed(1) + " GB" : mb + " MB";
+  }
+
+  const STATUS_LABEL = { 0: "OK", 1: "Warning", 2: "Critical" };
+  const STATUS_COLOR = {
+    0: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
+    1: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
+    2: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+  };
+
+  // Detect dark mode for chart colors
+  const isDark = document.documentElement.classList.contains("dark") ||
+                 window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const gridColor  = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
+  const tickColor  = isDark ? "#6b7280" : "#9ca3af";
+  const chartFont  = { family: "inherit", size: 11 };
+
+  const CHART_DEFAULTS = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: isDark ? "#1f2937" : "#fff",
+        borderColor: isDark ? "#374151" : "#e5e7eb",
+        borderWidth: 1,
+        titleColor: isDark ? "#f9fafb" : "#111827",
+        bodyColor: isDark ? "#9ca3af" : "#6b7280",
+        padding: 10
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: tickColor, font: chartFont, maxTicksLimit: 8 },
+        grid: { color: gridColor }
+      },
+      y: {
+        ticks: { color: tickColor, font: chartFont },
+        grid: { color: gridColor }
+      }
+    }
+  };
+
+  function mergeDeep(a, b) {
+    const out = Object.assign({}, a);
+    for (const k in b) {
+      if (b[k] && typeof b[k] === "object" && !Array.isArray(b[k])) {
+        out[k] = mergeDeep(a[k] || {}, b[k]);
+      } else {
+        out[k] = b[k];
+      }
+    }
+    return out;
+  }
+
+  function lineDataset(label, data, color, opts = {}) {
+    return Object.assign({
+      label, data,
+      borderColor: color,
+      backgroundColor: color.replace(")", ",0.10)").replace("rgb", "rgba"),
+      borderWidth: 2,
+      pointRadius: data.length > 60 ? 0 : 2,
+      pointHoverRadius: 4,
+      tension: 0.3,
+      fill: false
+    }, opts);
+  }
+
+  // ── No-data guard ─────────────────────────────────────────────────
+  if (!RAW || RAW.length === 0) {
+    document.getElementById("no-data").classList.remove("hidden");
+    document.getElementById("content-area").classList.add("hidden");
+    return;
+  }
+
+  const snapshots = RAW.slice(); // server returns oldest → newest (file is read top-to-bottom)
+  const labels    = snapshots.map(s => fmtTs(s.ts));
+
+  // ── Charts (line view) ────────────────────────────────────────────
+  if (VIEW === "line") {
+    // CPU & Load
+    new Chart(document.getElementById("chart-cpu"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          lineDataset("CPU %",   snapshots.map(s => s.cpu_pct),              "rgb(59,130,246)"),
+          lineDataset("Load 1m", snapshots.map(s => parseFloat(s.load["1m"])), "rgb(251,146,60)"),
+          lineDataset("Load 5m", snapshots.map(s => parseFloat(s.load["5m"])), "rgb(253,224,71)")
+        ]
+      },
+      options: mergeDeep(CHART_DEFAULTS, {
+        scales: { y: { min: 0, suggestedMax: 100 } }
+      })
+    });
+
+    // Memory & Swap
+    new Chart(document.getElementById("chart-mem"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          lineDataset("RAM %",  snapshots.map(s => s.mem.pct),  "rgb(139,92,246)"),
+          lineDataset("Swap %", snapshots.map(s => s.swap.pct), "rgb(244,114,182)")
+        ]
+      },
+      options: mergeDeep(CHART_DEFAULTS, {
+        scales: {
+          y: { min: 0, max: 100,
+               ticks: { callback: v => v + "%" } }
+        }
+      })
+    });
+
+    // Disk
+    new Chart(document.getElementById("chart-disk"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          lineDataset("Disk %", snapshots.map(s => s.disk_pct), "rgb(234,88,12)", { fill: true })
+        ]
+      },
+      options: mergeDeep(CHART_DEFAULTS, {
+        scales: { y: { min: 0, max: 100 } }
+      })
+    });
+
+    // Web connections
+    new Chart(document.getElementById("chart-conn"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          lineDataset("Connections", snapshots.map(s => s.web_conn), "rgb(20,184,166)", { fill: true })
+        ]
+      },
+      options: CHART_DEFAULTS
+    });
+
+    // Health checks
+    new Chart(document.getElementById("chart-checks"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          lineDataset("Pass", snapshots.map(s => s.pass), "rgb(16,185,129)"),
+          lineDataset("Warn", snapshots.map(s => s.warn), "rgb(234,179,8)"),
+          lineDataset("Fail", snapshots.map(s => s.fail), "rgb(239,68,68)")
+        ]
+      },
+      options: mergeDeep(CHART_DEFAULTS, {
+        scales: { y: { min: 0, ticks: { stepSize: 1 } } }
+      })
+    });
+  }
+
+  // ── Grid / table view (Alpine) ────────────────────────────────────
+  window.snapshotTable = function() {
+    return {
+      allRows: RAW,
+      searchQuery: '',
+      sortKey: 'ts',
+      sortDir: 'desc',
+      columns: {
+        ts: true, cpu: true, load1: true, load5: true, load15: false,
+        mem: true, memused: false, swap: false, disk: true,
+        conn: true, status: true, pass: true, warn: true, fail: true
+      },
+      columnList: [
+        { key: 'ts',      label: 'Timestamp' },
+        { key: 'cpu',     label: 'CPU %' },
+        { key: 'load1',   label: 'Load 1m' },
+        { key: 'load5',   label: 'Load 5m' },
+        { key: 'load15',  label: 'Load 15m' },
+        { key: 'mem',     label: 'RAM %' },
+        { key: 'memused', label: 'RAM used' },
+        { key: 'swap',    label: 'Swap %' },
+        { key: 'disk',    label: 'Disk %' },
+        { key: 'conn',    label: 'Web conn' },
+        { key: 'status',  label: 'Status' },
+        { key: 'pass',    label: 'Pass' },
+        { key: 'warn',    label: 'Warn' },
+        { key: 'fail',    label: 'Fail' },
+      ],
+
+      init() {
+        const saved = localStorage.getItem('sentinelColumnsVisibility');
+        if (saved) { try { this.columns = JSON.parse(saved); } catch(e) {} }
+      },
+
+      saveColumns() {
+        localStorage.setItem('sentinelColumnsVisibility', JSON.stringify(this.columns));
+      },
+
+      fmtMb(mb) {
+        return mb >= 1024 ? (mb / 1024).toFixed(1) + ' GB' : mb + ' MB';
+      },
+
+      sortBy(key) {
+        if (this.sortKey === key) {
+          this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          this.sortKey = key;
+          this.sortDir = 'asc';
+        }
+      },
+
+      get filteredSorted() {
+        const q = this.searchQuery.toLowerCase();
+        let rows = q
+          ? this.allRows.filter(s =>
+              s.ts.toLowerCase().includes(q) ||
+              (['ok','warning','critical'][s.status] || '').toLowerCase().includes(q)
+            )
+          : this.allRows.slice();
+
+        const key = this.sortKey;
+        const dir = this.sortDir === 'asc' ? 1 : -1;
+        const getVal = s => {
+          switch(key) {
+            case 'ts':      return s.ts;
+            case 'cpu':     return s.cpu_pct;
+            case 'load1':   return parseFloat(s.load['1m']);
+            case 'load5':   return parseFloat(s.load['5m']);
+            case 'load15':  return parseFloat(s.load['15m']);
+            case 'mem':     return s.mem.pct;
+            case 'memused': return s.mem.used_mb;
+            case 'swap':    return s.swap.pct;
+            case 'disk':    return s.disk_pct;
+            case 'conn':    return s.web_conn;
+            case 'status':  return s.status;
+            case 'pass':    return s.pass;
+            case 'warn':    return s.warn;
+            case 'fail':    return s.fail;
+            default:        return 0;
+          }
+        };
+        rows.sort((a, b) => {
+          const va = getVal(a), vb = getVal(b);
+          return va < vb ? -dir : va > vb ? dir : 0;
+        });
+        return rows;
+      }
+    };
+  };
+
+})();
+</script>
+
+<!-- END templates/server/resource_usage_history.html -->
+{% endblock %}

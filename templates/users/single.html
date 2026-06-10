@@ -85,7 +85,10 @@
               if (this.activeTab === 'storage') this.loadDiskUsage();
               else if (this.activeTab === 'activity') $store?.activityStore?.fetchLogs();
               else if (this.activeTab === 'logins') $store?.loginsStore?.fetchloginLogs();
-              else if (this.activeTab === 'edit' || this.activeTab === 'delete') $store?.ipStore?.fetchIPs();
+              else if (this.activeTab === 'edit' || this.activeTab === 'delete') {
+                  $store?.ipStore?.fetchIPs();
+                  $store?.resellerStore?.fetchResellers();
+              }
               else if (this.activeTab === 'info') this.fetchCustomMessage();
           });
       }
@@ -143,7 +146,39 @@
                   });
           }
       });
+
   
+      
+    Alpine.store("resellerStore", {
+      fetched: false,
+      fetchResellers() {
+          if (this.fetched) return;
+          this.fetched = true;
+  
+          const currentReseller = "{{ user.owner }}";
+          const resellerSelect = document.getElementById('resellerSelect');
+  
+          fetch('/resellers?output=json')
+              .then(res => res.json())
+              .then(data => {
+                  resellerSelect.innerHTML = '<option value="">No reseller</option>';
+  
+                  data.forEach(r => {
+                      const option = document.createElement('option');
+                      option.value = r.username;
+                      option.textContent = r.username;
+                      if (r.username === currentReseller) {
+                          option.selected = true;
+                      }
+                      resellerSelect.appendChild(option);
+                  });
+              })
+              .catch(err => {
+                  console.error('Error fetching resellers:', err);
+                  this.fetched = false;
+              });
+      }
+  });
 
 
 
