@@ -11,7 +11,7 @@
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
                     <h1 class="flex gap-2 mb-1 text-xl font-bold">Edit Defaults <a href="/settings/defaults/files" class="flex items-center gap-x-1.5 whitespace-nowrap rounded border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 cursor-pointer"><span class="w-full text-left sm:w-fit">Advanced</span></a></h1>
-                    <h2 class="text-sm font-medium text-slate-500">Edit defaults used for new OpenPanel user accounts.</h2>
+                    <h2 class="text-sm font-medium text-slate-500">Edit defaults used for new OpenPanel user accounts. Options can be set per-user <a href="/user/new">on creation</a></h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
                     <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Save</button>
@@ -302,9 +302,8 @@
 
 
   <!-- PHP_FPM versioned keys -->
-
-
-<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+	  
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" id="services-limits">
     <div>
         <h2 id="services" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Services</h2>
         <p class="mt-1 text-sm leading-6 text-gray-500">Configure service versions, CPU & Memory limits and other defaults.
@@ -321,6 +320,11 @@
 
 
 
+
+
+
+
+							
 
   {% if defaults.PHP_FPM %}
     {% for version, items in defaults.PHP_FPM|dictsort(reverse=true) %}
@@ -465,6 +469,53 @@
 </div>
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  fetch('https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/docker/compose/1.0/.env')
+    .then(function (r) { return r.text(); })
+    .then(function (text) {
+      var defaults = {};
+      text.split('\n').forEach(function (line) {
+        line = line.trim();
+        if (!line || line.startsWith('#') || line.indexOf('=') === -1) return;
+        var parts = line.split('=');
+        var key = parts.shift().trim();
+        var value = parts.join('=').trim().replace(/^["']|["']$/g, '');
+        defaults[key] = value;
+      });
+
+      var scope = document.getElementById('services-limits');
+      if (!scope) return;
+
+      scope.querySelectorAll('input[name], select[name]').forEach(function (el) {
+        var key = el.getAttribute('name');
+        if (!(key in defaults)) return;
+
+        var defaultValue = defaults[key];
+
+        if (key.endsWith('_RAM')) {
+          if (defaultValue.endsWith('g') || defaultValue.endsWith('G')) {
+            defaultValue = defaultValue.slice(0, -1);
+          }
+        } else if (key.endsWith('CPU') || key.endsWith('CPUS')) {
+          if (defaultValue.endsWith('G')) {
+            defaultValue = defaultValue.slice(0, -1);
+          }
+        }
+
+        var hint = document.createElement('span');
+        hint.className = 'mt-1 block text-xs text-gray-400 dark:text-gray-500';
+        hint.textContent = 'Default: ' + defaultValue;
+        el.parentNode.appendChild(hint);
+      });
+    })
+    .catch(function (err) {
+      console.error('Failed to fetch default service limits:', err);
+    });
+});
+</script>
+	  
    
 </div>
 </div>
