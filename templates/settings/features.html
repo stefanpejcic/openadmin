@@ -21,7 +21,7 @@
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
                     <h1 class="mb-1 text-xl font-bold">Feature Manager</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Edit features set: {{ plan }}</h2>
+                    <h2 class="text-sm font-medium text-slate-500">Edit features available to users on hosting plans that use this feature set: <strong>{{ plan }}</strong></h2>
                 </div>
 
 
@@ -83,21 +83,9 @@
 
 
 <span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800">
-  <button
-    type="button"
-    @click="applyToAll(true)"
-    class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"
-  ><svg class="remixicon -ml-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C17.5 22 22 17.5 22 12S17.5 2 12 2 2 6.5 2 12s4.5 10 10 10Zm5.5-12.5-6.5 6.5-4.2-4.2L8.2 10.3l2.3 2.3 5.1-5.1 1.4 1.4Z"></path></svg>Enable All
-  </button>
-
-    <span class="h-4 w-px bg-gray-200 dark:bg-gray-800"></span>
-
-  <button
-    type="button"
-    @click="applyToAll(false)"
-    class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"
-  ><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-red-600 dark:text-red-500"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path></svg>Disable All
-  </button>
+  <button type="button" @click="applyToAll(true)" class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50">Enable All</button>
+  <span class="h-4 w-px bg-gray-200 dark:bg-gray-800"></span>
+  <button type="button" @click="applyToAll(false)" class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50" >Disable All</button>
 </span>
 
 </div>
@@ -114,6 +102,7 @@
 
               <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Type</th>
               <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Page</th>
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Module</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -150,6 +139,13 @@
                 <span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Plugin</span>
               </td>
               <td class="p-4 text-sm text-gray-900 dark:text-gray-50">{{ plugin.link }}</td>
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">
+                {% if plugin.module_enabled %}
+                <span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-emerald-500 dark:bg-emerald-500" aria-hidden="true"></span>Enabled</span>
+                {% else %}
+                <span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-red-500 dark:bg-red-500" aria-hidden="true"></span>Disabled</span>
+                {% endif %}
+              </td>
 
             </tr>
             {% endfor %}
@@ -204,6 +200,15 @@
                 {% endif %}
               </td>
               <td class="p-4 text-sm text-gray-900 dark:text-gray-50">{{ feature.link }}</td>
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">
+                {% if feature.module_enabled %}
+<span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800"><span class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</span></span>
+                {% else %}
+                <a title="This module is disabled. Enable it in Settings → Modules, or this feature will have no effect." href="/settings/modules">
+<span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800"><span class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-red-600 dark:text-red-500"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path></svg>Disabled</span></span>
+                  </a>
+                  {% endif %}
+              </td>
 
             </tr>
             {% endfor %}
