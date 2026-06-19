@@ -152,6 +152,56 @@
   });
 </script>
 
+                  <br>
+                  <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+
+                       {{ macros.tooltip('private_notes_for_this_user', 'Private notes', 'Internal notes about this user, visible only to admins/resellers in OpenAdmin. Never shown to the user.', required=False) }}
+
+                    </span> <button type="button" class="hidden sm:flex save_private_notes_btn relative  items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+                  </div>
+                  <textarea id="private_notes_for_this_user" data-username="{{ user.username }}" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" rows="5">{{ user_notes }}</textarea>
+
+<button type="button" class="w-full mt-2 sm:hidden save_private_notes_btn relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+
+<script>
+  const notesTextarea = document.getElementById('private_notes_for_this_user');
+  const saveNotesBtns = document.querySelectorAll('.save_private_notes_btn');
+  var csrf_token_notes = $('meta[name="csrf-token"]').attr('content');
+
+  async function savePrivateNotes() {
+    const notes = notesTextarea.value;
+    const notesUsername = notesTextarea.dataset.username;
+
+    try {
+      const response = await fetch(`/get_user_notes/${notesUsername}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token_notes,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ notes: notes }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showToast(data.message || 'Saved successfully.', 'info');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || `Save failed (${response.status})`, 'error');
+      }
+    } catch (err) {
+      showToast('Error saving private notes for user.', 'error');
+    }
+  }
+
+  saveNotesBtns.forEach(function (btn) {
+    btn.addEventListener('click', () => {
+      savePrivateNotes();
+    });
+  });
+</script>
+
 
 
 
