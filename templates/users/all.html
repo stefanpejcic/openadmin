@@ -245,6 +245,15 @@
                     <li>
                         <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
                             <label class="inline-flex items-center w-full cursor-pointer">
+                                <input type="checkbox" x-model="columns.notes" x-on:change="saveColumns" class="sr-only peer">
+                                <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Private Notes</span>
+                            </label>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <label class="inline-flex items-center w-full cursor-pointer">
                                 <input type="checkbox" x-model="columns.actions" x-on:change="saveColumns" class="sr-only peer">
                                 <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
                                 <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Quick Actions</span>
@@ -371,6 +380,8 @@
                                     </div>
                                 </div>
                             </th>   
+
+                            <th x-show="columns.notes" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left"><div class="">Private Notes</div></th>
 
                             <th x-show="columns.login" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Login</th>
                             <th x-show="columns.actions" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Actions</th>
@@ -643,6 +654,9 @@
 {% if user[4] %}<a href="/resellers#{{ user[4] }}" class="text-indigo-600 dark:text-indigo-400">{{ user[4] }}</a>{% endif %}</td>
 
 
+                            {% set note = notes.get(user[10], '') %}
+                            <td x-show="columns.notes" class="p-4 text-sm relative max-w-[14rem] truncate py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text" title="{{ note }}">{{ note|truncate(40) }}</td>
+
                             <td x-show="columns.login" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
                            <div class="btn-list flex-nowrap">
     {% if "SUSPENDED_" in user[1] %}  
@@ -783,6 +797,7 @@ function userTable() {
             context: false,
             date: true,
             owner: false,
+            notes: false,
             login: true,
             actions: false
         },
