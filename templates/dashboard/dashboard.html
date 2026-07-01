@@ -12,6 +12,7 @@
     <header>
         <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
             <div class="grow" x-data="{
+    tourDismissed: false,
     messages: [
       'May your uptime be endless and your servers perfectly balanced.',
       'Welcome back, admin. The system runs smoother under your command.',
@@ -31,7 +32,19 @@
   }"
 >
                 <h1 class="mb-1 text-xl font-bold">Welcome {{ current_user.username }}</h1>
+                {% if tour_show %}
+                <h2 class="text-sm font-medium text-slate-500">
+                    <span x-show="!tourDismissed" id="tour-prompt-row">
+                        Want a quick guided tour of OpenPanel?
+                        <a href="#" id="tour-prompt-start" @click.prevent="OPTour.start(true)" class="text-indigo-600 hover:underline dark:text-indigo-400">Take the tour</a>
+                        <span class="text-slate-300 px-2">·</span>
+                        <a href="#" id="tour-prompt-skip" @click.prevent="tourDismissed = true; OPTour.markComplete()" class="hover:underline">Skip</a>
+                    </span>
+                    <span x-show="tourDismissed" x-text="message"></span>
+                </h2>
+                {% else %}
                 <h2 class="text-sm font-medium text-slate-500" x-text="message"></h2>
+                {% endif %}
             </div>
 
 
@@ -141,7 +154,7 @@
 
 <dl class="my-4 grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 
-    <div class="">
+    <div id="tour-user-activity" class="">
                     <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">User Activity</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Real-time user activity log.</p></div></div>
 
                 <div class="flex flex-1 flex-col gap-2 overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:60vh">
@@ -157,7 +170,7 @@
 
     
     {% if openpanel_news %}
-        <div class="">
+        <div id="tour-latest-news" class="">
         {% include 'dashboard/openpanel_news.html' %}
         </div>
     {% endif %}
@@ -165,7 +178,7 @@
 
 
 
-    <div class="">
+    <div id="tour-system-info" class="">
                     <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">System Information</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Information about your server configuration.</p></div></div>
 
 
