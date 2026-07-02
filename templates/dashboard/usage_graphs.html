@@ -1,0 +1,116 @@
+<!-- START templates/dashboard/usage_graphs.html -->
+<style>.dismiss-usage_graphs-button { display: none;} #usage_graphs:hover .dismiss-usage_graphs-button { display: inline-block;}</style>
+
+<div>
+    <div id="usage_graphs" class="">
+        <form action="{{ url_for('dismiss_dashboard_widget', template_name='usage_graphs') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                <div>
+                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Resource Usage <button class="dismiss-usage_graphs-button text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded px-2 py-1 ml-2" type="submit" title="Hide this widget">Dismiss</button></h3>
+                    <p class="text-sm/6 text-gray-500 dark:text-gray-500">CPU &amp; RAM over the last hour.</p>
+                </div>
+                <a href="/server/resource-usage/history" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View history &rarr;</a>
+            </div>
+        </form>
+
+        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50 mt-2">
+            <div id="dashboard-resource-chart-wrap">
+                <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-blue-500 inline-block rounded"></span>CPU %</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-violet-500 inline-block rounded"></span>RAM %</span>
+                </div>
+                <div style="position:relative;height:160px">
+                    <canvas id="dashboard-resource-chart"></canvas>
+                </div>
+            </div>
+            <p id="dashboard-resource-empty" class="hidden text-sm text-gray-500 dark:text-gray-500 text-center py-6">No resource usage data yet.</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    fetch('/server/resource-usage/history/data?minutes=60')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            var snapshots = (data && data.snapshots) || [];
+
+            if (!snapshots.length) {
+                document.getElementById('dashboard-resource-chart-wrap').classList.add('hidden');
+                document.getElementById('dashboard-resource-empty').classList.remove('hidden');
+                return;
+            }
+
+            var isDark = document.documentElement.classList.contains('dark') ||
+                         window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            var tickColor = isDark ? '#6b7280' : '#9ca3af';
+
+            var labels = snapshots.map(function (s) { return s.ts.split(' ')[1] || s.ts; });
+
+            new Chart(document.getElementById('dashboard-resource-chart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'CPU %',
+                            data: snapshots.map(function (s) { return s.cpu_pct; }),
+                            borderColor: 'rgb(59,130,246)',
+                            backgroundColor: 'rgba(59,130,246,0.10)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'RAM %',
+                            data: snapshots.map(function (s) { return s.mem.pct; }),
+                            borderColor: 'rgb(139,92,246)',
+                            backgroundColor: 'rgba(139,92,246,0.10)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1f2937' : '#fff',
+                            borderColor: isDark ? '#374151' : '#e5e7eb',
+                            borderWidth: 1,
+                            titleColor: isDark ? '#f9fafb' : '#111827',
+                            bodyColor: isDark ? '#9ca3af' : '#6b7280',
+                            padding: 10
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: tickColor, maxTicksLimit: 6 },
+                            grid: { display: false }
+                        },
+                        y: {
+                            min: 0, max: 100,
+                            ticks: { color: tickColor, callback: function (v) { return v + '%'; } },
+                            grid: { color: gridColor }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(function (err) {
+            console.error('Error loading resource usage widget:', err);
+        });
+});
+</script>
+<!-- END templates/dashboard/usage_graphs.html -->
