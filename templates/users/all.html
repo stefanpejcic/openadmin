@@ -408,7 +408,7 @@
               &&
               ((filters.active && !'{{ user[1] }}'.includes('SUSPENDED_')) || 
                (filters.suspended && '{{ user[1] }}'.includes('SUSPENDED_')))"
-                           class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group select-none hover:bg-gray-50 hover:dark:bg-gray-900 {% if "SUSPENDED_" in user[1] %}bg-red-50 dark:bg-red-400/10{% endif %}">
+                           class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {% if "SUSPENDED_" in user[1] %}bg-red-50 dark:bg-red-400/10{% endif %}">
                             <td x-show="columns.username" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
 
                                 <div id="tooltip-manage-{{ user[1].split('_')[-1] }}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
@@ -421,7 +421,7 @@
 
                             <td x-show="columns.email" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-600 dark:text-gray-400 first:w-10 text-left select-text">{{ user[3] }}</td>
 
-                            <td x-show="columns.online" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-600 dark:text-gray-400 first:w-10 text-center select-none"></td>
+                            <td x-show="columns.online" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-600 dark:text-gray-400 first:w-10 text-center"></td>
 
 
                             <td x-show="columns.twofa" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums select-text w-10"><span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset {% if user[6] %}bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20{% else %}bg-blue-50 text-blue-900 ring-blue-500/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30{% endif %} rounded-full">
@@ -655,7 +655,46 @@
 
 
                             {% set note = notes.get(user[10], '') %}
-                            <td x-show="columns.notes" class="p-4 text-sm relative max-w-[14rem] truncate py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text" title="{{ note }}">{{ note|truncate(40) }}</td>
+                            <td x-show="columns.notes"
+                                x-data='{"note": {{ note|tojson|safe }}, "original": {{ note|tojson|safe }}, "editing": false, "saving": false, "csrf": {{ csrf_token()|tojson|safe }}}'
+                                class="p-4 text-sm relative max-w-[14rem] py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+
+                                <div x-show="!editing" class="flex items-center justify-between gap-1.5 min-w-0">
+                                    <span class="truncate select-text min-w-0 flex-1" :title="note" x-text="note.length > 40 ? note.slice(0, 40) + '...' : note"></span>
+                                    <button type="button" title="Edit private note" @click="editing = true; $nextTick(() => $refs.noteInput_{{ loop.index }}.focus())" class="shrink-0 ml-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-pencil"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" /></svg>
+                                    </button>
+                                </div>
+
+                                <div x-show="editing" x-cloak class="flex items-center gap-1">
+                                    <input x-ref="noteInput_{{ loop.index }}" type="text" x-model="note"
+                                        @keydown.enter="$el.blur(); $refs.noteSave_{{ loop.index }}.click()"
+                                        @keydown.escape="note = original; editing = false"
+                                        class="w-full rounded border px-2 py-1 text-xs text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                                    <button type="button" x-ref="noteSave_{{ loop.index }}" title="Save" :disabled="saving"
+                                        @click="
+                                            saving = true;
+                                            fetch('/get_user_notes/{{ user[1] }}', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf, 'Accept': 'application/json' },
+                                                body: JSON.stringify({ notes: note })
+                                            }).then(r => r.json().then(data => ({ ok: r.ok, data })))
+                                              .then(({ ok, data }) => {
+                                                  saving = false;
+                                                  if (ok) { original = note; editing = false; }
+                                                  const message = ok ? (note.trim() === '' ? 'Note deleted successfully.' : (data.message || 'Saved successfully.')) : (data.error || 'Save failed.');
+                                                  showToast(message, ok ? 'success' : 'error');
+                                              })
+                                              .catch(() => { saving = false; showToast('Error saving private note.', 'error'); });
+                                        "
+                                        class="shrink-0 text-gray-400 hover:text-emerald-600 disabled:opacity-50">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-check"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
+                                    </button>
+                                    <button type="button" title="Cancel" @click="note = original; editing = false" class="shrink-0 text-gray-400 hover:text-red-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-x"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            </td>
 
                             <td x-show="columns.login" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
                            <div class="btn-list flex-nowrap">
@@ -665,7 +704,7 @@
     Login is disabled for suspended user
     <div class="tooltip-arrow" data-popper-arrow></div>
 </div>
-<button title="" data-tooltip-target="tooltip-login-{{ user[1].split('_')[-1] }}" class="hidden relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => spinning = false, 500)"><svg version="1.0" style="vertical-align:middle; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" :class="{'animate-spin': spinning}" class=""><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> OpenPanel</button>
+<button title="" data-tooltip-target="tooltip-login-{{ user[1].split('_')[-1] }}" class="hidden relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => spinning = false, 500)"><svg version="1.0" style="vertical-align:middle; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" :class="{'animate-spin': spinning}" class=""><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> Impersonate</button>
 
     {% else %}
 
@@ -674,7 +713,7 @@
     <div class="tooltip-arrow" data-popper-arrow></div>
 </div>
 
-<a href="/login/token/{{ user[1] }}" data-tooltip-target="tooltip-login-{{ user[1].split('_')[-1] }}" data-tooltip-placement="left" target="_blank" class="relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => spinning = false, 500)"><svg version="1.0" style="vertical-align:middle; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" :class="{'animate-spin': spinning}" class=""><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> OpenPanel</a>
+<a href="/login/token/{{ user[1] }}" data-tooltip-target="tooltip-login-{{ user[1].split('_')[-1] }}" data-tooltip-placement="left" target="_blank" class="relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => spinning = false, 500)"><svg version="1.0" style="vertical-align:middle; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" :class="{'animate-spin': spinning}" class=""><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg> Impersonate</a>
 
     {% endif %}
                             </div>
