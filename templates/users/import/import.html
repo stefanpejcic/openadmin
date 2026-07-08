@@ -11,7 +11,7 @@
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
                     <h1 id="title" class="mb-1 text-xl font-bold">Import Account from backup</h1>
-                    <h2 id="subtitle" class="text-sm font-medium text-slate-500">Create new OpenPanel user account from cPanel or CyberPanel backup file.</h2>
+                    <h2 id="subtitle" class="text-sm font-medium text-slate-500">Create new OpenPanel user account from an OpenPanel, cPanel, or CyberPanel backup file.</h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
 <a id="tour-import-view-logs" href="/import/cpanel" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">View Logs</a>
@@ -23,7 +23,7 @@
 
 <div id="collapseAddNewUser" class="px-4">
     <div id="create_user_form" class="sm:mx-auto sm:max-w-2xl" style="display:block;">
-            <form id="userimportForm" class="mt-8" method="POST" action="/import/cpanel">
+            <form id="userimportForm" class="mt-8" method="POST" action="/import/cpanel" x-data="{ selectedType: 'cpanel' }">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
 
@@ -69,11 +69,17 @@
     <div role="radiogroup" aria-required="false" dir="ltr" class="grid gap-2" tabindex="0" style="outline: none;">
         <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">Backup type</p>
 
-<div x-data="{ selectedType: 'cpanel' }" class="col-span-full sm:col-span-3 mt-4">
+<div class="col-span-full sm:col-span-3 mt-4">
 
-  <div class="grid grid-cols-2 gap-4" role="radiogroup" aria-labelledby="sql_type">
-    {% for option in ['cpanel', 'cyberpanel'] %}
-    {% set label = 'cPanel' if option == 'cpanel' else 'CyberPanel' %}
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" role="radiogroup" aria-labelledby="sql_type">
+    {% for option in ['openpanel', 'cpanel', 'cyberpanel'] %}
+    {% if option == 'openpanel' %}
+    {% set label = 'OpenPanel' %}
+    {% elif option == 'cpanel' %}
+    {% set label = 'cPanel' %}
+    {% else %}
+    {% set label = 'CyberPanel' %}
+    {% endif %}
     <button
       type="button"
       role="radio"
@@ -87,7 +93,12 @@
     >
       <div class="flex items-center justify-center text-sm text-gray-900 dark:text-gray-50">
         <div class="group items-center gap-2">
-          {% if option == 'cpanel' %}
+          {% if option == 'openpanel' %}
+<div class="flex h-16 items-center gap-2">
+  <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" class="shrink-0 text-blue-500 dark:text-blue-500"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg>
+  <span class="text-lg font-bold text-gray-900 dark:text-gray-50">OpenPanel</span>
+</div>
+          {% elif option == 'cpanel' %}
 <svg width="154.28" height="34.131" class="h-16" version="1.1" viewBox="0 0 154.28 34.131" xmlns="http://www.w3.org/2000/svg">
   <path d="m12.75 8.4007h9.64l-1.49 5.72c-0.2103 0.74945-0.65979 1.4096-1.28 1.88-0.62085 0.47896-1.386 0.73282-2.17 0.72h-4.45c-0.97936-0.01666-1.9352 0.30078-2.71 0.9-0.79177 0.61443-1.3664 1.4659-1.64 2.43-0.1966 0.71072-0.2206 1.4581-0.07 2.18 0.15041 0.6536 0.43286 1.2695 0.83 1.81 0.40612 0.53621 0.93399 0.9681 1.54 1.26 0.63712 0.31497 1.3393 0.47596 2.05 0.47h2.7c0.49564-0.0097 0.96524 0.22141 1.26 0.62 0.31505 0.38593 0.41637 0.90379 0.27 1.38l-1.7 6.32h-3c-1.9655 0.01952-3.9057-0.44406-5.65-1.35-1.668-0.84453-3.1294-2.0464-4.28-3.52-1.136-1.4731-1.9287-3.1814-2.32-5-0.41927-1.9271-0.36782-3.927 0.15-5.83l0.17-0.69c0.35995-1.3435 0.94124-2.6176 1.72-3.77 0.7659-1.1175 1.7042-2.1065 2.78-2.93 1.0754-0.82519 2.2778-1.4703 3.56-1.91 1.3142-0.46101 2.6973-0.69435 4.09-0.69zm4.87 25.73 8.38-31.49c0.21034-0.76284 0.66749-1.4345 1.3-1.91 0.62026-0.48834 1.3907-0.74634 2.18-0.73h8.91c1.9507-0.012074 3.8754 0.44765 5.61 1.34 3.4155 1.7354 5.8687 4.9158 6.68 8.66 0.42198 1.9245 0.3636 3.9234-0.17 5.82l-0.17 0.64c-0.35878 1.3453-0.9365 2.6223-1.71 3.78-0.74706 1.1432-1.676 2.1565-2.75 3-2.1955 1.6913-4.8886 2.6089-7.66 2.61h-7.72l1.5-5.85c0.20765-0.74809 0.6535-1.4081 1.27-1.88 0.62411-0.48116 1.392-0.73829 2.18-0.73h2.55c2.0474-0.0045 3.8288-1.4024 4.32-3.39 0.19415-0.68074 0.21478-1.3992 0.06-2.09-0.14597-0.6551-0.42882-1.2719-0.83-1.81-0.41944-0.52461-0.94844-0.95122-1.55-1.25-0.61892-0.31816-1.3041-0.48602-2-0.49h-4.81l-6.19 23.16c-0.21491 0.7473-0.66348 1.4061-1.28 1.88-0.6057 0.47962-1.3574 0.73726-2.13 0.73zm53.19-16.81 0.13-0.47c0.06363-0.1995 0.02226-0.41765-0.11-0.58-0.1238-0.16902-0.32049-0.26922-0.53-0.27h-13.86c-1.6611 7e-3 -3.0983-1.1544-3.44-2.78-0.12469-0.54631-0.12469-1.1137 0-1.66l0.86-3.24h18.79c1.1112-0.015995 2.2085 0.24886 3.19 0.77 0.93927 0.48339 1.7617 1.1659 2.41 2 0.64803 0.83658 1.1023 1.8066 1.33 2.84 0.24005 1.0899 0.21605 2.2213-0.07 3.3l-3.37 12.55c-0.67232 2.5523-2.9907 4.323-5.63 4.3l-13.86-0.08c-2.3065 0.01736-4.4873-1.049-5.89-2.88-0.6636-0.89068-1.1275-1.9139-1.36-3-0.25997-1.1355-0.23247-2.3178 0.08-3.44l0.17-0.64c0.20414-0.79166 0.54237-1.5425 1-2.22 0.45696-0.66453 1.0135-1.2548 1.65-1.75 0.63528-0.46562 1.3408-0.82684 2.09-1.07 0.78145-0.27018 1.6032-0.40544 2.43-0.4h11.64l-0.85 3.2c-0.21361 0.74791-0.66244 1.4071-1.28 1.88-0.60818 0.4739-1.359 0.7277-2.13 0.72h-5.2c-0.45019-0.02747-0.84975 0.28617-0.93 0.73-0.093 0.28732-0.02847 0.60237 0.17 0.83 0.18254 0.23295 0.46412 0.36633 0.76 0.36h8.4c0.29118 0.0043 0.57575-0.08699 0.81-0.26 0.22556-0.16283 0.3796-0.40641 0.43-0.68l0.08-0.34zm24.83-8.92c1.9786-0.022402 3.9324 0.44116 5.69 1.35 1.6756 0.85485 3.1408 2.0707 4.29 3.56 1.1468 1.4965 1.94 3.2333 2.32 5.08 0.41592 1.9328 0.35068 3.9383-0.19 5.84l-2.13 8c-0.12977 0.5507-0.45713 1.0346-0.92 1.36-0.44524 0.33942-0.99014 0.52223-1.55 0.52h-4.61c-1.055 0.02024-1.8292-0.98521-1.54-2l2.56-9.68c0.19746-0.6799 0.22152-1.3984 0.07-2.09-0.14752-0.6564-0.43394-1.2736-0.84-1.81-0.85278-1.1163-2.1752-1.7739-3.58-1.78h-4.78l-4.13 15.5c-0.134 0.54884-0.46043 1.0314-0.92 1.36-0.46097 0.34586-1.0238 0.52878-1.6 0.52h-4.57c-0.47843-0.0047-0.92673-0.23441-1.21-0.62-0.32365-0.38556-0.42913-0.9092-0.28-1.39l6.28-23.72zm25.12 8.13c-0.33201 0.25635-0.58219 0.60383-0.72 1l-1.92 7.25c-0.11762 0.38198-0.039 0.79739 0.21 1.11 0.2318 0.32106 0.604 0.51089 1 0.51h17.67l-1.37 5.07c-0.21097 0.74914-0.66032 1.4091-1.28 1.88-0.60491 0.48107-1.3572 0.73888-2.13 0.73h-16.06c-1.1118 0.0142-2.2103-0.24325-3.2-0.75-0.94181-0.47954-1.7651-1.1627-2.41-2-0.64079-0.84844-1.0941-1.8233-1.33-2.86-0.23794-1.082-0.20012-2.2064 0.11-3.27l2.6-9.68c0.28006-1.0335 0.72948-2.0135 1.33-2.9 1.1613-1.7398 2.8617-3.0503 4.84-3.73 1.0043-0.35932 2.0633-0.54202 3.13-0.54h11.39c1.1139-0.011305 2.2132 0.25323 3.2 0.77 0.93909 0.48366 1.7615 1.1662 2.41 2 0.65018 0.83531 1.0954 1.8114 1.3 2.85 0.22841 1.0881 0.20103 2.2143-0.08 3.29l-0.77 2.9c-0.31178 1.2384-1.0433 2.3305-2.07 3.09-1.0073 0.7779-2.2474 1.1936-3.52 1.18h-12.88l0.85-3.16c0.18701-0.74966 0.6245-1.413 1.24-1.88 0.62085-0.47896 1.386-0.73282 2.17-0.72h5.21c0.45109 0.02369 0.85127-0.28709 0.94-0.73l0.17-0.64c0.1532-0.6184-0.30321-1.2205-0.94-1.24h-7.93c-0.42989 0.01546-0.84059 0.18187-1.16 0.47zm16.24 17.6 8.58-32.21c0.1345-0.55418 0.45588-1.0451 0.91-1.39 0.46075-0.34741 1.023-0.53364 1.6-0.53h4.57c0.50746-0.012699 0.99048 0.21767 1.3 0.62 0.31154 0.38803 0.40562 0.90734 0.25 1.38l-6.4 23.77c-0.30331 1.2168-0.81778 2.371-1.52 3.41-0.67384 1.0031-1.5084 1.8883-2.47 2.62-0.96178 0.73632-2.0354 1.3136-3.18 1.71-1.1697 0.41029-2.4004 0.61991-3.64 0.62z" fill="#f26c32"/>
 </svg>
@@ -129,6 +140,7 @@
 
 
 
+<div x-show="selectedType !== 'openpanel'">
 {% if plans %}
 
   {% if plans == -1 %}
@@ -233,6 +245,7 @@
     No plans available.
 </p>
 {% endif %}
+</div>
 
             <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
