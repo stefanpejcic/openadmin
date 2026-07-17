@@ -69,3 +69,13 @@ func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	}
 	return hj.Hijack()
 }
+
+// Flush forwards to the underlying ResponseWriter's Flusher, if it has one.
+// Same embedding gap as Hijack above: without this, every route behind this
+// middleware that streams a response (e.g. the SSE progress output from
+// /user/new) 500s with "Streaming unsupported".
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
