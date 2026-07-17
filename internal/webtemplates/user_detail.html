@@ -1118,6 +1118,14 @@
             success: function(response) {
                 if (!response.container_stats || response.container_stats.length === 0) return;
 
+                function formatBytes(bytes) {
+                    if (!bytes) return '0 B';
+                    var units = ['B', 'KB', 'MB', 'GB', 'TB'];
+                    var i = Math.floor(Math.log(bytes) / Math.log(1024));
+                    i = Math.min(i, units.length - 1);
+                    return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+                }
+
                 response.container_stats.forEach(function(container) {
                     var containerName = container.Name;
                     var containerId = containerName.replace(/\./g, '\\.');
@@ -1127,15 +1135,14 @@
                     var ramText = $('#ram-usage-' + containerId);
                     var cpuText = $('#cpu-usage-' + containerId);
 
-                    var cpuUsage = parseFloat(container.CPUPerc.replace('%', '')) || 0;
-                    var memUsage = parseFloat(container.MemPerc.replace('%', '')) || 0;
+                    var cpuUsage = parseFloat(container.CPU) || 0;
+                    var memUsage = parseFloat(container.MemPerc) || 0;
 
                     var cpuDashOffset = 78.54 * (1 - cpuUsage / 100);
                     var memDashOffset = 78.54 * (1 - memUsage / 100);
 
-                    cpuText.html(`${container.CPUPerc}`);
-                    var memUsageOnly = container.MemUsage.split('/')[0].trim();
-                    ramText.html(`${memUsageOnly}`);
+                    cpuText.html(`${cpuUsage.toFixed(2)}%`);
+                    ramText.html(`${formatBytes(container.MemUsage)}`);
 
                     var cpuColor = cpuUsage < 50 ? 'stroke-blue-500' : cpuUsage < 80 ? 'stroke-green-500' : cpuUsage < 90 ? 'stroke-orange-500' : 'stroke-red-500';
                     var cpuInfo = `
@@ -1682,7 +1689,6 @@
                   <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 cursor-pointer">Save</button>
                   </div>
                         </div>
-                     </div>
                   </form>
                </div>
                <!-- END EDIT -->
