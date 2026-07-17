@@ -1,10 +1,12 @@
 // This file implements the container-management routes: POST
 // /containers/{username}/{action}/{container_name}
-// (start/stop/restart/cpu/ram) and GET /containers/stats/{username}.
+// (start/stop/restart/cpu/ram), GET /containers/stats/{username}, and the
+// read side used by the #services tab (composeServicesForUser).
 package handlers
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +14,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 
 	"openadmin/internal/auth"
@@ -22,6 +26,145 @@ import (
 // containerEnvVarSanitizeRe replaces '.' and '-' with '_' when deriving an
 // env var name from a container name in update_container_ram_or_cpu().
 var containerEnvVarSanitizeRe = regexp.MustCompile(`[.-]`)
+
+// composePortView is one resolved port mapping for a compose service, as
+// shown in the #services tab.
+type composePortView struct {
+	HostIP    string
+	Published string
+	Target    string
+}
+
+// composeEnvView is one environment variable for a compose service. Whether
+// it's masked by default (password/token/... in the key) is decided
+// client-side by the template's Alpine component, matching the original
+// Python/Jinja page.
+type composeEnvView struct {
+	Key   string
+	Value string
+}
+
+// composeServiceView is one service parsed from a user's docker-compose.yml,
+// as rendered in the #services tab's table.
+type composeServiceView struct {
+	Name          string
+	ContainerName string // falls back to Name when the compose file doesn't set one
+	Image         string
+	Ports         []composePortView
+	Environment   []composeEnvView
+	CPULimit      string // raw "cpus" value (e.g. "0.5" or "0"), "" if unset -- "0" itself is NOT unlimited here, the template's JS decides that, matching the original page
+	MemoryLimitGB string // memory converted to GB and formatted to 2 decimals, "" if unset or zero
+}
+
+// composeStringOrEmpty stringifies a decoded JSON value, treating a missing
+// key (nil) as "" rather than apiJSONValueToString's literal "<nil>".
+func composeStringOrEmpty(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	return apiJSONValueToString(v)
+}
+
+// composeSizeToBytes converts a resolved compose memory limit into bytes.
+// podman-compose's resolved JSON normally emits this as a plain number of
+// bytes, but a string like "512M"/"0.5G" is handled defensively too, in
+// case some version leaves it unresolved. ok is false for a zero, missing,
+// or unparseable value -- matching the original page treating those as
+// "no limit set", not "limit is zero".
+func composeSizeToBytes(v interface{}) (bytes float64, ok bool) {
+	switch t := v.(type) {
+	case float64:
+		return t, t != 0
+	case string:
+		s := strings.TrimSuffix(strings.TrimSpace(strings.ToUpper(t)), "B")
+		if s == "" || s == "0" {
+			return 0, false
+		}
+		mult := 1.0
+		switch {
+		case strings.HasSuffix(s, "G"):
+			mult, s = 1<<30, strings.TrimSuffix(s, "G")
+		case strings.HasSuffix(s, "M"):
+			mult, s = 1<<20, strings.TrimSuffix(s, "M")
+		case strings.HasSuffix(s, "K"):
+			mult, s = 1<<10, strings.TrimSuffix(s, "K")
+		}
+		n, err := strconv.ParseFloat(s, 64)
+		if err != nil || n == 0 {
+			return 0, false
+		}
+		return n * mult, true
+	default:
+		return 0, false
+	}
+}
+
+// composeServicesForUser parses a user's resolved docker-compose config
+// (via apiContainersData's same podman-compose plumbing) into the
+// #services tab's view model. A missing/invalid compose file, or one with
+// no "services" key, returns nil -- the template shows "invalid or
+// missing" in that case, same as the original Python/Jinja page did.
+// Services are sorted by name for a stable render (unlike Python's
+// dict-preserves-insertion-order, Go's JSON decoding into a map does not
+// preserve the compose file's declaration order).
+func composeServicesForUser(mysqlDB *sql.DB, username string) []composeServiceView {
+	data, err := apiContainersData(mysqlDB, username)
+	if err != nil {
+		return nil
+	}
+	rawServices, _ := data["services"].(map[string]interface{})
+	if len(rawServices) == 0 {
+		return nil
+	}
+
+	views := make([]composeServiceView, 0, len(rawServices))
+	for name, raw := range rawServices {
+		svc, _ := raw.(map[string]interface{})
+		view := composeServiceView{Name: name, ContainerName: name}
+		if cn, ok := svc["container_name"].(string); ok && cn != "" {
+			view.ContainerName = cn
+		}
+		if img, ok := svc["image"].(string); ok {
+			view.Image = img
+		}
+		if ports, ok := svc["ports"].([]interface{}); ok {
+			for _, p := range ports {
+				pm, ok := p.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				view.Ports = append(view.Ports, composePortView{
+					HostIP:    composeStringOrEmpty(pm["host_ip"]),
+					Published: composeStringOrEmpty(pm["published"]),
+					Target:    composeStringOrEmpty(pm["target"]),
+				})
+			}
+		}
+		if env, ok := svc["environment"].(map[string]interface{}); ok {
+			keys := make([]string, 0, len(env))
+			for k := range env {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				view.Environment = append(view.Environment, composeEnvView{Key: k, Value: composeStringOrEmpty(env[k])})
+			}
+		}
+		if deploy, ok := svc["deploy"].(map[string]interface{}); ok {
+			if resources, ok := deploy["resources"].(map[string]interface{}); ok {
+				if limits, ok := resources["limits"].(map[string]interface{}); ok {
+					view.CPULimit = composeStringOrEmpty(limits["cpus"])
+					if b, ok := composeSizeToBytes(limits["memory"]); ok {
+						view.MemoryLimitGB = strconv.FormatFloat(b/(1<<30), 'f', 2, 64)
+					}
+				}
+			}
+		}
+		views = append(views, view)
+	}
+	sort.Slice(views, func(i, j int) bool { return views[i].Name < views[j].Name })
+	return views
+}
 
 // splitFileLinesPreserving splits a text file into lines the way a
 // line-by-line file iteration would: each element keeps its original

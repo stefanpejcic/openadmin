@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"crypto/hmac"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"openadmin/internal/server"
 )
@@ -106,6 +108,48 @@ func shouldSkipIPValidation(path string) bool {
 	case len(path) >= 4 && path[:4] == "/api":
 		return true
 	case len(path) >= 8 && path[:8] == "/static/":
+		return true
+	default:
+		return false
+	}
+}
+
+// BasicAuthMiddleware gates every request behind an HTTP Basic Auth prompt
+// when enabled, on top of (and before) the panel's own session-based login.
+// It's a network-level challenge -- like an old-style htaccess prompt in
+// front of the whole app -- so it covers /login itself. /api, /send_email,
+// and /imav are exempt: they're authenticated by their own bearer
+// token/HMAC/proxy scheme rather than a browser, and /api in particular
+// already uses the Authorization header for its bearer token, which a Basic
+// challenge would collide with.
+func BasicAuthMiddleware(enabled bool, username, password string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		if !enabled {
+			return next
+		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if shouldSkipBasicAuth(r.URL.Path) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			gotUser, gotPass, ok := r.BasicAuth()
+			if !ok || !hmac.Equal([]byte(gotUser), []byte(username)) || !hmac.Equal([]byte(gotPass), []byte(password)) {
+				w.Header().Set("WWW-Authenticate", `Basic realm="OpenAdmin"`)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func shouldSkipBasicAuth(path string) bool {
+	switch {
+	case path == "/send_email":
+		return true
+	case strings.HasPrefix(path, "/imav/"):
+		return true
+	case strings.HasPrefix(path, "/api/"):
 		return true
 	default:
 		return false

@@ -432,6 +432,148 @@ func TestServeContainersStatsFailureReturns500(t *testing.T) {
 	}
 }
 
+// --- composeServicesForUser / composeSizeToBytes (pure functions) ---
+
+func TestComposeSizeToBytes(t *testing.T) {
+	cases := []struct {
+		name      string
+		in        interface{}
+		wantBytes float64
+		wantOK    bool
+	}{
+		{"zero float", float64(0), 0, false},
+		{"nil", nil, 0, false},
+		{"bytes as float64", float64(536870912), 536870912, true},
+		{"zero string", "0", 0, false},
+		{"empty string", "", 0, false},
+		{"gigabyte string", "0.5G", 0.5 * (1 << 30), true},
+		{"megabyte string with B suffix", "512MB", 512 * (1 << 20), true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			gotBytes, gotOK := composeSizeToBytes(c.in)
+			if gotOK != c.wantOK || gotBytes != c.wantBytes {
+				t.Fatalf("composeSizeToBytes(%#v) = (%v, %v), want (%v, %v)", c.in, gotBytes, gotOK, c.wantBytes, c.wantOK)
+			}
+		})
+	}
+}
+
+func TestComposeServicesForUserParsesResolvedConfig(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	mock.ExpectQuery(`SELECT server FROM users`).
+		WithArgs("alice").
+		WillReturnRows(sqlmock.NewRows([]string{"server"}).AddRow("alice"))
+
+	orig := containerComposeCaptureRun
+	containerComposeCaptureRun = func(context, dir string, args ...string) (string, string, error) {
+		return `{"services":{"mysql":{
+			"container_name":"mysql",
+			"image":"mysql:8",
+			"ports":[{"host_ip":"127.0.0.1","published":"3306","target":3306},{"host_ip":"","published":"0","target":0}],
+			"environment":{"MYSQL_ROOT_PASSWORD":"secret"},
+			"deploy":{"resources":{"limits":{"cpus":"0.5","memory":536870912}}}
+		}}}`, "", nil
+	}
+	t.Cleanup(func() { containerComposeCaptureRun = orig })
+
+	views := composeServicesForUser(mysqlDB, "alice")
+	if len(views) != 1 {
+		t.Fatalf("expected 1 service, got %d: %#v", len(views), views)
+	}
+	v := views[0]
+	if v.Name != "mysql" || v.ContainerName != "mysql" || v.Image != "mysql:8" {
+		t.Fatalf("unexpected service identity: %#v", v)
+	}
+	if len(v.Ports) != 2 || v.Ports[0].Published != "3306" || v.Ports[0].Target != "3306" {
+		t.Fatalf("unexpected ports: %#v", v.Ports)
+	}
+	if len(v.Environment) != 1 || v.Environment[0].Key != "MYSQL_ROOT_PASSWORD" || v.Environment[0].Value != "secret" {
+		t.Fatalf("unexpected environment: %#v", v.Environment)
+	}
+	if v.CPULimit != "0.5" {
+		t.Fatalf("expected CPULimit 0.5, got %q", v.CPULimit)
+	}
+	if v.MemoryLimitGB != "0.50" {
+		t.Fatalf("expected MemoryLimitGB 0.50, got %q", v.MemoryLimitGB)
+	}
+}
+
+func TestComposeServicesForUserEmptyOnMissingComposeFile(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	mock.ExpectQuery(`SELECT server FROM users`).
+		WithArgs("alice").
+		WillReturnRows(sqlmock.NewRows([]string{"server"}).AddRow("alice"))
+
+	orig := containerComposeCaptureRun
+	containerComposeCaptureRun = func(context, dir string, args ...string) (string, string, error) {
+		return "", "no such file or directory", &exec.ExitError{}
+	}
+	t.Cleanup(func() { containerComposeCaptureRun = orig })
+
+	views := composeServicesForUser(mysqlDB, "alice")
+	if views != nil {
+		t.Fatalf("expected nil services for a missing compose file, got %#v", views)
+	}
+}
+
+// --- HTML rendering with real service data (catches template errors that
+// only surface when the {{range .Services}} branch actually executes) ---
+
+func TestUsersDetailRendersServicesTable(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	mock.ExpectQuery(`SELECT u.username, u.id, u.email`).
+		WithArgs("alice", "SUSPENDED_%_alice").
+		WillReturnRows(sqlmock.NewRows([]string{"username", "id", "email", "owner", "twofa_enabled", "registered_date", "plan_id", "server"}).
+			AddRow("alice", int64(3), "alice@example.com", nil, true, "2025-06-01 10:00:00", int64(1), "alice"))
+	mock.ExpectQuery(`SELECT server FROM users`).
+		WithArgs("alice").
+		WillReturnRows(sqlmock.NewRows([]string{"server"}).AddRow("alice"))
+
+	orig := containerComposeCaptureRun
+	containerComposeCaptureRun = func(context, dir string, args ...string) (string, string, error) {
+		return `{"services":{"mysql":{
+			"container_name":"mysql",
+			"image":"mysql:8",
+			"ports":[{"host_ip":"127.0.0.1","published":"3306","target":3306}],
+			"environment":{"MYSQL_ROOT_PASSWORD":"secret"},
+			"deploy":{"resources":{"limits":{"cpus":"0.5","memory":536870912}}}
+		}}}`, "", nil
+	}
+	t.Cleanup(func() { containerComposeCaptureRun = orig })
+
+	u := &Users{MySQL: mysqlDB}
+	srv, client := newUsersTestServer(t, u, "admin")
+
+	resp, err := client.Get(srv.URL + "/users/alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	got := string(body)
+	for _, want := range []string{"mysql:8", "MYSQL_ROOT_PASSWORD", "/containers/alice/cpu/mysql", "/containers/alice/start/mysql", "</html>"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
+		}
+	}
+}
+
 func TestServeContainersStatsDeniedForNonOwningReseller(t *testing.T) {
 	mysqlDB, mock, err := sqlmock.New()
 	if err != nil {

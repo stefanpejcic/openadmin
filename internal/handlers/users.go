@@ -574,6 +574,7 @@ type userDetailPageData struct {
 	Locale      string
 	CountryCode string
 	EnvData     map[string]string
+	Services    []composeServiceView
 	CSRFToken   string
 	Flashes     []auth.Flash
 }
@@ -740,6 +741,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Locale:      userLocale(userData.Context),
 		CountryCode: countryCodeForIP(serverIP),
 		EnvData:     envData,
+		Services:    composeServicesForUser(u.MySQL, username),
 		CSRFToken:   csrf.Token(r),
 		Flashes:     auth.PopFlashes(w, r, u.Sessions),
 	})

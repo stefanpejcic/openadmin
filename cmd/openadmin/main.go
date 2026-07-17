@@ -133,6 +133,9 @@ func main() {
 		LoginRatePerMin:   atoiDefault(config.Admin().Get("PANEL", "login_ratelimit", "5"), 5),
 		DemoMode:          config.Openpanel().Get("PANEL", "demo_mode", "off") == "on",
 		ValidateSessionIP: config.Openpanel().Get("SECURITY", "validate_ip_address_cookie", "yes") == "yes",
+		BasicAuthEnabled:  config.Admin().Get("SECURITY", "basic_auth", "no") == "yes",
+		BasicAuthUsername: config.Admin().Get("SECURITY", "basic_auth_username", ""),
+		BasicAuthPassword: config.Admin().Get("SECURITY", "basic_auth_password", ""),
 		PublicIP:          publicIP,
 		ServerHostname:    osHostname(),
 		PanelVersion:      openpanelVersion(),
@@ -194,6 +197,10 @@ type appDeps struct {
 	LoginRatePerMin   int
 	DemoMode          bool
 	ValidateSessionIP bool
+
+	BasicAuthEnabled  bool
+	BasicAuthUsername string
+	BasicAuthPassword string
 
 	StaticDir string // defaults to "static" if empty
 }
@@ -887,6 +894,11 @@ func newHandler(d appDeps) (http.Handler, error) {
 			next.ServeHTTP(w, csrf.PlaintextHTTPRequest(r))
 		})
 	}
+
+	// Outermost: an optional network-level Basic Auth gate in front of the
+	// whole panel (see /security/basic_auth), checked before session
+	// cookies, CSRF, or routing even come into play.
+	handler = auth.BasicAuthMiddleware(d.BasicAuthEnabled, d.BasicAuthUsername, d.BasicAuthPassword)(handler)
 
 	return handler, nil
 }
