@@ -1,10 +1,10 @@
 // Package handlers implements listing, viewing, suspending/unsuspending,
 // creating, and deleting hosting accounts, plus private notes, a per-user
 // custom message banner, live CPU/RAM/disk usage widgets and history,
-// activity/login log viewing, and per-container start/stop/restart/cpu/ram
-// management (see users_containers.go) for the users list/detail pages.
-// Not yet implemented: the multi-field account-edit form and per-user
-// feature permissions.
+// activity/login log viewing, per-user feature permission overrides, and
+// per-container start/stop/restart/cpu/ram management (see
+// users_containers.go) for the users list/detail pages.
+// Not yet implemented: the multi-field account-edit form.
 package handlers
 
 import (
@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -463,6 +464,14 @@ func readUserNotes(context string) string {
 	return string(raw)
 }
 
+// userFeaturesPath is where a user's custom feature-permission overrides are
+// stored, one enabled feature name per line -- mirroring notes.txt. Its
+// presence means the user has left their plan's feature-set defaults and
+// switched to a custom, per-user list.
+func userFeaturesPath(context string) string {
+	return "/home/" + context + "/features.txt"
+}
+
 // notesMapFor builds a map of each user's private note, keyed by each
 // user's "server"/context column.
 func notesMapFor(users []paneldb.RowMap) map[string]string {
@@ -561,23 +570,24 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 
 type userDetailPageData struct {
 	webtemplates.Chrome
-	Username    string
-	User        *paneldb.UserData
-	Disk        diskUsage
-	Notes       string
-	Stats       map[string]interface{}
-	StatsWidget detailStatsWidget
-	ServerIP    string
-	ServerName  string
-	DockerCtx   string
-	IPType      string
-	Locale      string
-	CountryCode string
-	EnvData     map[string]string
-	Services    []composeServiceView
-	Features    []map[string]interface{}
-	CSRFToken   string
-	Flashes     []auth.Flash
+	Username          string
+	User              *paneldb.UserData
+	Disk              diskUsage
+	Notes             string
+	Stats             map[string]interface{}
+	StatsWidget       detailStatsWidget
+	ServerIP          string
+	ServerName        string
+	DockerCtx         string
+	IPType            string
+	Locale            string
+	CountryCode       string
+	EnvData           map[string]string
+	Services          []composeServiceView
+	Features          []map[string]interface{}
+	HasCustomFeatures bool
+	CSRFToken         string
+	Flashes           []auth.Flash
 }
 
 var ipv4Re = regexp.MustCompile(`^\d+\.\d+\.\d+\.\d+$`)
@@ -736,27 +746,34 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 			featureSet = fs
 		}
 	}
-	features, _ := FeaturesForSet(FeatureSetPathForPlan(featureSet, userData.Owner.String))
+	featuresPath := FeatureSetPathForPlan(featureSet, userData.Owner.String)
+	hasCustomFeatures := false
+	if _, err := os.Stat(userFeaturesPath(userData.Context)); err == nil {
+		hasCustomFeatures = true
+		featuresPath = userFeaturesPath(userData.Context)
+	}
+	features, _ := FeaturesForSet(featuresPath)
 
 	webtemplates.Render(w, "user_detail.html", userDetailPageData{
-		Chrome:      buildChrome(r, "User: "+stripSuspendedPrefix(username)),
-		Username:    username,
-		User:        userData,
-		Disk:        disk,
-		Notes:       readUserNotes(userData.Context),
-		Stats:       parsedStats,
-		StatsWidget: buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats),
-		ServerIP:    serverIP,
-		ServerName:  serverName(),
-		DockerCtx:   userData.Context,
-		IPType:      ipTypeOf(serverIP),
-		Locale:      userLocale(userData.Context),
-		CountryCode: countryCodeForIP(serverIP),
-		EnvData:     envData,
-		Services:    composeServicesForUser(u.MySQL, username),
-		Features:    features,
-		CSRFToken:   csrf.Token(r),
-		Flashes:     auth.PopFlashes(w, r, u.Sessions),
+		Chrome:            buildChrome(r, "User: "+stripSuspendedPrefix(username)),
+		Username:          username,
+		User:              userData,
+		Disk:              disk,
+		Notes:             readUserNotes(userData.Context),
+		Stats:             parsedStats,
+		StatsWidget:       buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats),
+		ServerIP:          serverIP,
+		ServerName:        serverName(),
+		DockerCtx:         userData.Context,
+		IPType:            ipTypeOf(serverIP),
+		Locale:            userLocale(userData.Context),
+		CountryCode:       countryCodeForIP(serverIP),
+		EnvData:           envData,
+		Services:          composeServicesForUser(u.MySQL, username),
+		Features:          features,
+		HasCustomFeatures: hasCustomFeatures,
+		CSRFToken:         csrf.Token(r),
+		Flashes:           auth.PopFlashes(w, r, u.Sessions),
 	})
 }
 
@@ -827,7 +844,7 @@ func (u *Users) ServeIPs(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleManage handles POST /user/{action}/{username} for the
-// suspend/unsuspend/delete actions. ('edit' and 'permissions*' are not yet
+// suspend/unsuspend/delete/permissions actions. ('edit' is not yet
 // implemented -- see the package doc comment.)
 func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 	action := r.PathValue("action")
@@ -884,8 +901,40 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+	case "permissions":
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		userData, err := paneldb.GetUserDataByUsername(u.MySQL, username)
+		if err != nil {
+			auth.AddFlash(w, r, u.Sessions, "Error: User "+username+" not found", "error")
+			http.Redirect(w, r, "/users", http.StatusSeeOther)
+			return
+		}
+		keys := make([]string, 0, len(r.PostForm))
+		for k := range r.PostForm {
+			if k == "csrf_token" {
+				continue
+			}
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		var b strings.Builder
+		for _, k := range keys {
+			b.WriteString(k + "\n")
+		}
+		if err := os.WriteFile(userFeaturesPath(userData.Context), []byte(b.String()), 0644); err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		logUserAction(username, "Administrator "+currentUser.Username+" updated permissions for user "+username)
+		auth.AddFlash(w, r, u.Sessions, "Permissions for '"+username+"' updated successfully", "success")
+		http.Redirect(w, r, "/users/"+username+"#permissions", http.StatusSeeOther)
+		return
+
 	default:
-		auth.AddFlash(w, r, u.Sessions, "Invalid user action, valid options are: edit, suspend, unsuspend, delete", "error")
+		auth.AddFlash(w, r, u.Sessions, "Invalid user action, valid options are: suspend, unsuspend, delete, permissions", "error")
 	}
 
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
