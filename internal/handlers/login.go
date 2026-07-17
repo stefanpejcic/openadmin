@@ -150,6 +150,7 @@ func (l *Login) finalizeLogin(w http.ResponseWriter, r *http.Request, user *admi
 	appendLogLine(LoginLogPath, fmt.Sprintf("%s %s %s", time.Now().Format("2006-01-02 15:04:05"), user.Username, ip))
 
 	if err := auth.LoginUser(w, r, l.Sessions, user, ip); err != nil {
+		logError("Login session save failed for user %s (%s): %v", user.Username, ip, err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -464,6 +465,7 @@ func (l *Login) HandlePasskeyComplete(w http.ResponseWriter, r *http.Request) {
 
 	appendLogLine(LoginLogPath, fmt.Sprintf("%s %s %s", time.Now().Format("2006-01-02 15:04:05"), user.Username, ip))
 	if err := auth.LoginUser(w, r, l.Sessions, user, ip); err != nil {
+		logError("Passkey login session save failed for user %s (%s): %v", user.Username, ip, err)
 		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
