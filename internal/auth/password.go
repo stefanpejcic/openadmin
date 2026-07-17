@@ -7,6 +7,11 @@
 //     length is 64 bytes.
 //   - "pbkdf2:hash_name:iterations" (bare "pbkdf2" defaults to
 //     sha256/600000). Key length is the underlying hash's size.
+//
+// A hash starting with "$6$" is glibc's SHA-512-crypt instead (what `opencli
+// admin new`/`password` produce via `openssl passwd -6`) and is verified
+// separately -- it doesn't fit the "<method>$<salt>$<hash>" shape above,
+// since the salt itself is "$"-delimited from an optional rounds= prefix.
 package auth
 
 import (
@@ -22,6 +27,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/GehirnInc/crypt"
+	_ "github.com/GehirnInc/crypt/sha512_crypt"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 )
@@ -30,6 +37,10 @@ const saltAlphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345
 
 // CheckPasswordHash reports whether password matches the given salted hash.
 func CheckPasswordHash(pwhash, password string) bool {
+	if strings.HasPrefix(pwhash, "$6$") {
+		return crypt.SHA512.New().Verify(pwhash, []byte(password)) == nil
+	}
+
 	parts := strings.SplitN(pwhash, "$", 3)
 	if len(parts) != 3 {
 		return false

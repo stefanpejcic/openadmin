@@ -195,6 +195,30 @@ func TestLoginWrongPasswordShowsFlash(t *testing.T) {
 	}
 }
 
+func TestLoginRepeatedFailuresDontAccumulateFlashes(t *testing.T) {
+	login, db := newTestLogin(t)
+	hash, _ := auth.GeneratePasswordHash("correct-password")
+	db.CreateUser("admin", hash, "admin")
+
+	srv, client := newTestServer(t, login)
+
+	for i := 0; i < 3; i++ {
+		resp, err := client.PostForm(srv.URL+"/login", url.Values{
+			"username": {"admin"},
+			"password": {"wrong-password"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		count := strings.Count(string(body), "Login failed. Please check your credentials.")
+		if count != 1 {
+			t.Fatalf("attempt %d: expected exactly 1 flash message, got %d in body:\n%s", i+1, count, truncate(string(body)))
+		}
+	}
+}
+
 func TestLoginInactiveUserBlocked(t *testing.T) {
 	login, db := newTestLogin(t)
 	hash, _ := auth.GeneratePasswordHash("pw")

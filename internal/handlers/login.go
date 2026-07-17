@@ -86,8 +86,7 @@ type loginPageData struct {
 }
 
 func (l *Login) renderLoginPage(w http.ResponseWriter, r *http.Request, status int) {
-	w.WriteHeader(status)
-	webtemplates.Render(w, "login.html", loginPageData{
+	data := loginPageData{
 		ForceDomainValue: l.ForceDomainValue,
 		ServerHostname:   l.ServerHostname,
 		PublicIP:         l.PublicIP,
@@ -98,7 +97,9 @@ func (l *Login) renderLoginPage(w http.ResponseWriter, r *http.Request, status i
 		Flashes:          auth.PopFlashes(w, r, l.Sessions),
 		OpenpanelDomain:  panelinfo.Domain(),
 		OpenpanelPort:    panelinfo.Port(),
-	})
+	}
+	w.WriteHeader(status)
+	webtemplates.Render(w, "login.html", data)
 }
 
 // ServeLoginPage handles GET /login (and GET /login/).
