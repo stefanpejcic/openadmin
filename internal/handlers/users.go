@@ -1015,7 +1015,11 @@ var userCreateRun = func(args []string) (*exec.Cmd, error) {
 // handleCreateUserPost builds the `opencli user-add` argv from the
 // submitted form and streams its stdout back line-by-line as it runs.
 func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	// The form is submitted as multipart/form-data (the frontend posts a
+	// FormData body), not application/x-www-form-urlencoded, so it must be
+	// parsed with ParseMultipartForm -- plain ParseForm leaves the body
+	// unread for that content type and PostFormValue silently returns "".
+	r.ParseMultipartForm(32 << 20)
 
 	email := r.PostFormValue("admin_email")
 	username := strings.ToLower(r.PostFormValue("admin_username"))
