@@ -575,6 +575,7 @@ type userDetailPageData struct {
 	CountryCode string
 	EnvData     map[string]string
 	Services    []composeServiceView
+	Features    []map[string]interface{}
 	CSRFToken   string
 	Flashes     []auth.Flash
 }
@@ -697,6 +698,9 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 	disk, _ := readDiskUsageFor(username)
 	stats, hasStats := readUsageStatsFor(userData.Context)
 	serverIP := firstIPFor(username)
+	if serverIP == "" || ipTypeOf(serverIP) == "Invalid" {
+		serverIP = chromeSite.PublicIP
+	}
 	envData := readEnvFile(userData.Context)
 
 	if r.URL.Query().Get("output") == "json" {
@@ -726,6 +730,14 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		json.Unmarshal(stats, &parsedStats)
 	}
 
+	featureSet := "default"
+	if planRow, err := paneldb.GetPlanByID(u.MySQL, strconv.FormatInt(userData.PlanID, 10)); err == nil {
+		if fs, ok := planRow["feature_set"].(string); ok && fs != "" {
+			featureSet = fs
+		}
+	}
+	features, _ := FeaturesForSet(FeatureSetPathForPlan(featureSet, userData.Owner.String))
+
 	webtemplates.Render(w, "user_detail.html", userDetailPageData{
 		Chrome:      buildChrome(r, "User: "+stripSuspendedPrefix(username)),
 		Username:    username,
@@ -742,6 +754,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		CountryCode: countryCodeForIP(serverIP),
 		EnvData:     envData,
 		Services:    composeServicesForUser(u.MySQL, username),
+		Features:    features,
 		CSRFToken:   csrf.Token(r),
 		Flashes:     auth.PopFlashes(w, r, u.Sessions),
 	})

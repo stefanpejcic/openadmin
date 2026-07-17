@@ -322,6 +322,58 @@ func (f *Features) servePlan(w http.ResponseWriter, r *http.Request, plan string
 	}, r, "Feature Manager"))
 }
 
+// FeatureSetPathForPlan resolves the feature-set .txt file for a plan,
+// preferring a reseller-owned copy (FeaturesDir/<owner>/<set>.txt) over the
+// top-level one when the owning reseller has one.
+func FeatureSetPathForPlan(featureSet, owner string) string {
+	if owner != "" {
+		resellerPath := FeaturesDir + owner + "/" + featureSet + ".txt"
+		if _, err := os.Stat(resellerPath); err == nil {
+			return resellerPath
+		}
+	}
+	return FeaturesDir + featureSet + ".txt"
+}
+
+// FeaturesForSet returns every known feature (from FeaturesJSONPath) marked
+// with "status" (enabled in configFilePath) and "module_enabled". A missing
+// configFilePath is treated as "nothing enabled", not an error.
+func FeaturesForSet(configFilePath string) ([]map[string]interface{}, error) {
+	var enabled []string
+	if raw, err := os.ReadFile(configFilePath); err == nil {
+		for _, line := range strings.Split(string(raw), "\n") {
+			if trimmed := strings.TrimSpace(line); trimmed != "" {
+				enabled = append(enabled, trimmed)
+			}
+		}
+	}
+
+	rawFeatures, err := os.ReadFile(FeaturesJSONPath)
+	if err != nil {
+		return nil, err
+	}
+	var allFeatures []map[string]interface{}
+	if err := json.Unmarshal(rawFeatures, &allFeatures); err != nil {
+		return nil, err
+	}
+
+	moduleEnabled := modulesEnabledList(ModulesConfigFilePath)
+	enabledSet := make(map[string]bool, len(enabled))
+	for _, name := range enabled {
+		enabledSet[name] = true
+	}
+	moduleEnabledSet := make(map[string]bool, len(moduleEnabled))
+	for _, name := range moduleEnabled {
+		moduleEnabledSet[name] = true
+	}
+	for _, feat := range allFeatures {
+		name, _ := feat["name"].(string)
+		feat["status"] = enabledSet[name]
+		feat["module_enabled"] = moduleEnabledSet[name]
+	}
+	return allFeatures, nil
+}
+
 // checkIfFeatureInUse reports whether any plan currently references the
 // given feature set, so it can be blocked from deletion while in use.
 func (f *Features) checkIfFeatureInUse(featureName string) (bool, error) {

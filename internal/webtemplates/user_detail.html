@@ -1726,7 +1726,43 @@
                              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Module</th>
                            </tr>
                          </thead>
-                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                           {{range .Features}}
+                           <tr x-data="{ enabled: {{if index . "status"}}true{{else}}false{{end}} }"
+                               x-effect="if (typeof toggleAll === 'boolean') enabled = toggleAll"
+                               data-row
+                               data-title="{{index . "title"}}"
+                               data-description="{{index . "description"}}"
+                               x-show="searchQuery === '' || ($el.dataset.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || ($el.dataset.description || '').toLowerCase().includes(searchQuery.toLowerCase())"
+                               class="hover:bg-gray-50 dark:hover:bg-gray-900">
+                             <td class="p-4 text-sm text-right">
+                               <button type="button" @click="enabled = !enabled" :aria-checked="enabled"
+                                 :class="enabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                                 class="inline-flex h-5 w-9 items-center rounded-full p-0.5 transition ring-1 ring-inset ring-black/5 dark:ring-gray-800 focus:outline-none">
+                                 <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
+                                   class="h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 transition"></span>
+                               </button>
+                               <input type="checkbox" x-model="enabled" hidden name="{{index . "name"}}" value="{{index . "name"}}" :checked="enabled">
+                             </td>
+                             <td class="p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+                               <div class="flex flex-col gap-1">
+                                 <span class="font-medium text-gray-900 dark:text-gray-50">{{index . "title"}}</span>
+                                 <span class="hidden sm:inline text-xs text-gray-500 dark:text-gray-500">{{index . "description"}}</span>
+                               </div>
+                             </td>
+                             <td class="p-4 text-sm text-gray-900 dark:text-gray-50">{{index . "link"}}</td>
+                             <td class="p-4 text-sm text-gray-900 dark:text-gray-50">
+                               {{if index . "module_enabled"}}
+                               <span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800"><span class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</span></span>
+                               {{else}}
+                               <a title="This module is disabled. Enable it in Settings → Modules, or this feature will have no effect." href="/settings/modules">
+                               <span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800"><span class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-red-600 dark:text-red-500"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path></svg>Disabled</span></span>
+                               </a>
+                               {{end}}
+                             </td>
+                           </tr>
+                           {{end}}
+                         </tbody>
                        </table>
                      </div>
                      </fieldset>
