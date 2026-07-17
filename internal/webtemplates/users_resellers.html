@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{ searchQuery: '', showSection: false, filters: { active: false, suspended: false } }">
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Resellers</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Create and manage Reseller users.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <a id="tour-create-reseller-btn" @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0 cursor-pointer">Create New</a>
+                </div>
+            </div>
+
+        <div :class="{ 'hidden': !showSection }" class="mt-8 w-full md:items-stretch md:space-x-4 hidden">
+
+<div id="create_user_form" class="sm:mx-auto" style="display:block;">
+    <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="action" value="create">
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <div class="col-span-full sm:col-span-2"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
+                <div class="relative w-full mt-2"><input type="text" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="username" id="username" required="" autofocus="" placeholder="emma" minlength="6" maxlength="30" pattern="[\S]{6,30}" title="Password must be 6–30 characters long and can't contain spaces"></div>
+            </div>
+            <div class="col-span-full sm:col-span-2"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="password">Password<span class="text-red-500 dark:text-red-500">*</span></label>
+                <div class="relative w-full flex mt-2"><input class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+                        autocomplete="password" name="password" id="password" required="" minlength="6" maxlength="30" pattern="[\S]{6,30}" title="Password must be 6–30 characters long and can't contain spaces">
+                    <div class="flex"><button class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+                            type="button" id="generatePassword" tabindex="-1">Generate</button><button class="relative inline-flex items-center justify-center rounded-r border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+                            tabindex="-1" type="button" id="togglePassword"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" style="margin:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-eye"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"></path><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"></path></svg></button></div>
+                </div>
+            </div>
+
+
+            <div class="col-span-full sm:col-span-2 flex flex-col justify-end h-full">
+            <div class="relative w-full mt-2">
+                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">Create</button>
+            </div>
+            </div>
+
+        </div>
+
+    </form>
+</div>
+
+
+<script>
+function generateRandomStrongPassword(length) {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result = "";
+    for (let i = 0; i < length; i++) {
+        const randomIndex = Math.floor(Math.random() * charset.length);
+        result += charset.charAt(randomIndex);
+    }
+    return result;
+}
+
+document.getElementById("generatePassword").addEventListener("click", function() {
+    const generatedPassword = generateRandomStrongPassword(16);
+    document.getElementById("password").value = generatedPassword;
+    const passwordField = document.getElementById("password");
+    if (passwordField.type === "password") {
+        passwordField.type = "text";
+    }
+});
+
+document.getElementById("togglePassword").addEventListener("click", function() {
+    const passwordField = document.getElementById("password");
+    if (passwordField.type === "password") {
+        passwordField.type = "text";
+    } else {
+        passwordField.type = "password";
+    }
+});
+</script>
+
+
+        </div>
+        </header>
+    </div>
+
+    <div class="">
+        <div class="space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+
+                    <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search by reseller..." type="search" @input="searchQuery = (filters.active ? 'active ' : '') + (filters.suspended ? 'suspended ' : '') + $event.target.value.trim()">
+
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="relative overflow-auto min-h-[90vh]">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
+                    <thead class="">
+                        <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Username</th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Status</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">2FA</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Passkeys</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Login IP</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Login Time</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Accounts</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Storage</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Hosting Plans</div></th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+
+{{$root := .}}
+{{if .Users}}
+
+                        {{range .Users}}
+                        <tr x-show="searchQuery === '' || '{{.Username}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 select-text">
+                            {{.Username}}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+    {{if .IsActive}}
+          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
+    {{else}}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Suspended</span>
+    {{end}}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+    {{if .TOTPEnabled}}
+          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>
+    {{else}}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Disabled</span>
+    {{end}}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+    {{if .PasskeysEnabled}}
+          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>
+    {{else}}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Disabled</span>
+    {{end}}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{.LastIP}}</td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{.LastLogin}}</td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/users?reseller={{.Username}}">{{.CurrentAccounts}}</a>/<a href="/resellers/update/{{.Username}}">{{.MaxAccounts}}</a></td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"
+                                x-data="{
+                                    current: {{.CurrentDiskBlocks}},
+                                    max: {{.MaxDiskBlocks}},
+                                    get percentage() { return this.max > 0 ? Math.min((this.current / this.max) * 100, 100) : 0; },
+                                    get label() { return this.max > 0 ? this.max : '∞'; },
+                                    progressBarClass(p) { return p >= 90 ? 'bg-red-500 dark:bg-red-500' : p >= 70 ? 'bg-yellow-500 dark:bg-yellow-500' : 'bg-blue-500 dark:bg-blue-500'; }
+                                }">
+                                <div class="w-full">
+                                    <div class="flex w-full items-center mt-2 [&>*]:h-1.5">
+                                        <div class="relative flex h-2 w-full items-center bg-blue-100 dark:bg-blue-500/30" aria-label="progress bar" :aria-valuenow="percentage" aria-valuemax="100">
+                                            <div class="h-full flex-col" :style="'width: ' + percentage + '%'" :class="progressBarClass(percentage)"></div>
+                                        </div>
+                                    </div>
+                                    <p class="mt-1 flex items-center justify-between text-xs text-gray-500"><span x-text="current"></span><span x-text="label"></span></p>
+                                </div>
+                            </td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/resellers/update/{{.Username}}">{{if .AllowedPlans}}{{len .AllowedPlans}}{{end}}</a></td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+                                <button id="{{.Username}}" data-dropdown-toggle="dropdown-{{.Username}}" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer" type="button">
+                                  <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
+                                    <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
+                                  </svg>
+                                </button>
+
+<div id="dropdown-{{.Username}}" class="relative z-50 hidden rounded border p-1 shadow-xl shadow-black/[2.5%] max-h-[var(--radix-popper-available-height)] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade min-w-40 text-left">
+    <ul class="py-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer" aria-labelledby="{{.Username}}">
+      <li>
+        <a href="/resellers/update/{{.Username}}" class="group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Plans &amp; Limits</a>
+      </li>
+      <li>
+        <a href="/resellers/rename/{{.Username}}" class="group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Rename</a>
+      </li>
+      <li>
+        <a href="/resellers/password/{{.Username}}" class="group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Change Password</a>
+      </li>
+
+    {{if and $root.IsAdmin .TOTPEnabled (ne $root.CurrentUser .Username)}}
+      <li>
+          <form method="POST">
+              <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+              <input type="hidden" name="action" value="disable_2fa">
+              <input type="hidden" name="username" value="{{.Username}}">
+              <button class="group/DropdownMenuItem w-full relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Disable 2FA</button>
+          </form>
+      </li>
+    {{end}}
+
+    {{if and $root.IsAdmin .PasskeysEnabled (ne $root.CurrentUser .Username)}}
+      <li>
+          <form method="POST">
+              <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+              <input type="hidden" name="action" value="disable_passkeys">
+              <input type="hidden" name="username" value="{{.Username}}">
+              <button class="group/DropdownMenuItem w-full relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Disable Passkeys</button>
+          </form>
+      </li>
+    {{end}}
+
+      <li>
+    {{if eq .Role "reseller"}}
+        {{if .IsActive}}
+        {{if ne $root.CurrentUser .Username}}
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+            <input type="hidden" name="action" value="suspend">
+            <input type="hidden" name="username" value="{{.Username}}">
+            <button class="group/DropdownMenuItem w-full relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Suspend</button>
+        </form>
+        {{end}}
+    {{else}}
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+        <input type="hidden" name="action" value="unsuspend">
+        <input type="hidden" name="username" value="{{.Username}}">
+        <button class="group/DropdownMenuItem w-full relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Unsuspend</button>
+    </form>
+    {{end}}
+    {{end}}
+      </li>
+
+      <li>
+        {{if and (eq .Role "reseller") (ne $root.CurrentUser .Username)}}
+            <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="username" value="{{.Username}}">
+            <button class="group/DropdownMenuItem w-full relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900 text-red-600 dark:text-red-500">Delete</button>
+            </form>
+        {{end}}
+      </li>
+    </ul>
+</div>
+
+                              </td>
+
+                        </tr>
+
+                {{end}}
+
+{{else}}
+
+<tr>
+    <td colspan="10" class="p-6 text-center">
+        No reseller users. <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Create your first reseller</a>
+    </td>
+</tr>
+
+{{end}}
+
+                    </tbody>
+                </table>
+
+                <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

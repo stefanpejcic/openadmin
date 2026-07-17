@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{
+    searchQuery: '',
+    toggleAll: null,
+    applyToAll(state) {
+        this.toggleAll = state;
+        document.querySelectorAll('[data-row]').forEach(el => {
+            el.__x.$data.enabled = state;
+        });
+    }
+}">
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Feature Manager</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Edit features available to users on hosting plans that use this feature set: <strong>{{.Plan}}</strong></h2>
+                </div>
+
+
+
+<div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+    {{if ne .Plan "default"}}
+    <div x-data="{ confirming: false }">
+        <form method="post" @submit.prevent="if (!confirming) { confirming = true } else { $el.submit(); }">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="action" value="delete">
+            <button type="submit"
+                class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 text-red-600 dark:text-red-500 gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-trash-x">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M20 6a1 1 0 0 1 .117 1.993l-.117 .007h-.081l-.919 11a3 3 0 0 1 -2.824 2.995l-.176 .005h-8c-1.598 0 -2.904 -1.249 -2.992 -2.75l-.005 -.167l-.923 -11.083h-.08a1 1 0 0 1 -.117 -1.993l.117 -.007h16zm-9.489 5.14a1 1 0 0 0 -1.218 1.567l1.292 1.293l-1.292 1.293l-.083 .094a1 1 0 0 0 1.497 1.32l1.293 -1.292l1.293 1.292l.094 .083a1 1 0 0 0 1.32 -1.497l-1.292 -1.293l1.292 -1.293l.083 -.094a1 1 0 0 0 -1.497 -1.32l-1.293 1.292l-1.293 -1.292l-.094 -.083z" />
+                    <path d="M14 2a2 2 0 0 1 2 2a1 1 0 0 1 -1.993 .117l-.007 -.117h-4l-.007 .117a1 1 0 0 1 -1.993 -.117a2 2 0 0 1 1.85 -1.995l.15 -.005h4z" />
+                </svg>
+                <span x-text="confirming ? 'Confirm' : 'Delete'"></span>
+            </button>
+        </form>
+    </div>
+    {{end}}
+
+
+
+<form method="post">
+<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+    <input type="hidden" name="action" value="update">
+
+    <button id="tour-save-features-btn" type="submit"
+    class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Save</button>
+
+</div>
+
+            </div>
+        </header>
+    </div>
+
+
+<div class="">
+  <div class="space-y-3">
+    <div class="px-6 pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+                    <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+    <input id="tour-features-search" x-model="searchQuery"  class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search features..." type="search" @input="searchQuery = $event.target.value.trim()">
+
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+<div class="flex flex-wrap gap-3 justify-center sm:justify-end">
+
+
+<span id="tour-bulk-features" class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800">
+  <button type="button" @click="applyToAll(true)" class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50">Enable All</button>
+  <span class="h-4 w-px bg-gray-200 dark:bg-gray-800"></span>
+  <button type="button" @click="applyToAll(false)" class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50" >Disable All</button>
+</span>
+
+</div>
+
+    </div>
+
+    <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500  pb-4">
+        <table id="tour-features-grid" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+          <thead>
+              <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Status</th>
+
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Name</th>
+
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Type</th>
+              <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Page</th>
+              <th id="tour-features-module-col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Module</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+
+            {{$root := .}}
+            {{range .Features}}
+            {{$type := lower (index . "type")}}
+            {{$isEnterprise := eq $type "enterprise"}}
+            {{$disableToggle := and $isEnterprise (ne $root.LicenseType "Enterprise")}}
+            <tr x-data="{ enabled: {{if index . "status"}}true{{else}}false{{end}} }"
+                x-effect="if (typeof toggleAll === 'boolean') enabled = toggleAll"
+                data-row
+                data-title="{{index . "title"}}"
+                data-description="{{index . "description"}}"
+                x-show="searchQuery === '' || ($el.dataset.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || ($el.dataset.description || '').toLowerCase().includes(searchQuery.toLowerCase())"
+                class="hover:bg-gray-50 dark:hover:bg-gray-900">
+
+              <td class="p-4 text-sm text-right">
+                {{if $disableToggle}}
+                <button type="button" disabled aria-disabled="true"
+                  class="opacity-50 cursor-not-allowed {{if index . "status"}}bg-indigo-300 dark:bg-indigo-900{{else}}bg-gray-100 dark:bg-gray-800{{end}} inline-flex h-5 w-9 items-center rounded-full p-0.5 transition ring-1 ring-inset ring-black/5 dark:ring-gray-800 focus:outline-none">
+                  <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
+                    class="h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 transition"></span>
+                </button>
+                {{else}}
+                <button type="button" @click="enabled = !enabled" :aria-checked="enabled"
+                  :class="enabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                  class="inline-flex h-5 w-9 items-center rounded-full p-0.5 transition ring-1 ring-inset ring-black/5 dark:ring-gray-800 focus:outline-none">
+                  <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
+                    class="h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 transition"></span>
+                </button>
+                {{end}}
+                <input type="checkbox" x-model="enabled" hidden name="{{index . "name"}}" value="{{index . "name"}}"
+                  :checked="enabled">
+              </td>
+
+
+
+                <td class="p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+                    <div class="flex flex-col gap-1">
+                        <span class="font-medium text-gray-900 dark:text-gray-50">{{index . "title"}}</span>
+                        <span class="hidden sm:inline text-xs text-gray-500 dark:text-gray-500">{{index . "description"}}</span>
+                    </div>
+                </td>
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">
+                {{if eq $type "beta"}}
+<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-orange-500 dark:bg-orange-500" aria-hidden="true"></span>BETA</span>
+                {{else if eq $type "enterprise"}}
+                        {{if eq $root.LicenseType "Enterprise"}}
+<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>Enterprise</span>
+                        {{else}}
+<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-red-500 dark:bg-red-500" aria-hidden="true"></span>Enterprise</span>
+                        {{end}}
+                {{else if eq $type "community"}}
+<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>Community</span>
+                {{else}}
+<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>{{$type}}</span>
+                {{end}}
+              </td>
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">{{index . "link"}}</td>
+              <td class="p-4 text-sm text-gray-900 dark:text-gray-50">
+                {{if index . "module_enabled"}}
+<span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800"><span class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</span></span>
+                {{else}}
+                <a title="This module is disabled. Enable it in Settings → Modules, or this feature will have no effect." href="/settings/modules">
+<span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800"><span class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-red-600 dark:text-red-500"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path></svg>Disabled</span></span>
+                  </a>
+                  {{end}}
+              </td>
+
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+
+    </div>
+  </div>
+</div>
+</form>
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

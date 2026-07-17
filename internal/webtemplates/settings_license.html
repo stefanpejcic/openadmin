@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">License</h1>
+                <h2 class="text-sm font-medium text-slate-500">Add OpenPanel Enterprise license key.</h2>
+            </div>
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <a target="_blank" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 w-full gap-x-0.5 whitespace-nowrap sm:w-fit" href="https://my.openpanel.com/clientarea.php?action=products">my.openpanel.com<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg></a>
+            </div>
+        </div>
+    </header>
+</div>
+
+<div id="license-alerts"></div>
+
+<div class="border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div>
+        <section>
+                <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+                    <div>
+                        <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">License key</h2>
+                        <p class="mt-2 text-sm leading-6 text-gray-500">Enter your <a href="https://openpanel.com/docs/articles/license/upgrade_to_openpanel_enterprise_and-activate_license/" target="_blank" class="inline-flex items-center gap-1 text-sm text-blue-500 dark:text-blue-500">OpenPanel Enterprise edition<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a> license key to unlock premium features, including email and FTP accounts, reseller management, API access, and billing integrations with WHMCS, FOSSBilling, and more.
+                        </p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <div>
+                            <div class="mt-6 space-y-8 rounded border border-gray-200 bg-gray-50 p-4 sm:p-8 lg:p-10 dark:border-gray-800 dark:bg-gray-900/40">
+
+<form id="license-form" method="POST">
+<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+<div class="relative w-full mt-2">
+                                <div><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="key">License key:</label>
+                                    <div class="relative w-full mt-2">
+										<input class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-[#090E1A]" name="key" id="license-key" placeholder="enterprise-xxxxxxxxxxx" {{if .Key}}value="{{.Key}}"{{end}} required>
+											</div>
+                                </div>
+
+<div class="flex flex-none items-center gap-2 rounded-sm px-2 sm:bg-transparent sm:px-0">
+
+<div id="tooltip-save" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Save license key and restart OpenAdmin to enable premium features.
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+<div id="tooltip-verify" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Verify license key on my.openpanel.com
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+<div id="tooltip-downgrade" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Remove license key and all premium features
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+<button id="save_license_btn" data-tooltip-target="tooltip-save" class="relative inline-flex items-center justify-center rounded border my-4 px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 sm:w-fit" type="submit">Save key</button>
+
+											<a href="#" data-tooltip-target="tooltip-verify" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 sm:w-fit {{if not .Key}}hidden{{end}} btn-verify"> Re-Verify</a>
+
+											<a href="#" data-tooltip-target="tooltip-downgrade" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 sm:w-fit {{if not .Key}}hidden{{end}} btn-downgrade"> Downgrade</a>
+
+									</div>
+
+                                <div><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="rule-name">License Info:</label>
+
+                                    <div id="license_info" class="d-none w-full mt-2 rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] relative overflow-hidden border-gray-300 p-0 dark:border-gray-800">
+
+                                        <div class="overflow-hidden border-l-4 border-sky-500 p-6 dark:border-sky-500">
+                                    <div><p><span id="license_data"></span></p></div>
+                                </div>
+                            </div>
+                        </div>
+
+</form>
+
+                    </div>
+                </div>
+    </div>
+</div>
+</section>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+        <section>
+                <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+                    <div>
+                        <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Contact Support</h2>
+                        <p class="mt-2 text-sm leading-6 text-gray-500">Generate system report and share it when contacting support.
+
+                                            {{if ne .LicenseType "Community"}}
+                                            <a href="https://my.openpanel.com/submitticket.php?step=2&deptid=2" target="_blank" class="inline-flex items-center gap-1 text-sm text-blue-500 dark:text-blue-500">Open a Support Ticket<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a>
+                                            {{else}}
+                                            <a href="https://community.openpanel.org/t/openadmin" target="_blank" class="inline-flex items-center gap-1 text-sm text-blue-500 dark:text-blue-500">Start a Discussion on Community forums<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a>
+                                            {{end}}
+
+                        </p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <div>
+                            <div class="mt-6 space-y-8 rounded border border-gray-200 bg-gray-50 p-4 sm:p-8 lg:p-10 dark:border-gray-800 dark:bg-gray-900/40">
+
+<div class="relative w-full mt-2">
+<a id="tour-generate-report-btn" href="/support/report" class="relative inline-flex items-center justify-center rounded border my-4 px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 sm:w-fit">Generate report</a>
+
+</div>
+
+                </div>
+    </div>
+</div>
+</section>
+
+</div>
+</div>
+
+<script src="/static/pages/license.js" defer></script>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

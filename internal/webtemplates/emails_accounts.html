@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<style>[x-cloak] { display: none !important; }</style>
+
+<!-- Page header -->
+<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">Emails</h1>
+                <h2 class="text-sm font-medium text-slate-500">
+                    {{if .Emails}}
+                        <b>{{len .Emails}}</b> email{{if gt (len .Emails) 1}}s{{end}} hosted on this server.
+                    {{else}}
+                        No emails yet.
+                    {{end}}
+                </h2>
+            </div>
+        </div>
+    </header>
+</div>
+
+{{if eq .MailserverStatus "running"}}
+
+<script>
+    const EMAIL_DATA = {{toJSON .EmailPairs}};
+</script>
+
+<div x-data="emailsApp()">
+
+    <!-- ── Toolbar ── -->
+    <div class="space-y-3">
+        <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+                <!-- Search -->
+                <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+                    <input x-model="searchQuery"
+                           class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8"
+                           placeholder="Search emails..." type="search" />
+                    <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk actions (shown when selection > 0) -->
+            <div x-show="selected.length > 0" x-cloak class="flex flex-wrap items-center gap-2">
+                <span class="text-sm text-gray-500 dark:text-gray-400" x-text="selected.length + ' selected'"></span>
+
+                <button @click="openPasswordBulk()"
+                        class="inline-flex items-center gap-1.5 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Set Password
+                </button>
+
+                <button @click="openQuotaBulk()"
+                        class="inline-flex items-center gap-1.5 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Set Quota
+                </button>
+
+                <button @click="openRestrictBulk()"
+                        class="inline-flex items-center gap-1.5 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    Restrict
+                </button>
+
+                <button @click="openDeleteMany()"
+                        class="inline-flex items-center gap-1.5 rounded border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    Delete
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Table ── -->
+        <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+            <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                <thead>
+                    <tr class="border-y border-gray-200 dark:border-gray-800 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4">
+                        <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs w-10">
+                            <input type="checkbox" :checked="isAllSelected()" @change="toggleAll($event.target.checked)"
+                                   class="size-4 rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                        </th>
+                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                            <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                <span>Email</span>
+                                <div class="-space-y-2">
+                                    <button @click="setSort('email', 'asc')" type="button">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true"
+                                             class="size-3.5 text-gray-900 dark:text-gray-50 transition-opacity"
+                                             :class="sortBy === 'email' && sortDir === 'asc' ? 'opacity-30' : 'opacity-100'">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/>
+                                        </svg>
+                                    </button>
+                                    <button @click="setSort('email', 'desc')" type="button">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true"
+                                             class="size-3.5 text-gray-900 dark:text-gray-50 transition-opacity"
+                                             :class="sortBy === 'email' && sortDir === 'desc' ? 'opacity-30' : 'opacity-100'">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </th>
+                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                            <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                <span>Quota</span>
+                                <div class="-space-y-2">
+                                    <button @click="setSort('quota', 'asc')" type="button">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true"
+                                             class="size-3.5 text-gray-900 dark:text-gray-50 transition-opacity"
+                                             :class="sortBy === 'quota' && sortDir === 'asc' ? 'opacity-30' : 'opacity-100'">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/>
+                                        </svg>
+                                    </button>
+                                    <button @click="setSort('quota', 'desc')" type="button">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true"
+                                             class="size-3.5 text-gray-900 dark:text-gray-50 transition-opacity"
+                                             :class="sortBy === 'quota' && sortDir === 'desc' ? 'opacity-30' : 'opacity-100'">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </th>
+                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Webmail</th>
+                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+
+                    <template x-for="[email, quota] in sortedEmails" :key="email">
+                        <tr x-show="searchQuery === '' || email.toLowerCase().includes(searchQuery.toLowerCase())"
+                            class="group hover:bg-gray-50 hover:dark:bg-gray-900 [&_td:last-child]:pr-4 [&_td:first-child]:pl-4">
+
+                            <!-- Checkbox -->
+                            <td class="p-4 py-2 w-10">
+                                <input type="checkbox" :value="email" x-model="selected"
+                                       class="size-4 rounded border-gray-300 dark:border-gray-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                            </td>
+
+                            <!-- Email -->
+                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" x-text="email"></td>
+
+                            <!-- Quota + progress bar -->
+                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[180px]"
+                                x-data="{ pct: parseInt((quota.match(/\[(\d+)%\]/) || [0,0])[1]) }">
+                                <span x-text="quota"></span>
+                                <div class="h-2 w-32 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-2 rounded-full transition-all duration-300"
+                                         :class="{
+                                             'bg-green-500':  pct < 75,
+                                             'bg-yellow-400': pct >= 75 && pct < 90,
+                                             'bg-red-500':    pct >= 90
+                                         }"
+                                         :style="'width:' + pct + '%'">
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Webmail -->
+                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                <a :href="'/emails/webmail/' + email" target="_blank"
+                                   :title="'Open webmail for ' + email"
+                                   class="inline-flex items-center text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18h-7a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v7.5" /><path d="M3 6l9 6l9 -6" /><path d="M15 18h6" /><path d="M18 15l3 3l-3 3" /></svg>
+                                </a>
+                            </td>
+
+                            <!-- Actions dropdown -->
+                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap text-end">
+<div class="relative" x-data="{ open: false }" @click.outside="open = false">
+    <button @click="open = !open"
+            class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer"
+            type="button">
+        <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
+            <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
+        </svg>
+    </button>
+
+    <div x-show="open" x-cloak x-transition
+         class="absolute right-0 z-50 rounded border p-1 shadow-xl shadow-black/[2.5%] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 min-w-40 text-left cursor-pointer">
+        <!-- aria-labelledby is intentionally left blank here: `email` is only
+             an Alpine x-for loop variable, not an actual element id, so
+             there's nothing valid to point it at. (Note: this comment
+             intentionally avoids writing literal curly-brace template
+             delimiters -- html/template parses them even inside an HTML
+             comment, and doing so previously broke the whole template set
+             at init time.) -->
+        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="">
+            <li class="flex">
+                <button @click="open=false; openPassword(email)"
+                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    Change Password
+                </button>
+            </li>
+            <li class="flex">
+                <button @click="open=false; openQuota(email)"
+                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    Set Quota
+                </button>
+            </li>
+            <li class="flex">
+                <button @click="open=false; openRestrict(email)"
+                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    Restrictions
+                </button>
+            </li>
+            <li class="flex">
+                <button @click="open=false; openDelete(email)"
+                        class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    Delete Account
+                </button>
+            </li>
+        </ul>
+    </div>
+</div>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <tr x-show="emails.length === 0">
+                        <td colspan="5" class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                            No email accounts yet.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <!-- ════════════════════════════════════════════
+         MODALS
+    ════════════════════════════════════════════ -->
+
+    <!-- Backdrop -->
+    <template x-if="showPasswordModal || showQuotaModal || showRestrictModal || showDeleteModal || showDeleteManyModal">
+        <div class="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm"></div>
+    </template>
+
+
+    <!-- ── Change Password ── -->
+    <div x-show="showPasswordModal" x-cloak x-transition
+         class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Change Password</h3>
+                <button @click="showPasswordModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <!-- Single vs bulk target display -->
+            <p x-show="!passwordBulk" class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Set a new password for <span class="font-medium text-gray-700 dark:text-gray-300" x-text="activeEmail"></span>.
+            </p>
+            <div x-show="passwordBulk" class="mb-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                    Set the same password for <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selected.length"></span> account(s):
+                </p>
+                <ul class="max-h-24 overflow-y-auto rounded border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-3 py-2 text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                    <template x-for="e in selected" :key="e"><li x-text="e"></li></template>
+                </ul>
+            </div>
+
+            <input x-model="newPassword" type="password" placeholder="New password"
+                   class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3" />
+            <p x-show="passwordMsg" class="text-sm mb-3"
+               :class="passwordMsg.toLowerCase().includes('error') || passwordMsg.includes('fail') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
+               x-text="passwordMsg"></p>
+            <div class="flex justify-end gap-2">
+                <button @click="showPasswordModal=false"
+                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
+                <button @click="submitPassword()" :disabled="passwordLoading || !newPassword"
+                        class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+                        x-text="passwordLoading ? 'Saving…' : 'Save'">
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ── Manage Quota ── -->
+    <div x-show="showQuotaModal" x-cloak x-transition
+         class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Manage Quota</h3>
+                <button @click="showQuotaModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <p x-show="!quotaBulk" class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Account: <span class="font-medium text-gray-700 dark:text-gray-300" x-text="activeEmail"></span>
+            </p>
+            <div x-show="quotaBulk" class="mb-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                    Apply quota to <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selected.length"></span> account(s):
+                </p>
+                <ul class="max-h-24 overflow-y-auto rounded border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-3 py-2 text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                    <template x-for="e in selected" :key="e"><li x-text="e"></li></template>
+                </ul>
+            </div>
+
+            <!-- Set / Remove toggle -->
+            <div class="flex gap-2 mb-4">
+                <button @click="quotaAction='set'"
+                        :class="quotaAction === 'set' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700'"
+                        class="flex-1 rounded border px-3 py-1.5 text-sm font-medium transition">Set quota</button>
+                <button @click="quotaAction='remove'"
+                        :class="quotaAction === 'remove' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700'"
+                        class="flex-1 rounded border px-3 py-1.5 text-sm font-medium transition">Remove quota</button>
+            </div>
+
+            <input x-show="quotaAction === 'set'" x-model="quotaValue" type="text" placeholder="e.g. 512M or 2G"
+                   class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3" />
+            <p x-show="quotaAction === 'remove'" class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                This will remove any mailbox quota limit for the selected account(s).
+            </p>
+
+            <p x-show="quotaMsg" class="text-sm mb-3"
+               :class="quotaMsg.toLowerCase().includes('error') || quotaMsg.includes('fail') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
+               x-text="quotaMsg"></p>
+            <div class="flex justify-end gap-2">
+                <button @click="showQuotaModal=false"
+                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
+                <button @click="submitQuota()" :disabled="quotaLoading || (quotaAction==='set' && !quotaValue)"
+                        class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+                        x-text="quotaLoading ? 'Applying…' : 'Apply'">
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ── Restrictions ── -->
+    <div x-show="showRestrictModal" x-cloak x-transition
+         class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Email Restrictions</h3>
+                <button @click="showRestrictModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <p x-show="!restrictBulk" class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Account: <span class="font-medium text-gray-700 dark:text-gray-300" x-text="activeEmail"></span>
+            </p>
+            <div x-show="restrictBulk" class="mb-4">
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                    Apply restriction to <span class="font-medium text-gray-700 dark:text-gray-300" x-text="selected.length"></span> account(s):
+                </p>
+                <ul class="max-h-24 overflow-y-auto rounded border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-3 py-2 text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                    <template x-for="e in selected" :key="e"><li x-text="e"></li></template>
+                </ul>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Action</label>
+                    <select x-model="restrictAction"
+                            class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="add">Add restriction</option>
+                        <option value="del">Remove restriction</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Restrict</label>
+                    <select x-model="restrictType"
+                            class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="send">Sending</option>
+                        <option value="receive">Receiving</option>
+                    </select>
+                </div>
+            </div>
+
+            <p x-show="restrictMsg" class="text-sm mb-3"
+               :class="restrictMsg.toLowerCase().includes('error') || restrictMsg.includes('fail') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
+               x-text="restrictMsg"></p>
+            <div class="flex justify-end gap-2">
+                <button @click="showRestrictModal=false"
+                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
+                <button @click="submitRestrict()" :disabled="restrictLoading"
+                        class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition"
+                        x-text="restrictLoading ? 'Applying…' : 'Apply'">
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ── Delete single ── -->
+    <div x-show="showDeleteModal" x-cloak x-transition
+         class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Delete Account</h3>
+                <button @click="showDeleteModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Permanently delete <span class="font-semibold text-gray-800 dark:text-gray-200" x-text="activeEmail"></span>?
+                All mail data will be lost and this cannot be undone.
+            </p>
+            <p x-show="deleteMsg" class="text-sm text-red-600 dark:text-red-400 mb-3" x-text="deleteMsg"></p>
+            <div class="flex justify-end gap-2">
+                <button @click="showDeleteModal=false"
+                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
+                <button @click="submitDelete()" :disabled="deleteLoading"
+                        class="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 transition"
+                        x-text="deleteLoading ? 'Deleting…' : 'Delete'">
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ── Delete many ── -->
+    <div x-show="showDeleteManyModal" x-cloak x-transition
+         class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Delete Accounts</h3>
+                <button @click="showDeleteManyModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                Permanently delete <span class="font-semibold text-gray-800 dark:text-gray-200" x-text="selected.length"></span> account(s)?
+                All mail data will be lost.
+            </p>
+            <ul class="mb-4 max-h-32 overflow-y-auto rounded border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-3 py-2 text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                <template x-for="e in selected" :key="e"><li x-text="e"></li></template>
+            </ul>
+            <p x-show="deleteManyMsg" class="text-sm text-red-600 dark:text-red-400 mb-3" x-text="deleteManyMsg"></p>
+            <div class="flex justify-end gap-2">
+                <button @click="showDeleteManyModal=false"
+                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
+                <button @click="submitDeleteMany()" :disabled="deleteManyLoading"
+                        class="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 transition"
+                        x-text="deleteManyLoading ? 'Deleting…' : 'Delete All'">
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div><!-- end x-data -->
+
+
+<script>
+function emailsApp() {
+    return {
+        searchQuery: '',
+        getCsrf() {
+            return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+        },
+        selected: [],
+        emails: EMAIL_DATA,
+
+        sortBy: 'email',
+        sortDir: 'asc',
+
+        get sortedEmails() {
+            return [...this.emails].sort((a, b) => {
+                let valA, valB;
+                if (this.sortBy === 'email') {
+                    valA = a[0].toLowerCase();
+                    valB = b[0].toLowerCase();
+                } else {
+                    // sort by % used; treat missing % as 0
+                    valA = parseInt((a[1].match(/\[(\d+)%\]/) || [0, 0])[1]);
+                    valB = parseInt((b[1].match(/\[(\d+)%\]/) || [0, 0])[1]);
+                }
+                if (valA < valB) return this.sortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return this.sortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        },
+
+        setSort(col, dir) {
+            this.sortBy = col;
+            this.sortDir = dir;
+        },
+
+        showPasswordModal: false,
+        showQuotaModal: false,
+        showRestrictModal: false,
+        showDeleteModal: false,
+        showDeleteManyModal: false,
+
+        activeEmail: '',
+
+        newPassword: '',
+        passwordLoading: false,
+        passwordMsg: '',
+        passwordBulk: false,
+
+        quotaAction: 'set',
+        quotaValue: '',
+        quotaLoading: false,
+        quotaMsg: '',
+        quotaBulk: false,
+
+        restrictAction: 'add',
+        restrictType: 'send',
+        restrictLoading: false,
+        restrictMsg: '',
+        restrictBulk: false,
+
+        deleteLoading: false,
+        deleteMsg: '',
+
+        deleteManyLoading: false,
+        deleteManyMsg: '',
+
+        toggleAll(checked) {
+            this.selected = checked ? this.emails.map(e => e[0]) : [];
+        },
+        isAllSelected() {
+            return this.emails.length > 0 && this.selected.length === this.emails.length;
+        },
+        quotaPct(quota) {
+            const m = quota.match(/\[(\d+)%\]/);
+            return m ? parseInt(m[1]) : 0;
+        },
+
+        openPassword(email) {
+            this.activeEmail = email;
+            this.newPassword = '';
+            this.passwordMsg = '';
+            this.passwordBulk = false;
+            this.showPasswordModal = true;
+        },
+        openQuota(email) {
+            this.activeEmail = email;
+            this.quotaValue = '';
+            this.quotaMsg = '';
+            this.quotaAction = 'set';
+            this.quotaBulk = false;
+            this.showQuotaModal = true;
+        },
+        openRestrict(email) {
+            this.activeEmail = email;
+            this.restrictMsg = '';
+            this.restrictAction = 'add';
+            this.restrictType = 'send';
+            this.restrictBulk = false;
+            this.showRestrictModal = true;
+        },
+        openDelete(email) {
+            this.activeEmail = email;
+            this.deleteMsg = '';
+            this.showDeleteModal = true;
+        },
+
+        openPasswordBulk() {
+            this.activeEmail = '';
+            this.newPassword = '';
+            this.passwordMsg = '';
+            this.passwordBulk = true;
+            this.showPasswordModal = true;
+        },
+        openQuotaBulk() {
+            this.activeEmail = '';
+            this.quotaValue = '';
+            this.quotaMsg = '';
+            this.quotaAction = 'set';
+            this.quotaBulk = true;
+            this.showQuotaModal = true;
+        },
+        openRestrictBulk() {
+            this.activeEmail = '';
+            this.restrictMsg = '';
+            this.restrictAction = 'add';
+            this.restrictType = 'send';
+            this.restrictBulk = true;
+            this.showRestrictModal = true;
+        },
+        openDeleteMany() {
+            this.deleteManyMsg = '';
+            this.showDeleteManyModal = true;
+        },
+
+        async submitPassword() {
+            this.passwordLoading = true;
+            this.passwordMsg = '';
+            const targets = this.passwordBulk ? this.selected : [this.activeEmail];
+            let errors = 0;
+            for (const email of targets) {
+                try {
+                    const r = await fetch('/emails/api/update-password', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
+                        body: JSON.stringify({email, password: this.newPassword})
+                    });
+                    if (!r.ok) errors++;
+                } catch(e) { errors++; }
+            }
+            this.passwordMsg = errors === 0
+                ? 'Password updated for ' + targets.length + ' account(s).'
+                : 'Done with ' + errors + ' error(s).';
+            this.passwordLoading = false;
+        },
+
+        async submitQuota() {
+            this.quotaLoading = true;
+            this.quotaMsg = '';
+            const targets = this.quotaBulk ? this.selected : [this.activeEmail];
+            const url = this.quotaAction === 'set' ? '/emails/api/quota-set' : '/emails/api/quota-del';
+            let errors = 0;
+            for (const email of targets) {
+                const body = this.quotaAction === 'set'
+                    ? {email, quota: this.quotaValue}
+                    : {email};
+                try {
+                    const r = await fetch(url, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
+                        body: JSON.stringify(body)
+                    });
+                    if (!r.ok) errors++;
+                } catch(e) { errors++; }
+            }
+            this.quotaMsg = errors === 0
+                ? 'Quota updated for ' + targets.length + ' account(s).'
+                : 'Done with ' + errors + ' error(s).';
+            this.quotaLoading = false;
+        },
+
+        async submitRestrict() {
+            this.restrictLoading = true;
+            this.restrictMsg = '';
+            const targets = this.restrictBulk ? this.selected : [this.activeEmail];
+            let errors = 0;
+            for (const email of targets) {
+                try {
+                    const r = await fetch('/emails/api/restrict', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
+                        body: JSON.stringify({email, action: this.restrictAction, type: this.restrictType})
+                    });
+                    if (!r.ok) errors++;
+                } catch(e) { errors++; }
+            }
+            this.restrictMsg = errors === 0
+                ? 'Restrictions updated for ' + targets.length + ' account(s).'
+                : 'Done with ' + errors + ' error(s).';
+            this.restrictLoading = false;
+        },
+
+        async submitDelete() {
+            this.deleteLoading = true;
+            this.deleteMsg = '';
+            try {
+                const r = await fetch('/emails/api/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
+                    body: JSON.stringify({emails: [this.activeEmail]})
+                });
+                if (r.ok) {
+                    this.emails = this.emails.filter(e => e[0] !== this.activeEmail);
+                    this.selected = this.selected.filter(e => e !== this.activeEmail);
+                    this.showDeleteModal = false;
+                } else {
+                    const d = await r.json();
+                    this.deleteMsg = d.message || 'Error deleting account.';
+                }
+            } catch(e) { this.deleteMsg = 'Request failed.'; }
+            this.deleteLoading = false;
+        },
+
+        async submitDeleteMany() {
+            this.deleteManyLoading = true;
+            this.deleteManyMsg = '';
+            try {
+                const r = await fetch('/emails/api/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
+                    body: JSON.stringify({emails: this.selected})
+                });
+                if (r.ok) {
+                    const removed = [...this.selected];
+                    this.emails = this.emails.filter(e => !removed.includes(e[0]));
+                    this.selected = [];
+                    this.showDeleteManyModal = false;
+                } else {
+                    const d = await r.json();
+                    this.deleteManyMsg = d.message || 'Error deleting accounts.';
+                }
+            } catch(e) { this.deleteManyMsg = 'Request failed.'; }
+            this.deleteManyLoading = false;
+        }
+    };
+}
+</script>
+
+{{else if eq .MailserverStatus "not_installed"}}
+<div style="
+        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        height: 90vh;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    "><div><style>.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}</style><h1 class="next-error-h1" style="display:inline-block;margin:0 20px 0 0;padding:0 23px 0 0;font-size:24px;font-weight:500;vertical-align:top;line-height:49px">Not Configured</h1><div style="display:inline-block"><h2 style="font-size:14px;font-weight:400;line-height:49px;margin:0">This Mailserver is not yet installed, install it from terminal with the following command: <pre>opencli email-server install</pre></h2></div></div></div>
+{{else if eq .MailserverStatus "stopped"}}
+<!-- Intentional quirk preserved: the dark-mode media-query selector is
+     missing its leading "." so it never matches (`next-error-h1` instead of
+     `.next-error-h1`). -->
+<div style="
+        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        height: 90vh;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    "><div><style>.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}</style><h1 class="next-error-h1" style="display:inline-block;margin:0 20px 0 0;padding:0 23px 0 0;font-size:24px;font-weight:500;vertical-align:top;line-height:49px">Not Running</h1><div style="display:inline-block"><h2 style="font-size:14px;font-weight:400;line-height:49px;margin:0">The Mailserver is not currently running. Start it <a class="inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400" href="/services">from the Services page</a>.</h2></div></div></div>
+{{else}}
+Mailserver status not detected!
+{{end}}
+
+    </main>
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

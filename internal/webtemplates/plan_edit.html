@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div>
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Edit Plan '{{index .Plan "name"}}'</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Edit plan limits.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                </div>
+            </div>
+    </header>
+    </div>
+
+
+<div id="collapseAddNewUser" class="px-2 pb-6">
+
+    <div class="sm:mx-auto sm:max-w-2xl" style="display:block;">
+        <form method="POST" class="mt-8">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "name" "Label" "Name" "Description" "Plan name." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="text"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="name" required="" autofocus value="{{index .Plan "name"}}" />
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "description" "Label" "Description" "Description" "Plan description is visible to users on Server Information page." "Required" false)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="text"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="description" value="{{index .Plan "description"}}" />
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+           <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "disk_limit" "Label" "Disk (in GB)" "Description" "Disk Space in GB to allocate for user services, files, logs.." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="disk_limit" required="" min="0" autofocus value='{{replace (index .Plan "disk_limit") " GB" ""}}' />
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "inodes_limit" "Label" "Inodes" "Description" "Total number of files to allow for users on this plan." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="inodes_limit" required="" min="0" value="{{index .Plan "inodes_limit"}}" />
+                    </div>
+                </div>
+
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "cpu" "Label" "CPU cores" "Description" "Limit the total CPU (cores) used by all running services combined for a user." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="cpu" required="" value="{{index .Plan "cpu"}}" min="0" />
+                    </div>
+                </div>
+
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "ram" "Label" "Memory (in GB)" "Description" "Limit the total memory (in GB) used by all running services combined for a user." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="ram" required="" value='{{replace (index .Plan "ram") "g" ""}}' min="0" />
+                    </div>
+                </div>
+
+
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "bandwidth" "Label" "Port Speed" "Description" "Port Speed (or bandwidth) is the total speed user can use on this plan." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="bandwidth" required="" value="{{index .Plan "bandwidth"}}" min="0" />
+                    </div>
+                </div>
+
+
+
+            </div>
+
+            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+           <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "domains_limit" "Label" "Domains" "Description" "Total number of domains: primary, addons, aliases. Subdomains are excluded." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="domains_limit" required="" value="{{index .Plan "domains_limit"}}" min="0"/>
+                    </div>
+                </div>
+
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "websites_limit" "Label" "Websites" "Description" "Total number of websites that user can install/manage on this plan. Includes: WordPress, NodeJS, Python, Website Builder.." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="websites_limit" required="" value="{{index .Plan "websites_limit"}}" min="0"/>
+                    </div>
+                </div>
+
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "db_limit" "Label" "Databases" "Description" "Total number of MySQL and PostgreSQL databases a user can have on this plan. The limits for PostgreSQL and MySQL are separate." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="db_limit" value="{{index .Plan "db_limit"}}" min="0"/>
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "email_limit" "Label" "Email Accounts" "Description" "Total number of email accounts that user can create and manage on this plan." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="email_limit" required="" value="{{index .Plan "email_limit"}}" min="0"/>
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "max_email_quota" "Label" "Mailbox quota" "Description" "Max mailbox size for email accounts that user can set on this plan. Examples: 100k | 250M | 3G | 1T | 0 for unlimited." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="text"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="max_email_quota" required="" value="{{index .Plan "max_email_quota"}}"/>
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "max_hourly_email" "Label" "Max hourly emails" "Description" "The maximum number of emails that all addresses under this account can send within one hour." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="max_hourly_email" min="0" required="" value="{{index .Plan "max_hourly_email"}}"/>
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "ftp_limit" "Label" "FTP Accounts" "Description" "Total number of FTP accounts that user can create and manage on this plan." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <input
+                            type="number"
+                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="ftp_limit" required="" value="{{index .Plan "ftp_limit"}}" min="0"/>
+                    </div>
+                </div>
+
+                <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "feature_set" "Label" "Feature set" "Description" "Feature set determines which features users on this plan have access to." "Required" true)}}
+                    <div class="relative w-full mt-2">
+                        <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name="feature_set">
+                            {{$current := index .Plan "feature_set"}}
+                            {{range .FeatureSets}}
+                                <option value="{{.}}" {{if eq . $current}}selected{{end}}>{{.}} {{if eq . $current}}(Current){{end}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+
+
+
+            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+
+            <div class="flex items-center justify-end space-x-4">
+                <a href="/plans" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">Go back</a>
+                <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400" type="submit">Save changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

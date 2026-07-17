@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="plansTable()" x-init="init()" x-cloak>
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">User Packages</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Create and manage packages for OpenPanel users.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    <a id="tour-create-plan-btn" href="/plans/new" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Create New</a>
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <div class="">
+        <div class="space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+                    <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search by plan name..." type="search" @input="searchQuery =  $event.target.value.trim()">
+
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+
+        <!-- Dropdown for Column Visibility -->
+        <div class="relative">
+            <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer" type="button"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg> Show Columns</button>
+
+            <!-- Dropdown menu -->
+            <div id="dropdownToggle" class="z-10 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-72 dark:divide-gray-600 hidden">
+                <ul class="p-2 space-y-1" aria-labelledby="dropdownToggleButton">
+                    {{template "plan_column_toggle" (dict "Col" "id" "Label" "ID")}}
+                    {{template "plan_column_toggle" (dict "Col" "name" "Label" "Name")}}
+                    {{template "plan_column_toggle" (dict "Col" "description" "Label" "Description")}}
+                    {{template "plan_column_toggle" (dict "Col" "ram" "Label" "Memory")}}
+                    {{template "plan_column_toggle" (dict "Col" "cpu" "Label" "CPU")}}
+                    {{template "plan_column_toggle" (dict "Col" "disk_limit" "Label" "Disk (storage)")}}
+                    {{template "plan_column_toggle" (dict "Col" "inodes_limit" "Label" "Inodes (files count)")}}
+                    {{template "plan_column_toggle" (dict "Col" "bandwidth" "Label" "Port Speed")}}
+                    {{template "plan_column_toggle" (dict "Col" "domains_limit" "Label" "Domains")}}
+                    {{template "plan_column_toggle" (dict "Col" "websites_limit" "Label" "Websites")}}
+                    {{template "plan_column_toggle" (dict "Col" "db_limit" "Label" "Databases (mysql+postgre)")}}
+                    {{template "plan_column_toggle" (dict "Col" "email_limit" "Label" "Email accounts")}}
+                    {{template "plan_column_toggle" (dict "Col" "max_email_quota" "Label" "Mailbox quota")}}
+                    {{template "plan_column_toggle" (dict "Col" "max_hourly_email" "Label" "Max hourly emails")}}
+                    {{template "plan_column_toggle" (dict "Col" "ftp_limit" "Label" "FTP accounts")}}
+                    {{template "plan_column_toggle" (dict "Col" "feature_set" "Label" "Feature Set")}}
+                    {{template "plan_column_toggle" (dict "Col" "user_count" "Label" "Users using a plan")}}
+                </ul>
+            </div>
+        </div>
+
+                </div>
+            </div>
+            <div class="min-h-[90vh]">
+                <div class="relative overflow-y-auto min-h-[90vh]">
+                    <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
+                        <thead class="">
+                            <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+
+{{template "plan_sort_th" (dict "Show" "columns.id" "Col" "id" "Label" "ID" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.name" "Col" "name" "Label" "Name" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.description" "Col" "description" "Label" "Description" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.ram" "Col" "ram" "Label" "Memory" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.cpu" "Col" "cpu" "Label" "CPU" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.disk_limit" "Col" "disk_limit" "Label" "Disk" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.inodes_limit" "Col" "inodes_limit" "Label" "Inodes" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.bandwidth" "Col" "bandwidth" "Label" "Port speed" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.domains_limit" "Col" "domains_limit" "Label" "Domains" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.websites_limit" "Col" "websites_limit" "Label" "Websites" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.db_limit" "Col" "db_limit" "Label" "Databases" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.email_limit" "Col" "email_limit" "Label" "Email accounts" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.max_email_quota" "Col" "max_email_quota" "Label" "Mailbox quota" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.max_hourly_email" "Col" "max_hourly_email" "Label" "Hourly emails" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.ftp_limit" "Col" "ftp_limit" "Label" "FTP accounts" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.feature_set" "Col" "feature_set" "Label" "Feature Set" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+{{template "plan_sort_th" (dict "Show" "columns.user_count" "Col" "user_count" "Label" "Used by" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
+
+                                <th id="tour-plans-edit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+
+{{if .MySQLIsDown}}
+    <tr>
+        <td colspan="13" class="p-6 text-center">
+            {{template "partial_mysql_error" .}}
+        </td>
+    </tr>
+
+{{else if .Plans}}
+
+                    {{$root := .}}
+                    {{range .Plans}}
+
+                            <tr x-show="searchQuery === '' || '{{index . "name"}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+
+                                <td x-show="columns.id" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">{{index . "id"}}</td>
+
+                                <td x-show="columns.name" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">{{index . "name"}}</td>
+
+                                <td x-show="columns.description" class="p-4 text-xs relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{index . "description"}}</td>
+
+                                <td x-show="columns.ram" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0 flex gap-1 items-center"><span class="icon icon-tabler"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-memory" viewBox="0 0 16 16"><path d="M1 3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.586a1 1 0 0 0 .707-.293l.353-.353a.5.5 0 0 1 .708 0l.353.353a1 1 0 0 0 .707.293H15a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1zm.5 1h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5m5 0h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5m4.5.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zM2 10v2H1v-2zm2 0v2H3v-2zm2 0v2H5v-2zm3 0v2H8v-2zm2 0v2h-1v-2zm2 0v2h-1v-2zm2 0v2h-1v-2z"/></svg></span> {{$ram := index . "ram"}}{{if or (eq $ram "0 g") (eq $ram "0g") (eq $ram nil)}}&#8734;{{else}}{{rstrip $ram "g"}}{{end}} GB</p></td>
+
+                                <td x-show="columns.cpu" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0 flex gap-1 items-center"><span class="icon icon-tabler"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-cpu" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg></span> {{$cpu := index . "cpu"}}{{if or (eq $cpu "0") (eq $cpu nil)}}&#8734;{{else}}{{$cpu}}{{end}} Core</p></td>
+
+                                <td x-show="columns.disk_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0 flex gap-1 items-center"><span class="icon icon-tabler"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-hdd" viewBox="0 0 16 16"><path d="M4.5 11a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 10.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/><path d="M16 11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V9.51c0-.418.105-.83.305-1.197l2.472-4.531A1.5 1.5 0 0 1 4.094 3h7.812a1.5 1.5 0 0 1 1.317.782l2.472 4.53c.2.368.305.78.305 1.198zM3.655 4.26 1.592 8.043Q1.79 8 2 8h12q.21 0 .408.042L12.345 4.26a.5.5 0 0 0-.439-.26H4.094a.5.5 0 0 0-.44.26zM1 10v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1"/></svg></span> {{if eq (index . "disk_limit") "0 GB"}}&#8734;{{else}}{{index . "disk_limit"}}{{end}}</p></td>
+
+                                <td x-show="columns.inodes_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                            <p class="m-0 flex gap-1 items-center"><span class="icon icon-tabler"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-hdd-stack" viewBox="0 0 16 16"> <path d="M14 10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1zM2 9a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2z"/> <path d="M5 11.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m-2 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0M14 3a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM2 2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/> <path d="M5 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m-2 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/> </svg></span>
+                                            {{$inodes := index . "inodes_limit"}}
+                                            {{if eq $inodes nil}}&#8734;{{else}}{{$inodesN := toInt $inodes}}{{if eq $inodesN 0}}&#8734;{{else if lt $inodesN 1000000}}{{dotThousands $inodesN}}{{else}}<span title="{{dotThousands $inodesN}}">{{millionsAbbrev $inodesN}}</span>{{end}}{{end}}</p></td>
+                                <td x-show="columns.bandwidth" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                {{if eq (toInt (index . "bandwidth")) 0}}&#8734;{{else}}{{index . "bandwidth"}} mbits{{end}}
+                                </td>
+
+                                <td x-show="columns.domains_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                {{if eq (toInt (index . "domains_limit")) 0}}&#8734;{{else}}{{index . "domains_limit"}}{{end}}
+                                </td>
+                                <td x-show="columns.websites_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "websites_limit")) 0}}&#8734;{{else}}{{index . "websites_limit"}}{{end}}</td>
+
+                                <td x-show="columns.db_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "db_limit")) 0}}&#8734;{{else}}{{index . "db_limit"}}{{end}}</td>
+
+                                <td x-show="columns.email_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "email_limit")) 0}}&#8734;{{else}}{{index . "email_limit"}}{{end}}</td>
+
+                                <td x-show="columns.max_email_quota" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "max_email_quota")) 0}}&#8734;{{else}}{{index . "max_email_quota"}}{{end}}</td>
+
+                                <td x-show="columns.max_hourly_email" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "max_hourly_email")) 0}}&#8734;{{else}}{{index . "max_hourly_email"}}{{end}}</td>
+
+                                <td x-show="columns.ftp_limit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "ftp_limit")) 0}}&#8734;{{else}}{{index . "ftp_limit"}}{{end}}</td>
+
+                                <td x-show="columns.feature_set" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text"><a href="/features/{{index . "feature_set"}}">{{index . "feature_set"}}</a></td>
+
+
+                                <td x-show="columns.user_count" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                    {{if ne (toInt (index . "user_count")) 0}}
+                                        <a href="/users?plan={{index . "name"}}">{{index . "user_count"}}</a>
+                                    {{else}}
+                                        {{index . "user_count"}}
+                                    {{end}}
+                                    </td>
+
+                                <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+
+    <button id="{{index . "id"}}" data-dropdown-toggle="dropdown-{{index . "id"}}" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer" type="button">
+    <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
+        <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
+    </svg>
+    </button>
+
+    <!-- Dropdown menu -->
+    <div id="dropdown-{{index . "id"}}" class="relative z-50 hidden rounded border p-1 shadow-xl shadow-black/[2.5%] max-h-[var(--radix-popper-available-height)] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade min-w-40 text-left cursor-pointer">
+        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="{{index . "id"}}">
+        <li class="flex">
+            <a href="/plans/{{index . "id"}}" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit</a>
+        </li>
+        <li class="flex">
+
+            {{if eq (toInt (index . "user_count")) 0}}
+
+            <form method="POST" class="w-full" action="/plan/delete/{{index . "name"}}">
+                <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+                <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900 text-red-600 dark:text-red-500">Delete</button>
+            </form>
+
+            {{end}}
+
+        </li>
+        </ul>
+    </div>
+
+                                </td>
+
+
+
+                                    </tr>
+
+                    {{end}}
+
+
+{{else}}
+
+    <tr>
+        <td colspan="12" class="p-6 text-center">
+            No plans yet. <a href="/plans/new" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Create your first plan</a>
+        </td>
+    </tr>
+
+{{end}}
+
+
+
+                        </tbody>
+                    </table>
+
+
+                    <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
+                </div>
+            </div>
+            <div class="px-6 py-2 flex items-center justify-between">
+                <div></div>
+                <div class="hidden text-sm tabular-nums text-gray-500">0 of {{len .Plans}} row(s) selected.</div>
+                <div class="flex items-center gap-x-6 lg:gap-x-8">
+<p class="text-sm tabular-nums text-gray-500 sm:block">
+  Showing
+  <span class="font-medium text-gray-900 dark:text-gray-50" x-text="count"></span> of <span class="font-medium text-gray-900 dark:text-gray-50">{{len .Plans}}</span>
+</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function plansTable() {
+    return {
+        searchQuery: '',
+        columns: {
+            id: false,
+            bandwidth: true,
+            cpu: true,
+            db_limit: true,
+            description: false,
+            disk_limit: true,
+            domains_limit: true,
+            email_limit: true,
+            max_email_quota: true,
+            max_hourly_email: false,
+            feature_set: true,
+            ftp_limit: true,
+            inodes_limit: true,
+            name: true,
+            ram: true,
+            websites_limit: true,
+            user_count: true
+        },
+        count: {{len .Plans}},
+
+        init() {
+            this.loadColumns();
+            this.initWatchers();
+        },
+
+        initWatchers() {
+            this.$watch('searchQuery', () => {
+                this.$nextTick(() => this.updateCount());
+            });
+
+            // Watch columns changes and save
+            this.$watch('columns', () => {
+                this.saveColumns();
+            }, { deep: true });
+        },
+
+        updateCount() {
+            // Count visible rows
+            this.count = [...this.$refs.tbody.querySelectorAll('tr.user-row')]
+                .filter(row => row.offsetParent !== null).length;
+        },
+
+        saveColumns() {
+            localStorage.setItem('columnsVisibilityPlans', JSON.stringify(this.columns));
+        },
+
+        loadColumns() {
+            const saved = localStorage.getItem('columnsVisibilityPlans');
+            if (saved) {
+                try {
+                    this.columns = JSON.parse(saved);
+                } catch (e) {
+                    console.warn("Failed to parse columnsVisibilityPlans from localStorage", e);
+                }
+            }
+        }
+    };
+}
+</script>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

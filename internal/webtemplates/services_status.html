@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{ searchQuery: '', filters: { active: false, suspended: false } }">
+    <div x-data="{ showSection: false, fileContent: '' }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Services</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Manage system services and containers.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
+                <div class="toast-container position-fixed bottom-0 end-0 p-2">
+</div>
+
+                <a id="tour-edit-services-btn" href="/services/edit" class="gap-1 relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-settings"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg> Edit services</a>
+                </div>
+            </div>
+        </header>
+    </div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('actions', {
+        locked: false
+    });
+});
+
+function restartAdminService(form) {
+    document.getElementById('admin_restart_overlay').classList.remove('hidden');
+
+    fetch(form.action || window.location.pathname, {
+        method: 'POST',
+        body: new FormData(form)
+    }).catch(function () {});
+
+    let timeout = 60;
+    let timer;
+    let successShown = false;
+
+    function checkAdminStatus() {
+        $.ajax({
+            url: '/services/admin/status',
+            method: 'GET',
+            cache: false,
+            success: function (response) {
+                if (response.status === "up" && !successShown) {
+                    successShown = true;
+                    clearInterval(timer);
+                    document.getElementById('admin_restart_progress').classList.add('hidden');
+                    document.getElementById('admin_restart_success').classList.remove('hidden');
+                    setTimeout(function () { window.location.reload(); }, 1000);
+                }
+            },
+            error: function () {
+                timeout--;
+                if (timeout <= 0) {
+                    clearInterval(timer);
+                    document.getElementById('admin_restart_progress').classList.add('hidden');
+                    document.getElementById('admin_restart_error').classList.remove('hidden');
+                }
+            }
+        });
+    }
+
+    setTimeout(function () {
+        timer = setInterval(checkAdminStatus, 1000);
+    }, 3000);
+}
+</script>
+
+<div id="admin_restart_overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-gray-950/90">
+    <ul class="space-y-2 text-gray-500 list-inside dark:text-gray-400">
+        <li id="admin_restart_success" class="hidden flex items-center justify-center">
+            <svg class="w-4 h-4 me-2 text-green-500 dark:text-green-400 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
+            </svg>
+            OpenAdmin has been restarted.
+        </li>
+
+        <li id="admin_restart_error" class="hidden flex items-center justify-center">
+            <svg class="w-4 h-4 me-2 text-orange-500 dark:text-orange-400 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM10 15a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm1-4a1 1 0 0 1-2 0V6a1 1 0 0 1 2 0v5Z"></path>
+            </svg>
+            OpenAdmin did not come back online in time. Please refresh the page manually.
+        </li>
+
+        <li id="admin_restart_progress" class="flex items-center justify-center">
+            <div role="status">
+                <svg aria-hidden="true" class="w-4 h-4 me-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/><path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/></svg>
+                <span class="sr-only">Loading...</span>
+            </div>
+            OpenAdmin is restarting, please wait…
+        </li>
+    </ul>
+</div>
+
+    <div class="">
+        <div class="space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+
+                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search services..." type="search">
+
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path
+                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
+                                ></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden flex items-center gap-2">
+                    <div>
+                        <div class="flex justify-center">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+                <table x-data class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
+                    <thead class="">
+                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                <th class="hidden border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">
+
+                            </th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Service</span>
+                                </div>
+                            </th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Status</span>
+                                </div>
+                            </th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Version</div></th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Real Name</div></th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Type</div></th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Port</div></th>
+
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Monitoring</div></th>
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800" x-data="{ monitoredServices: [] }" x-init="
+                        fetch('/services/monitored')
+                            .then(response => response.json())
+                            .then(data => monitoredServices = data.monitored_services)
+                    ">
+
+{{if .Statuses}}
+{{range $name, $svc := .Statuses}}
+                        <tr x-show="searchQuery === '' || '{{$name}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">
+                            {{$name}}
+
+{{if eq $svc.RealName "openpanel"}}
+{{range $.RestartMessages}}{{if contains . "OpenPanel"}}
+<span class="inline-flex items-center gap-2.5 p-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-white px-2 py-0.5 text-xs font-medium">RESTART NEEDED</span>
+{{end}}{{end}}
+{{else if eq $svc.RealName "admin"}}
+{{range $.RestartMessages}}{{if contains . "OpenAdmin"}}
+<span class="inline-flex items-center gap-2.5 p-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-white px-2 py-0.5 text-xs font-medium">RESTART NEEDED</span>
+{{end}}{{end}}
+{{end}}
+
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+{{if eq $svc.Label "up"}}
+          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
+{{else if eq $svc.Label "down"}}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>
+{{else}}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-grey-50 text-grey-800 ring-grey-600/30 dark:bg-grey-400/10 dark:text-grey-500 dark:ring-grey-400/20">Unknown</span>
+{{end}}
+                                </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 select-text">
+                            {{$svc.RealName}}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 select-text">
+                           {{if eq $svc.Type "docker"}}<span title="View logs with: docker logs -f {{$svc.RealName}}">container</span>{{else}}<span title="View logs with: journalctl -u {{$svc.RealName}}">{{$svc.Type}}</span>{{end}}
+                            </td>
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">
+                            </td>
+
+<td
+  x-data="{
+    isMonitored(realName) {
+      if (realName === 'openpanel' && monitoredServices.some(service => service.includes('panel'))) return true;
+      if (realName === 'openpanel_dns' && monitoredServices.some(service => service.includes('named'))) return true;
+      if (realName === 'openpanel_mysql' && monitoredServices.some(service => service.includes('mysql'))) return true;
+      return monitoredServices.includes(realName);
+    },
+    monitoredMsg: 'This service is being monitored and will be restarted on failure.'
+  }"
+  class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-left"
+  x-bind:title="isMonitored('{{$svc.RealName}}') ? monitoredMsg : ''"
+>
+  <template x-if="isMonitored('{{$svc.RealName}}')">
+    <a href="/settings/notifications#services" class="text-blue-500 hover:underline">
+      Monitored
+    </a>
+  </template>
+</td>
+
+<td class="flex p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right justify-end">
+
+{{if and (eq $.LicenseType "Community") (or (hasPrefix $svc.RealName "openadmin_") (eq $svc.RealName "clamav"))}}
+
+<div class="cursor-default items-center justify-start gap-3 text-xs font-medium uppercase tracking-widest text-gray-600 sm:flex sm:justify-center dark:text-gray-400"><span>Enterprise only</span></div>
+
+{{else}}
+
+  <!-- Start/Stop Form -->
+  <form x-data @submit="$el.submit()" method="POST" action="/services">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+    <input type="hidden" name="real_name" value="{{$svc.RealName}}">
+    <input type="hidden" name="container" value="{{$svc.Type}}">
+
+    {{if eq $svc.Label "up"}}
+      <input type="hidden" name="action" value="stop">
+                <button
+                    type="button"
+                    title="Stop {{$svc.RealName}}"
+                    class="btn btn-outline-danger cursor-pointer"
+                    :disabled="$store.actions.locked"
+                    :class="{ 'opacity-50 cursor-not-allowed': $store.actions.locked }"
+                    @click="
+                        $store.actions.locked = true;
+                        showToast('Service {{$svc.RealName}} stopping..', 'warning');
+                        $el.closest('form').submit();
+                    "
+                >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+             viewBox="0 0 24 24" fill="currentColor"
+             class="icon icon-tabler icons-tabler-filled icon-tabler-player-stop">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M17 4h-10a3 3 0 0 0 -3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3 -3v-10a3 3 0 0 0 -3 -3z" />
+        </svg>
+      </button>
+    {{else}}
+      <input type="hidden" name="action" value="start">
+                <button
+                    type="button"
+                    title="Start {{$svc.RealName}}"
+                    class="btn btn-outline-success cursor-pointer"
+                    :disabled="$store.actions.locked"
+                    :class="{ 'opacity-50 cursor-not-allowed': $store.actions.locked }"
+                    @click="
+                        $store.actions.locked = true;
+                        showToast('Service {{$svc.RealName}} starting..', 'info');
+                        $el.closest('form').submit();
+                    "
+                >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+             viewBox="0 0 24 24" fill="currentColor"
+             class="icon icon-tabler icons-tabler-filled icon-tabler-player-play">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" />
+        </svg>
+      </button>
+    {{end}}
+  </form>
+
+  &nbsp;
+
+  <!-- Restart Form -->
+  <form x-data @submit="$el.submit()" method="POST" action="/services">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+    <input type="hidden" name="real_name" value="{{$svc.RealName}}">
+    <input type="hidden" name="container" value="{{$svc.Type}}">
+    <input type="hidden" name="action" value="restart">
+
+                <button
+                    x-data="{ spinning: false }"
+                    type="button"
+                    title="Restart {{$svc.RealName}}"
+                    class="btn btn-outline-warning cursor-pointer"
+                    :disabled="$store.actions.locked"
+                    :class="{ 'opacity-50 cursor-not-allowed': $store.actions.locked }"
+{{if eq $svc.RealName "admin"}}
+                    @click="
+                        spinning = true;
+                        $store.actions.locked = true;
+                        restartAdminService($el.closest('form'));
+                    "
+{{else}}
+                    @click="
+                        spinning = true;
+                        $store.actions.locked = true;
+                        showToast('Service {{$svc.RealName}} restarting..', 'info');
+                        $el.closest('form').submit();
+                    "
+{{end}}
+                >
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24" height="24"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="icon icon-tabler icon-tabler-refresh"
+            :class="{ 'animate-spin': spinning }"
+        >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/>
+            <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>
+        </svg>
+    </button>
+
+  </form>
+</td>
+
+{{end}}
+
+                        </tr>
+{{end}}
+{{else}}
+<tr>
+    <td colspan="6" class="p-6 text-center">
+        No services or the <code>/etc/openpanel/openadmin/config/services.json</code> file is invalid.
+    </td>
+</tr>
+{{end}}
+                    </tbody>
+                </table>
+
+                <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

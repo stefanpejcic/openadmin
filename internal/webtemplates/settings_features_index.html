@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{ searchQuery: '' }">
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Feature Manager</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Manage feature sets.</h2>
+                </div>
+            </div>
+        </header>
+    </div>
+
+
+  <form method="post">
+  <div class="m-8">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+            <div>
+                <h2 id="create" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Create</h2>
+                <p class="mt-1 text-sm leading-6 text-gray-500">Create a new feature list to be used.</p>
+            </div>
+            <div class="md:col-span-2">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                    <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="feature_name">Add a new feature list</label>
+                        <div class="relative w-full mt-2 flex"><input class="relative block w-full appearance-none truncate rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" type="text" class="form-control ps-0" name="feature_name" autocomplete="off" required>
+                        <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-r border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Create</button></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+        <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+            <div>
+                <h2 id="manage" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Manage</h2>
+                <p class="mt-1 text-sm leading-6 text-gray-500">Select existing feature set to edit.</p>
+            </div>
+            <div class="md:col-span-2">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                    <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="files">Manage feature set:</label>
+                        <div class="relative w-full mt-2">
+                                        <select id="files" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name="version" onchange="redirectToSelectedVersion(this)">
+                          <option value="" disabled selected>Select feature set</option>
+                      {{range .Files}}
+                          <option value="{{.}}">{{.}}</option>
+                      {{end}}
+                      </select>
+                      <script>
+                          // JavaScript function to redirect to the same page with domain parameter
+                          function redirectToSelectedVersion(selectElement) {
+                              var selectedVersion = selectElement.value;
+                              if (selectedVersion) {
+                                  var url = `/features/${selectedVersion}`;
+                                  window.open(url, '_self');
+                              }
+                          }
+                      </script>
+                      </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+  </div>
+  </form>
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{ searchQuery: '', filters: { active: false, suspended: false } }">
+    <div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">FTP</h1>
+                </div>
+                <div id="tour-ftp-status" class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+<div class="flex text-center  sm:text-start items-center gap-2"><dt class="text-sm text-gray-500 dark:text-gray-500">FTP service status:</dt>
+<div class="flex gap-0.5">
+	{{if or (eq .FTPServerStatus "active") (eq .FTPServerStatus "running")}}
+	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+	<div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+	</div><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">active </p></div>
+	{{else}}
+	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+	<div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+	</div><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.FTPServerStatus}} </p></div>
+	{{end}}
+</div>
+        </div>
+    </header>
+    </div>
+
+
+	<nav aria-label="Tabs" data-orientation="horizontal" dir="ltr">
+		<div style="position: relative;">
+			<ul data-orientation="horizontal" class="flex bg-gray-50 dark:bg-gray-950 items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
+
+				<li class="flex">
+				<button
+					class="border-b-2 border-blue-600 text-blue-600 group relative flex shrink-0 select-none items-center justify-center"
+					role="tab">
+	<span
+							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
+						>
+							Accounts
+						</span>            </button>
+				</li>
+			<li class="flex">
+				<a
+					id="tour-ftp-config-tab"
+					href="/services/ftp/settings"
+					class="group relative flex shrink-0 select-none items-center justify-center"
+					role="tab">
+						<span
+							class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
+						>
+							Configuration
+						</span>
+				</a>
+			</li>
+
+
+			</ul>
+		</div>
+	</nav>
+
+
+{{if eq .FTPServerStatus "running"}}
+<!-- status is running -->
+    <div class="">
+        <div class="pl-2 space-y-3">
+            <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead class="">
+                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Account</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Owner</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+
+
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Path</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th class="hidden border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>GUID</span>
+                                    <div class="-space-y-2">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50 opacity-30">
+                                            <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path>
+                                        </svg>
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50">
+                                            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </th>
+
+
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Actions</span>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+{{if .Accounts}}
+<!-- accounts exist -->
+
+                        {{range .Accounts}}
+                        <tr x-show="searchQuery === '' || '{{.User}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{.User}}</td>
+
+<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/users/{{.Owner}}" class="text-indigo-600 dark:text-indigo-400">{{.Owner}}</a></td>
+
+                            <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"></td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{.Path}}</td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"></td>
+                        </tr>
+                      {{end}}
+{{else}}
+      <tr>
+          <td colspan="5" class="p-6 text-center">
+              FTP server is running but there are not FTP accounts created yet. <a href="/services/ftp/refresh" id="refresh_data"  class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Click to refresh data</a>
+          </td>
+      </tr>
+
+      <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const refreshDataButton = document.getElementById('refresh_data');
+
+        refreshDataButton.addEventListener('click', (event) => {
+          event.preventDefault(); // Prevent the default link behavior
+
+          refreshDataButton.disabled = true;
+          refreshDataButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp; Processing...';
+
+          fetch(refreshDataButton.href, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          .then(response => {
+            if (response.ok) {
+            refreshDataButton.disabled = false;
+            refreshDataButton.innerHTML = '<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-check"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg> Completed';
+              window.location.reload();
+            } else {
+              refreshDataButton.disabled = true;
+              refreshDataButton.innerHTML = "Failed. run command 'opencli ftp-users'";
+              console.error('Failed to run opencli ftp-users:', response.statusText);
+            }
+          })
+          .catch(error => {
+            console.error('Error during AJAX request:', error);
+          });
+        });
+      });
+      </script>
+
+
+      {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+{{else if eq .FTPServerStatus "not_installed"}}
+<!-- status not_installed -->
+
+<div
+    style="
+        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        height: 90vh;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    "
+>
+    <div>
+        <style>
+            .next-error-h1 {
+                border-right: 1px solid rgba(0, 0, 0, 0.3);
+            }
+            @media (prefers-color-scheme: dark) {
+                .next-error-h1 {
+                    border-right: 1px solid rgba(255, 255, 255, 0.3);
+                }
+            }
+        </style>
+        <div style="display: inline-block;">
+          <h2 style="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">FTP server is not installed</h2>
+          <p class="mt-1 text-sm leading-6 text-gray-500">FTP is not yet installed, install it from terminal with the following command:</p>
+              <div class="mt-4">
+            <pre>cd /root && docker --context default compose up -d openadmin_ftp</pre>
+              </div>
+          </div>
+    </div>
+</div>
+
+
+{{else if eq .FTPServerStatus "stopped"}}
+<!-- status is stopped -->
+
+<div
+    style="
+        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        height: 90vh;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    "
+>
+    <div>
+        <style>
+            .next-error-h1 {
+                border-right: 1px solid rgba(0, 0, 0, 0.3);
+            }
+            @media (prefers-color-scheme: dark) {
+                .next-error-h1 {
+                    border-right: 1px solid rgba(255, 255, 255, 0.3);
+                }
+            }
+        </style>
+        <div style="display: inline-block;">
+          <h2 style="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">FTP server is not running</h2>
+          <p class="mt-1 text-sm leading-6 text-gray-500">FTP is currently stopped.</p>
+              <div class="mt-4">
+                <a href="/service/start/openadmin_ftp" id="start_ftpserver" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Click to start FTP server</a>
+              </div>
+          </div>
+    </div>
+</div>
+
+
+
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const startMailServerButton = document.getElementById('start_ftpserver');
+
+  startMailServerButton.addEventListener('click', (event) => {
+    event.preventDefault(); // Prevent the default link behavior
+
+    startMailServerButton.disabled = true;
+    startMailServerButton.innerHTML = '<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>&nbsp; Starting...';
+
+    fetch(startMailServerButton.href, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => {
+      if (response.ok) {
+      startMailServerButton.disabled = false;
+      startMailServerButton.innerHTML = 'Finished';
+        window.location.reload();
+      } else {
+        startMailServerButton.disabled = false;
+        startMailServerButton.innerHTML = 'Failed. Click to try again..';
+        console.error('Failed to start ftp server:', response.statusText);
+      }
+    })
+    .catch(error => {
+      console.error('Error during AJAX request:', error);
+    });
+  });
+});
+</script>
+
+
+{{else}}
+<!-- status is unknown -->
+
+<div
+    style="
+        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        height: 90vh;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    "
+>
+    <div>
+        <style>
+            .next-error-h1 {
+                border-right: 1px solid rgba(0, 0, 0, 0.3);
+            }
+            @media (prefers-color-scheme: dark) {
+                .next-error-h1 {
+                    border-right: 1px solid rgba(255, 255, 255, 0.3);
+                }
+            }
+        </style>
+        <div style="display: inline-block;">
+          <h2 style="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">FTP server is crashed</h2>
+          <p class="mt-1 text-sm leading-6 text-gray-500">FTP server status not detected!
+</p>
+              <div class="mt-4">
+              </div>
+          </div>
+    </div>
+</div>
+
+{{end}}
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

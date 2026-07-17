@@ -1,0 +1,1743 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+{{if .User}}
+
+<div
+  x-data="{
+      activeTab: 'stats',
+      diskInfo: [],
+      containers: [],
+      images: [],
+      volumes: [],
+      loading: false,
+      error: null,
+      diskLoaded: false,
+      containerName: '{{lastSegment .Username `_`}}',
+
+      loadDiskUsage() {
+          if (this.diskLoaded) return;
+          this.diskLoaded = true;
+          this.loading = true;
+          this.error = null;
+
+          fetch(`/client/disk/{{.Username}}`)
+              .then(res => res.json())
+              .then(data => {
+                  if (data.error) {
+                      this.error = data.error;
+                      this.containers = [];
+                      this.images = [];
+                      this.volumes = [];
+                  } else {
+                      const payload = data[0] || {};
+                      this.containers = payload.Containers || [];
+                      this.images = payload.Images || [];
+                      this.volumes = payload.Volumes || [];
+                  }
+              })
+              .catch(err => {
+                  this.error = 'Failed to load disk info';
+                  console.error(err);
+              })
+              .finally(() => {
+                  this.loading = false;
+              });
+      },
+
+      fetchCustomMessage() {
+          $.ajax({
+              url: '/get_custom_message_for_user/' + this.containerName,
+              type: 'GET',
+              success: function(response) {
+                  $('#custom_message_for_this_user').val(response.custom_message || '');
+              },
+              error: function(xhr) {
+                  if (xhr.status === 404) {
+                      $('#custom_message_for_this_user').val('');
+                  } else {
+                      showMessageModal('Error', (xhr.responseJSON && xhr.responseJSON.error) || 'An error occurred while retrieving the custom message.');
+                  }
+              }
+          });
+      },
+
+      initTabs() {
+          const hash = window.location.hash;
+
+          if (hash === '#services') this.activeTab = 'services';
+          else if (hash === '#activity') this.activeTab = 'activity';
+          else if (hash === '#logins') this.activeTab = 'logins';
+          else if (hash === '#suspend') this.activeTab = 'suspend';
+          else if (hash === '#unsuspend') this.activeTab = 'unsuspend';
+          else if (hash === '#transfer') this.activeTab = 'transfer';
+          else if (hash === '#storage') this.activeTab = 'storage';
+          else if (hash === '#edit') this.activeTab = 'edit';
+          else if (hash === '#permissions') this.activeTab = 'permissions';
+          else if (hash === '#delete') this.activeTab = 'delete';
+          else if (hash === '#overview') this.activeTab = 'info';
+          else this.activeTab = 'stats';
+
+          this.$nextTick(() => {
+              if (this.activeTab === 'storage') this.loadDiskUsage();
+              else if (this.activeTab === 'activity') $store?.activityStore?.fetchLogs();
+              else if (this.activeTab === 'logins') $store?.loginsStore?.fetchloginLogs();
+              else if (this.activeTab === 'edit' || this.activeTab === 'delete') {
+                  $store?.ipStore?.fetchIPs();
+                  $store?.resellerStore?.fetchResellers();
+              }
+              else if (this.activeTab === 'info') this.fetchCustomMessage();
+          });
+      }
+  }"
+  x-init="initTabs()"
+>
+
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">{{lastSegment .Username "_"}} {{if contains .Username "SUSPENDED_"}}
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-700 ring-red-500/30 dark:bg-red-400/10 dark:text-red-300 dark:ring-red-400/20 ml-1">Suspended</span>{{end}} <span id="transfer-status-message"></span></h1>
+                    <h2 class="text-sm font-medium text-slate-500">
+                       <span class="inline-flex">
+{{if .CountryCode}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .CountryCode}}.svg" alt="IP address location: {{.CountryCode}}"></img></span><span>{{.ServerIP}} / {{end}}
+{{if or (eq (index .EnvData "TOTAL_CPU") "0") (not (index .EnvData "TOTAL_CPU"))}}&#8734;{{else}}{{index .EnvData "TOTAL_CPU"}}{{end}} Cores /
+{{$totalRam := index .EnvData "TOTAL_RAM"}}{{if or (eq $totalRam "0g") (not $totalRam)}}&#8734;{{else}}{{rstrip $totalRam "g"}} GB{{end}} Memory /
+{{if .Disk.DiskHard}}{{.StatsWidget.DiskHardHuman}}{{else}}&#8734;{{end}}
+                    </h2>
+               </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
+                    {{if not (contains .Username "SUSPENDED_")}}
+
+<div id="tooltip-user-autologin" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
+    Login as {{lastSegment .Username "_"}} into OpenPanel
+    <div class="tooltip-arrow" data-popper-arrow></div>
+</div>
+
+<a href="/login/token/{{lastSegment .Username "_"}}"
+   target="_blank"
+   data-tooltip-target="tooltip-user-autologin" data-tooltip-placement="left"
+   class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+   x-data="{ spinning: false }"
+   @click="spinning = true; setTimeout(() => spinning = false, 500)">
+
+    <svg version="1.0"
+         style="vertical-align:middle; margin-right:5px;"
+         xmlns="http://www.w3.org/2000/svg"
+         width="24" height="24"
+         viewBox="0 0 213.000000 215.000000"
+         preserveAspectRatio="xMidYMid meet"
+         :class="{'animate-spin': spinning}">
+        <g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none">
+            <path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path>
+        </g>
+    </svg>
+    Impersonate
+</a>
+
+                    {{end}}
+
+                </div>
+            </div>
+
+        </header>
+    </div>
+
+    <nav class="flex sm:hidden justify-center w-full overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" aria-label="Actions" data-orientation="horizontal" dir="ltr">
+        <div style="position: relative;">
+            <ul data-orientation="horizontal" class="flex items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800" dir="ltr">
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'stats'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'stats'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Statistics</span>
+                    </a>
+                </li>
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'services'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'services'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Services</span>
+                    </a>
+                </li>
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'storage'; loadDiskUsage()"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'storage'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Storage</span>
+                    </a>
+                </li>
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'info'; fetchCustomMessage()" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Overview</span>
+                    </a>
+                </li>
+
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'permissions'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'permissions'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Permissions</span>
+                    </a>
+                </li>
+
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="$store.activityStore.fetchLogs(); activeTab = 'activity'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'activity'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Activity</span>
+                    </a>
+                </li>
+
+
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="$store.loginsStore.fetchloginLogs(); activeTab = 'logins'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'logins'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Login Log</span>
+                    </a>
+                </li>
+
+{{if contains .Username "SUSPENDED_"}}
+                <li class="flex cursor-pointer">
+
+<form method="POST" action="/user/unsuspend/{{lastSegment .Username "_"}}">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <button class="" type="submit"><span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Unsuspend</span></button>
+</form>
+
+                </li>
+{{else}}
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="$store.ipStore.fetchIPs(); $store.planStore.fetchPlans(); activeTab = 'edit'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'edit'}" >
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Edit</span>
+                    </a>
+                </li>
+
+                {{if eq .LicenseType "Enterprise"}}
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'transfer'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'transfer'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Transfer</span>
+                    </a>
+                </li>
+                {{end}}
+
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'suspend'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'suspend'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Suspend</span>
+                    </a>
+                </li>
+{{end}}
+
+                <li class="flex cursor-pointer">
+                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'delete'" :class="{'text-red-600 dark:text-red-500': activeTab === 'delete'}">
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Delete</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+<script>
+  document.addEventListener("alpine:init", () => {
+      Alpine.store("ipStore", {
+          fetchedips: false,
+          fetchIPs() {
+            if (this.fetchedips) return;
+            this.fetchedips = true;
+
+              const ipSelect = document.getElementById('ipSelect');
+              const currentIP = "{{.ServerIP}}";
+              const usernameForIP = "{{.Username}}";
+
+              fetch(`/json/ips`)
+                  .then(response => response.json())
+                  .then(data => {
+                      const ips = data[usernameForIP] ? [data[usernameForIP]] : Object.values(data);
+
+                      ipSelect.innerHTML = '<option disabled value="">Change IP address</option>';
+
+                      ips.forEach(ip => {
+                          const option = document.createElement('option');
+                          option.value = ip;
+                          option.textContent = ip;
+                          if (ip === currentIP) {
+                              option.selected = true;
+                              option.textContent = `${ip} (Current)`;
+                          }
+                          ipSelect.appendChild(option);
+                      });
+                  })
+                  .catch(error => {
+                      console.error('Error fetching IPs:', error);
+                      this.fetchedips = false;
+
+                      ipSelect.innerHTML = '';
+                      const option = document.createElement('option');
+                      option.value = currentIP;
+                      option.textContent = currentIP;
+                      option.selected = true;
+                      ipSelect.appendChild(option);
+                  });
+          }
+      });
+
+    Alpine.store("resellerStore", {
+      fetched: false,
+      fetchResellers() {
+          if (this.fetched) return;
+          this.fetched = true;
+
+          const currentReseller = "{{.User.Owner.String}}";
+          const resellerSelect = document.getElementById('resellerSelect');
+
+          fetch('/resellers?output=json')
+              .then(res => res.json())
+              .then(data => {
+                  resellerSelect.innerHTML = '<option value="">No reseller</option>';
+
+                  data.forEach(r => {
+                      const option = document.createElement('option');
+                      option.value = r.username;
+                      option.textContent = r.username;
+                      if (r.username === currentReseller) {
+                          option.selected = true;
+                      }
+                      resellerSelect.appendChild(option);
+                  });
+              })
+              .catch(err => {
+                  console.error('Error fetching resellers:', err);
+                  this.fetched = false;
+              });
+      }
+  });
+
+  Alpine.store("activityStore", {
+      activities: [],
+      fetchedactivitylogs: false,
+      fetchLogs() {
+
+        if (this.fetchedactivitylogs) return;
+        this.fetchedactivitylogs = true;
+
+          const username = "{{lastSegment .Username `_`}}";
+
+          fetch(`/json/user-activity/${username}`)
+              .then(response => response.json())
+              .then(data => {
+
+                  this.activities = [];
+
+                  if (!data.user_activity || data.user_activity.length === 0) {
+                      this.activities.push({ noActivity: true });
+                      return;
+                  }
+
+                  data.user_activity.forEach(activity => {
+                      const date = this.formatDateString(activity.timestamp);
+                      const ip = activity.ip_address;
+                      let action = activity.action;
+                      let actionClass = '';
+
+                      if (activity.user_type === 'Administrator') {
+                          action = `<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-crown" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6l4 6l5 -4l-2 10h-14l-2 -10l5 4z" /></svg> ` + action;
+
+                          if (action.includes('unsuspended')) {
+                              actionClass = 'text-green bg-dark';
+                          } else if (action.includes('suspended')) {
+                              actionClass = 'text-red bg-dark';
+                          } else if (action.includes('edit') || action.includes('changed')) {
+                              actionClass = 'text-yellow bg-dark';
+                          } else {
+                              actionClass = 'text-teal bg-dark';
+                          }
+                      }
+
+                      this.activities.push({
+                          date: date,
+                          action: action,
+                          ip: ip,
+                          actionClass: actionClass,
+                      });
+                  });
+              })
+              .catch(error => {
+                  this.fetched = false;
+                  console.error('Error fetching activity logs:', error);
+              });
+      },
+
+      formatDateString(rawDate) {
+          const dateObj = new Date(rawDate);
+          let day = dateObj.getDate();
+          const month = dateObj.toLocaleString('en-US', { month: 'long' });
+          const year = dateObj.getFullYear();
+          const hours = dateObj.getHours();
+          const minutes = dateObj.getMinutes();
+
+          day = day < 10 ? '0' + day : day;
+          const formattedHours = hours < 10 ? '0' + hours : hours;
+          const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+
+          const currentDate = new Date();
+          const currentYear = currentDate.getFullYear();
+
+          if (year !== currentYear) {
+              return `${day}.${month}.${year} ${formattedHours}:${formattedMinutes}`;
+          } else {
+              return `${day}.${month} ${formattedHours}:${formattedMinutes}`;
+          }
+      }
+  });
+
+  Alpine.store("loginsStore", {
+      logins: [],
+      fetchedloginslogs: false,
+      fetchloginLogs() {
+
+        if (this.fetchedloginslogs) return;
+        this.fetchedloginslogs = true;
+
+          const username = "{{lastSegment .Username `_`}}";
+
+          fetch(`/json/user-logins/${username}`)
+              .then(response => response.json())
+              .then(data => {
+                  this.logins = [];
+
+                  if (!data.user_logins || data.user_logins.length === 0) {
+                      this.logins.push({ noLogins: true });
+                      return;
+                  }
+
+                  data.user_logins.forEach(login => {
+                      const date = this.formatDateString(login.login_time);
+                      const ip = login.ip;
+                      const country = login.country || 'Unknown';
+
+                      this.logins.push({
+                          date: date,
+                          ip: ip,
+                          country: country
+                      });
+                  });
+              })
+              .catch(error => {
+                  this.fetched = false;
+                  console.error('Error fetching login logs:', error);
+              });
+      },
+
+      formatDateString(rawDate) {
+          const dateObj = new Date(rawDate);
+          let day = dateObj.getDate();
+          const month = dateObj.toLocaleString('en-US', { month: 'long' });
+          const year = dateObj.getFullYear();
+          const hours = dateObj.getHours();
+          const minutes = dateObj.getMinutes();
+
+          day = day < 10 ? '0' + day : day;
+          const formattedHours = hours < 10 ? '0' + hours : hours;
+          const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
+
+          const currentDate = new Date();
+          const currentYear = currentDate.getFullYear();
+
+          if (year !== currentYear) {
+              return `${day}.${month}.${year} ${formattedHours}:${formattedMinutes}`;
+          } else {
+              return `${day}.${month} ${formattedHours}:${formattedMinutes}`;
+          }
+      }
+  });
+
+      Alpine.store("planStore", {
+          plans: [],
+          selectedPlan: parseInt("{{.User.PlanID}}"),
+          plansLoaded: false,
+
+          fetchPlans() {
+              if (this.plansLoaded) return;
+
+              fetch('/plans?output=json')
+                  .then(res => res.json())
+                  .then(data => {
+                      this.plans = (data.plans || data || []).map(p => ({ ...p, showDetails: false }));
+                      this.plansLoaded = true;
+                  })
+                  .catch(err => {
+                      console.error('Failed to fetch plans:', err);
+                  });
+          },
+
+          selectPlan(planId) {
+              this.selectedPlan = planId;
+          }
+      });
+
+  });
+</script>
+
+   <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 !p-0">
+      <div class="grid-cols-12 divide-y divide-gray-200 dark:divide-gray-800 md:grid md:divide-x md:divide-y-0">
+
+         <div class="hidden sm:flex p-4 divide-y divide-gray-200 px-2 dark:divide-gray-800 md:col-span-2">
+            <nav aria-label="core navigation links" class="flex flex-1 flex-col space-y-4">
+               <div>
+                  <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Docker</span>
+                  <ul class="mt-1 space-y-2">
+                     <li>
+                        <a @click="activeTab = 'stats'; window.location.hash = 'stats'"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'stats'}" class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-column-big size-5 shrink-0" aria-hidden="true">
+                              <path d="M3 3v16a2 2 0 0 0 2 2h16"></path>
+                              <rect x="15" y="5" width="4" height="12" rx="1"></rect>
+                              <rect x="7" y="8" width="4" height="9" rx="1"></rect>
+                           </svg>
+                           Statistics
+                        </a>
+                     </li>
+                     <li>
+                        <a @click="activeTab = 'services'; window.location.hash = 'services'"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'services'}" class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-compass size-5 shrink-0" aria-hidden="true">
+                              <path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"></path>
+                              <circle cx="12" cy="12" r="10"></circle>
+                           </svg>
+                           Services
+                        </a>
+                     </li>
+                     <li>
+                        <a @click="activeTab = 'storage'; loadDiskUsage(); window.location.hash = 'storage'"   :class="{'text-blue-600 dark:text-blue-500': activeTab === 'storage'}" class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-table2 size-5 shrink-0" aria-hidden="true">
+                              <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"></path>
+                           </svg>
+                           Storage
+                        </a>
+                     </li>
+                  </ul>
+               </div>
+               <div>
+                  <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Account</span>
+                  <ul class="mt-1 space-y-2">
+                     <li>
+                        <a @click="activeTab = 'info'; fetchCustomMessage(); window.location.hash = 'info'"
+                           :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}"
+                           class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                        Overview
+                        </a>
+                     </li>
+
+                     <li>
+                        <a @click="activeTab = 'permissions'; window.location.hash = 'permissions'"
+                           :class="{'text-blue-600 dark:text-blue-500': activeTab === 'permissions'}"
+                           class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                        Permissions
+                        </a>
+                     </li>
+
+                     {{if contains .Username "SUSPENDED_"}}
+                     <li>
+                        <form method="POST" action="/user/unsuspend/{{lastSegment .Username "_"}}">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <button class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900 w-full" type="submit">Unsuspend</button>
+                        </form>
+                     </li>
+                     {{else}}
+                     <li>
+                        <a @click="$store.ipStore.fetchIPs(); $store.planStore.fetchPlans(); activeTab = 'edit'; window.location.hash = 'edit'"
+                           :class="{'text-blue-600 dark:text-blue-500': activeTab === 'edit'}"
+                           class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
+                        Edit
+                        </a>
+                     </li>
+                     {{if eq .LicenseType "Enterprise"}}
+                     <li>
+                        <a @click="activeTab = 'transfer'; window.location.hash = 'transfer'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'transfer'}"  class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Transfer
+                        </a>
+                     </li>
+                     {{end}}
+                     <li>
+                        <a @click="activeTab = 'suspend'; window.location.hash = 'suspend'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'suspend'}"  class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Suspend
+                        </a>
+                     </li>
+                     {{end}}
+                     <li>
+                        <a @click="activeTab = 'delete'; window.location.hash = 'delete'" :class="{'text-red-600 dark:text-red-500': activeTab === 'delete'}"  class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Delete
+                        </a>
+                     </li>
+                  </ul>
+               </div>
+
+
+               <div>
+                  <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Statistics</span>
+                  <ul class="mt-1 space-y-2">
+                     <li>
+                        <a @click="$store.activityStore.fetchLogs(); activeTab = 'activity'; window.location.hash = 'activity'"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'activity'}" class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Activity Log
+                        </a>
+                     </li>
+
+                     <li>
+                        <a @click="$store.loginsStore.fetchloginLogs(); activeTab = 'logins'; window.location.hash = 'logins'"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'logins'}" class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900"> Login Log
+                        </a>
+                     </li>
+                  </ul>
+               </div>
+            </nav>
+         </div>
+
+         <div class="md:col-span-10 h-auto">
+            <div class="relative h-full rounded">
+
+               <!-- DOCKER STATS -->
+               <div x-show="activeTab === 'stats'">
+                  <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden !p-0 sm:mx-auto">
+                     <div class="p-6">
+                        <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+<div
+  x-data="{ hovered: false }"
+  class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5"
+>
+  <div class="relative">
+    <div
+      @mouseenter="hovered = true"
+      @mouseleave="hovered = false"
+    >
+      <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{.StatsWidget.DiskUsageRounded}}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{.StatsWidget.DiskUsageRounded}}">
+        <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{.StatsWidget.DiskColorClass}}"></circle>
+        <circle
+          r="29"
+          cx="32"
+          cy="32"
+          stroke-width="6"
+          stroke-dasharray="182.212373908208 182.212373908208"
+          stroke-dashoffset="{{.StatsWidget.DiskOffset}}"
+          fill="transparent"
+          stroke="currentColor"
+          stroke-linecap="round"
+          class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
+        ></circle>
+      </svg>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <template x-if="!hovered">
+          <span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.DiskUsageRounded}}%</span>
+        </template>
+        <template x-if="hovered">
+            <button type="button" class="relative items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 group hidden h-10 text-sm sm:flex" @click="activeTab = 'storage'; loadDiskUsage()">Explore</button>
+        </template>
+      </div>
+    </div>
+  </div>
+  <div class="mt-0 text-left sm:mt-2 sm:text-center">
+    <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
+      {{.StatsWidget.DiskUsedHuman}} / {{.StatsWidget.DiskHardHuman}}
+    </p>
+    <p class="text-sm text-gray-500 dark:text-gray-500">Storage used</p>
+  </div>
+</div>
+                           <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+                              <div class="relative">
+                                <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="progress bar" aria-valuenow="{{.StatsWidget.InodesUsageRounded}}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{.StatsWidget.InodesUsageRounded}}">
+                                <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear {{.StatsWidget.InodesColorClass}}"></circle>
+                                <circle
+                                    r="29"
+                                    cx="32"
+                                    cy="32"
+                                    stroke-width="6"
+                                    stroke-dasharray="182.212373908208 182.212373908208"
+                                    stroke-dashoffset="{{.StatsWidget.InodesOffset}}"
+                                    fill="transparent"
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    class="stroke-current transform-gpu transition-all duration-300 ease-in-out"
+                                ></circle>
+                                </svg>
+                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.InodesUsageRounded}}%</span></div>
+                              </div>
+                              <div class="mt-0 text-left sm:mt-2 sm:text-center">
+                                <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
+                                {{.StatsWidget.InodesUsedHuman}} / {{.StatsWidget.InodesHardHuman}}
+                                </p>
+                                 <p class="text-sm text-gray-500 dark:text-gray-500">Inodes used</p>
+                              </div>
+                           </div>
+<div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+    <div class="relative">
+        <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="CPU usage">
+            <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-200 dark:stroke-gray-500/40"></circle>
+            <circle
+                r="29"
+                cx="32"
+                cy="32"
+                stroke-width="6"
+                stroke-dasharray="182.212373908208 182.212373908208"
+                stroke-dashoffset="{{.StatsWidget.CPUOffset}}"
+                fill="transparent"
+                stroke="{{.StatsWidget.CPUColor}}"
+                stroke-linecap="round"
+                class="transform-gpu transition-all duration-300 ease-in-out"
+            ></circle>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+            <span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.CPURatioRounded}}%</span>
+        </div>
+    </div>
+    <div class="mt-0 text-left sm:mt-2 sm:text-center">
+        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.CPUHumanUsage}} / {{.StatsWidget.CPUHumanTotal}}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-500">CPU usage</p>
+    </div>
+</div>
+<div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
+    <div class="relative">
+        <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="progress circle" aria-label="RAM usage">
+            <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="transition-colors ease-linear stroke-gray-200 dark:stroke-gray-500/40"></circle>
+            <circle
+                r="29"
+                cx="32"
+                cy="32"
+                stroke-width="6"
+                stroke-dasharray="182.212373908208 182.212373908208"
+                stroke-dashoffset="{{.StatsWidget.RAMOffset}}"
+                fill="transparent"
+                stroke="{{.StatsWidget.RAMColor}}"
+                stroke-linecap="round"
+                class="transform-gpu transition-all duration-300 ease-in-out"
+            ></circle>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+            <span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.RAMPercentRounded}}%</span>
+        </div>
+    </div>
+    <div class="mt-0 text-left sm:mt-2 sm:text-center">
+        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.RAMHumanUsage}} / {{.StatsWidget.RAMHumanTotal}}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-500">Memory usage</p>
+    </div>
+</div>
+                        </div>
+                     </div>
+                     <div>
+                      <div class="flex justify-between mt-4 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-900 dark:bg-gray-950">
+                        <div>
+                          <h4 class="text-sm font-medium text-gray-900 dark:text-gray-50">Last updated:</h4>
+                          <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-500">{{if .Stats}}{{index .Stats "timestamp"}}{{end}}</p>
+                        </div>
+                        <div>
+                          <button id="get_docker_history_usage" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 cursor-pointer">
+                            View Past Usage
+                          </button>
+                        </div>
+                      </div>
+
+<div id="docker_stats_history" class="hidden overflow-x-auto">
+  <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+    <table id="usage" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+      <thead>
+        <tr class="bg-gray-50 dark:bg-gray-900 sm:[&amp;_td:last-child]:pr-6 sm:[&amp;_th:last-child]:pr-6 sm:[&amp;_td:first-child]:pl-6 sm:[&amp;_th:first-child]:pl-6">
+          <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
+          <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU %</th>
+          <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory %</th>
+        </tr>
+      </thead>
+      <tbody id="usageTableBody" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const username = '{{lastSegment .Username `_`}}';
+  const fetchButton = document.getElementById("get_docker_history_usage");
+  const container = document.getElementById("docker_stats_history");
+  const tbody = document.getElementById("usageTableBody");
+
+  let alreadyFetched = false;
+
+  fetchButton.addEventListener("click", () => {
+    if (alreadyFetched) return;
+    alreadyFetched = true;
+
+    container.classList.remove("hidden");
+
+    fetch(`/get_resource_usage_history/${username}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to fetch resource usage history');
+        return response.text();
+      })
+      .then(text => {
+        const lines = text.trim().split('\n').reverse();
+
+        lines.forEach(line => {
+          let data;
+          try {
+            data = JSON.parse(line);
+          } catch(e) {
+            return;
+          }
+
+          const timestamp = data.timestamp;
+          const cpuPercent = data.cpu?.usage?.pct ?? 0;
+          const memPercent = data.memory?.usage_pct ?? 0;
+
+          const tr = document.createElement('tr');
+          tr.className = "sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900";
+
+          tr.innerHTML = `
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 time_readable">${timestamp}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${cpuPercent}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${memPercent}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        updateAllTimestamps();
+      })
+      .catch(error => {
+        console.error(error);
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-red-600">Error loading usage data: ${error.message}</td></tr>`;
+      });
+
+  });
+</script>
+                  </div>
+               </div>
+               </div>
+               <!-- END DOCKER STATS -->
+
+               <!-- DOCKER SERVICES -->
+            <div x-show="activeTab === 'services'" x-cloak x-data="{ showEditor: false }">
+                  <div class="flex flex-col justify-between gap-2 px-4 py-6 sm:flex-row sm:items-center sm:p-6">
+                     <div>
+                        <span class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Edit docker-compose.yml and .env file for user:</span>
+                     </div>
+                     <div class="relative w-full sm:w-64 [&amp;>input]:py-1.5">
+                        <button
+                        type="button"
+                        @click="showEditor = !showEditor; if (showEditor) { loadEditorData(); }"
+                        class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto flex gap-x-2 px-2 py-1.5 text-sm sm:text-xs cursor-pointer"
+                        >
+                        <span x-text="showEditor ? 'Close Editor' : 'Edit Services'"></span>
+                        </button>
+                     </div>
+                  </div>
+                  <div class="overflow-x-auto">
+                     <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                        <div x-show="!showEditor">
+                        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                           <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                              <tr>
+                                 <td colspan="6" class="p-6 text-center">
+                                    docker-compose.yml file is invalid or missing.
+                                 </td>
+                              </tr>
+                           </tbody>
+                        </table>
+                        </div>
+                        <div x-show="showEditor" x-transition>
+                        <div class="p-4">
+                            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                                <span class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Edit docker-compose.yml and .env file for user:</span>
+                                <button type="button" @click="saveEditorData()" class="hidden sm:flex relative  items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+                            </div>
+                            <div class="flex gap-2">
+                                <textarea id="docker_compose_file" class="flex min-h-[10rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="20"></textarea>
+                                <textarea id="env_file" class="flex min-h-[10rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="20"></textarea>
+                            </div>
+                            <button type="button" @click="saveEditorData()" class="w-full mt-2 sm:hidden relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button><br>
+                        </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+<script>
+    const settingsEditor = (() => {
+        const username = "{{lastSegment .Username `_`}}";
+
+        return {
+            loadEditorData() {
+                fetch(`/settings/defaults/files/${username}`)
+                    .then(res => res.ok ? res.json() : Promise.reject(res))
+                    .then(data => {
+                        document.getElementById('env_file').value = data.env || '';
+                        document.getElementById('docker_compose_file').value = data.compose || '';
+                    })
+                    .catch(err => {
+                        console.error('Failed to load defaults:', err);
+                    });
+            },
+            saveEditorData() {
+                const env = document.getElementById('env_file').value;
+                const compose = document.getElementById('docker_compose_file').value;
+
+                if (!env && !compose) {
+                    showToast("Cannot save empty files. Please restore defaults.", "error");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('env', env);
+                formData.append('compose', compose);
+
+                fetch(`/settings/defaults/files/${username}`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(res => res.ok ? res.text() : Promise.reject(res))
+                .then(() => {
+                    showToast("Files saved successfully!", 'success');
+                })
+                .catch(err => {
+                    console.error('Save failed:', err);
+                    showToast("Failed to save. Check console for details.", 'error');
+                });
+            }
+        };
+    })();
+    Object.assign(document.currentScript, {});
+</script>
+               <!-- END DOCKER SERVICES -->
+
+               <!-- STORAGE -->
+               <div x-show="activeTab === 'storage'" x-cloak>
+
+<template x-if="loading">
+  <div
+    x-data="{
+      messages: [
+        'Loading storage information...',
+        'Fetching data from server...',
+        'Almost there, please wait...',
+        'Preparing your dashboard...',
+        'Why is this taking so long...',
+        'Its taking forever, refresh and try again...'
+      ],
+      messageIndex: 0,
+      get message() { return this.messages[this.messageIndex]; },
+      interval: null,
+      startRotating() {
+        let delay = 1000;
+        const showNext = () => {
+          if (this.messageIndex < this.messages.length - 1) {
+            this.messageIndex++;
+            delay += 1000;
+            this.interval = setTimeout(showNext, delay);
+          } else {
+            this.stopRotating();
+          }
+        };
+        this.interval = setTimeout(showNext, delay);
+      },
+      stopRotating() {
+        if (this.interval) clearTimeout(this.interval);
+      }
+    }"
+    x-init="startRotating()"
+    x-on:remove="stopRotating()"
+    class="p-6 h-72 w-full flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400"
+  >
+    <svg class="animate-spin h-8 w-8 text-gray-400 dark:text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
+    <p class="mt-3 font-medium text-gray-900 dark:text-gray-50" x-text="message"></p>
+  </div>
+</template>
+
+<template x-if="error">
+    <div class="text-red-600" x-text="error"></div>
+</template>
+
+<template x-if="!loading && !error">
+    <div>
+<div
+  class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] mb-8"
+  x-data="{
+    total: {{.Disk.DiskHard}} * 1000,
+
+    parseSize(sizeStr) {
+      if (!sizeStr) return 0;
+      const units = { B: 1, KB: 1e3, MB: 1e6, GB: 1e9 };
+      const regex = /^([\d.]+)\s*(B|KB|MB|GB)$/i;
+      const match = sizeStr.match(regex);
+      if (!match) return 0;
+      const value = parseFloat(match[1]);
+      const unit = match[2].toUpperCase();
+      return value * (units[unit] || 1);
+    },
+
+    get usedVolumes() {
+      return volumes.reduce((sum, v) => sum + this.parseSize(v.Size), 0);
+    },
+    get usedContainers() {
+      return containers.reduce((sum, c) => sum + this.parseSize(c.Size), 0);
+    },
+    get usedImages() {
+      return images.reduce((sum, img) => sum + this.parseSize(img.Size), 0);
+    },
+    get used() {
+      return this.usedVolumes + this.usedContainers + this.usedImages;
+    },
+    get free() {
+      return this.total - this.used;
+    },
+    format(bytes) {
+      if (bytes >= 1e9) return (bytes / 1e9).toFixed(2) + ' GB';
+      if (bytes >= 1e6) return (bytes / 1e6).toFixed(2) + ' MB';
+      if (bytes >= 1e3) return (bytes / 1e3).toFixed(2) + ' KB';
+      return bytes + ' B';
+    },
+    getPercent(part) {
+      if (this.total === 0) return 0;
+      return (part / this.total) * 100;
+    }
+  }"
+>
+  <h1 class="text-sm text-gray-500 dark:text-gray-500">Disk Usage Summary</h1>
+  <p class="mt-1 text-3xl font-semibold text-gray-900 dark:text-gray-50" x-text="format(used) + ' / ' + format(total)"></p>
+
+  <div class="mt-6">
+    <div class="relative flex h-2 w-full items-center">
+      <div class="flex h-full flex-1 items-center gap-0.5 overflow-hidden rounded-full">
+        <div class="h-full bg-blue-500" :style="'width:' + getPercent(usedVolumes) + '%'"></div>
+        <div class="h-full bg-emerald-500" :style="'width:' + getPercent(usedContainers) + '%'"></div>
+        <div class="h-full bg-orange-500" :style="'width:' + getPercent(usedImages) + '%'"></div>
+        <div class="h-full bg-gray-300 dark:bg-gray-700" :style="'width:' + getPercent(free) + '%'"></div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-500">
+    <li class="flex items-center space-x-2">
+      <span class="size-3 shrink-0 rounded-sm bg-blue-500"></span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(usedVolumes)"></span> Volumes (User Files)</span>
+    </li>
+    <li class="flex items-center space-x-2">
+      <span class="size-3 shrink-0 rounded-sm bg-emerald-500"></span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(usedContainers)"></span> Containers (Changes)</span>
+    </li>
+    <li class="flex items-center space-x-2">
+      <span class="size-3 shrink-0 rounded-sm bg-orange-500"></span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(usedImages)"></span> Images (System)</span>
+    </li>
+    <li class="flex items-center space-x-2">
+      <span class="size-3 shrink-0 rounded-sm bg-gray-300 dark:bg-gray-700"></span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(free)"></span> Free</span>
+    </li>
+  </ul>
+</div>
+
+        <table class="w-full caption-bottom border-b border-tborder-gray-200 dark:border-gray-800">
+            <thead>
+                <tr class="sm:[&_td:last-child]:pr-6 sm:[&_th:last-child]:pr-6 sm:[&_td:first-child]:pl-6 sm:[&_th:first-child]:pl-6">
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name/ID</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Details</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Used By</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Status</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Type</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                <tr>
+                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
+                        <div class="flex gap-1 items-center">Volumes
+                        <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="volumes.length"></span>
+                    </div>
+                    </th>
+                </tr>
+                <template x-for="v in volumes" :key="'volume-' + v.Name">
+                    <tr>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 relative" x-bind:title="v.Name" x-text="v.Name.length > 20 ? v.Name.slice(0, 20) + '...' : v.Name"></td>
+                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            <div class="flex items-center gap-1">Mountpoint: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="v.Mountpoint"></span></div>
+                            <div>Type: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="v.Driver"></span></div>
+                        </td>
+                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="v.Size"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"><span x-text="v.Links"></span> containers</td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"> Volume</td>
+                    </tr>
+                </template>
+                <tr>
+                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
+                        <div class="flex gap-1 items-center">Containers
+                        <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="containers.length"></span>
+                        </div>
+                    </th>
+                </tr>
+                <template x-for="c in containers" :key="'container-' + c.ID">
+                    <tr>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="c.Names"></td>
+                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            <div>ID: <span x-text="c.ID"></span></div>
+                            <div>Image: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Image"></span></div>
+                            <div>Status: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Status"></span></div>
+                            <div>Ports: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Ports"></span></div>
+                        </td>
+                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="c.Size"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"><span x-text="c.LocalVolumes"></span> volumes</td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">
+                                <span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>
+                                <span x-text="c.State"></span>
+                            </span>
+                        </td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"> Container</td>
+                    </tr>
+                </template>
+                <tr>
+                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
+                        <div class="flex gap-1 items-center">Images
+                        <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="images.length"></span>
+                        </div>
+                    </th>
+                </tr>
+                <template x-for="img in images" :key="'image-' + img.ID">
+                    <tr>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="img.Repository + (img.Tag && img.Tag !== '&lt;none&gt;' ? ':' + img.Tag : '')"></td>
+                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            <div>ID: <span x-text="img.ID"></span></div>
+                            <div>Created: <span x-text="img.CreatedAt"></span></div>
+                            <div>Created since: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="img.CreatedSince"></span></div>
+                        </td>
+                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="img.Size"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"><span x-text="img.Containers"></span> containers</td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">Image</td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</template>
+               </div>
+               <!-- END STORAGE -->
+
+               <!-- INFO -->
+               <div x-show="activeTab === 'info'" class="p-4" x-cloak>
+                  <div class="grid grid-cols-2 gap-4">
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Username:</span><span class="font-medium">{{firstSegment .Username "_"}}</span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium">{{.User.Email}}</span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Locale:</span><span class="flex items-center font-medium">
+                        {{if .Locale}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .Locale}}.svg" alt="Locale: {{.Locale}}"></img> {{upper .Locale}}{{else}}default{{end}}</span></div>
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">2FA status:</span><span class="font-medium">{{if .User.TwoFAEnabled}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{{end}}</span></div>
+
+        {{if index .EnvData "USER_ID"}}
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID (UID):</span><span class="font-medium">{{index .EnvData "USER_ID"}}</span></div>
+        {{else}}
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID (in database):</span><span class="font-medium">{{.User.ID}}</span></div>
+        {{end}}
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium flex"> {{.ServerIP}}<span class="hidden sm:flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{.IPType}}</span></span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="flex items-center font-medium">
+                        {{if .CountryCode}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .CountryCode}}.svg" alt="IP address location: {{.CountryCode}}"></img>{{end}} {{.CountryCode}}</span></div>
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Server:</span><span class="font-medium">{{.ServerName}}</span></div>
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Docker Context:</span><span class="font-medium">{{.DockerCtx}}</span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Home dir:</span><span class="font-medium">/home/{{.DockerCtx}}/</span></div>
+
+        {{if index .EnvData "WEB_SERVER"}}
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Web server:</span><span class="font-medium flex gap-1 items-center">{{index .EnvData "WEB_SERVER"}}</span></div>
+        {{end}}
+
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Varnish Caching:</span><span class="font-medium">{{if index .EnvData "PROXY_HTTP_PORT"}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Disabled</span>{{end}}</span></div>
+
+        {{if index .EnvData "MYSQL_TYPE"}}
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Database type:</span><span class="font-medium">{{if eq (index .EnvData "MYSQL_TYPE") "mysql"}}MySQL{{else if eq (index .EnvData "MYSQL_TYPE") "mariadb"}}MariaDB{{end}}</span></div>
+        {{end}}
+
+                     {{if .User.Owner.Valid}}
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Reseller:</span><span class="font-medium"><a href="/resellers">{{.User.Owner.String}}</a></span></div>
+                     {{end}}
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Setup time:</span><span class="font-medium">{{formatDateTime .User.RegisteredDate.String}}</span></div>
+
+{{if contains .Username "SUSPENDED_"}}
+  <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Suspended on:</span><span class="font-medium">{{replace (suspendedLabel .Username) "on: " ""}}</span></div>
+{{end}}
+
+                  </div>
+                  <br>
+                  <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                       {{template "macro_tooltip" (dict "ID" "custom_message_for_this_user" "Label" "Custom message for user" "Description" "Plain text or HTML code to be displayed for this user on the Dashboard page." "Required" false)}}
+                    </span> <button type="button" class="hidden sm:flex save_custom_message_btn relative  items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+                  </div>
+                  <textarea id="custom_message_for_this_user" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="5"></textarea>
+
+<button type="button" class="w-full mt-2 sm:hidden save_custom_message_btn relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+
+<script>
+  const textarea = document.getElementById('custom_message_for_this_user');
+  const saveBtn = document.querySelector('.save_custom_message_btn');
+  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+
+  async function saveCustomMessage() {
+    const message = textarea.value;
+
+    try {
+      const response = await fetch(`/get_custom_message_for_user/${username}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ custom_message: message }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showToast(data.message || 'Saved successfully.', 'info');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || `Save failed (${response.status})`, 'error');
+      }
+    } catch (err) {
+      showToast('Error saving custom message for user.', 'error');
+    }
+  }
+
+  saveBtn.addEventListener('click', () => {
+    saveCustomMessage();
+  });
+</script>
+
+                  <br>
+                  <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                       {{template "macro_tooltip" (dict "ID" "private_notes_for_this_user" "Label" "Private notes" "Description" "Internal notes about this user, visible only to admins/resellers in OpenAdmin. Never shown to the user." "Required" false)}}
+                    </span> <button type="button" class="hidden sm:flex save_private_notes_btn relative  items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+                  </div>
+                  <textarea id="private_notes_for_this_user" data-username="{{.Username}}" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="5">{{.Notes}}</textarea>
+
+<button type="button" class="w-full mt-2 sm:hidden save_private_notes_btn relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+
+<script>
+  const notesTextarea = document.getElementById('private_notes_for_this_user');
+  const saveNotesBtns = document.querySelectorAll('.save_private_notes_btn');
+  var csrf_token_notes = $('meta[name="csrf-token"]').attr('content');
+
+  async function savePrivateNotes() {
+    const notes = notesTextarea.value;
+    const notesUsername = notesTextarea.dataset.username;
+
+    try {
+      const response = await fetch(`/get_user_notes/${notesUsername}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token_notes,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ notes: notes }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showToast(data.message || 'Saved successfully.', 'info');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || `Save failed (${response.status})`, 'error');
+      }
+    } catch (err) {
+      showToast('Error saving private notes for user.', 'error');
+    }
+  }
+
+  saveNotesBtns.forEach(function (btn) {
+    btn.addEventListener('click', () => {
+      savePrivateNotes();
+    });
+  });
+</script>
+                  <br>
+               </div>
+               <!-- INFO -->
+
+               <!-- EDIT -->
+               <div x-show="activeTab === 'edit'" class="p-4" x-cloak>
+                  <form action="/user/edit/{{lastSegment .Username "_"}}" method="POST">
+                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                     <div id="collapseAddNewUser">
+                        <div id="create_user_form" class="sm:mx-auto sm:max-w-4xl">
+                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                  <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "new_username" "Label" "Username" "Description" "Can only contain letters and numbers. 3 characters min. - 20 max." "Required" true)}}
+                  <div class="relative w-full mt-2">
+                  <input type="text" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950" minlength="3" maxlength="20" pattern="[a-zA-Z0-9]{3,20}" name="new_username" placeholder="Username" value="{{lastSegment .Username "_"}}"/>
+                  </div>
+                  </div>
+                  <div class="col-span-full sm:col-span-3">
+                    {{template "macro_tooltip" (dict "ID" "new_email" "Label" "Email" "Description" "Email address is used to receive important account related notifications and password reset emails." "Required" true)}}
+                  <div class="relative w-full mt-2">
+                  <input type="email" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950" autocomplete="off" name="new_email" placeholder="some-email@example.com" value="{{.User.Email}}"/>
+                  </div>
+                  </div>
+                  </div>
+<div x-data="passwordManager()" class="col-span-full mt-4">
+  {{template "macro_tooltip" (dict "ID" "new_password" "Label" "Password" "Description" "Cannot contain apostrophe. 6 characters min. - 30 max. Leave empty to not change password." "Required" false)}}
+  <div class="relative w-full flex mt-2">
+    <input x-ref="passwordInput" x-bind:type="passwordVisible ? 'text' : 'password'" x-model="password" @input="checkStrength()" class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950" autocomplete="new-password" name="new_password" minlength="6" maxlength="30" pattern="[^']{6,30}" placeholder="unchanged if empty"/>
+    <div class="flex">
+      <button @click="generatePassword()" type="button" id="generatePassword" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium shadow-sm cursor-pointer border-black bg-black text-white hover:bg-gray-800">Generate</button>
+      <button @click="togglePasswordVisibility()" type="button" id="togglePassword" class="relative inline-flex items-center justify-center rounded-r border px-3 py-2 text-center text-sm font-medium shadow-sm cursor-pointer border-black bg-black text-white hover:bg-gray-800">
+        <svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+          <path d="M21 12c-2.4 4 -5.4 6 -9 6s-6.6-2-9-6c2.4-4 5.4-6 9-6s6.6 2 9 6" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div class="mt-2 w-full">
+    <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+      <div class="h-2 transition-all duration-300 ease-in-out" :class="{ 'bg-gray-300 w-0': strength === '', 'bg-red-500 w-1/4': strength === 'weak', 'bg-yellow-400 w-2/4': strength === 'medium', 'bg-green-500 w-full': strength === 'strong' }"></div>
+    </div>
+    <p class="mt-1 text-xs font-semibold transition-colors duration-200" :class="{ 'text-gray-400': strength === '', 'text-red-600 dark:text-red-400': strength === 'weak', 'text-yellow-600 dark:text-yellow-400': strength === 'medium', 'text-green-600 dark:text-green-400': strength === 'strong' }" x-text="strengthText"></p>
+  </div>
+</div>
+
+<script>
+  function passwordManager() {
+    return {
+      password: '', passwordVisible: false, strength: '', strengthText: '',
+      generatePassword() {
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+        let result = "";
+        for (let i = 0; i < 16; i++) result += charset.charAt(Math.floor(Math.random() * charset.length));
+        this.password = result;
+        this.passwordVisible = true;
+        this.checkStrength();
+        this.$nextTick(() => this.$refs.passwordInput.focus());
+      },
+      togglePasswordVisibility() { this.passwordVisible = !this.passwordVisible; },
+      checkStrength() {
+        const pwd = this.password;
+        if (!pwd) { this.strength = ''; this.strengthText = ''; return; }
+        let score = 0;
+        if (pwd.length >= 8) score++;
+        if (pwd.length >= 12) score++;
+        if (/[A-Z]/.test(pwd)) score++;
+        if (/[a-z]/.test(pwd)) score++;
+        if (/\d/.test(pwd)) score++;
+        if (/[^A-Za-z0-9]/.test(pwd)) score++;
+        if (score <= 2) { this.strength = 'weak'; this.strengthText = 'Weak password'; }
+        else if (score <= 4) { this.strength = 'medium'; this.strengthText = 'Medium strength'; }
+        else { this.strength = 'strong'; this.strengthText = 'Strong password'; }
+      }
+    };
+  }
+</script>
+
+                  <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+                  <div class="col-span-full sm:col-span-3">
+                                        {{template "macro_tooltip" (dict "ID" "new_ip" "Label" "IP address" "Description" "Change IP address used for user services and domains." "Required" false)}}
+                    <div class="relative w-full mt-2">
+                      <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 mt-2" id="ipSelect" name="new_ip">
+                      <option disabled value="">Change IP address</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="col-span-full sm:col-span-3">
+                      {{template "macro_tooltip" (dict "ID" "reseller" "Label" "Reseller" "Description" "Change owner (reseller) for this user." "Required" false)}}
+                      <div class="relative w-full mt-2">
+                          <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 mt-2" id="resellerSelect" name="reseller">
+                              <option value="">No reseller</option>
+                          </select>
+                      </div>
+                  </div>
+
+                  <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="col-span-full mt-4">
+  {{template "macro_tooltip" (dict "ID" "selectedPlan" "Label" "Select a package" "Description" "Change the user's hosting plan to adjust account limits or available features." "Required" false)}}
+
+  <div x-show="$store.planStore.plansLoaded" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <template x-for="plan in $store.planStore.plans" :key="plan.id">
+      <button type="button" role="radio" :aria-checked="$store.planStore.selectedPlan === plan.id ? 'true' : 'false'" :data-state="$store.planStore.selectedPlan === plan.id ? 'checked' : ''" @click="$store.planStore.selectPlan(plan.id)" class="group relative w-full rounded border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 flex items-start justify-between" tabindex="0">
+        <div x-show="plan.id === $store.planStore.selectedPlan" class="absolute -top-3 flex">
+          <span class="inline-flex items-center rounded-full bg-gray-300 text-black text-xs font-semibold py-1 px-3">Current Plan</span>
+        </div>
+        <div class="flex w-full flex-col justify-between">
+          <div>
+            <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" x-text="plan.name"></label>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-500" x-text="plan.description"></p>
+          </div>
+          <div class="mt-4">
+            <span @click="plan.showDetails = !plan.showDetails" class="text-sm font-medium text-gray-900 dark:text-gray-50 cursor-pointer">Display Limits</span>
+            <div x-show="plan.showDetails">
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.cpu == 0 ? '∞ Cores' : plan.cpu + ' Cores'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.ram.toLowerCase() === '0g' ? '∞ Memory' : plan.ram + ' Memory'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.disk_limit === '0 GB' ? '∞ Storage' : plan.disk_limit + ' Storage'"></p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.inodes_limit === 0 ? '∞ Inodes' : plan.inodes_limit + ' Inodes'"></p>
+            </div>
+          </div>
+        </div>
+        <div class="relative flex shrink-0 items-center justify-center rounded-full border shadow-sm border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950" :class="$store.planStore.selectedPlan === plan.id ? 'border-0 bg-blue-500' : ''">
+          <span x-show="$store.planStore.selectedPlan === plan.id" class="flex items-center justify-center">
+            <div class="w-3 h-3 rounded-full bg-white"></div>
+          </span>
+        </div>
+      </button>
+    </template>
+  </div>
+  <input type="hidden" name="plan_id" :value="$store.planStore.selectedPlan">
+</div>
+
+                  </div>
+                  <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+                  <div class="flex items-center justify-end space-x-4">
+                  <a href="/users" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60">Go back</a>
+                  <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 cursor-pointer">Save</button>
+                  </div>
+                        </div>
+                     </div>
+                  </form>
+               </div>
+               <!-- END EDIT -->
+
+               <!-- PERMISSIONS -->
+               <div x-show="activeTab === 'permissions'" x-cloak>
+                 <div x-data="{ searchQuery: '', toggleAll: null, customMode: false }">
+                   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-x-6 pb-3 rounded border-b px-3 py-2 text-sm border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900" x-show="!customMode">
+                     <span class="text-gray-700 dark:text-gray-300">This user's permissions follow their <strong>plan defaults</strong>. To customize permissions for this user only, switch to custom mode. </br>To change permissions for everyone on this plan, use <a href="/features/" class="inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400">Feature Manager</a>.</span>
+                     <button type="button" @click="customMode = true" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1 text-center text-sm font-medium shadow-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">Switch to Custom</button>
+                   </div>
+                   <form method="post" action="/user/permissions/{{lastSegment .Username "_"}}">
+                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-x-6 pb-3 pt-3 p-4">
+                       <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+                         <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-100 dark:bg-gray-950 pl-8" placeholder="Search features..." type="search">
+                       </div>
+                       <div class="flex flex-wrap gap-3 justify-center sm:justify-end">
+                         <span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800">
+                           <button type="button" :disabled="!customMode" @click="toggleAll = true" class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Enable All</button>
+                           <span class="h-4 w-px bg-gray-200 dark:bg-gray-800"></span>
+                           <button type="button" :disabled="!customMode" @click="toggleAll = false" class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Disable All</button>
+                         </span>
+                         <button type="submit" :disabled="!customMode" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:dark:bg-blue-800 cursor-pointer">Save</button>
+                       </div>
+                     </div>
+                     <fieldset :disabled="!customMode">
+                     <div class="relative overflow-y-auto pb-4">
+                       <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                         <thead>
+                           <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Status</th>
+                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Name</th>
+                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Page</th>
+                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Module</th>
+                           </tr>
+                         </thead>
+                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
+                       </table>
+                     </div>
+                     </fieldset>
+                   </form>
+                 </div>
+               </div>
+               <!-- END PERMISSIONS -->
+
+            <!-- ACTIVITY -->
+            <div x-show="activeTab === 'activity'" x-cloak x-data="{ searchQuery: '' }">
+               <div class="flex flex-col justify-between gap-2 px-4 py-6 sm:flex-row sm:items-center sm:p-6">
+                  <div class="relative w-full sm:w-64 [&>input]:py-1.5">
+                     <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 pl-8" placeholder="Search activities..." type="search"/>
+                  </div>
+                     <div class="flex gap-2 relative w-full sm:w-64 [&amp;>input]:py-1.5 justify-end">
+                        <a href="/json/user-activity/{{lastSegment .Username "_"}}?raw=true" target="_blank" class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer">View Raw</a>
+                        <a href="/json/user-activity/{{lastSegment .Username "_"}}?download=true" class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer">Download</a>
+                     </div>
+               </div>
+               <div class="overflow-x-auto">
+                  <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                     <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                        <thead>
+                           <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
+                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Action</th>
+                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP Address</th>
+                           </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                           <template x-if="$store.activityStore.activities.length === 0">
+                              <tr><td colspan="12" class="p-6 text-center">Loading user activity log..</td></tr>
+                           </template>
+                           <template x-for="(activity, index) in $store.activityStore.activities.filter(activity => {
+                              return activity.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              activity.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              activity.ip.toLowerCase().includes(searchQuery.toLowerCase());
+                              })" :key="activity.timestamp + '-' + index">
+                              <tr :class="activity.actionClass" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
+                                 <td class="relative group p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" x-text="activity.date"></td>
+                                 <td class="flex items-center relative group p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left truncate max-w-[500px]" x-html="activity.action"></td>
+                                 <td class="relative group p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-end" x-text="activity.ip"></td>
+                              </tr>
+                           </template>
+                        </tbody>
+                     </table>
+                  </div>
+               </div>
+            </div>
+            <!-- END ACTIVITY -->
+
+<div x-show="activeTab === 'logins'" x-cloak x-data="{ searchQuery: '' }">
+    <div class="flex flex-col justify-between gap-2 px-4 py-6 sm:flex-row sm:items-center sm:p-6">
+        <div class="relative w-full sm:w-64 [&>input]:py-1.5">
+            <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 pl-8" placeholder="Search logins..." type="search"/>
+        </div>
+                     <div class="flex gap-2 relative w-full sm:w-64 [&amp;>input]:py-1.5 justify-end">
+                        <a href="/json/user-logins/{{lastSegment .Username "_"}}?raw=true" target="_blank" class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer">View Raw</a>
+                        <a href="/json/user-logins/{{lastSegment .Username "_"}}?download=true" class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer">Download</a>
+                     </div>
+    </div>
+    <div class="overflow-x-auto">
+        <div class="w-full overflow-auto border-t border-gray-200 dark:border-gray-800">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                <thead>
+                    <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Country</th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP Address</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <template x-if="$store.loginsStore.logins.length === 0">
+                        <tr><td colspan="3" class="p-6 text-center text-gray-500">Loading login logs...</td></tr>
+                    </template>
+                    <template x-if="$store.loginsStore.logins.length > 0 && $store.loginsStore.logins[0].noLogins">
+                        <tr><td colspan="3" class="p-6 text-center text-gray-500">No logins recorded yet.</td></tr>
+                    </template>
+                    <template x-for="(login, index) in $store.loginsStore.logins.filter(l => {
+                        if(l.noLogins) return false;
+                        const term = searchQuery.toLowerCase();
+                        return l.date.toLowerCase().includes(term) ||
+                               l.country.toLowerCase().includes(term) ||
+                               l.ip.toLowerCase().includes(term);
+                    })" :key="index">
+                        <tr class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
+                            <td class="relative group p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" x-text="login.date"></td>
+                            <td class="relative group p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left flex gap-1 items-center">
+                                <img class="w-4 h-4 rounded mr-1" :src="`/static/dist/img/flags/${login.country.toLowerCase()}.svg`" :alt="`IP address location: ${login.country.toUpperCase()}`">
+                                <span x-text="login.country"></span>
+                            </td>
+                            <td class="relative group p-4 text-sm relative whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-end" x-text="login.ip"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+               {{if eq .LicenseType "Enterprise"}}
+            <!-- TRANSFER USER -->
+            <div x-show="activeTab === 'transfer'" class="p-4" x-cloak>
+               <form method="POST" id="transfer-form" action="/import/transfer/">
+                  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                  <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
+                    <h3 class="font-semibold text-gray-900 dark:text-gray-50">Transfer account {{lastSegment .Username "_"}}</h3>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Transfer the user account along with all its containers and data to another OpenPanel server via SSH.</p>
+                    <div class="mt-6">
+                        <input hidden type="hidden" name="openpanel_username" value="{{lastSegment .Username "_"}}">
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                        <div class="col-span-full">
+                        <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="server">Server<span class="text-red-500 dark:text-red-500">*</span></label>
+                        <div class="flex gap-4 mt-2">
+                            <div class="flex-2">
+                            <input type="text" class="block w-full rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" name="server" id="server" required autofocus placeholder="IP address"/>
+                            </div>
+                            <div class="flex-1">
+                            <label class="sr-only" for="port">Port</label>
+                            <input type="number" min="1" max="65535" class="block w-full rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" name="port" id="port" placeholder="Port"/>
+                            </div>
+                        </div>
+                        <div class="mt-4"><p class="text-xs text-gray-500">Insert remote server's IP address or domain name and SSH port (usually <b>22</b>).</p></div>
+                        </div>
+
+                        <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
+                            <div class="relative w-full mt-2"><input type="text" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" minlength="3" maxlength="25" name="username" placeholder="Username" id="username" required autofocus></div>
+                        <div class="mt-4"><p class="text-xs text-gray-500">SSH username for the remote server (usually <b>root</b>).</p></div>
+                        </div>
+
+                        <div class="col-span-full">
+{{template "macro_tooltip" (dict "ID" "password" "Label" "Password" "Description" "SSH password for the above username on remote server." "Required" true)}}
+                            <div class="relative w-full mt-2"><input type="password" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" name="password" id="password" required autofocus placeholder="Password"></div>
+                        </div>
+
+                        <div class="col-span-full">
+                       {{template "macro_tooltip" (dict "ID" "live_transfer" "Label" "Live Transfer" "Description" "When \"Live Transfer\" is enabled, once the migration is complete, the system will automatically suspend the account on the current server and update the domain DNS zones to replace the old server IP with the new server IP." "Required" false)}}
+                        <div class="relative w-full mt-2"><div class="mt-2 flex items-start"><input name="live_transfer" id="live_transfer" type="checkbox" tabindex="-1" class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"><label for="live_transfer" class="ml-2 block text-sm text-gray-500">Suspend account on this server and forward DNS to the remote server.</label></div></div></div>
+                        </div>
+                    </div>
+                    <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 mt-4 w-full" type="submit">Start Transfer</button>
+                   </div>
+               </form>
+               <div id="existing-transfers" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl"></div>
+            </div>
+            <!-- END TRANSFER USER -->
+               {{end}}
+
+<!-- SUSPEND USER -->
+<div x-show="activeTab === 'suspend'" class="p-4" x-cloak>
+    <div x-data="{ confirmationText: '', expected: '{{lastSegment .Username "_"}}' }" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
+        <form method="POST" action="/user/suspend/{{lastSegment .Username "_"}}" @submit.prevent="if (confirmationText === expected) { $el.submit() }">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <h3 class="font-semibold text-gray-900 dark:text-gray-50">Suspend user account</h3>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Disable login for OpenPanel user, stop their services and revoke access to websites and emails.</p>
+            <div class="mt-6">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Type "{{lastSegment .Username "_"}}" to confirm:</label>
+                <div class="relative w-full mt-2">
+                    <input type="text" x-model="confirmationText" required class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                </div>
+            </div>
+            <button :disabled="confirmationText !== expected" x-show="confirmationText === expected" x-transition class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 mt-4 w-full" type="submit">Suspend account</button>
+        </form>
+    </div>
+</div>
+<!-- END SUSPEND USER -->
+
+<!-- DELETE USER -->
+<div x-show="activeTab === 'delete'" class="p-4" x-cloak>
+    <div x-data="{ confirmationText: '', expected: '{{lastSegment .Username "_"}}' }" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
+        <form method="POST" action="/user/delete/{{lastSegment .Username "_"}}" @submit.prevent="if (confirmationText === expected) { $el.submit()}">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <h3 class="font-semibold text-gray-900 dark:text-gray-50">Delete user account</h3>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">All user data will be permanently deleted. There is no coming back after you press delete.</p>
+            <div class="mt-6">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Type "{{lastSegment .Username "_"}}" to confirm:</label>
+                <div class="relative w-full mt-2">
+                    <input type="text" name="confirmation" x-model="confirmationText" required class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                </div>
+            </div>
+            <button :disabled="confirmationText !== expected" x-show="confirmationText === expected" x-transition class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm text-white border-transparent bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 mt-4 w-full" type="submit">Delete account permanently</button>
+        </form>
+    </div>
+</div>
+<!-- END DELETE USER -->
+
+            </div>
+          </div>
+      </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const username = "{{.Username}}";
+  const url = `/json/transfers/${username}`;
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      const inProgress = data.some(item => item.pid && item.status === 'in progress');
+      const success = data.some(item => item.pid && item.status === 'success');
+
+        if ((inProgress || success) && username.includes('SUSPENDED_')) {
+            const form = document.getElementById('transfer-form');
+            if (form) form.style.display = 'none';
+        }
+
+      let message = null;
+      let bgColor = '';
+      let borderColor = '';
+
+      if (inProgress) {
+        message = `Transfer to another server in progress`;
+        bgColor = '#d9edf7';
+        borderColor = '#31708f';
+      } else if (success) {
+        message = `Transferred to another server`;
+        bgColor = '#dff0d8';
+        borderColor = '#3c763d';
+      }
+
+      let messageDiv = document.getElementById('transfer-status-message');
+      if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'transfer-status-message';
+        messageDiv.style.padding = '10px';
+        messageDiv.style.margin = '10px 0';
+        messageDiv.style.borderRadius = '4px';
+        messageDiv.style.fontWeight = 'bold';
+        document.body.prepend(messageDiv);
+      }
+
+function getStatusBadge(status) {
+  switch ((status || '').toLowerCase()) {
+    case 'success':
+    case 'completed':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>Completed
+              </span>`;
+    case 'in progress':
+    case 'running':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>Running
+              </span>`;
+    case 'failed':
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-red-600 dark:bg-red-400" aria-hidden="true"></span>Failed
+              </span>`;
+    default:
+      return `<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full">
+                <span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Unknown
+              </span>`;
+  }
+}
+
+      if (message) {
+        messageDiv.innerHTML = `${message}`;
+        messageDiv.style.backgroundColor = bgColor;
+        messageDiv.style.border = `1px solid ${borderColor}`;
+        messageDiv.style.color = borderColor;
+      } else {
+        messageDiv.innerHTML = '';
+      }
+
+      const transfersDiv = document.getElementById('existing-transfers');
+      if (transfersDiv) {
+        let html = `
+          <h3 class="font-semibold text-gray-900 dark:text-gray-50">Transfer logs:</h3>
+          <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">
+        `;
+
+        if (data.length === 0) {
+          html = '';
+        } else {
+          data.forEach(item => {
+            const statusBadge = getStatusBadge(item.status);
+            html += `<a class="text-blue-600 hover:underline" href="/import/user/log/${encodeURIComponent(item.filename)}" target="_blank">${item.filename || 'N/A'}</a> ${statusBadge}`;
+            if (item.details) {
+              html += `, Details: ${item.details}`;
+            }
+            html += '<br>';
+          });
+        }
+
+        html += '</p>';
+        transfersDiv.innerHTML = html;
+      }
+    })
+    .catch(err => {
+      console.error('Failed to fetch transfer status:', err);
+    });
+});
+</script>
+
+{{else}}
+<div style="height: 60vh; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <h2 class="font-semibold text-gray-900 dark:text-gray-50">No such user</h2>
+    <p class="mt-1 text-sm leading-6 text-gray-500">This user no longer exists or MySQL database is unreachable.</p>
+</div>
+{{end}}
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

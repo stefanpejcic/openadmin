@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+{{if .DomainName}}
+
+<div aria-label="Select Domain Header">
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+            <header>
+                <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                    <div class="grow">
+                        <h1 class="mb-1 text-xl font-bold">Edit Domain VirtualHost</h1>
+                        <h2 class="text-sm font-medium text-slate-500">Edit VirtualHosts file for domain <span class="punycode">{{.DomainName}}</span></h2>
+                    </div>
+                    <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                        <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Save</button>
+                    </div>
+                </div>
+            </header>
+        </div>
+
+        <div class="mt-2 gap-2 sm:mt-0 sm:flex">
+            <textarea name="bind_content" id="bind_content" rows="25" class="flex min-h-[4rem] w-full border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">{{.BindContent}}</textarea>
+        </div>
+    </form>
+</div>
+
+{{else}}
+
+<!-- page header -->
+<section aria-label="Select Domain Header">
+
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                        <h1 class="mb-1 text-xl font-bold">Edit Domain VirtualHost</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Select domain to edit VirtualHosts file for</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                </div>
+            </div>
+        </header>
+    </div>
+<!-- END page header -->
+
+<!-- form -->
+<div class="sm:mx-auto sm:max-w-2xl p-6 m-6 CrawlerStatusCard" id="toAddActive">
+    <form class="mt-8" method="GET">
+        <div class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-6">
+            <div class="col-span-full">
+                {{if .MySQLIsDown}}
+                {{template "partial_mysql_error" .}}
+                {{else if .Domains}}
+                <select id="domains" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" onchange="redirectToSelectedVhostDomain(this, '/domains/vhost/')">
+                    <option value="" disabled selected>Select domain</option>
+                    {{range .Domains}}
+                    <option value="{{index . "domain_url"}}" class="punycode" data-username="{{index . "username"}}">{{index . "domain_url"}}</option>
+                    {{end}}
+                </select>
+
+                <script>
+                    function redirectToSelectedVhostDomain(selectElement, baseUrl) {
+                        const selectedOption = selectElement.options[selectElement.selectedIndex];
+                        const domain = selectedOption.value;
+                        const username = selectedOption.dataset.username;
+                        if (domain) {
+                            let url = baseUrl;
+                            if (username) {
+                                url += username + "/";
+                            }
+                            url += domain;
+                            window.location.href = url;
+                        }
+                    }
+                </script>
+                {{else}}
+                <p class="text-sm text-gray-500">No domains yet.</p>
+                {{end}}
+            </div>
+        </div>
+    </form>
+</div>
+
+</section>
+{{end}}
+
+    </main>
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{ showSection: false, ...domainsTable() }" x-init="init()" x-cloak>
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Domains</h1>
+                    <h2 class="text-sm font-medium text-slate-500">
+                        {{if .Domains}}
+                            <b>{{len .Domains}}</b> {{if gt (len .Domains) 1}}domains{{else}}domain{{end}} hosted on this server.
+                        {{else}}
+                            {{if .MySQLIsDown}}
+                                Unable to check domains count from database.
+                            {{else}}
+                                No domains yet.
+                            {{end}}
+                        {{end}}
+                    </h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    <a id="tour-add-domain-btn" @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Add Domain</a>
+                </div>
+            </div>
+        </header>
+
+            <div :class="{ 'hidden': !showSection }" class="mt-8 w-full md:items-stretch md:space-x-4 hidden">
+
+                <div id="create_user_form" class="sm:mx-auto" style="display:block;" x-data="userSearch()">
+
+                    <form method="POST" action="/domains/add" @submit.prevent="submitForm">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                            <div class="col-span-full sm:col-span-2">
+                                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="domain">
+                                    Domain<span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative w-full mt-2">
+                                    <input type="text" name="domain" id="domain" placeholder="example.net" required
+                x-model="domain" autofocus class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                                </div>
+                            </div>
+
+                            <div class="col-span-full sm:col-span-2" x-data @click.away="show = false">
+                                <label for="username" class="text-sm font-medium">Username<span class="text-red-500">*</span></label>
+                                <div class="relative w-full mt-2">
+                                    <input type="text" name="username" id="username" placeholder="username" required
+                                        x-model="query" @input.debounce.300ms="searchUsers"
+                                        @focus="show = true"
+                                        class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700"
+                                        autocomplete="off">
+
+                                    <ul x-show="show && users.length > 0" class="absolute z-10 bg-white dark:bg-gray-950 border w-full mt-1 rounded shadow-lg max-h-60 overflow-auto">
+                                        <template x-for="user in users" :key="user">
+                                            <li @click="selectUser(user)" class="px-3 py-2 cursor-pointer hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600">
+                                                <span x-text="user"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="col-span-full sm:col-span-2 flex flex-col justify-end h-full">
+                                <div class="relative w-full mt-2">
+                                    <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">
+                                        Add Domain
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+<script>
+function userSearch() {
+    return {
+        query: '',
+        users: [],
+        show: false,
+        validUser: null,
+        domain: '',
+
+        searchUsers() {
+            if (this.query.length < 1) {
+                this.users = [];
+                return;
+            }
+
+            fetch(`/search/users/${encodeURIComponent(this.query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    this.users = data.filter(u => !u.startsWith('SUSPENDED_'));
+                    this.show = this.users.length > 0;
+                    this.validUser = null;
+                });
+        },
+
+        selectUser(user) {
+            this.query = user;
+            this.validUser = user;
+            this.show = false;
+        },
+
+        validateDomain(domain) {
+            const domainRegex = /^[^.\s]+(\.[^.\s]+)+$/;
+            return domainRegex.test(domain);
+        },
+
+        submitForm(event) {
+            if (!this.validUser || this.validUser !== this.query) {
+                showToast("Error, please select a valid username from the list.", 'error');
+                return;
+            }
+
+            if (!this.validateDomain(this.domain)) {
+                showToast("Error, please enter a valid domain (e.g., example.com).", 'error');
+                return;
+            }
+
+            event.target.submit();
+        }
+    }
+}
+</script>
+
+            </div>
+
+    </div>
+
+    <div class="">
+        <div class="space-y-3">
+            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+                <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+
+                    <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+    <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 pl-8" placeholder="Search by user/domain..." type="search">
+
+                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
+                                <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+
+                    <div class="relative">
+                        <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer" type="button"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg> Show Columns</button>
+
+                        <div id="dropdownToggle" class="z-10 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-72 dark:divide-gray-600 hidden">
+                            <ul class="p-2 space-y-1" aria-labelledby="dropdownToggleButton">
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.id" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">ID</span>
+                                        </label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.domain" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Domain Name</span>
+                                        </label>
+                                    </div>
+                                </li>
+
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.docroot" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Docroot</span>
+                                        </label>
+                                    </div>
+                                </li>
+
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.status" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Status</span>
+                                        </label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.php" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">PHP version</span>
+                                        </label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.ssl" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">SSL</span>
+                                        </label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.hsts" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">HTTP Strict Transport Security (HSTS)</span>
+                                        </label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.waf" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">WAF</span>
+                                        </label>
+                                    </div>
+                                </li>
+
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.owner" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Owner</span>
+                                        </label>
+                                    </div>
+                                </li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div x-data="{
+        showDeleteModal: false,
+        domainToDelete: '',
+        openDeleteModal(domain) {
+            this.domainToDelete = domain
+            this.showDeleteModal = true
+        }
+    }" class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500 h-screen" id="domains">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead class="">
+                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+
+                            <th x-show="columns.id" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>ID</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=id&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "id") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=id&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "id") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th x-show="columns.domain" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Domain</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=name&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "name") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=name&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "name") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                                </th>
+
+                            <th x-show="columns.docroot" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Docroot</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=docroot&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "docroot") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=docroot&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "docroot") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                                </th>
+
+                            <th x-show="columns.status" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Status</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=status&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "status") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=status&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "status") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th x-show="columns.php" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>PHP version</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=php&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "php") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=php&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "php") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th x-show="columns.ssl" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>SSL</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=ssl&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "ssl") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=ssl&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "ssl") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th x-show="columns.hsts" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>HSTS</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=hsts&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "hsts") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=hsts&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "hsts") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th x-show="columns.waf" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>WAF</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=waf&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "waf") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=waf&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "waf") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th x-show="columns.owner" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Owner</span>
+                                    <div class="-space-y-2">
+<a href="/domains?sort=owner&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "owner") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/domains?sort=owner&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "owner") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th id="tour-domains-actions" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Actions</th>
+
+                        </tr>
+                    </thead>
+                    <tbody x-ref="tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+
+{{if .Domains}}
+{{$root := .}}
+{{range .Domains}}
+{{$domainURL := index . "domain_url"}}
+{{$username := index . "username"}}
+{{$status := index . "status"}}
+                        <tr data-domain="{{$domainURL}}" x-show="searchQuery === '' || '{{$domainURL}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{lastSegment $username "_"}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if contains $username "SUSPENDED_"}}bg-red-50 dark:bg-red-400/10{{end}}">
+
+                        <td x-show="columns.id" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{index . "domain_id"}}</td>
+
+                        <td x-show="columns.domain" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><a href="http://{{$domainURL}}" class="domain_name_in_table" title="Open https://{{$domainURL}}" target="_blank"><span class="punycode">{{$domainURL}}</span></a></td>
+
+                        <td x-show="columns.docroot" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{index . "docroot"}}</td>
+
+           <td x-show="columns.status" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+            <span class="domain-status select-none">
+                {{if eq $status "active"}}
+                <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
+                {{else if eq $status "suspended"}}
+                <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Suspended</span>
+                {{else}}
+                <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Unknown</span>
+                {{end}}
+            </span>
+            </td>
+
+            <td x-show="columns.php" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+{{$phpVer := index . "php_version"}}
+{{$phpData := index $root.PHPVersions $phpVer}}
+                                        {{if $phpData}}
+                                        {{if or (index $phpData "isLatestVersion") (index $phpData "isFutureVersion") (index $phpData "isNextVersion")}}
+                                        <div>
+                                            <dd class="flex items-center gap-2">
+                                                <div class="flex gap-0.5">
+                                                    <div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+                                                    <div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+                                                    <div class="h-3.5 w-1 rounded-sm bg-emerald-500 dark:bg-emerald-500"></div>
+                                                </div>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">{{$phpVer}}</p>
+                                            </dd>
+                                        </div>
+                                            {{else if index $phpData "isSecureVersion"}}
+                                        <div>
+                                            <dd class="flex items-center gap-2">
+                                                <div class="flex gap-0.5">
+                                                    <div class="h-3.5 w-1 rounded-sm bg-orange-500 dark:bg-orange-500"></div>
+                                                    <div class="h-3.5 w-1 rounded-sm bg-orange-500 dark:bg-orange-500"></div>
+                                                    <div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+                                                </div>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">{{$phpVer}}</p>
+                                            </dd>
+                                        </div>
+                                            {{else}}
+                                        <div>
+                                            <dd class="flex items-center gap-2">
+                                                <div class="flex gap-0.5">
+                                                    <div class="h-3.5 w-1 rounded-sm bg-red-500 dark:bg-red-500"></div>
+                                                    <div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+                                                    <div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+                                                </div>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">{{$phpVer}}</p>
+                                            </dd>
+                                        </div>
+                                        {{end}}
+                                        {{else}}
+                                    <div>
+                                            <dd class="flex items-center gap-2">
+                                                <div class="flex gap-0.5">
+                                                    <div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+                                                    <div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+                                                    <div class="h-3.5 w-1 rounded-sm bg-gray-500 dark:bg-gray-500"></div>
+                                                </div>
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">{{$phpVer}}</p>
+                                            </dd>
+                                        </div>
+                                        {{end}}
+            </td>
+
+            <td x-show="columns.ssl" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                    <a href="/domains/ssl/{{$domainURL}}" class="flex select-none" title="View and manage SSL">
+                    {{if eq (index . "ssl") "automatic"}}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-check"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 21h-4.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v.5"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/><path d="M15 19l2 2l4 -4"/></svg> Automatic
+                    {{else if eq (index . "ssl") "custom"}}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-check"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 21h-4.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v.5"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/><path d="M15 19l2 2l4 -4"/></svg> Custom
+                    {{else}}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-open"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 11m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"/><path d="M12 16m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M8 11v-5a4 4 0 0 1 8 0"/></svg> None
+                    {{end}}
+                </a>
+            </td>
+
+            <td x-show="columns.hsts" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                <form method="POST" action="/domains/hsts/toggle"
+                    x-data="{
+                        enabled: {{if eq (index . "hsts") "on"}}true{{else}}false{{end}},
+                        isSuspended: {{if eq $status "suspended"}}true{{else}}false{{end}}
+                    }"
+                    class="flex items-center gap-2">
+
+                    <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+                    <input type="hidden" name="domain_name" value="{{$domainURL}}">
+                    <input type="hidden" name="hsts_action" :value="enabled ? 'Off' : 'On'">
+
+                    <button
+                        type="submit"
+                        :disabled="isSuspended"
+                        :title="isSuspended ? 'Action is disabled for suspended domain' : (enabled ? 'Click to disable HSTS for this domain' : 'Click to enable HSTS for this domain')"
+                        @click.prevent="if(!isSuspended){ enabled = !enabled; $el.form.submit() }"
+                        :aria-checked="enabled"
+                        :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                        class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800">
+
+                        <span :class="enabled ? 'translate-x-4' : 'translate-x-0'" class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 shadow transition-all duration-150 ease-in-out"></span>
+                    </button>
+
+                    <span class="text-xs text-gray-500 dark:text-gray-400" x-text="enabled ? 'On' : 'Off'"></span>
+                </form>
+            </td>
+
+           <td x-show="columns.waf" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                <form method="POST" action="/domains/waf/toggle"
+                    x-data="{
+                        enabled: {{if eq (index . "waf") "on"}}true{{else}}false{{end}},
+                        isSuspended: {{if eq $status "suspended"}}true{{else}}false{{end}}
+                    }"
+                    class="flex items-center gap-2">
+
+                    <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+                    <input type="hidden" name="domain_name" value="{{$domainURL}}">
+                    <input type="hidden" name="modsec_action" :value="enabled ? 'Off' : 'On'">
+
+                    <button
+                        type="submit"
+                        :disabled="isSuspended"
+                        :title="isSuspended ? 'Action is disabled for suspended domain' : (enabled ? 'Click to disable WAF for this domain' : 'Click to enable WAF for this domain')"
+                        @click.prevent="if(!isSuspended){ enabled = !enabled; $el.form.submit() }"
+                        :aria-checked="enabled"
+                        :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                        class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800">
+
+                        <span :class="enabled ? 'translate-x-4' : 'translate-x-0'" class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 shadow transition-all duration-150 ease-in-out"></span>
+                    </button>
+
+                    <span class="text-xs text-gray-500 dark:text-gray-400" x-text="enabled ? 'On' : 'Off'"></span>
+                </form>
+            </td>
+
+            <td x-show="columns.owner" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><a href="/users/{{$username}}">{{lastSegment $username "_"}} {{if contains $username "SUSPENDED_"}}<span class="badge bg-red-lt">SUSPENDED</span>{{end}}
+</a></td>
+
+            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+
+                <button id="{{index . "domain_id"}}" data-dropdown-toggle="dropdown-{{index . "domain_id"}}" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer" type="button">
+                <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
+                    <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
+                </svg>
+                </button>
+
+                <div id="dropdown-{{index . "domain_id"}}" class="relative z-50 hidden rounded border p-1 shadow-xl shadow-black/[2.5%] max-h-[var(--radix-popper-available-height)] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade min-w-40 text-left cursor-pointer">
+                    <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="{{index . "domain_id"}}">
+
+                    {{if hasModule $root.EnabledModules "dns"}}
+                    <li class="flex">
+                        <a href="/domains/dns/{{$domainURL}}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit DNS Zone</a>
+                    </li>
+                    {{end}}
+
+                    <li class="flex">
+                        <form method="POST" action="/domains/{{if eq $status "active"}}suspend{{else if eq $status "suspended"}}unsuspend{{end}}/toggle" class="flex items-center gap-2 w-full">
+                            <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+                            <input type="hidden" name="domain_name" value="{{$domainURL}}">
+                            <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">{{if eq $status "active"}}Suspend domain{{else if eq $status "suspended"}}Unsuspend domain{{end}}</button>
+                        </form>
+                    </li>
+
+                    {{if ne $status "suspended"}}
+                    <li class="flex">
+                        <a href="/domains/ssl/{{$domainURL}}" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Manage SSL</a>
+                    </li>
+                    {{end}}
+
+                    <li class="flex">
+                        <a href="/domains/vhost/{{$username}}/{{$domainURL}}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit VHosts</a>
+                    </li>
+
+                    <li class="flex">
+                        <a href="/domains/caddy/{{$domainURL}}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Caddyfile</a>
+                    </li>
+
+                    <li class="flex">
+                        <button type="button" @click="openDeleteModal('{{$domainURL}}')" class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">Delete domain</button>
+                    </li>
+
+                    </ul>
+                </div>
+
+            </td>
+
+                        </tr>
+{{end}}
+
+{{else if .MySQLIsDown}}
+<tr>
+    <td colspan="10" class="p-6 text-center">
+        {{template "partial_mysql_error" .}}
+    </td>
+</tr>
+{{else}}
+<tr>
+    <td colspan="10" class="p-6 text-center">
+        No domains yet. <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Add domain for a user</a>
+    </td>
+</tr>
+{{end}}
+
+                    </tbody>
+                </table>
+
+                <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" @keydown.escape.window="showDeleteModal = false">
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showDeleteModal = false"></div>
+
+                    <div @click.stop x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95 translate-y-2" x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100 translate-y-0" x-transition:leave-end="opacity-0 scale-95 translate-y-2" x-data="{ confirmationText: '' }" x-effect="if (!showDeleteModal) confirmationText = ''" class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#090E1A]">
+                        <div class="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+                            <div class="flex items-start gap-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Delete Domain</h3>
+                                    <p class="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">You are about to permanently remove <span class="font-semibold text-red-600 dark:text-red-400" x-text="domainToDelete"></span> and all associated configuration.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form method="POST" action="/domains/delete/toggle" @submit.prevent="if (confirmationText === domainToDelete) { $el.submit() }">
+                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                            <input type="hidden" name="domain_name" :value="domainToDelete">
+
+                            <div class="space-y-3 px-6 py-4">
+                                <div class="rounded border border-red-500 bg-red-50 p-4 dark:bg-red-500">
+                                    <ul class="space-y-1 text-sm text-red-900 dark:text-red-200">
+                                        <li>• VHost configuration files</li>
+                                        <li>• Caddyfile entries</li>
+                                        <li>• SSL certificates</li>
+                                        <li>• Email accounts &amp; redirects</li>
+                                    </ul>
+
+                                    <p class="mt-4 text-sm text-red-800 dark:text-red-300">Website files and the docroot directory will NOT be deleted.</p>
+                                </div>
+
+                                <p class="text-sm leading-6 text-gray-600 dark:text-gray-400">If this domain is added again later, default configurations will be recreated.<br><br>Domains with attached websites cannot be deleted. Remove all websites from Site Manager first.</p>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-900 dark:text-white">Type "<span x-text="domainToDelete"></span>" to confirm</label>
+
+                                    <input type="text" x-model="confirmationText" autocomplete="off" @keydown.enter.prevent class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+                                </div>
+                            </div>
+
+                            <div x-cloak x-show="confirmationText === domainToDelete" x-transition class="flex gap-3 border-t px-6 py-4 border-gray-200 dark:border-gray-800">
+                                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 text-white border-transparent bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 mt-4 w-full">Delete Permanently</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
+            </div>
+            <div class="px-6 py-2 flex items-center justify-between">
+                <div></div>
+                <div class="flex items-center gap-x-6 lg:gap-x-8">
+                    <p class="text-sm tabular-nums text-gray-500 sm:block">Showing <span class="font-medium text-gray-900 dark:text-gray-50" x-text="count"></span> of {{len .Domains}}</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function domainsTable() {
+    return {
+        searchQuery: '',
+        columns: {
+            id: false,
+            domain: true,
+            docroot: false,
+            status: true,
+            php: true,
+            ssl: true,
+            hsts: false,
+            waf: true,
+            owner: true
+        },
+        count: {{len .Domains}},
+
+        init() {
+            this.loadColumns();
+            this.initWatchers();
+            const params = new URLSearchParams(window.location.search);
+            const owner = params.get('owner');
+            if (owner) {
+                this.searchQuery = owner;
+            }
+        },
+
+        initWatchers() {
+            this.$watch('searchQuery', () => {
+                this.$nextTick(() => this.updateCount());
+            });
+
+            this.$watch('columns', () => {
+                this.saveColumns();
+            }, { deep: true });
+        },
+
+        updateCount() {
+            this.count = [...this.$refs.tbody.querySelectorAll('tr.user-row')]
+                .filter(row => row.offsetParent !== null).length;
+        },
+
+        saveColumns() {
+            localStorage.setItem('domainscolumnsVisibility', JSON.stringify(this.columns));
+        },
+
+        loadColumns() {
+            const saved = localStorage.getItem('domainscolumnsVisibility');
+            if (saved) {
+                try {
+                    this.columns = JSON.parse(saved);
+                } catch (e) {
+                    console.warn("Failed to parse domainscolumnsVisibility from localStorage", e);
+                }
+            }
+        }
+    };
+}
+</script>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

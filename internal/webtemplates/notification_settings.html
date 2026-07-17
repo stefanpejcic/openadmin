@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{ searchQuery: '' }">
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+
+
+    <form method="post">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Notification settings</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Important notifications and system alerts.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <button id="tour-save-changes-btn" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400 cursor-pointer"
+                    type="submit">Save changes</button>
+                </div>
+            </div>
+        </header>
+    </div>
+
+
+
+
+<div class="m-8">
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="email" class="flex justify-between scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-1" x-data="{tooltip: false}">
+            <a href="#email">Email</a>
+            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                    <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                </svg>
+                <div x-show="tooltip" x-transition x-cloak class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">Leave empty to disable.<br>Daily Reports can be disabled by editing the cron schedule from <b>Advanced &gt; System Cron Jobs</b> page.</div>
+            </span>
+        </h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Send notifications and Daily Usage reports to this address.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+            <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="email">Email address:</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="email" placeholder="" value="{{.EmailAddress}}" type="text"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="webhook_url" class="flex justify-between scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-1" x-data="{tooltip: false}">
+            <span><a href="#webhook_url">Webhook</a> <span class="inline-flex items-center gap-x-1 rounded px-2 py-1 text-xs font-semibold text-emerald-500 ring-1 ring-inset dark:text-emerald-500 dark:ring-gray-800">new</span></span>
+            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                    <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                </svg>
+                <div x-show="tooltip" x-transition x-cloak class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">Example payload:<br>
+<code class="text-xs">{
+  "text": "High CPU usage detected",
+  "username": "OpenAdmin-myhost",
+  "content": "High CPU usage detected"
+}</code>
+<br>Leave empty to disable.
+</div>
+            </span>
+        </h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Send notifications to a webhook URL.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4">
+            <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="webhook_url">Webhook URL:</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="webhook_url" placeholder="" value="{{.ConfigData.Get "DEFAULT" "webhook_url" ""}}" type="url"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="services" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#services">Services</a></h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when a service is down or not responding.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div x-data="{
+                serviceStates: {
+                    {{range .Services}}
+                        '{{.Key}}': {{if .Enabled}}true{{else}}false{{end}},
+                    {{end}}
+                },
+                get selectedServices() {
+                    return Object.entries(this.serviceStates)
+                                .filter(([_, v]) => v)
+                                .map(([k, _]) => k)
+                                .join(',');
+                }
+            }">
+
+            <input type="hidden" name="services" :value="selectedServices">
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                {{range .Services}}
+                    <div class="col-span-full sm:col-span-3">
+                        <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{.Key}}">
+                            {{.Name}}
+                        </label>
+                        <div class="relative w-full mt-2">
+                            <div class="flex items-center space-x-2">
+                                <button
+                                    type="button"
+                                    @click="serviceStates['{{.Key}}'] = !serviceStates['{{.Key}}']"
+                                    :aria-checked="serviceStates['{{.Key}}']"
+                                    role="switch"
+                                    :class="serviceStates['{{.Key}}'] ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+                                    class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+                                >
+                                    <span
+                                        :class="serviceStates['{{.Key}}'] ? 'translate-x-4' : 'translate-x-0'"
+                                        class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"
+                                    ></span>
+                                </button>
+                                <span class="text-sm" x-text="serviceStates['{{.Key}}'] ? 'Enabled' : 'Disabled'"></span>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{.Desc}}</p>
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="thresholds" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#thresholds">Resource Usage</a></h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when resource usage exceeds a threshold.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+        {{range .Thresholds}}
+
+            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{.Key}}">{{.Label}}</label>
+                <div class="relative w-full mt-2 flex-grow flex items-center">
+                    <input type="number" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="{{.Key}}" placeholder="{{.Key}}" min="10" max="100" value="{{.Value}}" >
+      {{if .ShowPercent}}
+        <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">%</span>
+      {{end}}
+
+                </div>
+            </div>
+        {{end}}
+        </div>
+    </div>
+</div>
+
+
+<div x-data="{ attackEnabled: {{if .AttackEnabled}}true{{else}}false{{end}} }">
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="server-actions" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#server-actions">Server actions</a></h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when a certain action is detected on the server.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+        {{range .ServerActions}}
+
+            <div class="col-span-full sm:col-span-3">
+                <label for="{{.Key}}" class="text-gray-900 dark:text-gray-50 font-medium flex justify-between items-center" x-data="{tooltip: false}">
+                    <span><input type="checkbox" name="{{.Key}}" id="{{.Key}}" class="toggle-checkbox" {{if .Checked}}checked{{end}} {{if .IsAttack}}@change="attackEnabled = $event.target.checked"{{end}}> {{.Label}}</span>
+
+                    <!-- Tooltip icon -->
+                    <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                        </svg>
+                        <div x-show="tooltip" x-transition x-cloak class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">
+                            {{.Tooltip}}
+                        </div>
+                    </span>
+                </label>
+            </div>
+
+        {{end}}
+
+        </div>
+    </div>
+</div>
+
+
+<div x-show="attackEnabled" x-cloak>
+
+    <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500">
+        <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 id="website-traffic" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Website traffic</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Receive a notification when unusual traffic / attacks are detected.</p>
+        </div>
+
+        <div class="md:col-span-2">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                <!-- max_total_conn -->
+                <div>
+                    <label class="text-sm font-medium text-gray-900 dark:text-gray-50">Max total connections</label>
+                    <input type="number" name="max_total_conn" min="1" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value="{{.MaxTotalConn}}">
+                    <p class="text-xs text-gray-500 mt-1">Receive a notification when concurrent connections on ports 80|443 reach this threshold.</p>
+                </div>
+
+                <!-- max_conn_per_ip -->
+                <div>
+                    <label class="text-sm font-medium text-gray-900 dark:text-gray-50">Max connections per IP</label>
+                    <input type="number" name="max_conn_per_ip" min="1" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value="{{.MaxConnPerIP}}">
+                    <p class="text-xs text-gray-500 mt-1">Receive a notification when concurrent connections from a single IP reach this threshold.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+</div>
+
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="user-actions" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#user-actions">User actions</a> <span class="inline-flex items-center gap-x-1 rounded px-2 py-1 text-xs font-semibold text-emerald-500 ring-1 ring-inset dark:text-emerald-500 dark:ring-gray-800">new</span></h2>
+
+        <p class="mt-1 text-sm leading-6 text-gray-500">Get notified whenever an action occurs in the admin or user panels.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+        {{range .UserActions}}
+
+            <div class="col-span-full sm:col-span-3">
+                <label for="{{.Key}}" class="text-gray-900 dark:text-gray-50 font-medium flex justify-between items-center" x-data="{tooltip: false}">
+                    <span><input type="checkbox" name="{{.Key}}" id="{{.Key}}" class="toggle-checkbox" {{if .Checked}}checked{{end}}> {{.Label}}</span>
+
+                    <!-- Tooltip icon -->
+                    <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                        </svg>
+                        <div x-show="tooltip" x-transition x-cloak class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">
+                            {{.Tooltip}}
+                        </div>
+                    </span>
+                </label>
+            </div>
+
+        {{end}}
+
+
+
+        </div>
+    </div>
+</div>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="ssh_allowlist" class="flex justify-between scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50 flex items-center gap-1" x-data="{tooltip: false}">
+            <a href="#ssh_allowlist">SSH Allowlist</a>
+            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                    <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                </svg>
+                <div x-show="tooltip" x-transition x-cloak class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">Supports both IP addresses and CIDR ranges. Enter one per line.</div>
+            </span>
+        </h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Specify IP addresses that will be exempt from SSH login checks.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <div class="col-span-full">
+                <div class="relative w-full mt-2">
+                    <div class="row form-selectgroup form-selectgroup-boxes d-flex">
+                        <div class="mt-4 grid grid-cols-1 gap-4">
+                            <textarea name="ssh_whitelist" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" rows="5" cols="50">{{.SSHWhitelist}}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="smtp" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"><a href="#smtp">SMTP</a></h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Set up an SMTP server to send email notifications to administrators and OpenPanel user accounts. Email notifications won't be sent until this is configured.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mail_server">Server:</label>
+                <div class="relative w-full mt-2 flex-grow flex items-center">
+                    <input type="text" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="mail_server" placeholder="mail.example.net" value="{{.MailServer}}" >
+                </div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mail_port">Port:</label>
+                <div class="relative w-full mt-2 flex-grow flex items-center">
+                    <input type="number" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="mail_port" placeholder="465" min="25" max="65535" value="{{.MailPort}}" >
+                </div>
+            </div>
+
+
+
+<div class="col-span-full sm:col-span-3" x-data="{ mail_use_tls: {{if eq (lower .MailUseTLS) "true"}}true{{else}}false{{end}} }">
+    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mail_use_tls_toggle">Use TLS:</label>
+
+    <div class="relative w-full mt-2 flex-grow flex items-center space-x-3">
+        <!-- Toggle Switch -->
+        <button
+            type="button"
+            role="switch"
+            :aria-checked="mail_use_tls.toString()"
+            @click="mail_use_tls = !mail_use_tls"
+            :class="mail_use_tls ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+            class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+        >
+            <span
+                :class="mail_use_tls ? 'translate-x-4' : 'translate-x-0'"
+                class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"
+            ></span>
+        </button>
+
+        <!-- Label -->
+        <span class="text-sm text-gray-900 dark:text-gray-500" x-text="mail_use_tls ? 'True' : 'False'"></span>
+
+        <!-- Hidden input -->
+        <input type="hidden" name="mail_use_tls" :value="mail_use_tls ? 'True' : 'False'">
+    </div>
+</div>
+
+
+
+<div class="col-span-full sm:col-span-3" x-data="{ mail_use_ssl: {{if eq (lower .MailUseSSL) "true"}}true{{else}}false{{end}} }">
+    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mail_use_ssl_toggle">Use SSL:</label>
+
+    <div class="relative w-full mt-2 flex-grow flex items-center space-x-3">
+        <!-- Toggle Switch -->
+        <button
+            type="button"
+            role="switch"
+            :aria-checked="mail_use_ssl.toString()"
+            @click="mail_use_ssl = !mail_use_ssl"
+            :class="mail_use_ssl ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+            class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+        >
+            <span
+                :class="mail_use_ssl ? 'translate-x-4' : 'translate-x-0'"
+                class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"
+            ></span>
+        </button>
+
+        <!-- Label -->
+        <span class="text-sm text-gray-900 dark:text-gray-500" x-text="mail_use_ssl ? 'True' : 'False'"></span>
+
+        <!-- Hidden input -->
+        <input type="hidden" name="mail_use_ssl" :value="mail_use_ssl ? 'True' : 'False'">
+    </div>
+</div>
+
+
+            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mail_username">Username:</label>
+                <div class="relative w-full mt-2 flex-grow flex items-center">
+                    <input type="text" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="mail_username" placeholder="no-reply@example.net" value="{{.MailUsername}}" >
+                </div>
+            </div>
+
+
+            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mail_password">Password:</label>
+                <div class="relative w-full mt-2 flex-grow flex items-center">
+                    <input type="password" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="mail_password" value="{{.MailPassword}}" >
+                </div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mail_default_sender">Default sender:</label>
+                <div class="relative w-full mt-2 flex-grow flex items-center">
+                    <input type="email" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="mail_default_sender" placeholder="should be same as username " value="{{.MailDefaultSender}}" >
+                </div>
+            </div>
+
+
+<div class="col-span-full sm:col-span-3" x-data="{ mail_debug: {{if eq (lower .MailDebug) "true"}}true{{else}}false{{end}} }">
+    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mail_debug_toggle">Store Emails:</label>
+
+    <div class="relative w-full mt-2 flex-grow flex items-center space-x-3">
+        <!-- Toggle Switch -->
+        <button
+            type="button"
+            role="switch"
+            :aria-checked="mail_debug.toString()"
+            @click="mail_debug = !mail_debug"
+            :class="mail_debug ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+            class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+        >
+            <span
+                :class="mail_debug ? 'translate-x-4' : 'translate-x-0'"
+                class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"
+            ></span>
+        </button>
+
+        <!-- Label -->
+        <span class="text-sm text-gray-900 dark:text-gray-500" x-text="mail_debug ? 'True' : 'False'"></span>
+
+        <!-- Hidden input -->
+        <input type="hidden" name="mail_debug" :value="mail_debug ? 'True' : 'False'">
+    </div>
+    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 pb-6">If enabled, sent emails are also stored as files in <code>/var/log/openpanel/admin/emails/</code></p>
+</div>
+
+
+
+
+        </div>
+    </div>
+</div>
+
+
+</div>
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

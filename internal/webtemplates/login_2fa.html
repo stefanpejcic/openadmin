@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" style="color-scheme: ">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{if .ForceDomainValue}}{{.ForceDomainValue}}{{else if .ServerHostname}}{{.ServerHostname}}{{else}}{{.PublicIP}}{{end}} - Two-Factor Authentication for OpenAdmin</title>
+  <link rel="icon" href="/static/images/favicon.svg" type="image/x-icon" />
+
+  <style>a,hr{color:inherit}progress,sub,sup{vertical-align:baseline}blockquote,body,dd,dl,fieldset,figure,h1,h2,h3,h4,h5,h6,hr,menu,ol,p,pre,ul{margin:0}.sr-only,dialog,fieldset,legend,menu,ol,ul{padding:0}.absolute,.sr-only{position:absolute}.sr-only,.whitespace-nowrap{white-space:nowrap}*,::after,::before{box-sizing:border-box;border:0 solid #e5e7eb}:host,html{line-height:1.5;font-family:ui-sans-serif,system-ui,sans-serif}body{line-height:inherit}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{text-decoration:inherit}b,strong{font-weight:bolder}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;font-weight:inherit;line-height:inherit;color:inherit;margin:0;padding:0}button{text-transform:none;cursor:pointer}.relative{position:relative}.absolute{position:absolute}.bottom-0{bottom:0}.right-0{right:0}.mx-auto{margin-left:auto;margin-right:auto}.my-6{margin-top:1.5rem;margin-bottom:1.5rem}.ml-2{margin-left:.5rem}.mt-1{margin-top:.25rem}.mt-2{margin-top:.5rem}.mt-4{margin-top:1rem}.mt-6{margin-top:1.5rem}.mt-8{margin-top:2rem}.block{display:block}.flex{display:flex}.h-4{height:1rem}.min-h-screen{min-height:100vh}.w-4{width:1rem}.w-full{width:100%}.items-start{align-items:flex-start}.items-center{align-items:center}.justify-center{justify-content:center}.gap-2{gap:.5rem}.space-y-4>:not([hidden])~:not([hidden]){margin-top:1rem}.rounded{border-radius:.375rem}.border{border-width:1px}.border-gray-300{border-color:#d1d5db}.border-transparent{border-color:transparent}.bg-\[\#090E1A\]{background-color:#090e1a}.bg-slate-200{background-color:#e2e8f0}.bg-white{background-color:#fff}.bg-contain{background-size:contain}.bg-left{background-position:left}.bg-no-repeat{background-repeat:no-repeat}.p-6{padding:1.5rem}.px-2\.5{padding-left:.625rem;padding-right:.625rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.text-center{text-align:center}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.font-medium{font-weight:500}.font-semibold{font-weight:600}.text-gray-500{color:#6b7280}.text-gray-900{color:#111827}.text-white{color:#fff}.shadow-sm{box-shadow:0 1px 2px 0 rgb(0 0 0/.05)}.outline-none{outline:2px solid transparent;outline-offset:2px}.transition-all{transition-property:all}.duration-100{transition-duration:.1s}.tracking-widest{letter-spacing:.1em}.hover\:bg-black:hover{background-color:#000}.hover\:text-gray-700:hover{color:#374151}@media (min-width:640px){.sm\:mx-auto{margin-left:auto;margin-right:auto}.sm\:w-full{width:100%}.sm\:max-w-md{max-width:28rem}.sm\:max-w-sm{max-width:24rem}}</style>
+</head>
+<body class="min-h-screen bg-contain bg-no-repeat bg-left bg-slate-200" style="background-image: url('/static/images/login_background.png'); font-family: ui-sans-serif, system-ui, sans-serif;">
+  <div class="flex min-h-screen flex-1 flex-col justify-center px-4 lg:px-6">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="">
+        <div class="flex items-center" style="gap: .625rem;">
+          <p class="font-medium text-gray-900">OpenAdmin</p>
+        </div>
+      </div>
+    </div>
+    <div class="relative w-full rounded border p-6 text-left shadow-sm bg-white border-gray-300 mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+        <h3 class="text-center text-lg font-semibold text-gray-900">Two-Factor Authentication</h3>
+        <p class="mt-2 text-center text-sm text-gray-500">Enter the 6-digit code from your authenticator app for <strong>{{.Username}}</strong>.</p>
+
+        <form class="mt-6 space-y-4" method="POST">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}" />
+
+          <div>
+            <label class="text-sm leading-none text-gray-900 font-medium" for="code">Authentication code</label>
+            <div class="relative w-full mt-2">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 text-gray-900 placeholder-gray-400 bg-white text-center tracking-widest" name="code" id="code" placeholder="000000" required autofocus/>
+            </div>
+          </div>
+
+          <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-transparent text-white bg-[#090E1A] hover:bg-black mt-4 w-full" type="submit">Verify</button>
+        </form>
+
+        {{if .Flashes}}
+        <div class="mx-auto my-6 text-center text-muted">
+          {{range .Flashes}}
+          <p class="mt-3" style="color: {{if eq .Category "success"}}green{{else}}red{{end}};">
+            {{.Message}}
+          </p>
+          {{end}}
+        </div>
+        {{end}}
+
+        <div class="mx-auto my-6 text-center text-sm">
+          <a href="/login" class="text-gray-500 hover:text-gray-700">Back to login</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

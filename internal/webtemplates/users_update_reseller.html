@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div>
+    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Edit {{.Username}}</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Assign plans and set limits for the reseller user.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+
+                </div>
+            </div>
+    </header>
+    </div>
+
+
+<div id="collapseAddNewUser">
+    <div class="sm:mx-auto sm:max-w-2xl" style="display:block;">
+        <form method="POST" action="/resellers" class="mt-8">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="username" value="{{.Username}}">
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div class="col-span-full">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="accounts">Max Accounts<span class="text-red-500 dark:text-red-500">*</span></label>
+                    <div class="relative w-full mt-2">
+                        <input type="number" min="0" class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="max_accounts" id="max_accounts" value="{{.ResellerData.MaxAccounts}}"/>
+                        <small>Current accounts: {{if .ResellerData.CurrentAccounts}}{{.ResellerData.CurrentAccounts}}{{else}}0{{end}} / {{if .ResellerData.MaxAccounts}}{{.ResellerData.MaxAccounts}}{{else}}&#8734;{{end}}</small>
+                    </div>
+                </div>
+
+                <div class="col-span-full">
+                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="accounts">Max Disk Usage (in blocks)<span class="text-red-500 dark:text-red-500">*</span></label>
+                    <div class="relative w-full mt-2">
+                        <input type="number" min="0" class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="max_disk_blocks" id="max_disk_blocks" value="{{.ResellerData.MaxDiskBlocks}}"/>
+                        <small>Current usage: {{if .ResellerData.CurrentDiskBlocks}}{{.ResellerData.CurrentDiskBlocks}}{{else}}0{{end}} / {{if .ResellerData.MaxDiskBlocks}}{{.ResellerData.MaxDiskBlocks}}{{else}}&#8734;{{end}}</small>
+                    </div>
+                </div>
+
+
+<div class="col-span-full">
+    <div role="group" aria-required="false" dir="ltr" class="grid gap-2">
+        <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">Hosting plans</p>
+
+        <!-- Alpine.js state to hold selected plans -->
+        <div
+            x-data='{
+                selectedPlans: {{toJSON .ResellerData.AllowedPlans}},
+                togglePlan(id) {
+                    if (this.selectedPlans.includes(id)) {
+                        this.selectedPlans = this.selectedPlans.filter(p => p !== id);
+                    } else {
+                        this.selectedPlans.push(id);
+                    }
+                }
+            }'
+            class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3"
+        >
+
+            {{range .Plans}}
+            <button
+                type="button"
+                role="checkbox"
+                :aria-checked="selectedPlans.includes('{{.id}}') ? 'true' : 'false'"
+                :data-state="selectedPlans.includes('{{.id}}') ? 'checked' : ''"
+
+                class="group relative w-full rounded border p-4 text-left shadow-sm transition focus:outline-none bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800 data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500 flex flex-col items-start justify-start"
+
+                @click="togglePlan('{{.id}}')"
+                id="{{.id}}"
+            >
+                <div class="flex w-full flex-col justify-between">
+                    <div class="flex gap-2 items-center">
+                        <div class="relative flex size-4 shrink-0 appearance-none items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                            <template x-if="selectedPlans.includes('{{.id}}')">
+                                <div class="size-1.5 shrink-0 rounded-full bg-blue-500 dark:bg-white"></div>
+                            </template>
+                        </div>
+
+                        <div>
+                            <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{.id}}" aria-describedby="{{.id}}-description">
+                                {{.name}}
+                            </label>
+                            <p title="Description: {{.description}}"
+                              x-data='{"text": {{toJSON .description}}}'
+                              x-text="text.length > 25 ? text.slice(0, 25) + '...' : text"
+                              class="mt-1 text-xs text-gray-500 dark:text-gray-500"
+                            ></p>
+                        </div>
+                    </div>
+
+                    <div class="mx-auto my-1 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+                                            <div>
+
+                    <div class="flex items-center gap-4 mt-2 text-md text-gray-500 dark:text-gray-500">
+                    <p class="w-1/2 flex flex-col items-center text-sm" title="CPU Cores">
+                        <span class="icon icon-tabler text-lg flex gap-2 items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-cpu" viewBox="0 0 16 16"><path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/></svg>
+                            <span class="text-base font-medium">{{if or (eq .cpu 0) (eq .cpu "0")}}&#8734;{{else}}{{.cpu}}{{end}}</span>
+                        </span>
+                        <span>CPU</span>
+                    </p>
+                    <p class="w-1/2 flex flex-col items-center text-sm" title="Physical Memory (RAM)">
+                        <span class="icon icon-tabler text-lg flex gap-2 items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-memory" viewBox="0 0 16 16"><path d="M1 3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.586a1 1 0 0 0 .707-.293l.353-.353a.5.5 0 0 1 .708 0l.353.353a1 1 0 0 0 .707.293H15a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1zm.5 1h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5m5 0h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5m4.5.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zM2 10v2H1v-2zm2 0v2H3v-2zm2 0v2H5v-2zm3 0v2H8v-2zm2 0v2h-1v-2zm2 0v2h-1v-2zm2 0v2h-1v-2z"/></svg>
+                            <span class="text-base font-medium">{{if or (eq (lower .ram) "0g") (eq .ram 0)}}&#8734;{{else}}{{.ram}}{{end}}</span>
+                        </span>
+                        <span>Memory</span>
+                    </p>
+                    </div>
+
+
+                    <div class="flex items-center gap-4 mt-2 text-md text-gray-500 dark:text-gray-500">
+                    <p class="w-1/2 flex flex-col items-center text-sm" title="Storage (Disk Space)">
+                        <span class="icon icon-tabler text-lg flex gap-2 items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-hdd" viewBox="0 0 16 16"><path d="M4.5 11a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M3 10.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/><path d="M16 11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V9.51c0-.418.105-.83.305-1.197l2.472-4.531A1.5 1.5 0 0 1 4.094 3h7.812a1.5 1.5 0 0 1 1.317.782l2.472 4.53c.2.368.305.78.305 1.198zM3.655 4.26 1.592 8.043Q1.79 8 2 8h12q.21 0 .408.042L12.345 4.26a.5.5 0 0 0-.439-.26H4.094a.5.5 0 0 0-.44.26zM1 10v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1"/></svg>
+                            <span class="text-base font-medium">{{if eq .disk_limit "0 GB"}}&#8734;{{else}}{{.disk_limit}}{{end}}</span>
+                        </span>
+                        <span>Storage</span>
+                    </p>
+                    <p class="w-1/2 flex flex-col items-center text-sm" title="Inodes (Files Count)">
+                        <span class="icon icon-tabler text-lg flex gap-2 items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" fill="currentColor" class="bi bi-hdd-stack" viewBox="0 0 16 16"> <path d="M14 10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1zM2 9a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2z"/> <path d="M5 11.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m-2 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0M14 3a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM2 2a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/> <path d="M5 4.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0m-2 0a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0"/> </svg>
+                            <span class="text-base font-medium">
+                    {{if eq .inodes_limit 0}}&#8734;{{else}}{{formatInodes .inodes_limit}}{{end}}
+                            </span>
+                        </span>
+                        <span>Inodes</span>
+                    </p>
+                    </div>
+
+
+                    <div class="mx-auto my-1 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500 col-span-full"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+                    <div class="items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-500" x-data="{ showDetails: false }">
+                        <span @click="showDetails = !showDetails" class="flex gap-1 text-xs text-gray-500 dark:text-gray-500 cursor-pointer hover:underline">
+                            <svg :class="{'rotate-90': showDetails}" class="w-4 h-4 mr-1 transition-transform duration-200 transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>View all limits</span>
+                        </span>
+
+                        <div x-show="showDetails">
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                            {{if eq .bandwidth 0}}&#8734;{{else}}{{.bandwidth}}{{end}} Mbps
+                            </p>
+
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                            {{if eq .domains_limit 0}}&#8734;{{else}}{{.domains_limit}}{{end}} Domains
+                            </p>
+
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                            {{if eq .websites_limit 0}}&#8734;{{else}}{{.websites_limit}}{{end}} Websites
+                            </p>
+
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                            {{if eq .email_limit 0}}&#8734;{{else}}{{.email_limit}}{{end}} Email accounts
+                            </p>
+
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                            {{if eq .ftp_limit 0}}&#8734;{{else}}{{.ftp_limit}}{{end}} FTP accounts
+                            </p>
+
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                            {{if eq .db_limit 0}}&#8734;{{else}}{{.db_limit}}{{end}} Databases
+                            </p>
+                        </div>
+                    </div>
+
+
+                                            </div>
+                                    </div>
+                                </button>
+                                {{end}}
+
+                                <!-- Hidden input with comma-separated IDs -->
+                                <input type="hidden" name="allowed_plans" :value="selectedPlans.join(',')" />
+                            </div>
+                        </div>
+                    </div>
+
+
+
+            </div>
+
+            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+
+            <div class="flex items-center justify-end space-x-4">
+                <a href="/resellers" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">Go back</a>
+                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

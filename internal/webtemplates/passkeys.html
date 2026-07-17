@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{ searchQuery: '' }">
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Passkeys</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Sign in to OpenAdmin without a password using a fingerprint, face scan, device PIN, or security key.</h2>
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <div class="m-8">
+
+        <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+            <div>
+                <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Your passkeys</h2>
+                <p class="mt-1 text-sm leading-6 text-gray-500">Passkeys registered to your account. Any of them can be used to sign in from the login page.</p>
+            </div>
+            <div class="md:col-span-2">
+
+                {{if .Passkeys}}
+                <div class="space-y-3 max-w-lg">
+                    {{range .Passkeys}}
+                    <div class="flex items-center justify-between rounded border border-gray-200 dark:border-gray-800 p-3">
+                        <div>
+                            <form method="post" action="/security/passkeys/rename" class="flex items-center gap-2">
+                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                <input type="hidden" name="id" value="{{.ID}}">
+                                <input type="text" name="name" value="{{.Name}}" maxlength="100" class="relative block appearance-none rounded border px-2.5 py-1 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"/>
+                                <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2.5 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" type="submit">Rename</button>
+                            </form>
+                            <p class="mt-1 text-xs text-gray-500">Added {{.CreatedAt}}</p>
+                        </div>
+                        <form method="post" action="/security/passkeys/delete" onsubmit="return confirm('Remove this passkey? You will no longer be able to sign in with it.');">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                            <input type="hidden" name="id" value="{{.ID}}">
+                            <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-transparent text-white bg-red-600 hover:bg-red-500 cursor-pointer" type="submit">Remove</button>
+                        </form>
+                    </div>
+                    {{end}}
+                </div>
+                {{else}}
+                <div class="rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-950 max-w-lg">
+                    No passkeys registered yet.
+                </div>
+                {{end}}
+
+            </div>
+        </div>
+
+        <div class="mt-8 grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+            <div>
+                <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Add a passkey</h2>
+                <p class="mt-1 text-sm leading-6 text-gray-500">Your browser will prompt you to use your device's fingerprint/face recognition, PIN, or a security key. Requires a supported browser and HTTPS.</p>
+            </div>
+            <div class="md:col-span-2 max-w-sm">
+                {{if not .WebauthnCapable}}
+                <div id="tour-passkeys-needs-domain" class="rounded border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-700 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-400">
+                    Passkeys require OpenAdmin to be accessed over a domain name (not an IP address). Set up a custom domain to use this feature.
+                </div>
+                {{else}}
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="passkey-name">Name for this passkey</label>
+                <div class="relative w-100 mt-2">
+                    <input type="text" id="passkey-name" maxlength="100" placeholder="e.g. MacBook Touch ID" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"/>
+                </div>
+                <button id="add-passkey-btn" type="button" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-transparent text-white bg-indigo-600 hover:bg-indigo-500 mt-4 cursor-pointer">Add passkey</button>
+                <p id="passkey-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                <p id="passkey-unsupported" class="mt-2 text-sm text-gray-500 hidden">Your browser does not support passkeys.</p>
+                {{end}}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+function base64urlToBuffer(base64url) {
+    const padded = base64url.replace(/-/g, '+').replace(/_/g, '/').padEnd(base64url.length + (4 - base64url.length % 4) % 4, '=');
+    const binary = atob(padded);
+    const buffer = new ArrayBuffer(binary.length);
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return buffer;
+}
+
+function bufferToBase64url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const addBtn = document.getElementById('add-passkey-btn');
+    if (!addBtn) return;
+    const errorEl = document.getElementById('passkey-error');
+    const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    if (!window.PublicKeyCredential) {
+        addBtn.disabled = true;
+        document.getElementById('passkey-unsupported').classList.remove('hidden');
+        return;
+    }
+
+    addBtn.addEventListener('click', async function () {
+        errorEl.classList.add('hidden');
+        const name = document.getElementById('passkey-name').value.trim() || 'Passkey';
+
+        try {
+            const beginRes = await fetch('/security/passkeys/register/begin', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrf },
+            });
+            if (!beginRes.ok) throw new Error('Could not start passkey registration.');
+            const options = await beginRes.json();
+
+            options.challenge = base64urlToBuffer(options.challenge);
+            options.user.id = base64urlToBuffer(options.user.id);
+            if (options.excludeCredentials) {
+                options.excludeCredentials.forEach(c => c.id = base64urlToBuffer(c.id));
+            }
+
+            const credential = await navigator.credentials.create({ publicKey: options });
+
+            const credentialJson = {
+                id: credential.id,
+                rawId: bufferToBase64url(credential.rawId),
+                type: credential.type,
+                response: {
+                    clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+                    attestationObject: bufferToBase64url(credential.response.attestationObject),
+                },
+            };
+
+            const completeRes = await fetch('/security/passkeys/register/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                body: JSON.stringify({ credential: credentialJson, name: name }),
+            });
+            const result = await completeRes.json();
+            if (!completeRes.ok || !result.success) throw new Error(result.error || 'Could not save passkey.');
+
+            window.location.reload();
+        } catch (err) {
+            errorEl.textContent = err.message || 'Passkey registration failed.';
+            errorEl.classList.remove('hidden');
+        }
+    });
+});
+</script>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>
