@@ -1,10 +1,10 @@
-// Package handlers implements listing, viewing, suspending/unsuspending,
-// creating, and deleting hosting accounts, plus private notes, a per-user
-// custom message banner, live CPU/RAM/disk usage widgets and history,
-// activity/login log viewing, per-user feature permission overrides, and
-// per-container start/stop/restart/cpu/ram management (see
-// users_containers.go) for the users list/detail pages.
-// Not yet implemented: the multi-field account-edit form.
+// Package handlers implements listing, viewing, editing (see
+// users_edit.go), suspending/unsuspending, creating, and deleting hosting
+// accounts, plus private notes, a per-user custom message banner, live
+// CPU/RAM/disk usage widgets and history, activity/login log viewing,
+// per-user feature permission overrides, and per-container
+// start/stop/restart/cpu/ram management (see users_containers.go) for the
+// users list/detail pages.
 package handlers
 
 import (
@@ -26,6 +26,7 @@ import (
 
 	"github.com/gorilla/csrf"
 
+	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
 	"openadmin/internal/paneldb"
 	"openadmin/internal/webtemplates"
@@ -35,6 +36,7 @@ import (
 type Users struct {
 	MySQL    *sql.DB
 	Sessions *auth.Manager
+	AdminDB  *admindb.DB
 }
 
 // QuotaReportPath is the on-disk location of the generated quota report.
@@ -905,6 +907,10 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+	case "edit":
+		u.handleEditUser(w, r, username, currentUser)
+		return
+
 	case "permissions":
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -938,7 +944,7 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 		return
 
 	default:
-		auth.AddFlash(w, r, u.Sessions, "Invalid user action, valid options are: suspend, unsuspend, delete, permissions", "error")
+		auth.AddFlash(w, r, u.Sessions, "Invalid user action, valid options are: edit, suspend, unsuspend, delete, permissions", "error")
 	}
 
 	http.Redirect(w, r, "/users", http.StatusSeeOther)

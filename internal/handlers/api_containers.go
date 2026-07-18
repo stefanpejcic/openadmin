@@ -17,6 +17,8 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // APIContainers bundles the /api/users/{username}/containers* handlers.
@@ -117,7 +119,7 @@ func apiContainersData(mysqlDB *sql.DB, username string) (data map[string]interf
 	}
 
 	composePath := "/home/" + context + "/docker-compose.yml"
-	stdout, _, runErr := containerComposeCaptureRun(context, "", "-f", composePath, "config", "--format", "json")
+	stdout, _, runErr := containerComposeCaptureRun(context, "", "-f", composePath, "config")
 	if runErr != nil {
 		if _, ok := runErr.(*exec.ExitError); ok {
 			return map[string]interface{}{
@@ -129,7 +131,7 @@ func apiContainersData(mysqlDB *sql.DB, username string) (data map[string]interf
 	}
 
 	var dockerData map[string]interface{}
-	if err := json.Unmarshal([]byte(stdout), &dockerData); err != nil {
+	if err := yaml.Unmarshal([]byte(stdout), &dockerData); err != nil {
 		return nil, err
 	}
 	if _, ok := dockerData["services"]; !ok {

@@ -235,7 +235,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	serverUtils := &handlers.ServerUtils{Sessions: sessions}
 	cronjobs := &handlers.Cronjobs{Sessions: sessions}
 	securityToggles := &handlers.SecurityToggles{Sessions: sessions}
-	users := &handlers.Users{MySQL: d.MySQL, Sessions: sessions}
+	users := &handlers.Users{MySQL: d.MySQL, Sessions: sessions, AdminDB: d.AdminDB}
 	domains := &handlers.Domains{MySQL: d.MySQL, Sessions: sessions}
 	dnsZoneEditor := &handlers.DNSZoneEditor{MySQL: d.MySQL, Sessions: sessions}
 	caddyFileEditor := &handlers.CaddyFileEditor{MySQL: d.MySQL, Sessions: sessions}
