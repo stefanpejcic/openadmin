@@ -234,11 +234,11 @@ func buildUsageWidget(suspended bool, stat map[string]interface{}, disk diskUsag
 		w.DiskPercent = int(math.Round(diskPct))
 		w.DiskOffset = arcOffset(diskPct)
 		w.DiskColor = usageColorClass(diskPct)
-		w.DiskTooltip = fmt.Sprintf("Disk usage: %v / %v", disk.DiskUsed, disk.DiskHard)
+		w.DiskTooltip = fmt.Sprintf("Disk usage: %s / %s", humanGB(diskUsed), humanBytesOrInf(diskHard))
 		w.InodesPercent = int(math.Round(inodesPct))
 		w.InodesOffset = arcOffset(inodesOffsetPct)
 		w.InodesColor = usageColorClass(inodesPct)
-		w.InodesTooltip = fmt.Sprintf("Inodes usage: %v / %v", disk.InodesUsed, disk.InodesHard)
+		w.InodesTooltip = fmt.Sprintf("Inodes usage: %s / %s", humanCount(inodesUsed), humanCountOrInf(inodesHard))
 	}
 
 	return w
@@ -301,7 +301,11 @@ func humanBytesOrInf(hard float64) string {
 	if hard == 0 {
 		return "∞"
 	}
-	return strconv.FormatFloat(round2(hard/1024000), 'f', -1, 64) + "GB"
+	return humanGB(hard)
+}
+
+func humanGB(v float64) string {
+	return strconv.FormatFloat(round2(v/1024000), 'f', -1, 64) + "GB"
 }
 
 func humanCount(v float64) string {
