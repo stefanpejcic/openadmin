@@ -20,6 +20,7 @@ import (
 	"github.com/gorilla/csrf"
 
 	"openadmin/internal/auth"
+	"openadmin/internal/bootstrap"
 	"openadmin/internal/paneldb"
 	"openadmin/internal/podman"
 	"openadmin/internal/webtemplates"
@@ -45,6 +46,13 @@ var controlServiceRun = realControlService
 
 func realControlService(serviceName, serviceType, action string) (bool, string) {
 	if serviceName == "admin" && action == "restart" {
+		// Cleared here rather than left to the new process's own startup
+		// (bootstrap.RemoveRestartFlag): the restart happens in a detached
+		// background command below, and the UI polls /services/admin/status
+		// and reloads as soon as *something* answers on the port again --
+		// waiting on the next process to reach that startup line is one
+		// more race than this needs.
+		os.Remove(bootstrap.RestartFlagPath)
 		exec.Command("bash", "-c", "sleep 2 && systemctl restart admin").Start()
 		return true, "OpenAdmin restart scheduled"
 	}
