@@ -1226,10 +1226,12 @@ func (u *Users) ServeResourceUsageHistory(w http.ResponseWriter, r *http.Request
 }
 
 // userDiskInfoRun is injectable so tests never shell out to a real podman
-// binary. Runs `podman system df -v --format {{json .}}`, whose stdout is
-// one independent JSON object per line.
+// binary. Runs `podman system df --format {{json .}}` (summary, not -v --
+// podman rejects combining --verbose with --format), whose stdout is one
+// independent per-type JSON object per line (Images/Containers/Local
+// Volumes/Build Cache, each with Type/Total/Active/Size/Reclaimable).
 var userDiskInfoRun = func(context string) (stdout, stderr string, exitCode int, err error) {
-	return podmanExecCapture(context, "system", "df", "-v", "--format", "{{json .}}")
+	return podmanExecCapture(context, "system", "df", "--format", "{{json .}}")
 }
 
 // ServeUserDiskInfo handles GET /client/disk/{username}. Note: unlike most

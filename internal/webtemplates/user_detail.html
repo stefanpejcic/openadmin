@@ -18,9 +18,7 @@
   x-data="{
       activeTab: 'stats',
       diskInfo: [],
-      containers: [],
-      images: [],
-      volumes: [],
+      diskUsage: [],
       loading: false,
       error: null,
       diskLoaded: false,
@@ -37,14 +35,9 @@
               .then(data => {
                   if (data.error) {
                       this.error = data.error;
-                      this.containers = [];
-                      this.images = [];
-                      this.volumes = [];
+                      this.diskUsage = [];
                   } else {
-                      const payload = data[0] || {};
-                      this.containers = payload.Containers || [];
-                      this.images = payload.Images || [];
-                      this.volumes = payload.Volumes || [];
+                      this.diskUsage = Array.isArray(data) ? data : [];
                   }
               })
               .catch(err => {
@@ -1263,14 +1256,18 @@
       return value * (units[unit] || 1);
     },
 
+    getRowSize(type) {
+      const row = diskUsage.find((r) => r.Type === type);
+      return this.parseSize(row && row.Size);
+    },
     get usedVolumes() {
-      return volumes.reduce((sum, v) => sum + this.parseSize(v.Size), 0);
+      return this.getRowSize('Local Volumes');
     },
     get usedContainers() {
-      return containers.reduce((sum, c) => sum + this.parseSize(c.Size), 0);
+      return this.getRowSize('Containers');
     },
     get usedImages() {
-      return images.reduce((sum, img) => sum + this.parseSize(img.Size), 0);
+      return this.getRowSize('Images');
     },
     get used() {
       return this.usedVolumes + this.usedContainers + this.usedImages;
@@ -1327,83 +1324,26 @@
         <table class="w-full caption-bottom border-b border-tborder-gray-200 dark:border-gray-800">
             <thead>
                 <tr class="sm:[&_td:last-child]:pr-6 sm:[&_th:last-child]:pr-6 sm:[&_td:first-child]:pl-6 sm:[&_th:first-child]:pl-6">
-                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name/ID</th>
-                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Details</th>
-                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
-                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Used By</th>
-                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Status</th>
                     <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Type</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Total</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Active</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
+                    <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Reclaimable</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
-                <tr>
-                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
-                        <div class="flex gap-1 items-center">Volumes
-                        <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="volumes.length"></span>
-                    </div>
-                    </th>
-                </tr>
-                <template x-for="v in volumes" :key="'volume-' + v.Name">
+                <template x-for="row in diskUsage" :key="'disk-' + row.Type">
                     <tr>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 relative" x-bind:title="v.Name" x-text="v.Name.length > 20 ? v.Name.slice(0, 20) + '...' : v.Name"></td>
-                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                            <div class="flex items-center gap-1">Mountpoint: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="v.Mountpoint"></span></div>
-                            <div>Type: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="v.Driver"></span></div>
-                        </td>
-                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="v.Size"></td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"><span x-text="v.Links"></span> containers</td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"></td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"> Volume</td>
+                        <td class="whitespace-nowrap p-4 text-sm font-medium text-gray-900 dark:text-gray-50" x-text="row.Type"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="row.Total"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="row.Active"></td>
+                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="row.Size"></td>
+                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="row.Reclaimable"></td>
                     </tr>
                 </template>
-                <tr>
-                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
-                        <div class="flex gap-1 items-center">Containers
-                        <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="containers.length"></span>
-                        </div>
-                    </th>
+                <tr x-show="diskUsage.length === 0">
+                    <td colspan="5" class="p-6 text-center text-sm text-gray-600 dark:text-gray-400">No disk usage data available.</td>
                 </tr>
-                <template x-for="c in containers" :key="'container-' + c.ID">
-                    <tr>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="c.Names"></td>
-                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                            <div>ID: <span x-text="c.ID"></span></div>
-                            <div>Image: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Image"></span></div>
-                            <div>Status: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Status"></span></div>
-                            <div>Ports: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="c.Ports"></span></div>
-                        </td>
-                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="c.Size"></td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"><span x-text="c.LocalVolumes"></span> volumes</td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
-                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full">
-                                <span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>
-                                <span x-text="c.State"></span>
-                            </span>
-                        </td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"> Container</td>
-                    </tr>
-                </template>
-                <tr>
-                    <th class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900" scope="colgroup" colspan="6">
-                        <div class="flex gap-1 items-center">Images
-                        <span class="ml-2 font-medium text-gray-600 dark:text-gray-400" x-text="images.length"></span>
-                        </div>
-                    </th>
-                </tr>
-                <template x-for="img in images" :key="'image-' + img.ID">
-                    <tr>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="img.Repository + (img.Tag && img.Tag !== '&lt;none&gt;' ? ':' + img.Tag : '')"></td>
-                        <td class="text-xs whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                            <div>ID: <span x-text="img.ID"></span></div>
-                            <div>Created: <span x-text="img.CreatedAt"></span></div>
-                            <div>Created since: <span class="font-medium text-gray-900 dark:text-gray-50" x-text="img.CreatedSince"></span></div>
-                        </td>
-                        <td class="whitespace-nowrap p-4 font-medium text-gray-900 dark:text-gray-50" x-text="img.Size"></td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"><span x-text="img.Containers"></span> containers</td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"></td>
-                        <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">Image</td>
-                    </tr>
-                </template>
             </tbody>
         </table>
     </div>
