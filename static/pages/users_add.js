@@ -90,6 +90,13 @@ document.getElementById("CreateUserButton").addEventListener("click", function()
         return; // Stop the execution if the form is not valid
     }
 
+    // Native checkValidity() won't catch this: the plan radio input isn't
+    // rendered at all when there are no plans, so the field is simply absent.
+    if (!form.querySelector('input[name="plan_name"]:checked')) {
+        alert("Please select a plan before creating the user. If none are listed, create a plan first.");
+        return;
+    }
+
     var createUserButton = document.getElementById("CreateUserButton");
     createUserButton.disabled = true;
     createUserButton.innerHTML = '<span class="animate-spin spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp; Creating user...';
