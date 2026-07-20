@@ -667,6 +667,7 @@ var diskUsagePseudoFstypes = map[string]bool{
 	"devpts": true, "tmpfs": true, "mqueue": true, "debugfs": true, "tracefs": true,
 	"securityfs": true, "pstore": true, "bpf": true, "autofs": true, "rpc_pipefs": true,
 	"binfmt_misc": true, "hugetlbfs": true, "configfs": true, "fusectl": true,
+	"nsfs": true, "fuse.fuse-overlayfs": true,
 }
 
 // diskUsageSnapshot lists mounted filesystems (skipping pseudo-filesystems
@@ -691,7 +692,7 @@ func diskUsageSnapshot() []map[string]interface{} {
 		if seen[mountpoint] {
 			continue
 		}
-		if strings.HasPrefix(mountpoint, "/snap") || strings.HasPrefix(mountpoint, "/boot") || strings.HasPrefix(mountpoint, "/etc/bind") {
+		if strings.HasPrefix(mountpoint, "/snap") || strings.HasPrefix(mountpoint, "/boot") || strings.HasPrefix(mountpoint, "/etc/bind") || strings.HasPrefix(mountpoint, "/var/lib/containers/storage") {
 			continue
 		}
 		if diskUsagePseudoFstypes[fstype] && !strings.Contains(fstype, "sshfs") {

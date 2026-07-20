@@ -186,7 +186,7 @@ func apiDiskPartitionsUsage() []map[string]interface{} {
 			continue
 		}
 		device, mountpoint, fstype := fields[0], fields[1], fields[2]
-		if seen[mountpoint] || strings.HasPrefix(mountpoint, "/snap") {
+		if seen[mountpoint] || strings.HasPrefix(mountpoint, "/snap") || strings.HasPrefix(mountpoint, "/var/lib/containers/storage") {
 			continue
 		}
 		if diskUsagePseudoFstypes[fstype] {
