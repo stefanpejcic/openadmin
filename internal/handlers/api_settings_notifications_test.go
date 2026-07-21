@@ -48,9 +48,9 @@ func TestAPISettingsNotificationsGetReflectsConfig(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
 	}
 	var out struct {
-		EmailAddress string                        `json:"email_address"`
-		MailServer   string                        `json:"mail_server"`
-		MailPort     string                        `json:"mail_port"`
+		EmailAddress string                       `json:"email_address"`
+		MailServer   string                       `json:"mail_server"`
+		MailPort     string                       `json:"mail_port"`
 		Settings     map[string]map[string]string `json:"settings"`
 	}
 	if err := json.Unmarshal(body, &out); err != nil {

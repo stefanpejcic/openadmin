@@ -44,8 +44,8 @@ func TestAPISettingsUpdatesGetReturnsConfigVersionAndLogs(t *testing.T) {
 	}
 	var out struct {
 		ConfigData    map[string]map[string]string `json:"config_data"`
-		LatestVersion string                        `json:"latest_version"`
-		UpdateLogs    []updateLogEntry              `json:"update_logs"`
+		LatestVersion string                       `json:"latest_version"`
+		UpdateLogs    []updateLogEntry             `json:"update_logs"`
 	}
 	if err := json.Unmarshal(body, &out); err != nil {
 		t.Fatalf("expected valid JSON: %v (%s)", err, body)

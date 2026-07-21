@@ -38,7 +38,7 @@ func TestAPISettingsModulesGetSuccess(t *testing.T) {
 	}
 	var out struct {
 		Features []map[string]interface{} `json:"features"`
-		Plugins  []map[string]string       `json:"plugins"`
+		Plugins  []map[string]string      `json:"plugins"`
 	}
 	if err := json.Unmarshal(body, &out); err != nil {
 		t.Fatalf("expected valid JSON: %v (%s)", err, body)

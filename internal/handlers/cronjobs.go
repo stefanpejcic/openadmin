@@ -49,7 +49,7 @@ func splitCronLine(line string) (CronJob, bool) {
 
 	loggingEnabled := strings.Contains(commandPart, "&&") && !strings.Contains(commandPart, "#&&")
 
-	command := commandPart
+	var command string
 	if loc := cronLoggingSplitRe.FindStringIndex(commandPart); loc != nil {
 		command = strings.TrimSpace(commandPart[:loc[0]])
 	} else {

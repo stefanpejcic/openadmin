@@ -19,7 +19,7 @@ import (
 var files embed.FS
 
 var funcMap = template.FuncMap{
-	"contains":   strings.Contains,
+	"contains": strings.Contains,
 	// jsStr escapes a value for embedding inside a single-quoted JS string
 	// literal within an HTML attribute (e.g. Alpine's x-show="'...'"). Go's
 	// html/template only applies JS escaping in contexts it recognizes as
@@ -27,7 +27,7 @@ var funcMap = template.FuncMap{
 	// x-show are just plain HTML attribute text to it, so a value containing
 	// a literal quote (e.g. a notification title like "User account
 	// 'bob' created") breaks the embedded JS expression unless escaped here.
-	"jsStr": template.JSEscapeString,
+	"jsStr":      template.JSEscapeString,
 	"add":        func(a, b int) int { return a + b },
 	"sub":        func(a, b int) int { return a - b },
 	"mul":        func(a, b int) int { return a * b },

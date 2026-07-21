@@ -91,9 +91,7 @@ func (s *APISecurity) ServeBlacklistUseragents(w http.ResponseWriter, r *http.Re
 
 		if data.BlacklistUseragents != "" {
 			updated = true
-			if err := os.WriteFile(BlacklistUseragentsFilePath, []byte(data.BlacklistUseragents), 0644); err == nil {
-				list = data.BlacklistUseragents
-			}
+			os.WriteFile(BlacklistUseragentsFilePath, []byte(data.BlacklistUseragents), 0644)
 		}
 
 		if data.Enabled != "" && enabled != data.Enabled {
@@ -105,8 +103,8 @@ func (s *APISecurity) ServeBlacklistUseragents(w http.ResponseWriter, r *http.Re
 		if updated {
 			os.WriteFile(OpenpanelRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)
 			writeJSON(w, map[string]interface{}{
-				"success":                     true,
-				"message":                     "Saved blacklisted useragents.",
+				"success":                      true,
+				"message":                      "Saved blacklisted useragents.",
 				"blacklist_useragents_enabled": enabled,
 			})
 			return
