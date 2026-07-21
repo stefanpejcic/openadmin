@@ -112,6 +112,12 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 	case "restart":
 		runCompose("down", svc)
 		out, err := runCompose("up", "-d", svc)
+		if err == nil && serviceName == "openpanel" {
+			// Emptied, not removed: the chrome banner checks for
+			// non-empty content (os.ReadFile), unlike the openadmin
+			// flag which is checked with os.Stat for mere existence.
+			os.WriteFile(OpenpanelRestartFlagPath, []byte(""), 0644)
+		}
 		return err == nil, string(out)
 	default:
 		return false, "No command defined for the service action."
@@ -450,6 +456,12 @@ func realManageService(serviceName, action string) (bool, string) {
 	case "restart":
 		runCompose("down", svc)
 		out, err := runCompose("up", "-d", svc)
+		if err == nil && serviceName == "openpanel" {
+			// Emptied, not removed: the chrome banner checks for
+			// non-empty content (os.ReadFile), unlike the openadmin
+			// flag which is checked with os.Stat for mere existence.
+			os.WriteFile(OpenpanelRestartFlagPath, []byte(""), 0644)
+		}
 		return err == nil, string(out)
 	default:
 		return false, "Invalid action: " + action
