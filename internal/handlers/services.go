@@ -1,3 +1,4 @@
+cat internal/handlers/services.go 
 // This file implements service status (docker + systemd), start/stop/
 // restart control, and the monitored-services config editor.
 // Deliberately out of scope for this pass (see the migration backlog):
@@ -46,12 +47,6 @@ var controlServiceRun = realControlService
 
 func realControlService(serviceName, serviceType, action string) (bool, string) {
 	if serviceName == "admin" && action == "restart" {
-		// Cleared here rather than left to the new process's own startup
-		// (bootstrap.RemoveRestartFlag): the restart happens in a detached
-		// background command below, and the UI polls /services/admin/status
-		// and reloads as soon as *something* answers on the port again --
-		// waiting on the next process to reach that startup line is one
-		// more race than this needs.
 		os.Remove(bootstrap.RestartFlagPath)
 		exec.Command("bash", "-c", "sleep 2 && systemctl restart admin").Start()
 		return true, "OpenAdmin restart scheduled"
@@ -420,6 +415,9 @@ func realManageService(serviceName, action string) (bool, string) {
 
 	svc, known := dockerServices[serviceName]
 	if !known {
+		if serviceName == "admin" && action == "restart" {
+			os.Remove(bootstrap.RestartFlagPath)
+		}
 		cmd := exec.Command("service", serviceName, action)
 		cmd.Dir = "/root"
 		out, err := cmd.CombinedOutput()
