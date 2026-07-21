@@ -153,7 +153,7 @@ func validateOpenpanelValue(key, value string) (normalized string, ok bool, errM
 	case openpanelSpaceSeparatedExtensions:
 		extensions := strings.Fields(value)
 		for _, ext := range extensions {
-			if !strings.HasPrefix(ext, ".") && !isAlpha(ext) {
+			if !openpanelSpaceSeparatedListRe.MatchString(ext) {
 				return "", false, fmt.Sprintf("Error: '%s' must be space-separated valid file extensions for %s.", value, key)
 			}
 		}
@@ -167,18 +167,6 @@ func validateOpenpanelValue(key, value string) (normalized string, ok bool, errM
 		}
 		return "", false, fmt.Sprintf("Error: '%s' is not a valid value for %s.", value, key)
 	}
-}
-
-func isAlpha(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
-			return false
-		}
-	}
-	return true
 }
 
 // openpanelSectionForKey determines which ini section a given key
