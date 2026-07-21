@@ -350,7 +350,7 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cfg.Debug {
-		saveEmailToFile(subject, recipient, emailTemplate)
+		_ = saveEmailToFile(subject, recipient, emailTemplate)
 	}
 
 	if err := mailerSendRun(cfg, recipient, messageTitle, emailTemplate); err != nil {

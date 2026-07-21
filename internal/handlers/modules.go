@@ -45,7 +45,7 @@ var modulesRndcGenRun = func() {
 	if err != nil {
 		return
 	}
-	cmd.Start() // fire-and-forget; we don't wait for or track this process
+	_ = cmd.Start() // fire-and-forget; we don't wait for or track this process
 }
 
 // updateServiceInDockerCompose comments/uncomments a `- service_name`

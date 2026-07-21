@@ -56,21 +56,33 @@ func (s *APIServerSSH) ServeSSH(w http.ResponseWriter, r *http.Request) {
 			sshExecuteActionRun(body.Action)
 			writeJSON(w, map[string]interface{}{"success": true, "message": "SSH service has been " + body.Action + "ed."})
 		case body.Config != "":
-			sshUpdateConfigRun(body.Config)
+			if err := sshUpdateConfigRun(body.Config); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "Failed to update SSH configuration: "+err.Error())
+				return
+			}
 			writeJSON(w, map[string]interface{}{"success": true, "message": "SSH configuration updated and service restarted."})
 		case body.NewKey != "":
-			sshAddAuthorizedKeyRun(body.NewKey)
+			if err := sshAddAuthorizedKeyRun(body.NewKey); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "Failed to add SSH key: "+err.Error())
+				return
+			}
 			writeJSON(w, map[string]interface{}{"success": true, "message": "New SSH key added."})
 		case body.KeyToRemove != "":
-			sshRemoveAuthorizedKeyRun(body.KeyToRemove)
+			if err := sshRemoveAuthorizedKeyRun(body.KeyToRemove); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "Failed to remove SSH key: "+err.Error())
+				return
+			}
 			writeJSON(w, map[string]interface{}{"success": true, "message": "SSH key removed."})
 		case body.Port != "" || body.PasswordAuth != "" || body.PubkeyAuth != "" || body.PermitRootLogin != "":
-			sshUpdateSettingsRun(sshSettings{
+			if err := sshUpdateSettingsRun(sshSettings{
 				Port:            body.Port,
 				PasswordAuth:    body.PasswordAuth,
 				PubkeyAuth:      body.PubkeyAuth,
 				PermitRootLogin: body.PermitRootLogin,
-			})
+			}); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "Failed to update SSH settings: "+err.Error())
+				return
+			}
 			writeJSON(w, map[string]interface{}{"success": true, "message": "SSH settings updated."})
 		default:
 			writeJSONError(w, http.StatusBadRequest, "No recognized parameters provided.")
@@ -114,7 +126,10 @@ func (s *APIServerSSH) ServeSSHConfig(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusBadRequest, "config is required")
 			return
 		}
-		sshUpdateConfigRun(body.Config)
+		if err := sshUpdateConfigRun(body.Config); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "Failed to update SSH configuration: "+err.Error())
+			return
+		}
 		writeJSON(w, map[string]interface{}{"success": true, "message": "SSH configuration updated and service restarted."})
 		return
 	}

@@ -240,7 +240,11 @@ func (c *Cronjobs) handlePost(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		schedule := strings.Join(e.scheduleParts[:], " ")
-		addOrUpdateCron(lineNumber, schedule, e.logging)
+		if err := addOrUpdateCron(lineNumber, schedule, e.logging); err != nil {
+			auth.AddFlash(w, r, c.Sessions, "Failed to update cron jobs: "+err.Error(), "error")
+			http.Redirect(w, r, "/server/crons", http.StatusSeeOther)
+			return
+		}
 	}
 
 	auth.AddFlash(w, r, c.Sessions, "Cron jobs updated successfully", "success")

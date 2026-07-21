@@ -80,7 +80,7 @@ var emailsPodmanPsRun = func(filterArgs ...string) (string, error) {
 }
 
 var emailsRestartMailserverRun = func() {
-	exec.Command("/bin/bash", "-c",
+	_ = exec.Command("/bin/bash", "-c",
 		"cd /usr/local/mail/openmail/ && podman-compose down mailserver && podman-compose up -d mailserver").Start()
 }
 
@@ -303,7 +303,7 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 			webmailDomain = strings.TrimSuffix(webmailDomain, "/")
 
 			domainExists := false
-			filepath.Walk(EmailsCaddyConfigDir, func(path string, info os.FileInfo, err error) error {
+			_ = filepath.Walk(EmailsCaddyConfigDir, func(path string, info os.FileInfo, err error) error {
 				if err != nil || info == nil || info.IsDir() || domainExists {
 					return nil
 				}
@@ -355,9 +355,9 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 					if value == "1" {
 						action = "enable"
 					}
-					exec.Command("opencli", "email-server", "postfwd", action).Start()
+					_ = exec.Command("opencli", "email-server", "postfwd", action).Start()
 				} else {
-					updateEnvVariable(key, value)
+					_ = updateEnvVariable(key, value)
 				}
 				if key == "ENABLE_FAIL2BAN" {
 					triggeredServices = append(triggeredServices, "Fail2Ban")

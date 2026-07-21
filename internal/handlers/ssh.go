@@ -64,7 +64,7 @@ var sshStatusRun = func() string {
 // real) fire-and-forget behavior is kept as-is rather than turned into
 // an error-checked call.
 var sshExecuteActionRun = func(action string) {
-	exec.Command("systemctl", action, "ssh").Run()
+	_ = exec.Command("systemctl", action, "ssh").Run()
 }
 
 var sshRestartServiceRun = func() {
@@ -292,34 +292,46 @@ func (s *SSH) ServeSSH(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if newConfig != "" {
-			sshUpdateConfigRun(newConfig)
-			auth.AddFlash(w, r, s.Sessions, "SSH configuration updated and service restarted.", "success")
+			if err := sshUpdateConfigRun(newConfig); err != nil {
+				auth.AddFlash(w, r, s.Sessions, "Failed to update SSH configuration: "+err.Error(), "error")
+			} else {
+				auth.AddFlash(w, r, s.Sessions, "SSH configuration updated and service restarted.", "success")
+			}
 			http.Redirect(w, r, "/server/ssh#advanced", http.StatusSeeOther)
 			return
 		}
 
 		if newKey != "" {
-			sshAddAuthorizedKeyRun(newKey)
-			auth.AddFlash(w, r, s.Sessions, "New SSH key added.", "success")
+			if err := sshAddAuthorizedKeyRun(newKey); err != nil {
+				auth.AddFlash(w, r, s.Sessions, "Failed to add SSH key: "+err.Error(), "error")
+			} else {
+				auth.AddFlash(w, r, s.Sessions, "New SSH key added.", "success")
+			}
 			http.Redirect(w, r, "/server/ssh#keys", http.StatusSeeOther)
 			return
 		}
 
 		if keyToRemove != "" {
-			sshRemoveAuthorizedKeyRun(keyToRemove)
-			auth.AddFlash(w, r, s.Sessions, "SSH key removed.", "success")
+			if err := sshRemoveAuthorizedKeyRun(keyToRemove); err != nil {
+				auth.AddFlash(w, r, s.Sessions, "Failed to remove SSH key: "+err.Error(), "error")
+			} else {
+				auth.AddFlash(w, r, s.Sessions, "SSH key removed.", "success")
+			}
 			http.Redirect(w, r, "/server/ssh#keys", http.StatusSeeOther)
 			return
 		}
 
 		if port != "" || passwordAuth != "" || pubkeyAuth != "" || permitRootLogin != "" {
-			sshUpdateSettingsRun(sshSettings{
+			if err := sshUpdateSettingsRun(sshSettings{
 				Port:            port,
 				PasswordAuth:    passwordAuth,
 				PubkeyAuth:      pubkeyAuth,
 				PermitRootLogin: permitRootLogin,
-			})
-			auth.AddFlash(w, r, s.Sessions, "SSH settings updated.", "success")
+			}); err != nil {
+				auth.AddFlash(w, r, s.Sessions, "Failed to update SSH settings: "+err.Error(), "error")
+			} else {
+				auth.AddFlash(w, r, s.Sessions, "SSH settings updated.", "success")
+			}
 			http.Redirect(w, r, "/server/ssh#basic", http.StatusSeeOther)
 			return
 		}
@@ -369,11 +381,14 @@ func (s *SSH) ServeSSH(w http.ResponseWriter, r *http.Request) {
 // ServeSSHFullConfig handles GET/POST /server/ssh/config.
 func (s *SSH) ServeSSHFullConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		r.ParseForm()
+		_ = r.ParseForm()
 		newConfig := r.PostFormValue("config")
 		if newConfig != "" {
-			sshUpdateConfigRun(newConfig)
-			auth.AddFlash(w, r, s.Sessions, "SSH configuration updated and service restarted.", "success")
+			if err := sshUpdateConfigRun(newConfig); err != nil {
+				auth.AddFlash(w, r, s.Sessions, "Failed to update SSH configuration: "+err.Error(), "error")
+			} else {
+				auth.AddFlash(w, r, s.Sessions, "SSH configuration updated and service restarted.", "success")
+			}
 		}
 		http.Redirect(w, r, "/server/ssh#advanced", http.StatusSeeOther)
 		return

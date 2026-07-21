@@ -76,7 +76,7 @@ var zoneinfoExcluded = map[string]bool{
 
 func loadSystemTimezones() []string {
 	var zones []string
-	filepath.WalkDir(zoneinfoRoot, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(zoneinfoRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}
@@ -255,8 +255,11 @@ type demoModePageData struct {
 // enable_demo_mode().
 func (s *ServerUtils) ServeDemoMode(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		demoModeRun()
-		auth.AddFlash(w, r, s.Sessions, "Demo mode is enabled. Restart OpenPanel and OpenAdmin services to apply.", "info")
+		if err := demoModeRun(); err != nil {
+			auth.AddFlash(w, r, s.Sessions, "Failed to enable demo mode: "+err.Error(), "error")
+		} else {
+			auth.AddFlash(w, r, s.Sessions, "Demo mode is enabled. Restart OpenPanel and OpenAdmin services to apply.", "info")
+		}
 	}
 
 	webtemplates.Render(w, "demo_mode.html", demoModePageData{

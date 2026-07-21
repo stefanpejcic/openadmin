@@ -55,11 +55,11 @@ var (
 		return strings.TrimSpace(string(out)), err
 	}
 
-	generalSetOpenpanelPortRun = func(port string) { exec.Command("opencli", "port", "set", port, "--no-restart").Run() }
-	generalSetDomainRun        = func(domain string) { exec.Command("opencli", "domain", "set", domain, "--no-restart").Run() }
-	generalSetDevModeRun       = func(value string) { exec.Command("opencli", "config", "update", "dev_mode", value).Run() }
-	generalSetAdminPortRun     = func(port string) { exec.Command("opencli", "admin", "port", port, "--no-restart").Run() }
-	generalSetProxyRun         = func(proxy string) { exec.Command("opencli", "proxy", "set", proxy, "--no-restart").Run() }
+	generalSetOpenpanelPortRun = func(port string) { _ = exec.Command("opencli", "port", "set", port, "--no-restart").Run() }
+	generalSetDomainRun        = func(domain string) { _ = exec.Command("opencli", "domain", "set", domain, "--no-restart").Run() }
+	generalSetDevModeRun       = func(value string) { _ = exec.Command("opencli", "config", "update", "dev_mode", value).Run() }
+	generalSetAdminPortRun     = func(port string) { _ = exec.Command("opencli", "admin", "port", port, "--no-restart").Run() }
+	generalSetProxyRun         = func(proxy string) { _ = exec.Command("opencli", "proxy", "set", proxy, "--no-restart").Run() }
 )
 
 // GeneralOpenpanelRestartFlagPath / GeneralOpenadminRestartFlagPath are

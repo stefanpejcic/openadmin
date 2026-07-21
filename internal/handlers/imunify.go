@@ -51,7 +51,7 @@ var imunifyIsPortOpenRun = func(host string, port int) bool {
 // preserved here rather than "fixed" into an actually-async start.
 var imunifyStartDetachedRun = func() {
 	cmd := exec.Command("opencli", "imunify", "start")
-	cmd.Run()
+	_ = cmd.Run()
 }
 
 // imunifyGetTokenRun returns ("", false) for both a nonzero exit and a

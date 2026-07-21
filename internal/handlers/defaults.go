@@ -670,9 +670,9 @@ func (d *Defaults) handleDefaultsFilesPreview(w http.ResponseWriter, r *http.Req
 		}
 		dstPath := filepath.Join(DefaultsTmpDir, dst)
 		if info.IsDir() {
-			exec.Command("cp", "-r", src, dstPath).Run()
+			_ = exec.Command("cp", "-r", src, dstPath).Run()
 		} else {
-			exec.Command("cp", src, dstPath).Run()
+			_ = exec.Command("cp", src, dstPath).Run()
 		}
 	}
 

@@ -89,9 +89,9 @@ func (a *APIDomainFiles) ServeDomainCaddyConfig(w http.ResponseWriter, r *http.R
 			if exitCode == 0 {
 				// Reload result is intentionally not checked -- a failed
 				// reload still counts as a successful save here.
-				caddyReloadRun()
+				_ = caddyReloadRun()
 				if fileExists(backupFilePath) {
-					os.Remove(backupFilePath)
+					_ = os.Remove(backupFilePath)
 				}
 				return
 			}
@@ -179,7 +179,7 @@ func (a *APIDomainFiles) ServeDomainVHostConfig(w http.ResponseWriter, r *http.R
 			webserver = getWebserverFor(context)
 			// The restart result is intentionally not checked -- a failed
 			// restart still counts as a successful save here.
-			apiVHostRestartRun(context, webserver)
+			_ = apiVHostRestartRun(context, webserver)
 		}()
 
 		if crashErr != nil {

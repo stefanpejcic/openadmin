@@ -34,7 +34,7 @@ var emailsAPIOpencliRun = func(args ...string) error {
 // emailsAPIPostfwdToggleRun fires the postfwd enable/disable command in the
 // background, mirroring the fire-and-forget subprocess call it's based on.
 var emailsAPIPostfwdToggleRun = func(action string) {
-	exec.Command("opencli", "email-server", "postfwd", action).Start()
+	_ = exec.Command("opencli", "email-server", "postfwd", action).Start()
 }
 
 // emailsAPIQueuePodmanRun runs a single podman command against the
@@ -63,7 +63,7 @@ func apiEmailsStringField(data map[string]interface{}, key string) string {
 // performs before calling opencli to register a new webmail domain.
 func webmailDomainAlreadyConfigured(domain string) bool {
 	found := false
-	filepath.Walk(EmailsCaddyConfigDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(EmailsCaddyConfigDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil || info.IsDir() || found {
 			return nil
 		}
@@ -110,7 +110,10 @@ func (a *APIEmails) ServeSettings(w http.ResponseWriter, r *http.Request) {
 				writeJSONError(w, http.StatusBadRequest, "Invalid email storage location. Provide either 'user_dir' or full path.")
 				return
 			}
-			updateEmailStorageLocation(emailStorageLocation)
+			if err := updateEmailStorageLocation(emailStorageLocation); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 			writeJSON(w, map[string]interface{}{"success": true, "message": "Email storage location updated successfully. Make sure to stop and start Mailserver for new storage to apply"})
 			return
 		}
@@ -168,7 +171,7 @@ func (a *APIEmails) ServeSettings(w http.ResponseWriter, r *http.Request) {
 				}
 				emailsAPIPostfwdToggleRun(action)
 			} else {
-				updateEnvVariable(key, value)
+				_ = updateEnvVariable(key, value)
 			}
 			if key == "ENABLE_FAIL2BAN" {
 				triggeredServices = append(triggeredServices, "Fail2Ban")

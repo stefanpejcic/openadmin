@@ -110,7 +110,7 @@ var hupPostfwdRun = func() {
 	if err != nil {
 		return
 	}
-	cmd.Start()
+	_ = cmd.Start()
 }
 
 func buildPostfwdRule(username string, limit int, domain string) string {

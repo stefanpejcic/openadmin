@@ -72,7 +72,7 @@ func (f *Firewall) ServeCSFIframe(w http.ResponseWriter, r *http.Request) {
 		tmpName := tmp.Name()
 		_, writeErr := tmp.WriteString(qs)
 		tmp.Close()
-		defer os.Remove(tmpName)
+		defer func() { _ = os.Remove(tmpName) }()
 
 		if writeErr != nil {
 			output = "Unable to create csf UI temp file: " + writeErr.Error()

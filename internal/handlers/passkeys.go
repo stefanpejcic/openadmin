@@ -134,7 +134,7 @@ func (p *Passkeys) HandleRegisterBegin(w http.ResponseWriter, r *http.Request) {
 
 	sess, _ := p.Sessions.Get(r)
 	sess.Values[passkeyRegisterChallengeKey] = *sessionData
-	sess.Save(r, w)
+	_ = sess.Save(r, w)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(creation.Response)
@@ -155,7 +155,7 @@ func (p *Passkeys) HandleRegisterComplete(w http.ResponseWriter, r *http.Request
 		return
 	}
 	delete(sess.Values, passkeyRegisterChallengeKey)
-	sess.Save(r, w)
+	_ = sess.Save(r, w)
 
 	raw, err := io.ReadAll(r.Body)
 	if err != nil {

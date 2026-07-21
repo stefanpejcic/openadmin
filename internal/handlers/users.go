@@ -743,7 +743,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 
 	var parsedStats map[string]interface{}
 	if hasStats {
-		json.Unmarshal(stats, &parsedStats)
+		_ = json.Unmarshal(stats, &parsedStats)
 	}
 
 	featureSet := "default"
@@ -1093,7 +1093,7 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	// FormData body), not application/x-www-form-urlencoded, so it must be
 	// parsed with ParseMultipartForm -- plain ParseForm leaves the body
 	// unread for that content type and PostFormValue silently returns "".
-	r.ParseMultipartForm(32 << 20)
+	_ = r.ParseMultipartForm(32 << 20)
 
 	email := r.PostFormValue("admin_email")
 	username := strings.ToLower(r.PostFormValue("admin_username"))
@@ -1183,7 +1183,10 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s\n", strings.TrimSpace(scanner.Text()))
 		flusher.Flush()
 	}
-	cmd.Wait()
+	if err := cmd.Wait(); err != nil {
+		fmt.Fprintf(w, "Error: %s\n", err.Error())
+		flusher.Flush()
+	}
 }
 
 func logUserAction(username, action string) {
@@ -1198,7 +1201,7 @@ func logUserAction(username, action string) {
 		return
 	}
 	defer f.Close()
-	f.WriteString(action + "\n")
+	_, _ = f.WriteString(action + "\n")
 }
 
 // ServeResourceUsageHistory handles GET

@@ -346,8 +346,8 @@ func (p *ProcessManager) streamStrace(w http.ResponseWriter, r *http.Request, pi
 	go func() {
 		select {
 		case <-r.Context().Done():
-			cmd.Process.Kill()
-			cmd.Wait()
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
 		case <-done:
 		}
 	}()
@@ -369,5 +369,8 @@ func (p *ProcessManager) streamStrace(w http.ResponseWriter, r *http.Request, pi
 		fmt.Fprintf(w, "%s\n", scanner.Text())
 		flusher.Flush()
 	}
-	cmd.Wait()
+	if err := cmd.Wait(); err != nil {
+		fmt.Fprintf(w, "Error: %s\n", err.Error())
+		flusher.Flush()
+	}
 }

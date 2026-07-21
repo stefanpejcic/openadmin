@@ -168,7 +168,9 @@ func (u *Users) updateUserReseller(username, newReseller string) (ok bool, errMs
 
 		if limits, limitsPath, ok := readResellerLimits(newReseller); ok {
 			var currentAccounts int
-			u.MySQL.QueryRow(`SELECT COUNT(*) FROM users WHERE owner = ?`, newReseller).Scan(&currentAccounts)
+			if err := u.MySQL.QueryRow(`SELECT COUNT(*) FROM users WHERE owner = ?`, newReseller).Scan(&currentAccounts); err != nil {
+				return false, "Failed to verify reseller account limit."
+			}
 			if maxAccounts, capped := resellerMaxAccounts(limits); capped && currentAccounts >= maxAccounts {
 				return false, fmt.Sprintf("Reseller '%s' has reached the maximum account limit (%d).", newReseller, maxAccounts)
 			}
@@ -190,9 +192,10 @@ func (u *Users) updateUserReseller(username, newReseller string) (ok bool, errMs
 	if hasReseller {
 		if limits, limitsPath, ok := readResellerLimits(newReseller); ok {
 			var currentAccounts int
-			u.MySQL.QueryRow(`SELECT COUNT(*) FROM users WHERE owner = ?`, newReseller).Scan(&currentAccounts)
-			limits["current_accounts"] = currentAccounts
-			writeResellerLimits(limitsPath, limits)
+			if err := u.MySQL.QueryRow(`SELECT COUNT(*) FROM users WHERE owner = ?`, newReseller).Scan(&currentAccounts); err == nil {
+				limits["current_accounts"] = currentAccounts
+				writeResellerLimits(limitsPath, limits)
+			}
 		}
 	}
 	return true, ""

@@ -47,8 +47,8 @@ var controlServiceRun = realControlService
 
 func realControlService(serviceName, serviceType, action string) (bool, string) {
 	if serviceName == "admin" && action == "restart" {
-		os.Remove(bootstrap.RestartFlagPath)
-		exec.Command("bash", "-c", "sleep 2 && systemctl restart admin").Start()
+		_ = os.Remove(bootstrap.RestartFlagPath)
+		_ = exec.Command("bash", "-c", "sleep 2 && systemctl restart admin").Start()
 		return true, "OpenAdmin restart scheduled"
 	}
 
@@ -105,7 +105,7 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 		out, err := runCompose("down", svc)
 		return err == nil, string(out)
 	case "restart":
-		runCompose("down", svc)
+		_, _ = runCompose("down", svc)
 		out, err := runCompose("up", "-d", svc)
 		if err == nil && serviceName == "openpanel" {
 			// Emptied, not removed: the chrome banner checks for
@@ -164,7 +164,7 @@ func fetchAllSystemdStatuses(names []string) map[string]bool {
 	var out bytes.Buffer
 	cmd := exec.Command("systemctl", args...)
 	cmd.Stdout = &out
-	cmd.Run() // non-zero exit is expected whenever any service is inactive
+	_ = cmd.Run() // non-zero exit is expected whenever any service is inactive
 
 	lines := strings.Split(strings.TrimRight(out.String(), "\n"), "\n")
 	statuses := make(map[string]bool, len(names))
@@ -495,7 +495,7 @@ func realManageService(serviceName, action string) (bool, string) {
 	svc, known := dockerServices[serviceName]
 	if !known {
 		if serviceName == "admin" && action == "restart" {
-			os.Remove(bootstrap.RestartFlagPath)
+			_ = os.Remove(bootstrap.RestartFlagPath)
 		}
 		cmd := exec.Command("service", serviceName, action)
 		cmd.Dir = "/root"
@@ -531,7 +531,7 @@ func realManageService(serviceName, action string) (bool, string) {
 		out, err := runCompose("down", svc)
 		return err == nil, string(out)
 	case "restart":
-		runCompose("down", svc)
+		_, _ = runCompose("down", svc)
 		out, err := runCompose("up", "-d", svc)
 		if err == nil && serviceName == "openpanel" {
 			// Emptied, not removed: the chrome banner checks for

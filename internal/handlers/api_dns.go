@@ -91,9 +91,9 @@ func (a *APIDNS) ServeDomainDNSZone(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if exitCode == 0 {
-				dnsZoneReloadRun()
+				_ = dnsZoneReloadRun()
 				if fileExists(backupFilePath) {
-					os.Remove(backupFilePath)
+					_ = os.Remove(backupFilePath)
 				}
 				return
 			}

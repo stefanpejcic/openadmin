@@ -34,7 +34,10 @@ func (a *APIServerCrons) ServeCrons(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, job := range body.Jobs {
-			addOrUpdateCron(job.LineNumber, job.Schedule, job.Logging)
+			if err := addOrUpdateCron(job.LineNumber, job.Schedule, job.Logging); err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "Failed to update cron jobs: "+err.Error())
+				return
+			}
 		}
 		writeJSON(w, map[string]interface{}{"success": true, "message": "Cron jobs updated successfully"})
 		return

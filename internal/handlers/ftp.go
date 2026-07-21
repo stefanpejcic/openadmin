@@ -183,7 +183,7 @@ func (f *FTP) ServeSettings(w http.ResponseWriter, r *http.Request) {
 		newContent = strings.ReplaceAll(newContent, "\r", "\n")
 
 		if _, err := os.Stat(FTPConfPath); err == nil {
-			os.Rename(FTPConfPath, FTPConfPath+".bak")
+			_ = os.Rename(FTPConfPath, FTPConfPath+".bak")
 		}
 		if err := os.WriteFile(FTPConfPath, []byte(newContent), 0644); err != nil {
 			auth.AddFlash(w, r, f.Sessions, "Error reading or updating config file. - Check openadmin error log", "error")

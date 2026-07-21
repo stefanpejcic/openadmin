@@ -96,7 +96,7 @@ func (s *APISecurity) ServeBlacklistUseragents(w http.ResponseWriter, r *http.Re
 
 		if data.Enabled != "" && enabled != data.Enabled {
 			updated = true
-			runOpenCLICaptured("opencli", "config", "update", "blacklist_useragents", data.Enabled)
+			_, _, _ = runOpenCLICaptured("opencli", "config", "update", "blacklist_useragents", data.Enabled)
 			enabled = data.Enabled
 		}
 
@@ -125,7 +125,7 @@ func (s *APISecurity) ServeBlacklistUseragents(w http.ResponseWriter, r *http.Re
 // real. The real implementation starts the command and doesn't wait for
 // it to finish, same as ServeDisableAdmin's HTML equivalent.
 var apiSecurityDisableAdminRun = func() {
-	exec.Command("opencli", "admin", "off").Start()
+	_ = exec.Command("opencli", "admin", "off").Start()
 }
 
 // HandleDisableAdmin handles POST /api/security/disable-admin. Unlike the
@@ -173,7 +173,7 @@ func (s *APISecurity) ServeFirewall(w http.ResponseWriter, r *http.Request) {
 	tmpName := tmp.Name()
 	_, writeErr := tmp.WriteString(qs)
 	tmp.Close()
-	defer os.Remove(tmpName)
+	defer func() { _ = os.Remove(tmpName) }()
 	if writeErr != nil {
 		writeJSONError(w, http.StatusInternalServerError, writeErr.Error())
 		return

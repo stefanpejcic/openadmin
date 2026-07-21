@@ -94,7 +94,7 @@ func terminalNormalizeShell(shell string) string {
 // terminalReadInit reads the mandatory first message: the init JSON
 // {"type":"init","shell":"bash","rows":24,"cols":80}, with a 10s deadline.
 func terminalReadInit(conn *websocket.Conn) (terminalInitMessage, bool) {
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	_, data, err := conn.ReadMessage()
 	if err != nil {
 		return terminalInitMessage{}, false
@@ -125,7 +125,7 @@ func runPTYSession(conn *websocket.Conn, argv []string, rows, cols int, extraEnv
 	if err != nil {
 		return
 	}
-	pty.Setsize(ptmx, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)})
+	_ = pty.Setsize(ptmx, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)})
 
 	readerDone := make(chan struct{})
 	go func() {
@@ -149,7 +149,7 @@ func runPTYSession(conn *websocket.Conn, argv []string, rows, cols int, extraEnv
 	}()
 
 	for {
-		conn.SetReadDeadline(time.Now().Add(terminalCommandTimeout))
+		_ = conn.SetReadDeadline(time.Now().Add(terminalCommandTimeout))
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
 			break
@@ -158,7 +158,7 @@ func runPTYSession(conn *websocket.Conn, argv []string, rows, cols int, extraEnv
 		if messageType == websocket.TextMessage && len(data) > 0 && data[0] == '{' {
 			var msg terminalInitMessage
 			if json.Unmarshal(data, &msg) == nil && msg.Type == "resize" {
-				pty.Setsize(ptmx, &pty.Winsize{Rows: uint16(msg.Rows), Cols: uint16(msg.Cols)})
+				_ = pty.Setsize(ptmx, &pty.Winsize{Rows: uint16(msg.Rows), Cols: uint16(msg.Cols)})
 				continue
 			}
 		}
@@ -169,8 +169,8 @@ func runPTYSession(conn *websocket.Conn, argv []string, rows, cols int, extraEnv
 	}
 
 	ptmx.Close()
-	cmd.Process.Kill()
-	cmd.Wait()
+	_ = cmd.Process.Kill()
+	_ = cmd.Wait()
 	<-readerDone
 }
 

@@ -183,7 +183,7 @@ func (f *APISettingsFeatures) servePlan(w http.ResponseWriter, r *http.Request, 
 				return
 			}
 			if _, err := os.Stat(configFilePath); err == nil {
-				os.Remove(configFilePath)
+				_ = os.Remove(configFilePath)
 			}
 			writeJSON(w, map[string]interface{}{"success": true, "message": fmt.Sprintf("Feature set %s deleted successfully.", plan)})
 			return

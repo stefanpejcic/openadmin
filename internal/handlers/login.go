@@ -138,7 +138,7 @@ func (l *Login) HandleLoginSubmit(w http.ResponseWriter, r *http.Request) {
 		sess, _ := l.Sessions.Get(r)
 		sess.Values["2fa_user_id"] = user.ID
 		sess.Values["2fa_next"] = next
-		sess.Save(r, w)
+		_ = sess.Save(r, w)
 		http.Redirect(w, r, "/login/2fa", http.StatusSeeOther)
 		return
 	}
@@ -266,7 +266,7 @@ func (l *Login) HandleTwoFASubmit(w http.ResponseWriter, r *http.Request) {
 	next, _ := sess.Values["2fa_next"].(string)
 	delete(sess.Values, "2fa_user_id")
 	delete(sess.Values, "2fa_next")
-	sess.Save(r, w)
+	_ = sess.Save(r, w)
 
 	l.finalizeLogin(w, r, user, ip, next)
 }
@@ -390,7 +390,7 @@ func (l *Login) HandlePasskeyBegin(w http.ResponseWriter, r *http.Request) {
 
 	sess, _ := l.Sessions.Get(r)
 	sess.Values[webauthnSessionKey] = *sessionData
-	sess.Save(r, w)
+	_ = sess.Save(r, w)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(assertion.Response)
@@ -410,7 +410,7 @@ func (l *Login) HandlePasskeyComplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	delete(sess.Values, webauthnSessionKey)
-	sess.Save(r, w)
+	_ = sess.Save(r, w)
 
 	parsed, err := protocol.ParseCredentialRequestResponseBody(r.Body)
 	if err != nil {
@@ -453,7 +453,7 @@ func (l *Login) HandlePasskeyComplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	l.DB.UpdateCredentialSignCount(stored.CredentialID, uint32(cred.Authenticator.SignCount))
+	_ = l.DB.UpdateCredentialSignCount(stored.CredentialID, uint32(cred.Authenticator.SignCount))
 
 	if !user.IsActive {
 		writeJSONError(w, http.StatusForbidden, "Login failed. User is not active.")
@@ -515,7 +515,7 @@ func (u *webauthnUser) WebAuthnCredentials() []webauthn.Credential {
 
 // HandleLogout handles GET /logout.
 func (l *Login) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	auth.LogoutUser(w, r, l.Sessions)
+	_ = auth.LogoutUser(w, r, l.Sessions)
 	auth.AddFlash(w, r, l.Sessions, "Logged out successfully", "success")
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }

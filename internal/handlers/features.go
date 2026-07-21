@@ -57,7 +57,7 @@ var invalidateOpenpanelUserFeaturesCacheRun = func() bool {
 	if _, err := conn.Write([]byte(cmd)); err != nil {
 		return false
 	}
-	conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 	reply := make([]byte, 64)
 	n, err := conn.Read(reply)
 	if err != nil || n == 0 {
@@ -258,7 +258,7 @@ func (f *Features) servePlan(w http.ResponseWriter, r *http.Request, plan string
 				return
 			}
 			if _, err := os.Stat(configFilePath); err == nil {
-				os.Remove(configFilePath)
+				_ = os.Remove(configFilePath)
 			}
 			auth.AddFlash(w, r, f.Sessions, fmt.Sprintf("features set %s deleted successfully.", plan), "success")
 			http.Redirect(w, r, "/features/", http.StatusSeeOther)

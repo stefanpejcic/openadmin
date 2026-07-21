@@ -158,7 +158,7 @@ func PopFlashes(w http.ResponseWriter, r *http.Request, mgr *Manager) []Flash {
 	}
 	raw := sess.Flashes()
 	if len(raw) > 0 {
-		sess.Save(r, w)
+		_ = sess.Save(r, w)
 	}
 	flashes := make([]Flash, 0, len(raw))
 	for _, v := range raw {

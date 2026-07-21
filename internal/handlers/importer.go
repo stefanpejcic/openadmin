@@ -142,7 +142,7 @@ var importerCloneAndRunImportScriptRun = func(displayName, backupPath, planName 
 	importScript := filepath.Join(tempDir, "cp-import.sh")
 
 	if _, statErr := os.Stat(tempDir); statErr == nil {
-		exec.Command("rm", "-rf", tempDir).Run()
+		_ = exec.Command("rm", "-rf", tempDir).Run()
 	}
 
 	var stderr strings.Builder

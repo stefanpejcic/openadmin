@@ -329,7 +329,7 @@ func firstLine(s string) string {
 
 func notifySentinel(action, title, message string) {
 	cmd := exec.Command("opencli", "sentinel", "--action="+action, "--title="+title, "--message="+message)
-	cmd.Start() // fire-and-forget: we don't wait for or care about the child process's exit
+	_ = cmd.Start() // fire-and-forget: we don't wait for or care about the child process's exit
 }
 
 type loginInfo struct{ ip, login string }

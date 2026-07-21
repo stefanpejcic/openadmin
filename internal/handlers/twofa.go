@@ -70,7 +70,7 @@ func (t *TwoFA) ServeSettings(w http.ResponseWriter, r *http.Request) {
 			}
 			secret = key.Secret()
 			sess.Values[pendingTOTPSecretKey] = secret
-			sess.Save(r, w)
+			_ = sess.Save(r, w)
 		}
 
 		qrURI, err := qrDataURIForSecret(secret, user.Username)
@@ -131,7 +131,7 @@ func (t *TwoFA) HandleEnable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	delete(sess.Values, pendingTOTPSecretKey)
-	sess.Save(r, w)
+	_ = sess.Save(r, w)
 
 	auth.AddFlash(w, r, t.Sessions, "Two-factor authentication has been enabled.", "success")
 	http.Redirect(w, r, "/security/2fa", http.StatusSeeOther)

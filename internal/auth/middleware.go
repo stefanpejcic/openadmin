@@ -90,7 +90,7 @@ func ValidateSessionIPMiddleware(mgr *Manager, opts Options) func(http.Handler) 
 				currentIP := server.GetClientIP(r)
 				sessionIP, ok := SessionUserIP(mgr, r)
 				if ok && sessionIP != "" && sessionIP != currentIP {
-					LogoutUser(w, r, mgr)
+					_ = LogoutUser(w, r, mgr)
 					AddFlash(w, r, mgr, "Your session has expired due to an IP address change. Please log in again.", "danger")
 					http.Redirect(w, r, "/login", http.StatusSeeOther)
 					return

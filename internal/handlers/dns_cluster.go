@@ -257,7 +257,7 @@ var dnsRestartServiceRun = func() {
 	if err != nil {
 		return
 	}
-	cmd.Start()
+	_ = cmd.Start()
 }
 
 // dnsRNDCCommandRun runs an rndc command via podman exec into the DNS
@@ -391,7 +391,7 @@ func syncExistingZonesToSlave(slaveIP, masterIP string) {
 		"printf '\\n%s\\n' >> /etc/bind/named.conf.local && named-checkconf && service bind9 restart",
 		appendBlock,
 	)
-	dnsSSHRun(slaveIP, 30*time.Second, appendCmd)
+	_, _, _, _, _ = dnsSSHRun(slaveIP, 30*time.Second, appendCmd)
 }
 
 func dnsUniqueStrings(lists ...[]string) []string {

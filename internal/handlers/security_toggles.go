@@ -39,7 +39,7 @@ func (s *SecurityToggles) ServeDisableAdmin(w http.ResponseWriter, r *http.Reque
 	}
 
 	if r.Method == http.MethodPost {
-		exec.Command("opencli", "admin", "off").Start() // fire-and-forget
+		_ = exec.Command("opencli", "admin", "off").Start() // fire-and-forget
 		auth.AddFlash(w, r, s.Sessions, "OpenAdmin is now disabled and all further actions need to be performed via terminal.", "info")
 	}
 
@@ -156,7 +156,7 @@ func (s *SecurityToggles) ServeBlacklistUseragents(w http.ResponseWriter, r *htt
 		}
 		if enabled != action {
 			updated = true
-			exec.Command("opencli", "config", "update", "blacklist_useragents", action).Run()
+			_ = exec.Command("opencli", "config", "update", "blacklist_useragents", action).Run()
 			enabled = action
 		}
 
