@@ -144,11 +144,15 @@ func TestValidateOpenpanelValueSpaceSeparatedList(t *testing.T) {
 }
 
 func TestValidateOpenpanelValueSpaceSeparatedExtensions(t *testing.T) {
-	if v, ok, _ := validateOpenpanelValue("filemanager_edit_extensions", ".txt conf"); !ok || v != ".txt conf" {
-		t.Fatalf("expected valid (dot-prefixed OR pure-alpha) extensions, got %q %v", v, ok)
+	in := ".txt .md error_log .log env gitconfig cfg htaccess .ini .php .sh .html .json .htm .html5 .xml .py .php5 .php7 .php8 .sql .css .js .conf"
+	if v, ok, _ := validateOpenpanelValue("filemanager_edit_extensions", in); !ok || v != in {
+		t.Fatalf("expected valid space-separated extensions regardless of leading dot, got %q %v", v, ok)
 	}
-	if _, ok, _ := validateOpenpanelValue("filemanager_edit_extensions", "conf1"); ok {
-		t.Fatal("expected an extension with digits and no leading dot to be rejected")
+	if _, ok, _ := validateOpenpanelValue("filemanager_edit_extensions", "conf1"); !ok {
+		t.Fatal("expected an extension with digits and no leading dot to be accepted")
+	}
+	if _, ok, _ := validateOpenpanelValue("filemanager_edit_extensions", "no spaces allowed*"); ok {
+		t.Fatal("expected a token with an invalid character to be rejected")
 	}
 }
 
