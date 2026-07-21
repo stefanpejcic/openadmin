@@ -4,7 +4,7 @@ OpenAdmin is the administrative interface for **OpenPanel**, providing server ad
 
 Written in **Go**, OpenAdmin is designed to be highly efficient with minimal resource consumption while delivering a modern web experience using **Tremor** UI templates. A typical idle installation uses **approximately 15 MB of RAM**, making it suitable for everything from small VPS instances to large production servers.
 
-The user interface is built using [**Tremor** components and templates](https://tremor.so/), providing a clean, responsive, and accessible administration experience.
+The user interface is built using [**rremor**](https://tremor.so/) components and templates, providing a clean, responsive, and accessible administration experience.
 
 ## Features
 
