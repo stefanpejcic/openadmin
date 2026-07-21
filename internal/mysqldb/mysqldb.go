@@ -61,10 +61,15 @@ func parseOptionFile(path string, groups ...string) (map[string]string, error) {
 }
 
 // Open reads OptionFilePath's [client] group and returns a ready *sql.DB.
+//
+// The returned *sql.DB is never nil, even when the option file can't be
+// read: callers (see main.go) treat a non-nil error here as non-fatal and
+// keep using the returned handle, relying on every subsequent query to fail
+// gracefully instead of panicking on a nil *sql.DB.
 func Open() (*sql.DB, error) {
-	values, err := parseOptionFile(OptionFilePath, "client")
-	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", OptionFilePath, err)
+	values, parseErr := parseOptionFile(OptionFilePath, "client")
+	if parseErr != nil {
+		values = map[string]string{}
 	}
 
 	cfg := mysql.NewConfig()
@@ -97,6 +102,9 @@ func Open() (*sql.DB, error) {
 	db, err := sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
 		return nil, err
+	}
+	if parseErr != nil {
+		return db, fmt.Errorf("reading %s: %w", OptionFilePath, parseErr)
 	}
 	return db, nil
 }
