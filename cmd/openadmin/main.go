@@ -663,6 +663,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /services", auth.RequireAdmin(sessions, authOpts, services.ServeStatus))
 	mux.HandleFunc("POST /services", auth.RequireAdmin(sessions, authOpts, services.ServeStatus))
 	mux.HandleFunc("GET /services/admin/status", auth.RequireAdmin(sessions, authOpts, services.ServeAdminStatus))
+	mux.HandleFunc("GET /services/action-status", auth.RequireAdmin(sessions, authOpts, services.ServeActionStatus))
 	mux.HandleFunc("GET /services/monitored", auth.RequireAdmin(sessions, authOpts, services.ServeMonitored))
 	// SECURITY: /services/edit is guarded here just like every sibling
 	// route in this group. An unauthenticated config-write endpoint would

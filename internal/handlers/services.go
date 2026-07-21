@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/csrf"
 
@@ -274,36 +275,95 @@ func (s *Services) ServeStatus(w http.ResponseWriter, r *http.Request) {
 	}, r, "Services"))
 }
 
+// serviceActionMessage builds the human-readable outcome of a start/stop/
+// restart action, including the terminal fallback hint the UI has always
+// shown on failure. Shared by the synchronous (form-post) and async
+// (fetch-polled) paths through handleStatusPost so both report identical
+// wording.
+func serviceActionMessage(realName, container, action string, success bool, rawMessage string) (message, category string) {
+	if success {
+		return "Successfully " + action + "ed service '" + realName + "'.", "success"
+	}
+	switch {
+	case realName == "openpanel":
+		cmdMap := map[string]string{
+			"start":   "cd /root && podman-compose up -d openpanel",
+			"stop":    "cd /root && podman-compose down openpanel",
+			"restart": "cd /root && podman-compose down openpanel && podman-compose up -d openpanel",
+		}
+		return "Failed to " + action + " service '" + realName + "'. Try from terminal: '" + cmdMap[action] + "'", "error"
+	case container == "system":
+		return "Failed to " + action + " service '" + realName + "'. Try from terminal: 'systemctl " + action + " " + realName + "'", "error"
+	default:
+		return "Failed to " + action + " service '" + realName + "': " + rawMessage, "error"
+	}
+}
+
+// pendingServiceActions tracks in-flight async start/stop/restart actions
+// fired from the services table via fetch(), keyed by real_name, so
+// ServeActionStatus can report completion to the polling tab without the
+// triggering request having to block on the systemctl/podman command --
+// which is what used to freeze the tab (and any other tab sharing the
+// connection) for the life of the command.
+var (
+	pendingServiceActionsMu sync.Mutex
+	pendingServiceActions   = map[string]*serviceActionResult{}
+)
+
+type serviceActionResult struct {
+	Done    bool   `json:"done"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
 func (s *Services) handleStatusPost(w http.ResponseWriter, r *http.Request) {
 	realName := r.FormValue("real_name")
 	action := r.FormValue("action")
 	container := r.FormValue("container")
 
 	validAction := action == "start" || action == "stop" || action == "restart"
-	if !validAction {
-		auth.AddFlash(w, r, s.Sessions, "Invalid action, please use one of: 'start', 'stop' or 'restart'.", "error")
-	}
-	if container != "system" && container != "docker" {
-		auth.AddFlash(w, r, s.Sessions, "Invalid type, please set: 'system' or 'docker' as type.", "error")
+	validContainer := container == "system" || container == "docker"
+
+	// The services table drives this endpoint via fetch() (marked with
+	// this header) so it can show a toast and poll ServeActionStatus
+	// instead of blocking page navigation on the command. Other,
+	// non-JS callers (e.g. the mail server controls on /emails/settings)
+	// still post here as a plain form and keep the original
+	// blocking-then-redirect behavior.
+	if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+		if !validAction || !validContainer {
+			writeJSON(w, serviceActionResult{Done: true, Message: "Invalid action or service type."})
+			return
+		}
+
+		result := &serviceActionResult{}
+		pendingServiceActionsMu.Lock()
+		pendingServiceActions[realName] = result
+		pendingServiceActionsMu.Unlock()
+
+		go func() {
+			success, rawMessage := controlServiceRun(realName, container, action)
+			message, _ := serviceActionMessage(realName, container, action, success, rawMessage)
+
+			pendingServiceActionsMu.Lock()
+			result.Done = true
+			result.Success = success
+			result.Message = message
+			pendingServiceActionsMu.Unlock()
+		}()
+
+		writeJSON(w, map[string]bool{"scheduled": true})
+		return
 	}
 
-	success, message := controlServiceRun(realName, container, action)
-	if success {
-		auth.AddFlash(w, r, s.Sessions, "Successfully "+action+"ed service '"+realName+"'.", "success")
+	if !validAction {
+		auth.AddFlash(w, r, s.Sessions, "Invalid action, please use one of: 'start', 'stop' or 'restart'.", "error")
+	} else if !validContainer {
+		auth.AddFlash(w, r, s.Sessions, "Invalid type, please set: 'system' or 'docker' as type.", "error")
 	} else {
-		switch {
-		case realName == "openpanel":
-			cmdMap := map[string]string{
-				"start":   "cd /root && podman-compose up -d openpanel",
-				"stop":    "cd /root && podman-compose down openpanel",
-				"restart": "cd /root && podman-compose down openpanel && podman-compose up -d openpanel",
-			}
-			auth.AddFlash(w, r, s.Sessions, "Failed to "+action+" service '"+realName+"'. Try from terminal: '"+cmdMap[action]+"'", "error")
-		case container == "system":
-			auth.AddFlash(w, r, s.Sessions, "Failed to "+action+" service '"+realName+"'. Try from terminal: 'systemctl "+action+" "+realName+"'", "error")
-		default:
-			auth.AddFlash(w, r, s.Sessions, "Failed to "+action+" service '"+realName+"': "+message, "error")
-		}
+		success, rawMessage := controlServiceRun(realName, container, action)
+		message, category := serviceActionMessage(realName, container, action, success, rawMessage)
+		auth.AddFlash(w, r, s.Sessions, message, category)
 	}
 
 	if redirectTo := r.FormValue("redirect"); redirectTo != "" {
@@ -313,6 +373,26 @@ func (s *Services) handleStatusPost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.Redirect(w, r, "/services", http.StatusSeeOther)
+}
+
+// ServeActionStatus handles GET /services/action-status: the services
+// table polls this after firing an async start/stop/restart so it knows
+// when to swap the "please wait" toast for the real success/error message,
+// without ever blocking on the systemctl/podman command itself.
+func (s *Services) ServeActionStatus(w http.ResponseWriter, r *http.Request) {
+	realName := r.URL.Query().Get("real_name")
+
+	pendingServiceActionsMu.Lock()
+	result, ok := pendingServiceActions[realName]
+	var resp serviceActionResult
+	if ok {
+		resp = *result
+	} else {
+		resp = serviceActionResult{Done: true, Success: true}
+	}
+	pendingServiceActionsMu.Unlock()
+
+	writeJSON(w, resp)
 }
 
 // isSameOrigin decides whether to honor a caller-supplied redirect
