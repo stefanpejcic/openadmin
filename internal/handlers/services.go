@@ -1,4 +1,3 @@
-cat internal/handlers/services.go 
 // This file implements service status (docker + systemd), start/stop/
 // restart control, and the monitored-services config editor.
 // Deliberately out of scope for this pass (see the migration backlog):
