@@ -1,0 +1,780 @@
+
+Endpoint: /api/
+Description: On GET returns api status, on POST returns access token
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/
+  curl -X POST http://localhost:2087/api/ -H "Content-Type: application/json" -d '{"username":"admin", "password":"kQsUFhwkzBCw3M57"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/whoami
+Description: protected route that can be accessed only with a token and returns a username
+Type: GET
+Examples:
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/users
+Description: Manage users
+Type: GET POST DELETE PATCH CONNECT PUT
+Examples:
+  curl -X GET http://localhost:2087/api/users -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTcxMDMzOTE5OCwianRpIjoiOGIxZmRmNWUtOTdhNy00YmU4LThkN2ItOWRjNmQ4ZjZhNTQzIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6ImFkbWluIiwibmJmIjoxNzEwMzM5MTk4LCJjc3JmIjoiNDFlZGVhZWQtYWY1MC00MmY2LWFiYWMtYzM1M2Q2MGQyNzY1IiwiZXhwIjoxNzEwMzQwMDk4fQ.AYtC9GPqj3bEPuStc9f2CttBYh8I5rsRsB-gaQ1-xyg"
+  curl -X POST http://localhost/api/users \ -H "Content-Type: application/json" \ -H "Authorization: Bearer TOKEN_HERE" \ -d '{     "email": "stefan@pejcic.rs",     "username": "stefansss",     "password": "stefan",     "plan_name": "default_plan_apache" }'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains
+Description: list all domains
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/domains -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/new
+Description: Add a domain name for user
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/domains/new -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"username":"current_user","domain":"example.com","docroot":"/var/www/html/example.com"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/<action>/<domain>
+Description: Suspend/Usnuspend, Delete a domain
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/domains/suspend/example.com -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/domains/unsuspend/example.com -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/domains/delete/example.com -H "Authorization: Bearer TOKEN_HERE"
+  # Map action to CLI command
+  # Run the CLI command
+  # Return the response
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/docroot/<domain>
+Description: View or Update docroot for a domain
+Type: GET, POST
+Examples:
+  curl -X GET http://localhost:2087/api/domains/docroot/example.com -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/domains/docroot/example.com -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"docroot":"/var/www/html/newroot"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/plans
+Description: list all plans, or create a new hosting plan
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/plans -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/plans -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"name":"Starter","description":"...","email_limit":"10","ftp_limit":"5","domains_limit":"5","websites_limit":"5","disk_limit":"5000","inodes_limit":"100000","db_limit":"5","cpu":"1","ram":"1","bandwidth":"100","feature_set":"default"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/plans/<plan_id>
+Description: view, edit, or delete a specific plan by ID
+Type: GET PUT PATCH DELETE
+Examples:
+  curl -X GET http://localhost:2087/api/plans/1 -H "Authorization: Bearer TOKEN_HERE"
+  curl -X PUT http://localhost:2087/api/plans/1 -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"name":"Starter","disk_limit":"10000"}'
+  curl -X DELETE http://localhost:2087/api/plans/1 -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/services
+Description: list monitored services, check status, manage and edit them
+Type: GET PUT
+Examples:
+  curl -X GET http://localhost:2087/api/services -H "Authorization: Bearer YOUR_JWT_TOKEN"
+  curl -X PUT http://localhost:2087/api/services -H "Authorization: Bearer YOUR_JWT_TOKEN"      -H "Content-Type: application/json" -d '{"service1": {"name": "Service One","status": "active"},"service2": {"name": "Service Two","status": "inactive"}}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/services/status
+Description: check monitored services status
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/services/status -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/services/<action>/<service_name>
+Description: start, restart, stop service
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/restart/caddy -H "Authorization: Bearer YOUR_JWT_TOKEN"
+  # Stop first
+  # Then start
+  # Non-docker service
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/docker/info
+Description: list docker info
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/docker/info -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/ips
+Description: list users with dedicated ip addresses
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/ips -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/system
+Description: list system information
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/system -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/usage/cpu
+Description: display real-time cpu usage
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/usage/cpu -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/usage/memory
+Description: display real-time memory usage
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/usage/memory -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/usage/server
+Description: display real-time disk usage
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/usage/server -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/notifications
+Description: display OpenAdmin notifications
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/notifications -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/notifications/<int
+Description: mark a single notification as read, or all of them with ?command=mark_all_as_read
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/notifications/1/read -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST "http://localhost:2087/api/notifications/1/read?command=mark_all_as_read" -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/notifications/<int
+Description: delete a single notification, or all of them with ?command=delete_all
+Type: DELETE
+Examples:
+  curl -X DELETE http://localhost:2087/api/notifications/1 -H "Authorization: Bearer TOKEN_HERE"
+  curl -X DELETE "http://localhost:2087/api/notifications/1?command=delete_all" -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/usage/disk
+Description: display disk usage for user
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/usage/disk -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/users/<username>/containers
+Description: list a user's docker compose services, or their live stats with ?stats=1
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/users/username/containers -H "Authorization: Bearer TOKEN_HERE"
+  curl -X GET "http://localhost:2087/api/users/username/containers?stats=1" -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/users/<username>/containers/<action>/<container_name>
+Description: start, stop or restart a user's container, or set its cpu/ram limit
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/users/username/containers/restart/username_nginx -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/users/username/containers/cpu/username_nginx -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"value": "2"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/<domain_name>/dns
+Description: view or update the raw bind zone file for a domain (validates and reloads DNS on save)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/domains/example.com/dns -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/domains/example.com/dns -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"content": "$TTL 86400\n..."}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/dns/cluster
+Description: view DNS cluster config, or enable/disable the cluster / add / remove a slave IP
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/dns/cluster -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/dns/cluster -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"create","ip":"1.2.3.4"}'
+  curl -X POST http://localhost:2087/api/dns/cluster -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"delete","ip":"1.2.3.4"}'
+  curl -X POST http://localhost:2087/api/dns/cluster -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"enable"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/dns/cluster/<ip>
+Description: check the reachability/status of a DNS cluster slave node
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/dns/cluster/1.2.3.4 -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/dns/zone-templates
+Description: view or update the default IPv4/IPv6 DNS zone templates used for new domains
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/dns/zone-templates -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/dns/zone-templates -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"zone_template_ipv4":"...","zone_template_ipv6":"..."}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/<domain_name>/caddy
+Description: view or update the raw Caddy config file for a domain (validates and reloads Caddy on save)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/domains/example.com/caddy -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/domains/example.com/caddy -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"content": "example.com {\n reverse_proxy ...\n}"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/<domain_name>/vhost/<username>
+Description: view or update the raw virtual host config file for a user's domain (restarts the webserver on save)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/domains/example.com/vhost/username -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/domains/example.com/vhost/username -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"content": "..."}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/<domain_name>/ssl
+Description: view SSL status/info, request AutoSSL, upload a custom cert, or view SSL issuance logs
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/domains/example.com/ssl -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/domains/example.com/ssl -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"autossl"}'
+  curl -X POST http://localhost:2087/api/domains/example.com/ssl -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"custom","public_path":"/var/www/html/example.com/cert.pem","private_path":"/var/www/html/example.com/key.pem"}'
+  curl -X POST http://localhost:2087/api/domains/example.com/ssl -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"logs"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/<domain_name>/log
+Description: view the paginated access log for a domain (?page=N&show_all=true)
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/domains/example.com/log -H "Authorization: Bearer TOKEN_HERE"
+  curl -X GET "http://localhost:2087/api/domains/example.com/log?page=2" -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/<domain_name>/stats/<username>
+Description: view the GoAccess HTML stats report for a user's domain (generated every 24h)
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/domains/example.com/stats/username -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/domains/file-templates
+Description: view or update default nginx/apache/varnish/caddy domain file templates
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/domains/file-templates -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/domains/file-templates -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"default_page":"..."}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/emails/settings
+Description: view or update mailserver settings (webmail domain/software, storage location, enabled services)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/emails/settings -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/emails/settings -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"webmail_domain":"webmail.example.com"}'
+  curl -X POST http://localhost:2087/api/emails/settings -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"webmail_software":"roundcube"}'
+  curl -X POST http://localhost:2087/api/emails/settings -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"ENABLE_CLAMAV":"1","ENABLE_FAIL2BAN":"1"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/emails/accounts
+Description: list mailboxes, update password/quota/restrictions, or delete accounts
+Type: GET POST DELETE
+Examples:
+  curl -X GET http://localhost:2087/api/emails/accounts -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/emails/accounts -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"password","email":"user@example.com","password":"newpass"}'
+  curl -X POST http://localhost:2087/api/emails/accounts -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"quota-set","email":"user@example.com","quota":"1024"}'
+  curl -X POST http://localhost:2087/api/emails/accounts -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"quota-del","email":"user@example.com"}'
+  curl -X POST http://localhost:2087/api/emails/accounts -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"restrict","email":"user@example.com","type":"send","restrict_action":"add"}'
+  curl -X DELETE http://localhost:2087/api/emails/accounts -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"emails":["user@example.com"]}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/emails/queue
+Description: view the mail queue, or retry/delete queued messages
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/emails/queue -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/emails/queue -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"retry","scope":"all"}'
+  curl -X POST http://localhost:2087/api/emails/queue -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"delete","scope":"selected","queue_ids":["ABC123"]}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/emails/domain-limits
+Description: view or manage postfwd per-domain/per-user rate-limit rules
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/emails/domain-limits -H "Authorization: Bearer TOKEN_HERE"
+  curl -X GET "http://localhost:2087/api/emails/domain-limits?hits=example.com" -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/emails/domain-limits -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"update-domain","domain":"example.com","username":"user1","limit":100}'
+  curl -X POST http://localhost:2087/api/emails/domain-limits -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"reset-all"}'
+  curl -X POST http://localhost:2087/api/emails/domain-limits -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"raw_content":"..."}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/basic-auth
+Description: view or update HTTP basic auth protection for the admin panel
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/security/basic-auth -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/security/basic-auth -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"basic_auth":"yes","basic_auth_username":"admin","basic_auth_password":"secret"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/blacklist-useragents
+Description: view or update the blacklisted user-agents list and enable/disable it
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/security/blacklist-useragents -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/security/blacklist-useragents -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"blacklist_useragents":"BadBot\\nEvilCrawler","enabled":"yes"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/disable-admin
+Description: permanently disable the OpenAdmin panel (irreversible via web UI/API - only re-enabled via terminal)
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/security/disable-admin -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/firewall
+Description: check whether ConfigServer Firewall (CSF) is available, or forward a raw command to the CSF UI backend
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/security/firewall -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/security/firewall -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"cf"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/waf
+Description: view CorazaWAF status/rule-set counts, or enable/disable WAF for new domains
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/security/waf -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/security/waf -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"status":"yes"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/waf/rules
+Description: list CorazaWAF rule sets, or toggle a rule set on/off
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/security/waf/rules -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/security/waf/rules -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"rule_name":"REQUEST-901-INITIALIZATION","action":"off"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/2fa
+Description: view 2FA status for the authenticated API user (issues a new pending TOTP secret+QR if not enabled)
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/security/2fa -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/2fa/enable
+Description: enable 2FA for the authenticated API user using a secret from GET /api/security/2fa and a verification code
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/security/2fa/enable -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"secret":"BASE32SECRET","code":"123456"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/2fa/disable
+Description: disable 2FA for the authenticated API user (requires the account password)
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/security/2fa/disable -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"password":"secret"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/security/passkeys
+Description: list, rename, or delete passkeys for the authenticated API user (registration requires a browser/authenticator and isn't available over the API)
+Type: GET POST DELETE
+Examples:
+  curl -X GET http://localhost:2087/api/security/passkeys -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/security/passkeys -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"id":1,"name":"Yubikey"}'
+  curl -X DELETE http://localhost:2087/api/security/passkeys -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"id":1}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/crons
+Description: list cronjobs, or update the schedule/logging for one or more existing lines
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/server/crons -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/server/crons -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"jobs":[{"line_number":1,"schedule":"0 3 * * *","logging":true}]}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/ssh
+Description: view SSH status/config/keys, start/stop/restart the service, update settings, or manage authorized keys
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/server/ssh -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/server/ssh -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"restart"}'
+  curl -X POST http://localhost:2087/api/server/ssh -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"port":"2222","password_auth":"no","pubkey_auth":"yes","permit_root_login":"no"}'
+  curl -X POST http://localhost:2087/api/server/ssh -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"new_key":"ssh-ed25519 AAAA... comment"}'
+  curl -X POST http://localhost:2087/api/server/ssh -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"key_to_remove":"ssh-ed25519 AAAA..."}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/ssh/config
+Description: view or overwrite the full raw sshd_config file (restarts SSH on save)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/server/ssh/config -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/server/ssh/config -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"config":"..."}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/timezone
+Description: view current server timezone / list available timezones, or change the timezone
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/server/timezone -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/server/timezone -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"timezone":"Europe/Belgrade"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/memory/drop-cache
+Description: drop cached RAM (sync; echo 3 > /proc/sys/vm/drop_caches)
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/server/memory/drop-cache -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/memory/drop-swap
+Description: clear swap (swapoff -a && swapon -a) in the background
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/server/memory/drop-swap -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/processes
+Description: list running processes, sorted by ?sort=cpu|memory|priority|name|owner|command|pid (prefix - to reverse)
+Type: GET
+Examples:
+  curl -X GET "http://localhost:2087/api/server/processes?sort=memory" -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/processes/<int
+Description: kill a process by PID
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/server/processes/12345/kill -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/node
+Description: view or update the default clustering slave node (host + SSH key path)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/server/node -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/server/node -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"default_node":"root@1.2.3.4","default_ssh_key_path":"/root/.ssh/id_rsa"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/root-password
+Description: change the server's root SSH password (Super Admin only)
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/server/root-password -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"password":"newpassword"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/reboot
+Description: reboot the server (graceful
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/server/reboot -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"reboot_type":"graceful"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/reboot/status
+Description: check if the admin panel is back up after a reboot
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/server/reboot/status -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/server/migrate
+Description: start a server migration (imports data from another OpenPanel server via SSH), or check its status/log
+Type: GET POST
+Examples:
+  curl -X POST http://localhost:2087/api/server/migrate -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"host":"1.2.3.4","root":"root","password":"secret"}'
+  curl -X GET http://localhost:2087/api/server/migrate -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/administrators
+Description: list administrator accounts, or create/suspend/unsuspend/delete/rename/reset-password/disable-2fa/disable-passkeys
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/administrators -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/administrators -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"create","username":"newadmin","password":"secret123"}'
+  curl -X POST http://localhost:2087/api/settings/administrators -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"suspend","username":"newadmin"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/resellers
+Description: list reseller accounts, or create/update/suspend/unsuspend/delete/rename/reset-password/disable-2fa/disable-passkeys
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/resellers -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/resellers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"create","username":"reseller1","password":"secret123"}'
+  curl -X POST http://localhost:2087/api/settings/resellers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"update","username":"reseller1","allowed_plans":"1,2","max_accounts":"10","max_disk_blocks":"1000"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/general
+Description: view or update general OpenAdmin/OpenPanel settings (ports, domain, dev_mode, proxy)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/general -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/general -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"2083_port":"2083","2087_port":"2087"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/defaults
+Description: view or update the default .env values used for new user accounts, and autostart services
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/defaults -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/defaults -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"values":{"DEFAULT_PHP_VERSION":"8.2"},"services":["phpmyadmin"]}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/defaults/files
+Description: view/update the default docker-compose.yml and .env templates, or reset them from the upstream GitHub source
+Type: GET POST DELETE
+Examples:
+  curl -X GET http://localhost:2087/api/settings/defaults/files -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/defaults/files -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"env":"...","compose":"..."}'
+  curl -X DELETE http://localhost:2087/api/settings/defaults/files -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/defaults/files/<username>
+Description: view or update the docker-compose.yml/.env files for a specific user
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/defaults/files/username -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/defaults/files/username -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"env":"..."}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/features/<plan>
+Description: list feature sets, or view/update/enable-all/disable-all/delete a specific feature set (omit <plan> to list/create sets)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/features -H "Authorization: Bearer TOKEN_HERE"
+  curl -X GET http://localhost:2087/api/settings/features/default -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/features -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"feature_name":"my_set"}'
+  curl -X POST http://localhost:2087/api/settings/features/my_set -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"update","features":["ftp","cron"]}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/locales
+Description: list installed/available locales, install a new locale, or set the default locale
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/locales -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/locales -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"locale":"en-us"}'
+  curl -X POST http://localhost:2087/api/settings/locales -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"default":"en-us"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/modules
+Description: view enabled modules/plugins, or update the enabled modules list
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/modules -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/modules -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"enabled_modules":["dns","malware_scan","phpmyadmin"]}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/custom-code
+Description: view or update custom CSS/JS/header/footer snippets, startup scripts, and other custom-code files
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/custom-code -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/custom-code -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"custom_css":"body{}"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/php
+Description: view or update global PHP options and per-version php.ini files
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/php -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/php -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"php82":"memory_limit=512M"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/caddy/metrics
+Description: fetch raw Caddy metrics (Prometheus format)
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/settings/caddy/metrics -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/updates
+Description: view or update auto-update preferences, view the latest available version and update logs
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/updates -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/updates -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"preference":"minor_only"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/updates/now
+Description: start an immediate OpenPanel update in the background
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/settings/updates/now -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/updates/tags
+Description: list available OpenPanel docker image tags, or pin the panel to a specific version
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/updates/tags -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/updates/tags -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"version":"1.7.60"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/license
+Description: view or set the license key, view license info, verify, or delete the license
+Type: GET POST DELETE
+Examples:
+  curl -X GET http://localhost:2087/api/license -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/license -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"key":"YOUR-LICENSE-KEY"}'
+  curl -X DELETE http://localhost:2087/api/license -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/license/info
+Description: view detailed license info
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/license/info -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/license/verify
+Description: verify the current license against the licensing server
+Type: POST
+Examples:
+  curl -X POST http://localhost:2087/api/license/verify -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/support/report
+Description: generate a non-interactive support/diagnostics report
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/support/report -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/import/<panel_type>
+Description: import a user account from a cPanel or CyberPanel backup file (starts in the background), or list import job statuses
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/import/cpanel -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/import/cpanel -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"path":"/root/backup-user.tar.gz","plan_name":"default_plan_apache"}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/import/logs/account/<log_filename>
+Description: view the log for a cPanel/CyberPanel account import job
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/import/logs/account/import123.log -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/import/backup-files
+Description: list backup-*.tar.gz files found in /, /home, /root
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/import/backup-files -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/import/transfers
+Description: list OpenPanel-to-OpenPanel transfer log files, or start a new live/offline transfer
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/import/transfers -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/import/transfers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"openpanel_username":"newuser","server":"1.2.3.4","username":"root","password":"secret","live_transfer":true}'
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/import/transfers/<username>
+Description: list transfer logs and live status for a specific user
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/import/transfers/username -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/import/logs/transfer/<log_filename>
+Description: view the log for an OpenPanel-to-OpenPanel transfer job
+Type: GET
+Examples:
+  curl -X GET http://localhost:2087/api/import/logs/transfer/username_20260101.log -H "Authorization: Bearer TOKEN_HERE"
+
+--------------------------------------------------------------------------------
+
+Endpoint: /api/settings/notifications
+Description: view or update notification preferences (thresholds, webhook, SMTP, action toggles, SSH allowlist)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/settings/notifications -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/settings/notifications -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"cpu":"90","webhook_url":"https://example.com/hook","update":"on","ssh_whitelist":"1.2.3.4/32"}'
+
+--------------------------------------------------------------------------------
