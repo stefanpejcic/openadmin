@@ -364,7 +364,9 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cfg.Debug {
-		_ = saveEmailToFile(subject, recipient, emailTemplate)
+		if err := saveEmailToFile(subject, recipient, emailTemplate); err != nil {
+			m.logf("mail_debug: failed to save copy to %s for recipient=%q subject=%q: %v", MailerEmailLogDir, recipient, subject, err)
+		}
 	}
 
 	if err := mailerSendRun(cfg, recipient, messageTitle, emailTemplate); err != nil {
