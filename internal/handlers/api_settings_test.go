@@ -207,8 +207,13 @@ func TestServeAPISettingsViewLogParamMissingFileReturns500(t *testing.T) {
 	}
 }
 
-func TestServeAPIEndpointsListReturnsErrorWhenOpenCLIMissing(t *testing.T) {
+func TestServeAPIEndpointsListReturnsErrorWhenFileMissing(t *testing.T) {
 	h := &APISettings{}
+	dir := t.TempDir()
+	origPath := AvailableEndpointsPath
+	AvailableEndpointsPath = filepath.Join(dir, "does-not-exist.txt")
+	t.Cleanup(func() { AvailableEndpointsPath = origPath })
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /settings/api/endpoints", h.ServeAPIEndpointsList)
 	srv := httptest.NewServer(mux)
@@ -221,9 +226,41 @@ func TestServeAPIEndpointsListReturnsErrorWhenOpenCLIMissing(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusInternalServerError {
-		t.Fatalf("expected 500 (opencli not present in test sandbox), got %d: %s", resp.StatusCode, truncate(string(body)))
+		t.Fatalf("expected 500 (file not present), got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	if !strings.Contains(string(body), "Error executing opencli api list") {
-		t.Fatalf("expected the opencli-error body, got %s", truncate(string(body)))
+	if !strings.Contains(string(body), "Unable to read the available endpoints file") {
+		t.Fatalf("expected the read-error body, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeAPIEndpointsListRewritesPlaceholderHost(t *testing.T) {
+	h := &APISettings{}
+	dir := t.TempDir()
+	origPath := AvailableEndpointsPath
+	AvailableEndpointsPath = filepath.Join(dir, "available_endpoints.txt")
+	os.WriteFile(AvailableEndpointsPath, []byte("Endpoint: /api/\nExamples:\n  curl -X GET http://localhost:2087/api/\n"), 0644)
+	t.Cleanup(func() { AvailableEndpointsPath = origPath })
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /settings/api/endpoints", h.ServeAPIEndpointsList)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	resp, err := http.Get(srv.URL + "/settings/api/endpoints")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	host := strings.TrimPrefix(srv.URL, "http://")
+	want := "curl -X GET http://" + host + "/api/"
+	if !strings.Contains(string(body), want) {
+		t.Fatalf("expected rewritten host %q, got %s", want, truncate(string(body)))
+	}
+	if strings.Contains(string(body), "localhost:2087") {
+		t.Fatalf("expected localhost:2087 placeholder to be replaced, got %s", truncate(string(body)))
 	}
 }

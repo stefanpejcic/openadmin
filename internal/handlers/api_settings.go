@@ -25,17 +25,38 @@ type APISettings struct {
 // APILogPath is where API requests/responses get logged.
 var APILogPath = "/var/log/openpanel/admin/api.log"
 
+// AvailableEndpointsPath is the plain-text catalogue of API endpoints and
+// curl examples shown by the "View Examples" button on /settings/api.
+var AvailableEndpointsPath = "/usr/local/admin/modules/api/available_endpoints.txt"
+
 // ServeAPIEndpointsList handles GET /settings/api/endpoints: the plain-text
-// `opencli api list` output the page's "View Examples" button fetches.
+// endpoint catalogue the page's "View Examples" button fetches, with the
+// example curl commands' placeholder host rewritten to the scheme/host the
+// request actually came in on.
 func (a *APISettings) ServeAPIEndpointsList(w http.ResponseWriter, r *http.Request) {
-	out, err := exec.Command("opencli", "api", "list").CombinedOutput()
+	content, err := os.ReadFile(AvailableEndpointsPath)
 	w.Header().Set("Content-Type", "text/plain")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error executing opencli api list: " + string(out)))
+		w.Write([]byte("Unable to read the available endpoints file: " + err.Error()))
 		return
 	}
-	w.Write(out)
+
+	scheme := r.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		if r.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+	host := r.Header.Get("X-Forwarded-Host")
+	if host == "" {
+		host = r.Host
+	}
+
+	rewritten := strings.ReplaceAll(string(content), "http://localhost:2087", scheme+"://"+host)
+	w.Write([]byte(rewritten))
 }
 
 type apiSettingsPageData struct {
