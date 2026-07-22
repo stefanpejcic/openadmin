@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/smtp"
 	"os"
@@ -26,6 +27,16 @@ import (
 // Mailer bundles the /send_email handler.
 type Mailer struct {
 	PublicIP string
+
+	// Logger receives diagnostics for failed send attempts (dev-mode app
+	// log; see bootstrap.SetupLogging). Nil is safe -- logging is skipped.
+	Logger *log.Logger
+}
+
+func (m *Mailer) logf(format string, args ...interface{}) {
+	if m.Logger != nil {
+		m.Logger.Printf("mailer: "+format, args...)
+	}
 }
 
 // MailerEmailLogDir / MailerCronLogPath / MailerAPILogPath are the
@@ -287,11 +298,13 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	messageContent := r.PostFormValue("body")
 
 	if recipient == "" || !strings.Contains(recipient, "@") {
+		m.logf("rejected: invalid recipient %q (subject=%q)", recipient, subject)
 		writeJSONError(w, http.StatusBadRequest, "Invalid recipient email address provided.")
 		return
 	}
 
 	if !validateOneTimeCode(r.PostFormValue("transient")) {
+		m.logf("rejected: invalid or missing one-time code for recipient=%q subject=%q", recipient, subject)
 		writeJSONError(w, http.StatusUnauthorized, "Invalid unique code")
 		return
 	}
@@ -345,6 +358,7 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	if renderErr != nil {
+		m.logf("template render failed for recipient=%q subject=%q: %v", recipient, subject, renderErr)
 		writeJSONError(w, http.StatusInternalServerError, renderErr.Error())
 		return
 	}
@@ -354,6 +368,8 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := mailerSendRun(cfg, recipient, messageTitle, emailTemplate); err != nil {
+		m.logf("send failed: recipient=%q subject=%q server=%s:%d ssl=%v tls=%v username=%q sender=%q: %v",
+			recipient, subject, cfg.Server, cfg.Port, cfg.UseSSL, cfg.UseTLS, cfg.Username, cfg.DefaultSender, err)
 		devMode := strings.EqualFold(config.Load(config.OpenpanelConfigPath).Get("PANEL", "dev_mode", "off"), "on")
 		if devMode {
 			// In dev mode, include extra SMTP config fields for debugging,

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -144,6 +145,7 @@ func main() {
 		DevMode:           devMode,
 		AdminPortValue:    adminPortAtStartup(),
 		SearchJSONPath:    handlers.ResolveSearchJSONFilePath(),
+		Logger:            appLog,
 	})
 	if err != nil {
 		appLog.Printf("failed to build request handler: %v", err)
@@ -192,6 +194,7 @@ type appDeps struct {
 	DevMode          bool
 	AdminPortValue   string
 	SearchJSONPath   string
+	Logger           *log.Logger
 
 	LoginBlockLimit   int
 	LoginRatePerMin   int
@@ -265,7 +268,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	dnsTemplates := &handlers.DNSTemplates{Sessions: sessions}
 	firewall := &handlers.Firewall{Sessions: sessions}
 	domainTemplates := &handlers.DomainTemplates{Sessions: sessions}
-	mailer := &handlers.Mailer{PublicIP: d.PublicIP}
+	mailer := &handlers.Mailer{PublicIP: d.PublicIP, Logger: d.Logger}
 	processManager := &handlers.ProcessManager{Sessions: sessions}
 	slave := &handlers.Slave{Sessions: sessions}
 	imunify := &handlers.Imunify{Sessions: sessions}
