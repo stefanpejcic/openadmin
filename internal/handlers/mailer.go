@@ -292,7 +292,13 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 		cfg.DefaultSender = "root@" + serverHostname
 	}
 
-	r.ParseForm()
+	// ParseMultipartForm (not ParseForm) since callers send
+	// multipart/form-data (see sentinel.sh's curl -F calls). ParseForm
+	// leaves r.PostForm as a non-nil empty map for multipart bodies, which
+	// then blocks PostFormValue's own lazy multipart fallback and makes
+	// every field silently read back "". ParseMultipartForm handles both
+	// multipart and urlencoded bodies correctly.
+	r.ParseMultipartForm(32 << 20)
 	recipient := strings.TrimSpace(r.PostFormValue("recipient"))
 	subject := r.PostFormValue("subject")
 	messageContent := r.PostFormValue("body")
