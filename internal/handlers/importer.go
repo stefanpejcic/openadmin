@@ -146,7 +146,7 @@ var importerCloneAndRunImportScriptRun = func(displayName, backupPath, planName 
 	}
 
 	var stderr strings.Builder
-	cloneCmd := exec.Command("git", "clone", repoURL, tempDir)
+	cloneCmd := exec.Command("git", "clone", "--branch", "podman", repoURL, tempDir)
 	cloneCmd.Stderr = &stderr
 	if err := cloneCmd.Run(); err != nil {
 		return true, errors.New(stderr.String())
