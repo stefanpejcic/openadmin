@@ -190,6 +190,18 @@ var funcMap = template.FuncMap{
 		parts := strings.Split(s, sep)
 		return parts[len(parts)-1]
 	},
+	// stripSuspendedPrefix mirrors handlers.stripSuspendedPrefix (duplicated
+	// here rather than shared, since handlers imports webtemplates and a
+	// back-import would cycle). Unlike lastSegment, this only strips the
+	// "SUSPENDED_<timestamp>_" prefix when it's actually present, so it's
+	// safe to use on any username -- including ones containing "_" that
+	// aren't suspended.
+	"stripSuspendedPrefix": func(username string) string {
+		if idx := strings.LastIndex(username, "_"); strings.Contains(username, "SUSPENDED_") && idx != -1 {
+			return username[idx+1:]
+		}
+		return username
+	},
 	"hasModule": func(mods []string, name string) bool {
 		for _, m := range mods {
 			if m == name {

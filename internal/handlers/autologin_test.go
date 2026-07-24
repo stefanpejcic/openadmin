@@ -1,14 +1,18 @@
 package handlers
 
 import (
+	"database/sql"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
@@ -108,6 +112,28 @@ func withScratchAutologinTokenDir(t *testing.T) string {
 	return dir
 }
 
+// newUserExistsMock returns a *sql.DB whose only expectation is the
+// userExists lookup ServeLoginToken now runs before writing a token file,
+// answering with WillReturnRows(one row) if exists is true, or
+// sql.ErrNoRows otherwise.
+func newUserExistsMock(t *testing.T, username string, exists bool) *sql.DB {
+	t.Helper()
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	expectation := mock.ExpectQuery(regexp.QuoteMeta(`SELECT 1 FROM users WHERE username = ? LIMIT 1`)).
+		WithArgs(username)
+	if exists {
+		expectation.WillReturnRows(sqlmock.NewRows([]string{"1"}).AddRow(1))
+	} else {
+		expectation.WillReturnError(sql.ErrNoRows)
+	}
+	return db
+}
+
 func TestServeLoginTokenRedirectsWithLink(t *testing.T) {
 	withScratchAutologinConfig(t, "no")
 	tokenDir := withScratchAutologinTokenDir(t)
@@ -120,7 +146,7 @@ func TestServeLoginTokenRedirectsWithLink(t *testing.T) {
 		autologinOpenpanelDomainRun, autologinOpenpanelPortRun, autologinCheckSSLExistsRun = origDomain, origPort, origSSL
 	})
 
-	a := &Autologin{PublicIP: "198.51.100.5", AdminPort: "2087"}
+	a := &Autologin{PublicIP: "198.51.100.5", AdminPort: "2087", MySQL: newUserExistsMock(t, "testuser", true)}
 	srv, client := newAutologinTestServer(t, a, "admin")
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }
 
@@ -168,7 +194,7 @@ func TestServeLoginTokenImpersonateModeAndHTTPS(t *testing.T) {
 		autologinOpenpanelDomainRun, autologinOpenpanelPortRun, autologinCheckSSLExistsRun = origDomain, origPort, origSSL
 	})
 
-	a := &Autologin{PublicIP: "198.51.100.5", AdminPort: "2087"}
+	a := &Autologin{PublicIP: "198.51.100.5", AdminPort: "2087", MySQL: newUserExistsMock(t, "testuser", true)}
 	srv, client := newAutologinTestServer(t, a, "admin")
 
 	resp, err := client.Get(srv.URL + "/login/token/testuser?output=json")
@@ -183,6 +209,27 @@ func TestServeLoginTokenImpersonateModeAndHTTPS(t *testing.T) {
 	}
 	if !strings.Contains(got, "impersonate=yes") {
 		t.Fatalf("expected impersonate=yes when config says 'yes', got %s", got)
+	}
+}
+
+func TestServeLoginTokenUnknownUsernameNotFound(t *testing.T) {
+	withScratchAutologinConfig(t, "no")
+	tokenDir := withScratchAutologinTokenDir(t)
+
+	a := &Autologin{PublicIP: "198.51.100.5", AdminPort: "2087", MySQL: newUserExistsMock(t, "ghost", false)}
+	srv, client := newAutologinTestServer(t, a, "admin")
+
+	resp, err := client.Get(srv.URL + "/login/token/ghost")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404 for a username with no matching users row, got %d", resp.StatusCode)
+	}
+
+	if _, err := os.Stat(filepath.Join(tokenDir, "ghost")); !os.IsNotExist(err) {
+		t.Fatalf("expected no token file/dir to be written for a nonexistent username, err=%v", err)
 	}
 }
 

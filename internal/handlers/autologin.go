@@ -151,6 +151,20 @@ func checkIfOwnerForUser(db *sql.DB, username string, actingUser *admindb.User) 
 	return err == nil
 }
 
+// userExists reports whether username has a row in the panel's users
+// table. checkIfOwnerForUser returns true unconditionally for admin/self
+// callers without ever touching the DB, so without this check a mangled
+// or stale username (e.g. from a template bug) would still get a login
+// token written and handed out via a valid-looking link.
+func userExists(db *sql.DB, username string) bool {
+	if db == nil {
+		return false
+	}
+	var dummy int
+	err := db.QueryRow("SELECT 1 FROM users WHERE username = ? LIMIT 1", username).Scan(&dummy)
+	return err == nil
+}
+
 // ServeLoginToken handles GET /login/token/{username}.
 func (a *Autologin) ServeLoginToken(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
@@ -162,6 +176,11 @@ func (a *Autologin) ServeLoginToken(w http.ResponseWriter, r *http.Request) {
 	currentUser := auth.CurrentUser(r)
 	if !checkIfOwnerForUser(a.MySQL, username, currentUser) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	if !userExists(a.MySQL, username) {
+		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
 
