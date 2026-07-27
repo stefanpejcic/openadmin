@@ -83,7 +83,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 			fail("changing IP address", output)
 			return
 		}
-		logUserAction(username, "Administrator "+currentUser.Username+" changed IP address to "+newIP+" for user "+username)
+		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" changed IP address to "+newIP+" for user "+username)
 		changes = append(changes, "IP address changed to "+newIP)
 	}
 
@@ -94,10 +94,10 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 			return
 		}
 		if newReseller == "" || newReseller == "root" {
-			logUserAction(username, "Administrator "+currentUser.Username+" removed reseller for user "+username)
+			logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" removed reseller for user "+username)
 			changes = append(changes, "Reseller removed")
 		} else {
-			logUserAction(username, "Administrator "+currentUser.Username+" changed reseller to "+newReseller+" for user "+username)
+			logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" changed reseller to "+newReseller+" for user "+username)
 			changes = append(changes, "Reseller changed to "+newReseller)
 		}
 	}
@@ -108,7 +108,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 			fail("changing email", output)
 			return
 		}
-		logUserAction(username, "Administrator "+currentUser.Username+" changed the email address to "+newEmail+" for user "+username)
+		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" changed the email address to "+newEmail+" for user "+username)
 		changes = append(changes, "Email changed")
 	}
 
@@ -118,7 +118,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 			fail("changing password", output)
 			return
 		}
-		logUserAction(username, "Administrator "+currentUser.Username+" changed password for user "+username)
+		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" changed password for user "+username)
 		changes = append(changes, "Password changed")
 	}
 
@@ -128,7 +128,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 			fail("changing plan", output)
 			return
 		}
-		logUserAction(username, "Administrator "+currentUser.Username+" changed plan from "+oldPlanName+" to "+newPlanName+" for user "+username)
+		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" changed plan from "+oldPlanName+" to "+newPlanName+" for user "+username)
 		changes = append(changes, "Plan changed from "+oldPlanName+" to "+newPlanName)
 	}
 
@@ -138,7 +138,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 			fail("renaming user", output)
 			return
 		}
-		logUserAction(username, "Administrator "+currentUser.Username+" changed username from "+username+" to "+newUsername)
+		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" changed username from "+username+" to "+newUsername)
 		changes = append(changes, "Username changed from "+username+" to "+newUsername)
 		username = newUsername
 	}

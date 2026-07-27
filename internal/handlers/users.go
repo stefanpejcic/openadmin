@@ -866,7 +866,7 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 	case "suspend":
 		success, output := runOpenCLI("", "opencli", "user-suspend", username, "-y")
 		if success && strings.Contains(output, "successfully") {
-			logUserAction(username, "Administrator "+currentUser.Username+" suspended user "+username)
+			logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" suspended user "+username)
 			auth.AddFlash(w, r, u.Sessions, "User '"+username+"' suspended successfully", "info")
 		} else {
 			auth.AddFlash(w, r, u.Sessions, "Error suspending user "+username, "error")
@@ -887,7 +887,7 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 		}
 		success, output := runOpenCLI("", "opencli", "user-unsuspend", plain)
 		if success && strings.Contains(output, "success") {
-			logUserAction(plain, "Administrator "+currentUser.Username+" unsuspended user "+plain)
+			logUserAction(plain, clientIP(r), "Administrator "+currentUser.Username+" unsuspended user "+plain)
 			auth.AddFlash(w, r, u.Sessions, "User '"+plain+"' unsuspended successfully", "info")
 		} else {
 			auth.AddFlash(w, r, u.Sessions, "Error unsuspending user "+plain, "error")
@@ -938,7 +938,7 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		logUserAction(username, "Administrator "+currentUser.Username+" updated permissions for user "+username)
+		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" updated permissions for user "+username)
 		auth.AddFlash(w, r, u.Sessions, "Permissions for '"+username+"' updated successfully", "success")
 		http.Redirect(w, r, "/users/"+username+"#permissions", http.StatusSeeOther)
 		return
@@ -1189,7 +1189,7 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func logUserAction(username, action string) {
+func logUserAction(username, ip, action string) {
 	username = stripSuspendedPrefix(username)
 	username = strings.ReplaceAll(username, " ", "")
 	logDir := "/etc/openpanel/openpanel/core/users/" + username
@@ -1201,7 +1201,8 @@ func logUserAction(username, action string) {
 		return
 	}
 	defer f.Close()
-	_, _ = f.WriteString(action + "\n")
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	_, _ = f.WriteString(timestamp + "  " + ip + " " + action + "\n")
 }
 
 // ServeResourceUsageHistory handles GET
