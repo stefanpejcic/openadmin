@@ -45,6 +45,25 @@ var ServicesConfigPath = "/etc/openpanel/openadmin/config/services.json"
 // the tests.
 var controlServiceRun = realControlService
 
+// podmanForceRemoveContainer kills and force-removes a container stuck in
+// an improper/transitional state (e.g. wedged mid-"Stopping" after a
+// crashed conmon/OCI process) that a plain `podman-compose down` can't get
+// out of -- podman refuses to stop/restart a container from that state.
+// kill is best-effort (the container may already be dead); rm -f's result
+// is what actually tells the caller whether the container is gone.
+func podmanForceRemoveContainer(name string) error {
+	if cmd, err := podman.Command("default", "kill", name); err == nil {
+		cmd.Dir = "/root"
+		_ = cmd.Run()
+	}
+	cmd, err := podman.Command("default", "rm", "-f", name)
+	if err != nil {
+		return err
+	}
+	cmd.Dir = "/root"
+	return cmd.Run()
+}
+
 func realControlService(serviceName, serviceType, action string) (bool, string) {
 	if serviceName == "admin" && action == "restart" {
 		_ = os.Remove(bootstrap.RestartFlagPath)
@@ -103,9 +122,20 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 		return err == nil, string(out)
 	case "stop":
 		out, err := runCompose("down", svc)
+		if err != nil {
+			if rmErr := podmanForceRemoveContainer(svc); rmErr == nil {
+				return true, "Container was stuck in an improper state; force-removed it."
+			}
+		}
 		return err == nil, string(out)
 	case "restart":
-		_, _ = runCompose("down", svc)
+		_, downErr := runCompose("down", svc)
+		if downErr != nil {
+			// A graceful stop can't clear a container wedged in a
+			// transitional state (e.g. stuck "Stopping" after a crashed
+			// conmon/OCI process) -- force it out before recreating.
+			_ = podmanForceRemoveContainer(svc)
+		}
 		out, err := runCompose("up", "-d", svc)
 		if err == nil && serviceName == "openpanel" {
 			// Emptied, not removed: the chrome banner checks for
@@ -533,9 +563,20 @@ func realManageService(serviceName, action string) (bool, string) {
 		return err == nil, string(out)
 	case "stop":
 		out, err := runCompose("down", svc)
+		if err != nil {
+			if rmErr := podmanForceRemoveContainer(svc); rmErr == nil {
+				return true, "Container was stuck in an improper state; force-removed it."
+			}
+		}
 		return err == nil, string(out)
 	case "restart":
-		_, _ = runCompose("down", svc)
+		_, downErr := runCompose("down", svc)
+		if downErr != nil {
+			// A graceful stop can't clear a container wedged in a
+			// transitional state (e.g. stuck "Stopping" after a crashed
+			// conmon/OCI process) -- force it out before recreating.
+			_ = podmanForceRemoveContainer(svc)
+		}
 		out, err := runCompose("up", "-d", svc)
 		if err == nil && serviceName == "openpanel" {
 			// Emptied, not removed: the chrome banner checks for
