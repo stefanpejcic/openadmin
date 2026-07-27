@@ -376,6 +376,24 @@ func TestServeImportFromBackupCpanelPOSTCloneFailureIsWarning(t *testing.T) {
 	}
 }
 
+// TestImporterCloneAndRunImportScriptRunGitMissingReportsError exercises the
+// real (unmocked) implementation with PATH emptied out, simulating a server
+// where git isn't installed. cloneCmd.Run() then fails before git ever
+// writes anything to stderr, so the returned error must not come back empty.
+func TestImporterCloneAndRunImportScriptRunGitMissingReportsError(t *testing.T) {
+	origPath := os.Getenv("PATH")
+	os.Setenv("PATH", "")
+	t.Cleanup(func() { os.Setenv("PATH", origPath) })
+
+	cloneFailed, err := importerCloneAndRunImportScriptRun("cpanel", "/home/backup-x.tar.gz", "basic")
+	if !cloneFailed {
+		t.Fatalf("expected cloneFailed=true when git can't run")
+	}
+	if err == nil || err.Error() == "" {
+		t.Fatalf("expected a non-empty error describing why git couldn't run, got %v", err)
+	}
+}
+
 func TestServeViewAccountImportLogServesContent(t *testing.T) {
 	im := &Importer{}
 	srv, client := newImporterTestServer(t, im, "admin")

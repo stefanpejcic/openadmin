@@ -149,7 +149,14 @@ var importerCloneAndRunImportScriptRun = func(displayName, backupPath, planName 
 	cloneCmd := exec.Command("git", "clone", "--branch", "podman", repoURL, tempDir)
 	cloneCmd.Stderr = &stderr
 	if err := cloneCmd.Run(); err != nil {
-		return true, errors.New(stderr.String())
+		msg := stderr.String()
+		if msg == "" {
+			// git itself never ran (e.g. not installed) so nothing landed
+			// on stderr -- fall back to the exec error rather than an
+			// empty message.
+			msg = err.Error()
+		}
+		return true, errors.New(msg)
 	}
 
 	importCmd := exec.Command("bash", importScript,
