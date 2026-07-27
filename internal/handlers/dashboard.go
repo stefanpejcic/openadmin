@@ -430,6 +430,14 @@ func (d *Dashboard) ServeUserActivityStatus(w http.ResponseWriter, r *http.Reque
 
 // --- /json/combined_activity ---
 
+// combinedActivityEntry pairs a raw activity.log line with its parsed
+// timestamp so lines from different users' log files can be merged and
+// sorted by recency.
+type combinedActivityEntry struct {
+	timestamp time.Time
+	line      string
+}
+
 // ServeCombinedActivity handles GET /json/combined_activity for the admin
 // (non-reseller) path -- reseller-scoped username filtering is not yet
 // implemented (see backlog).
@@ -442,17 +450,40 @@ func (d *Dashboard) ServeCombinedActivity(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var logs []string
+	activityConf := userLogConfigs["activity"]
+	var candidates []combinedActivityEntry
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
 		}
 		logPath := logsDir + "/" + e.Name() + "/activity.log"
-		lines := tailLines(logPath, 20)
-		logs = append(logs, lines...)
+		// A user's own most recent 20 lines are always a superset of
+		// whatever of theirs could end up in the global top 20, so
+		// tailing per-file before the global sort/truncate below is safe.
+		for _, line := range tailLines(logPath, 20) {
+			parsed := parseGenericUserLogLine(line, activityConf)
+			if parsed == nil {
+				// Missing/malformed date, IP, or action -- skip.
+				continue
+			}
+			ts, err := time.Parse("2006-01-02 15:04:05", parsed["timestamp"])
+			if err != nil {
+				continue
+			}
+			candidates = append(candidates, combinedActivityEntry{timestamp: ts, line: line})
+		}
 	}
-	if len(logs) > 20 {
-		logs = logs[:20]
+
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].timestamp.After(candidates[j].timestamp)
+	})
+	if len(candidates) > 20 {
+		candidates = candidates[:20]
+	}
+
+	logs := make([]string, len(candidates))
+	for i, c := range candidates {
+		logs[i] = c.line
 	}
 
 	writeJSON(w, map[string][]string{"combined_logs": logs})
