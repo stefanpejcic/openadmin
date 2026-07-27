@@ -388,7 +388,11 @@ func (s *Services) ServeActionStatus(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		resp = *result
 	} else {
-		resp = serviceActionResult{Done: true, Success: true}
+		// No pending action was ever recorded for this service -- the
+		// triggering POST never reached handleStatusPost (e.g. it 404'd).
+		// Reporting success here would be a lie, so surface it as a
+		// failure instead of silently pretending the action ran.
+		resp = serviceActionResult{Done: true, Success: false, Message: "No action was recorded for this service. Please refresh and try again."}
 	}
 	pendingServiceActionsMu.Unlock()
 
