@@ -91,13 +91,30 @@ func (f *Firewall) ServeCSFIframe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if idx := strings.Index(output, "<form"); idx != -1 {
-		if end := strings.Index(output[idx:], ">"); end != -1 {
-			insertAt := idx + end + 1
-			token := `<input type="hidden" name="csrf_token" value="` + csrf.Token(r) + `">`
-			output = output[:insertAt] + token + output[insertAt:]
+	// csf.pl's own UI (Sentinel::DisplayUI) renders many independent
+	// <form> elements on a single page -- one per action button/row, not
+	// just one for the whole page -- so the token must be injected into
+	// every one of them, not just the first.
+	token := `<input type="hidden" name="csrf_token" value="` + csrf.Token(r) + `">`
+	var b strings.Builder
+	rest := output
+	for {
+		idx := strings.Index(rest, "<form")
+		if idx == -1 {
+			b.WriteString(rest)
+			break
 		}
+		end := strings.Index(rest[idx:], ">")
+		if end == -1 {
+			b.WriteString(rest)
+			break
+		}
+		insertAt := idx + end + 1
+		b.WriteString(rest[:insertAt])
+		b.WriteString(token)
+		rest = rest[insertAt:]
 	}
+	output = b.String()
 
 	w.Write([]byte(output))
 }

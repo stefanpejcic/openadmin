@@ -91,6 +91,33 @@ func TestServeCSFIframeInjectsCSRFToken(t *testing.T) {
 	}
 }
 
+func TestServeCSFIframeInjectsCSRFTokenIntoEveryForm(t *testing.T) {
+	origRun := firewallCSFRun
+	firewallCSFRun = func(tmpFile string) (string, error) {
+		return `<html><body>` +
+			`<form method="post" action="x">deny</form>` +
+			`<form method="post" action="y">allow</form>` +
+			`<form method="post" action="z">ignore</form>` +
+			`</body></html>`, nil
+	}
+	t.Cleanup(func() { firewallCSFRun = origRun })
+
+	f := &Firewall{}
+	srv, client := newFirewallTestServer(t, f)
+
+	resp, err := client.Get(srv.URL + "/configservercsf/iframe/?action=list")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	got := strings.Count(string(body), `<input type="hidden" name="csrf_token"`)
+	if got != 3 {
+		t.Fatalf("expected a CSRF token injected into all 3 forms, got %d in %s", got, truncate(string(body)))
+	}
+}
+
 func TestServeCSFIframePostUsesFormValues(t *testing.T) {
 	var gotTmpFileContent string
 	origRun := firewallCSFRun
