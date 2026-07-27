@@ -300,3 +300,32 @@ func TestServeProcessActionStraceStreamsRawLines(t *testing.T) {
 		t.Fatalf("expected the two raw lines streamed, got %+v", lines)
 	}
 }
+
+// TestServeProcessActionStraceMissingBinary covers the case reported in
+// production: strace isn't installed on the host, so exec.Command's lookup
+// fails at cmd.Start() for every pid alike. The handler should say so
+// instead of a bare "Internal Server Error".
+func TestServeProcessActionStraceMissingBinary(t *testing.T) {
+	origRun := straceRun
+	straceRun = func(pid int) (*exec.Cmd, error) {
+		return exec.Command("openadmin-test-strace-binary-does-not-exist"), nil
+	}
+	t.Cleanup(func() { straceRun = origRun })
+
+	p := &ProcessManager{}
+	srv, client := newProcessManagerTestServer(t, p)
+
+	resp, err := client.Get(srv.URL + "/server/processes/1234/strace?output=stream")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", resp.StatusCode)
+	}
+	if !strings.Contains(string(body), "strace is not installed") {
+		t.Fatalf("expected a clear missing-binary message, got %s", truncate(string(body)))
+	}
+}

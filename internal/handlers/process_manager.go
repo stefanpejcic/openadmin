@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -338,7 +339,12 @@ func (p *ProcessManager) streamStrace(w http.ResponseWriter, r *http.Request, pi
 	}
 	cmd.Stderr = cmd.Stdout
 	if err := cmd.Start(); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		msg := "Internal Server Error"
+		var execErr *exec.Error
+		if errors.As(err, &execErr) && errors.Is(execErr.Err, exec.ErrNotFound) {
+			msg = "strace is not installed on this server."
+		}
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 

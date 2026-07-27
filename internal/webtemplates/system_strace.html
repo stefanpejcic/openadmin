@@ -52,6 +52,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     fetch(`/server/processes/${pid}/strace?output=stream`, { signal: controller.signal })
         .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    streamEl.textContent += `[strace error] ${text}`;
+                });
+            }
+
             const reader = response.body.getReader();
             const decoder = new TextDecoder("utf-8");
 
