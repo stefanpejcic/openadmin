@@ -119,6 +119,44 @@ func TestServeImunifyGUINotRunningStartsDetached(t *testing.T) {
 	}
 }
 
+func TestServeImunifyGUIAutostartsAndServesGUIOnceRunning(t *testing.T) {
+	started := false
+	portOpen := false
+	origAvailable, origPortOpen, origStart, origToken := imunifyCommandAvailableRun, imunifyIsPortOpenRun, imunifyStartDetachedRun, imunifyGetTokenRun
+	imunifyCommandAvailableRun = func(string) bool { return true }
+	imunifyIsPortOpenRun = func(string, int) bool { return portOpen }
+	imunifyStartDetachedRun = func() { started = true; portOpen = true }
+	imunifyGetTokenRun = func() (string, bool) { return "abc123", true }
+	t.Cleanup(func() {
+		imunifyCommandAvailableRun = origAvailable
+		imunifyIsPortOpenRun = origPortOpen
+		imunifyStartDetachedRun = origStart
+		imunifyGetTokenRun = origToken
+	})
+
+	im := &Imunify{}
+	srv, client := newImunifyTestServer(t, im)
+
+	resp, err := client.Get(srv.URL + "/security/imunify/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	if !started {
+		t.Fatal("expected start_imunify_detached to be invoked")
+	}
+	if strings.Contains(got, "Not Running") {
+		t.Fatalf("expected the real GUI once the port comes up after autostart, got %s", truncate(got))
+	}
+	for _, want := range []string{"token=abc123", "</html>"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
+		}
+	}
+}
+
 func TestServeImunifyGUITokenSuccess(t *testing.T) {
 	withStubbedImunifyRunners(t, true, true, "abc123", true)
 	im := &Imunify{}
@@ -234,6 +272,46 @@ func TestServeImunifyPHPProxiesRequest(t *testing.T) {
 	}
 	if capturedMethod != "GET" || capturedPath != "/imav/some/page.php" {
 		t.Fatalf("expected the proxy to see the original method/path, got %s %s", capturedMethod, capturedPath)
+	}
+}
+
+func TestServeImunifyPHPAutostartsAndProxiesOnceRunning(t *testing.T) {
+	started := false
+	portOpen := false
+	origAvailable, origPortOpen, origStart, origToken := imunifyCommandAvailableRun, imunifyIsPortOpenRun, imunifyStartDetachedRun, imunifyGetTokenRun
+	imunifyCommandAvailableRun = func(string) bool { return true }
+	imunifyIsPortOpenRun = func(string, int) bool { return portOpen }
+	imunifyStartDetachedRun = func() { started = true; portOpen = true }
+	imunifyGetTokenRun = func() (string, bool) { return "", false }
+	t.Cleanup(func() {
+		imunifyCommandAvailableRun = origAvailable
+		imunifyIsPortOpenRun = origPortOpen
+		imunifyStartDetachedRun = origStart
+		imunifyGetTokenRun = origToken
+	})
+
+	origProxy := imunifyProxyRun
+	proxyCalled := false
+	imunifyProxyRun = func(r *http.Request) (int, http.Header, []byte, error) {
+		proxyCalled = true
+		return http.StatusOK, http.Header{}, []byte("<html>proxied</html>"), nil
+	}
+	t.Cleanup(func() { imunifyProxyRun = origProxy })
+
+	im := &Imunify{}
+	srv, client := newImunifyTestServer(t, im)
+
+	resp, err := client.Get(srv.URL + "/imav/some/page.php")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !started {
+		t.Fatal("expected start_imunify_detached to be invoked")
+	}
+	if !proxyCalled {
+		t.Fatalf("expected the request to be proxied once the port comes up after autostart, got %s", truncate(string(body)))
 	}
 }
 

@@ -95,8 +95,10 @@ func (im *Imunify) ServeImunifyGUI(w http.ResponseWriter, r *http.Request) {
 
 	if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
 		imunifyStartDetachedRun()
-		webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Running)"))
-		return
+		if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
+			webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Running)"))
+			return
+		}
 	}
 
 	token, ok := imunifyGetTokenRun()
@@ -165,8 +167,10 @@ func (im *Imunify) ServeImunifyPHP(w http.ResponseWriter, r *http.Request) {
 	}
 	if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
 		imunifyStartDetachedRun()
-		webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Running)"))
-		return
+		if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
+			webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Running)"))
+			return
+		}
 	}
 
 	scriptPath := filepath.Clean(filepath.Join(imunifyPHPRoot, path))
