@@ -929,6 +929,66 @@ Select how action buttons are shown on 'File Manager' page
 
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
     <div>
+        <h2 id="captcha" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Captcha</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Protect login and signup forms with a captcha provider.</p>
+    </div>
+    <div class="md:col-span-2" x-data="{ captcha_provider: '{{$cp := .ConfigData.Get "CAPTCHA" "captcha_provider" ""}}{{if eq $cp ""}}none{{else}}{{$cp}}{{end}}' }">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+            {{if not .CaptchaPluginInstalled}}
+            <div class="col-span-full rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+                The captcha plugin is not installed. Settings below will have no effect until it's installed — see <a href="https://github.com/stefanpejcic/captcha/" target="_blank" class="font-medium underline hover:no-underline">github.com/stefanpejcic/captcha</a>.
+            </div>
+            {{end}}
+
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="captcha_provider">Captcha provider</label>
+                <div class="relative w-full mt-2">
+                    <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2"
+                        name="captcha_provider" x-model="captcha_provider">
+                        <option value="none">Disabled</option>
+                        <option value="google">Google reCAPTCHA</option>
+                        <option value="turnstile">Cloudflare Turnstile</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                </div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3" x-show="captcha_provider === 'google'"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="recaptcha_site_key">reCAPTCHA site key</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="recaptcha_site_key" placeholder="Site key" value="{{.ConfigData.Get "CAPTCHA" "recaptcha_site_key" ""}}" type="text"></div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3" x-show="captcha_provider === 'google'"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="recaptcha_secret_key">reCAPTCHA secret key</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="recaptcha_secret_key" placeholder="Secret key" value="{{.ConfigData.Get "CAPTCHA" "recaptcha_secret_key" ""}}" type="password"></div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3" x-show="captcha_provider === 'turnstile'"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="turnstile_site_key">Turnstile site key</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="turnstile_site_key" placeholder="Site key" value="{{.ConfigData.Get "CAPTCHA" "turnstile_site_key" ""}}" type="text"></div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3" x-show="captcha_provider === 'turnstile'"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="turnstile_secret_key">Turnstile secret key</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="turnstile_secret_key" placeholder="Secret key" value="{{.ConfigData.Get "CAPTCHA" "turnstile_secret_key" ""}}" type="password"></div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3" x-show="captcha_provider === 'custom'"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="custom_captcha_site_key">Custom captcha site key</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
+                        name="custom_captcha_site_key" placeholder="Site key" value="{{.ConfigData.Get "CAPTCHA" "custom_captcha_site_key" ""}}" type="text"></div>
+            </div>
+
+            <div class="col-span-full mt-6 flex justify-end"></div>
+        </div>
+    </div>
+</div>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
         <h2 id="login_ratelimit" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Statistics</h2>
         <p class="mt-1 text-sm leading-6 text-gray-500"></p>
     </div>

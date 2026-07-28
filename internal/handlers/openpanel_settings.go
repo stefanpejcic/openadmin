@@ -26,6 +26,7 @@ type OpenpanelSettings struct {
 var (
 	OpenpanelSettingsConfigPath      = "/etc/openpanel/openpanel/conf/openpanel.config"
 	OpenpanelSettingsRestartFlagPath = "/root/openpanel_restart_needed"
+	CaptchaPluginPath                = "/etc/openpanel/modules/captcha/captcha.py"
 )
 
 // openpanelIntFields lists the ~20 keys that must parse as a non-negative
@@ -58,6 +59,8 @@ var openpanelStringFields = []string{
 	"filemanager_buttons_style", "filemanager_edit_extensions",
 	"filemanager_image_extensions", "filemanager_archives_extensions",
 	"logout_url",
+	"captcha_provider", "recaptcha_site_key", "recaptcha_secret_key",
+	"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key",
 }
 
 type openpanelValidationKind int
@@ -114,6 +117,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"password_strength":               {kind: openpanelOneToHundred},
 	"permit_subdomain_sharing":        {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"permit_username_change_by_user":  {kind: openpanelEnum, options: []string{"yes", "no"}},
+	"captcha_provider":                {kind: openpanelEnum, options: []string{"google", "turnstile", "custom", "none"}},
 }
 
 var openpanelSpaceSeparatedListRe = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
@@ -186,6 +190,11 @@ func openpanelSectionForKey(key string) string {
 	}
 	if key == "terminal_timeout" {
 		return "PANEL"
+	}
+	switch key {
+	case "captcha_provider", "recaptcha_site_key", "recaptcha_secret_key",
+		"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key":
+		return "CAPTCHA"
 	}
 	return "USERS"
 }
@@ -267,6 +276,13 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 				errorMessages = append(errorMessages, errMsg)
 				continue
 			}
+			// "none" is a UI-only choice for captcha_provider -- selecting it
+			// stores an empty value rather than the literal string "none", so
+			// downstream code that only checks "is this set" behaves as if no
+			// provider were configured.
+			if key == "captcha_provider" && value == "none" {
+				value = ""
+			}
 			configData.Set(openpanelSectionForKey(key), key, value)
 		}
 
@@ -298,9 +314,13 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 	// was just computed above during POST.
 	configData := loadOpenpanelConfigStripped(OpenpanelSettingsConfigPath)
 
+	_, err := os.Stat(CaptchaPluginPath)
+	captchaPluginInstalled := err == nil
+
 	webtemplates.Render(w, "settings_openpanel.html", mergeChrome(map[string]interface{}{
-		"ConfigData": configData,
-		"CSRFToken":  csrf.Token(r),
-		"Flashes":    auth.PopFlashes(w, r, o.Sessions),
+		"ConfigData":             configData,
+		"CSRFToken":              csrf.Token(r),
+		"Flashes":                auth.PopFlashes(w, r, o.Sessions),
+		"CaptchaPluginInstalled": captchaPluginInstalled,
 	}, r, "OpenPanel Settings"))
 }
