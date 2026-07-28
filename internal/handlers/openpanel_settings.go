@@ -37,6 +37,7 @@ var (
 var openpanelIntFields = []string{
 	"autopurge_trash",
 	"mysql_startup_time", "mysql_import_max_size_gb",
+	"filemanager_files_per_page",
 	"filemanager_edit_size", "filemanager_view_size", "filemanager_download_size",
 	"filemanager_upload_size", "filemanager_compress_max_time", "filemanager_download_max_time",
 	"filemanager_extract_max_time",
@@ -93,6 +94,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"mysql_restricted_usernames":      {kind: openpanelSpaceSeparatedList},
 	"mysql_restricted_databases":      {kind: openpanelSpaceSeparatedList},
 	"filemanager_buttons_style":       {kind: openpanelEnum, options: []string{"classic", "modern"}},
+	"filemanager_files_per_page":      {kind: openpanelNonNegativeInt},
 	"filemanager_edit_size":           {kind: openpanelNonNegativeInt},
 	"filemanager_view_size":           {kind: openpanelNonNegativeInt},
 	"filemanager_download_size":       {kind: openpanelNonNegativeInt},
