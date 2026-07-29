@@ -57,6 +57,13 @@ type oomUserGroup struct {
 	Entries  []string
 }
 
+// unescapeNewlines undoes sentinel.sh's `sed 's/\n/\\n/g'`, which flattens
+// multi-line process/partition listings to literal "\n" so each
+// notification stays on one line in the log file.
+func unescapeNewlines(s string) string {
+	return strings.ReplaceAll(s, `\n`, "\n")
+}
+
 // parseNotificationRow parses one raw log line plus its message-body
 // special-casing.
 func parseNotificationRow(raw string, index int) notificationRow {
@@ -84,7 +91,7 @@ func parseNotificationRow(raw string, index int) notificationRow {
 		msgParts := strings.SplitN(message, "|", 2)
 		ratio := strings.TrimSpace(msgParts[0])
 		if len(msgParts) > 1 {
-			row.ProcessLines = strings.TrimSpace(msgParts[1])
+			row.ProcessLines = unescapeNewlines(strings.TrimSpace(msgParts[1]))
 		}
 		ramPart := ""
 		if idx := strings.Index(ratio, ":"); idx != -1 {
@@ -112,7 +119,7 @@ func parseNotificationRow(raw string, index int) notificationRow {
 			row.Percent = strings.ReplaceAll(strings.TrimSpace(usageLine[idx+1:]), "%", "")
 		}
 		if idx := strings.Index(message, "|"); idx != -1 {
-			row.ProcessLines = strings.TrimSpace(message[idx+1:])
+			row.ProcessLines = unescapeNewlines(strings.TrimSpace(message[idx+1:]))
 		}
 
 	case strings.Contains(message, "killed by OOM"):
@@ -157,7 +164,7 @@ func parseNotificationRow(raw string, index int) notificationRow {
 		beforeDisk := strings.TrimSpace(msgParts[0])
 		if len(msgParts) > 1 {
 			escaped := template.HTMLEscapeString(strings.TrimSpace(msgParts[1]))
-			row.DiskDetail = template.HTML(strings.ReplaceAll(escaped, "\n", "<br>"))
+			row.DiskDetail = template.HTML(strings.ReplaceAll(escaped, `\n`, "<br>"))
 		}
 		row.DiskValue = "0"
 		if idx := strings.Index(beforeDisk, ":"); idx != -1 {

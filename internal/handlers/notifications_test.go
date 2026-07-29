@@ -103,6 +103,41 @@ func TestNotificationsViewRendersHTMLForEachMessageKind(t *testing.T) {
 	}
 }
 
+// TestNotificationsProcessListsRenderAsLineBreaks guards against a
+// regression where sentinel.sh's escaped process/partition listings
+// (real newlines flattened to literal "\n" so each notification stays on
+// one log line) were shown to the user as literal backslash-n text
+// instead of being unescaped back into line breaks inside the <pre> tag.
+func TestNotificationsProcessListsRenderAsLineBreaks(t *testing.T) {
+	path := withScratchNotificationsLog(t)
+	os.WriteFile(path, []byte(strings.Join([]string{
+		`2026-01-01 10:00:00 UNREAD High CPU Usage! MESSAGE: CPU: 95% | pid1  cpu1  proc1\npid2  cpu2  proc2`,
+		`2026-01-01 11:00:00 UNREAD Disk usage MESSAGE: Disk usage: 90% | Partitions: /dev/sda1 90%\n/dev/sdb1 10%`,
+	}, "\n")+"\n"), 0644)
+
+	n := &Notifications{Sessions: auth.NewManager("test-secret", false)}
+	srv := httptest.NewServer(newNotificationsMux(n))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+
+	if strings.Contains(got, `proc1\npid2`) {
+		t.Fatalf("expected literal \\n to be unescaped into a line break, got %s", truncate(got))
+	}
+	if !strings.Contains(got, "proc1\npid2") {
+		t.Fatalf("expected process list to contain a real line break between entries, got %s", truncate(got))
+	}
+	if !strings.Contains(got, "/dev/sda1 90%<br>/dev/sdb1 10%") {
+		t.Fatalf("expected disk partitions to be joined with <br>, got %s", truncate(got))
+	}
+}
+
 func TestNotificationsDeleteSpecificLine(t *testing.T) {
 	path := withScratchNotificationsLog(t)
 	os.WriteFile(path, []byte("line1\nline2\nline3\n"), 0644)

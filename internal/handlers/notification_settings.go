@@ -85,7 +85,7 @@ var notifServiceOrder = []struct{ Key, Name, Desc string }{
 	{"admin", "OpenAdmin", "Receive a notification when OpenAdmin UI fails."},
 	{"caddy", "Caddy", "Receive a notification when webserver is not responding."},
 	{"mysql", "MySQL", "Receive a notification when database is unreachable."},
-	{"docker", "Docker", "Receive a notification when Docker service is down."},
+	{"podman", "Podman", "Receive a notification when Podman service is down."},
 	{"named", "BIND9", "Receive a notification when DNS service is down or not responding to requests."},
 	{"csf", "Sentinel Firewall", "Receive a notification when CSF is disabled."},
 }
