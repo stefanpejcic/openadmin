@@ -1,0 +1,219 @@
+{{define "onboarding_card"}}
+<a href="{{.Href}}" class="onb-card relative flex w-full items-start gap-3 rounded-lg border bg-white p-4 text-left shadow-sm transition-all dark:bg-[#090E1A] {{if .Done}}border-gray-200 dark:border-gray-800{{else}}onb-card-hover border-gray-300 dark:border-gray-800{{end}}">
+    {{if .Done}}
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-green-500 dark:text-green-400"><path d="M20 6 9 17l-5-5"></path></svg>
+    {{else}}
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 shrink-0 text-gray-300 dark:text-gray-600"><circle cx="12" cy="12" r="9"></circle></svg>
+    {{end}}
+    <div>
+        <p class="text-sm font-semibold {{if .Done}}onb-done text-gray-400 dark:text-gray-600{{else}}text-gray-900 dark:text-gray-50{{end}}">{{.Label}}</p>
+        <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{.Description}}</p>
+        <div class="mt-2 flex flex-wrap gap-1.5">
+            {{range .Offer}}
+            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">{{.}}</span>
+            {{end}}
+        </div>
+    </div>
+</a>
+{{end}}
+
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<style>
+/* internal/webtemplates/*.html classes are compiled into a purged,
+   pre-built static/dist/output.css (see tailwind.config.js's content
+   glob) -- it only contains utility classes some template already used
+   before the last CSS build. Anything genuinely new to this page (odd
+   spacing/sizing values, :has() checkbox styling, line-through, etc.)
+   compiles to nothing and silently has no effect, so it's defined here
+   instead as plain CSS, the same way login.html ships its own inline
+   stylesheet rather than depending on output.css. */
+.onb-main { max-width: 40rem; margin-left: auto; margin-right: auto; padding-left: 1rem; padding-right: 1rem; padding-top: 6.5rem; padding-bottom: 5rem; }
+.onb-logo { width: 1.5rem; height: 1.5rem; }
+.onb-divider { margin-left: .75rem; margin-right: .75rem; }
+.onb-offer-row { margin-left: 1.75rem; }
+.onb-heading { font-size: 1.5rem; line-height: 2rem; }
+.onb-done { text-decoration: line-through; }
+.onb-step-eyebrow { color: #2563eb; }
+.dark .onb-step-eyebrow { color: #60a5fa; }
+.onb-card-hover:hover { border-color: #3b82f6; }
+.onb-service-card:has(input:checked) { border-color: #3b82f6; }
+.onb-step-mobile { display: block; }
+@media (min-width: 768px) {
+    .onb-step-mobile { display: none; }
+}
+.onb-progress { width: 6rem; }
+@media (min-width: 768px) {
+    .onb-progress { width: -moz-fit-content; width: fit-content; }
+}
+</style>
+<body class="h-full bg-gray-50 antialiased dark:bg-gray-950" x-data="onboardingWizard()" x-init="init()">
+
+<header class="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-gray-200 bg-gray-50 px-4 dark:border-gray-900 dark:bg-gray-900 sm:px-6">
+    <div class="flex items-center gap-2.5">
+        <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 213.000000 215.000000" preserveAspectRatio="xMidYMid meet" style="vertical-align: middle;" class="onb-logo text-gray-900 dark:text-gray-50"><g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path></g></svg>
+        <span class="font-medium text-gray-900 dark:text-gray-50">OpenAdmin</span>
+    </div>
+    <div x-show="step > 0" x-cloak aria-label="Onboarding progress">
+        <ol class="onb-progress mx-auto flex flex-nowrap gap-1">
+            <li class="h-1 w-12 rounded-full" :class="step >= 1 ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-700'">
+                <span class="sr-only" x-text="step === 1 ? 'Modules &amp; services, current' : 'Modules &amp; services'"></span>
+            </li>
+            <li class="h-1 w-12 rounded-full" :class="step >= 2 ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-700'">
+                <span class="sr-only" x-text="step === 2 ? 'Configuration, current' : 'Configuration'"></span>
+            </li>
+            <li class="h-1 w-12 rounded-full" :class="step >= 3 ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-700'">
+                <span class="sr-only" x-text="step === 3 ? 'Users &amp; plans, current' : 'Users &amp; plans'"></span>
+            </li>
+        </ol>
+    </div>
+    <a href="{{if .Next}}{{.Next}}{{else}}/dashboard{{end}}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">Skip to dashboard &rarr;</a>
+</header>
+
+<main class="onb-main">
+
+    <!-- Mobile-only step indicator (the header's numbered nav is desktop-only) -->
+    <p x-show="step > 0" x-cloak class="onb-step-mobile mb-4 text-sm font-medium text-gray-500 dark:text-gray-400">Step <span x-text="step"></span> of 3</p>
+
+    <div x-show="step === 0" x-cloak>
+        <h1 class="onb-heading font-semibold text-gray-900 dark:text-gray-50">Let's get your server ready</h1>
+        <p class="mt-3 text-gray-700 dark:text-gray-300">This onboarding guide will walk you through enabling services, configuring the basics, and preparing this server for production use. It takes a few minutes, and you can always pick up where you left off.</p>
+
+        <div class="mt-8 flex flex-col gap-3">
+            <button type="button" @click="step = 1" class="relative inline-flex w-full items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600">
+                Start
+            </button>
+            <button type="button" @click="skipForNow()" class="relative inline-flex w-full items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 shadow-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80">
+                Skip for now
+            </button>
+            <button type="button" id="onboarding-dismiss-intro-btn" @click="finish()" class="text-center text-sm text-gray-500 hover:text-gray-700 hover:underline dark:text-gray-400 dark:hover:text-gray-300">
+                Dismiss completely -- don't show this again
+            </button>
+        </div>
+    </div>
+
+    <div x-show="step === 1" x-cloak>
+        <p class="onb-step-eyebrow text-xs font-semibold uppercase tracking-wide">Step 1 of 3</p>
+        <h1 class="onb-heading mt-1 font-semibold text-gray-900 dark:text-gray-50">Enable modules &amp; services</h1>
+        <p class="mt-2 text-gray-700 dark:text-gray-300">Choose which services to run on this server. Already-running services are pre-checked; anything newly checked starts in the background when you continue.</p>
+
+        <div id="onboarding-services" class="mt-6 grid grid-cols-1 gap-3">
+            {{range $i, $svc := .OnboardingServices}}
+            <label class="onb-service-card relative flex w-full cursor-pointer flex-col gap-2 rounded-lg border bg-white p-4 text-left shadow-sm transition-all dark:bg-[#090E1A] border-gray-300 dark:border-gray-800">
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" autocomplete="off" class="mt-0.5 size-4 shrink-0 rounded border-gray-300 text-blue-500 focus:ring-blue-500 dark:border-gray-700" data-services="{{toJSON $svc.Services}}" data-was-active="{{if $svc.Active}}true{{else}}false{{end}}" {{if $svc.Active}}checked{{end}}>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">{{$svc.Label}}</p>
+                        <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{$svc.Description}}</p>
+                    </div>
+                </div>
+                <div class="onb-offer-row flex flex-wrap gap-1.5">
+                    {{range $svc.Offer}}
+                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">{{.}}</span>
+                    {{end}}
+                </div>
+            </label>
+            {{end}}
+        </div>
+    </div>
+
+    <div x-show="step === 2" x-cloak>
+        <p class="onb-step-eyebrow text-xs font-semibold uppercase tracking-wide">Step 2 of 3</p>
+        <h1 class="onb-heading mt-1 font-semibold text-gray-900 dark:text-gray-50">Server configuration</h1>
+        <p class="mt-2 text-gray-700 dark:text-gray-300">Recommended settings to review before you go live. Click any card to jump straight to it.</p>
+
+        <div class="mt-6 grid grid-cols-1 gap-3">
+            {{range .ConfigSteps}}{{template "onboarding_card" .}}{{end}}
+        </div>
+    </div>
+
+    <div x-show="step === 3" x-cloak>
+        <p class="onb-step-eyebrow text-xs font-semibold uppercase tracking-wide">Step 3 of 3</p>
+        <h1 class="onb-heading mt-1 font-semibold text-gray-900 dark:text-gray-50">Users and plans</h1>
+        <p class="mt-2 text-gray-700 dark:text-gray-300">Set up the hosting plans and defaults new accounts will use, then create your first one.</p>
+
+        <div class="mt-6 grid grid-cols-1 gap-3">
+            {{range .UserPlanSteps}}{{template "onboarding_card" .}}{{end}}
+        </div>
+    </div>
+
+    <div x-show="step > 0" x-cloak class="mt-8 flex items-center justify-between">
+        <button type="button" x-show="step > 1" x-cloak @click="step--" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80">
+            Back
+        </button>
+        <div class="ml-auto flex gap-3">
+            <button type="button" x-show="step > 0 && step < 3" x-cloak @click="nextStep()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600">
+                Continue
+            </button>
+            <button type="button" x-show="step === 3" x-cloak id="onboarding-dismiss-btn" @click="finish()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600">
+                Got it, take me to the dashboard
+            </button>
+        </div>
+    </div>
+</main>
+
+<script>
+function onboardingWizard() {
+    return {
+        step: 0,
+        csrf: '',
+        finishHref: {{if .Next}}"{{.Next}}"{{else}}"/dashboard"{{end}},
+
+        init() {
+            this.csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        },
+
+        // "Skip for now" just leaves -- no dismiss flag is set, so this
+        // page shows again on the next login. Different from finish(),
+        // which permanently dismisses it.
+        skipForNow() {
+            window.location.href = this.finishHref;
+        },
+
+        nextStep() {
+            if (this.step === 1) {
+                this.startCheckedServices();
+            }
+            this.step++;
+        },
+
+        startCheckedServices() {
+            var csrf = this.csrf;
+            document.querySelectorAll('#onboarding-services input[type=checkbox]:checked').forEach(function (cb) {
+                if (cb.dataset.wasActive === 'true') return;
+                var services;
+                try { services = JSON.parse(cb.dataset.services); } catch (e) { return; }
+                services.forEach(function (svc) {
+                    fetch('/services', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': csrf,
+                        },
+                        body: new URLSearchParams({ real_name: svc.RealName, action: 'start', container: svc.ServiceType }),
+                    }).catch(function () {});
+                });
+            });
+        },
+
+        finish() {
+            ['onboarding-dismiss-btn', 'onboarding-dismiss-intro-btn'].forEach(function (id) {
+                var btn = document.getElementById(id);
+                if (btn) btn.disabled = true;
+            });
+            var target = this.finishHref;
+            fetch('/api/quickstart/dismiss', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': this.csrf },
+            }).catch(function () {}).finally(function () {
+                window.location.href = target;
+            });
+        },
+    };
+}
+</script>
+
+</body>
+</html>

@@ -129,6 +129,60 @@ func TestLoginSuccessWithoutTwoFA(t *testing.T) {
 	}
 }
 
+// TestLoginRedirectsToOnboardingUntilDismissed guards the new default
+// post-login landing page: a plain login (no "next") should land on
+// /onboarding until it's been dismissed, then fall back to /dashboard.
+func TestLoginRedirectsToOnboardingUntilDismissed(t *testing.T) {
+	login, db := newTestLogin(t)
+	hash, err := auth.GeneratePasswordHash("s3cret-password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.CreateUser("admin", hash, "admin"); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	origPath := ChromeQuickStartSkipFilePath
+	ChromeQuickStartSkipFilePath = filepath.Join(dir, "quick_start.dismissed")
+	t.Cleanup(func() { ChromeQuickStartSkipFilePath = origPath })
+
+	srv, client := newTestServer(t, login)
+	noFollow := &http.Client{
+		Jar: client.Jar,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := noFollow.PostForm(srv.URL+"/login", url.Values{
+		"username": {"admin"},
+		"password": {"s3cret-password"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if loc := resp.Header.Get("Location"); loc != "/onboarding" {
+		t.Fatalf("expected redirect to /onboarding before dismissal, got %q", loc)
+	}
+
+	client.Get(srv.URL + "/logout")
+	os.WriteFile(ChromeQuickStartSkipFilePath, nil, 0644)
+
+	resp2, err := noFollow.PostForm(srv.URL+"/login", url.Values{
+		"username": {"admin"},
+		"password": {"s3cret-password"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp2.Body.Close()
+	if loc := resp2.Header.Get("Location"); loc != "/dashboard" {
+		t.Fatalf("expected redirect to /dashboard after dismissal, got %q", loc)
+	}
+}
+
 func TestHandleTourCompleteCreatesSkipFile(t *testing.T) {
 	login, db := newTestLogin(t)
 	hash, _ := auth.GeneratePasswordHash("s3cret-password")

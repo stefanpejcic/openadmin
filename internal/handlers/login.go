@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -168,7 +169,23 @@ func (l *Login) finalizeLogin(w http.ResponseWriter, r *http.Request, user *admi
 	// next is always a same-origin relative path here (see auth.RequireLogin's
 	// doc comment: it can't point off-domain by construction), so it's safe
 	// to redirect to directly without an extra origin check.
-	if next != "" && strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//") {
+	nextValid := next != "" && strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//")
+
+	// The onboarding wizard takes priority over "next" -- almost every real
+	// login carries a next (RequireLogin sets it to "/dashboard" whenever
+	// an unauthenticated request hits any protected page, which is how
+	// browsers/bookmarks normally land here), so deferring to it would
+	// mean this practically never shows. The intended destination isn't
+	// lost though -- it's carried through as /onboarding's own "next".
+	if !quickStartDismissed() {
+		target := "/onboarding"
+		if nextValid {
+			target += "?next=" + url.QueryEscape(next)
+		}
+		http.Redirect(w, r, target, http.StatusSeeOther)
+		return
+	}
+	if nextValid {
 		http.Redirect(w, r, next, http.StatusSeeOther)
 		return
 	}
@@ -473,9 +490,19 @@ func (l *Login) HandlePasskeyComplete(w http.ResponseWriter, r *http.Request) {
 	delete(l.failedAttempts, ip)
 	l.mu.Unlock()
 
+	nextValid := next != "" && strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//")
+
 	redirect := "/dashboard"
-	if user.Role != "reseller" && next != "" && strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//") {
-		redirect = next
+	if user.Role != "reseller" {
+		switch {
+		case !quickStartDismissed():
+			redirect = "/onboarding"
+			if nextValid {
+				redirect += "?next=" + url.QueryEscape(next)
+			}
+		case nextValid:
+			redirect = next
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

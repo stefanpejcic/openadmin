@@ -228,7 +228,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	autologin := &handlers.Autologin{MySQL: d.MySQL, Sessions: sessions, PublicIP: d.PublicIP, AdminPort: d.AdminPortValue}
 
-	dash := &handlers.Dashboard{MySQL: d.MySQL, Sessions: sessions}
+	dash := &handlers.Dashboard{MySQL: d.MySQL, Sessions: sessions, AdminDB: d.AdminDB}
 	admins := &handlers.Administrators{DB: d.AdminDB, Sessions: sessions, LicenseChecker: d.LicenseChecker}
 	plans := &handlers.Plans{MySQL: d.MySQL, Sessions: sessions}
 	twofa := &handlers.TwoFA{DB: d.AdminDB, Sessions: sessions}
@@ -540,6 +540,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux.HandleFunc("GET /{$}", auth.RequireLogin(sessions, authOpts, dash.ServeDashboard))
 	mux.HandleFunc("GET /dashboard", auth.RequireLogin(sessions, authOpts, dash.ServeDashboard))
+	mux.HandleFunc("POST /api/quickstart/dismiss", auth.RequireLogin(sessions, authOpts, dash.HandleQuickStartDismiss))
+	mux.HandleFunc("GET /onboarding", auth.RequireLogin(sessions, authOpts, dash.ServeOnboardingPage))
 	mux.HandleFunc("GET /json/system", auth.RequireLogin(sessions, authOpts, dash.ServeSystemInfo))
 	mux.HandleFunc("GET /json/{resource}", auth.RequireLogin(sessions, authOpts, dash.ServeResourceUsage))
 	mux.HandleFunc("GET /json/user_activity_status", auth.RequireAdmin(sessions, authOpts, dash.ServeUserActivityStatus))
@@ -862,16 +864,18 @@ func newHandler(d appDeps) (http.Handler, error) {
 	// with its own CSRF handling. /api/... is exempt too: every route in the
 	// api blueprint is bearer-token (JWT) authenticated, not session/cookie
 	// based, so there's no CSRF token to check in the first place --
-	// EXCEPT /api/tour/complete and /api/docker-tags, which both live under
-	// that path but are actually plain session-authenticated routes
-	// (registered directly in login.py/updates.py, not the api blueprint)
-	// and were never marked @csrf.exempt there, so they keep going through
-	// the normal CSRF check. gorilla/csrf has no first-class per-route
-	// exemption, so this splits the chain: everything else goes through
-	// csrfMiddleware, these bypass it entirely.
+	// EXCEPT /api/tour/complete, /api/quickstart/dismiss, and
+	// /api/docker-tags, which all live under that path but are actually
+	// plain session-authenticated routes (registered directly in
+	// login.py/updates.py, not the api blueprint) and were never marked
+	// @csrf.exempt there, so they keep going through the normal CSRF check.
+	// gorilla/csrf has no first-class per-route exemption, so this splits
+	// the chain: everything else goes through csrfMiddleware, these bypass
+	// it entirely.
 	apiCSRFExemptExceptions := map[string]bool{
-		"/api/tour/complete": true,
-		"/api/docker-tags":   true,
+		"/api/tour/complete":      true,
+		"/api/quickstart/dismiss": true,
+		"/api/docker-tags":        true,
 	}
 	withoutCSRF := handler
 	handler = csrfMiddleware(handler)

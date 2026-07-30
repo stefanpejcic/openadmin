@@ -138,11 +138,14 @@ func TestNewHandlerEndToEnd(t *testing.T) {
 	}
 	body, _ = io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if resp.Request.URL.Path != "/dashboard" && resp.Request.URL.Path != "/" {
-		t.Fatalf("expected successful login to land on the dashboard, ended at %q (body: %s)", resp.Request.URL.Path, truncateBody(string(body)))
+	// A first-ever login lands on the onboarding wizard (see finalizeLogin
+	// in login.go), not the dashboard directly -- it hasn't been dismissed
+	// yet in this fresh test admindb.
+	if resp.Request.URL.Path != "/onboarding" {
+		t.Fatalf("expected successful login to land on onboarding, ended at %q (body: %s)", resp.Request.URL.Path, truncateBody(string(body)))
 	}
-	if !strings.Contains(string(body), "Users") {
-		t.Fatalf("expected dashboard content, got %s", truncateBody(string(body)))
+	if !strings.Contains(string(body), "Enable modules") {
+		t.Fatalf("expected onboarding content, got %s", truncateBody(string(body)))
 	}
 
 	// 5. now authenticated, /dashboard resolves directly (no redirect)

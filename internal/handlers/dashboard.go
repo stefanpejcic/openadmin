@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ import (
 type Dashboard struct {
 	MySQL    *sql.DB
 	Sessions *auth.Manager
+	AdminDB  *admindb.DB
 }
 
 type dashboardAdminData struct {
@@ -61,6 +63,23 @@ type dashboardPageData struct {
 	dashboardAdminData
 	dashboardResellerData
 	Flashes []auth.Flash
+}
+
+// onboardingPageData is the shape webtemplates/onboarding.html renders
+// against: the 3-step onboarding wizard shown after login until dismissed
+// (see ServeOnboardingPage).
+type onboardingPageData struct {
+	webtemplates.Chrome
+	Flashes []auth.Flash
+	// Next is where "Skip to dashboard" and the final dismiss button
+	// should land, when onboarding was reached via a deep-linked login
+	// redirect (see finalizeLogin in login.go). Empty means the default,
+	// "/dashboard".
+	Next string
+
+	OnboardingServices []onboardingServiceItem
+	ConfigSteps        []quickStartStep
+	UserPlanSteps      []quickStartStep
 }
 
 // blocksToGB converts a 1024-byte block count to GiB, rounded to 2
@@ -154,6 +173,42 @@ func (d *Dashboard) serveAdminDashboardError(w http.ResponseWriter, r *http.Requ
 		Chrome:             buildChrome(r, "Dashboard"),
 		dashboardAdminData: data,
 		Flashes:            auth.PopFlashes(w, r, d.Sessions),
+	})
+}
+
+// safeNextPath returns next if it's a safe same-origin relative path (the
+// same test finalizeLogin uses before trusting one), or "" otherwise.
+func safeNextPath(next string) string {
+	if next != "" && strings.HasPrefix(next, "/") && !strings.HasPrefix(next, "//") {
+		return next
+	}
+	return ""
+}
+
+// ServeOnboardingPage handles GET /onboarding: the 3-step onboarding
+// wizard shown as the default landing page right after login (see
+// finalizeLogin/HandlePasskeyComplete in login.go) until it's dismissed.
+// Resellers never see it -- they're bounced straight to /dashboard.
+func (d *Dashboard) ServeOnboardingPage(w http.ResponseWriter, r *http.Request) {
+	user := auth.CurrentUser(r)
+	if user == nil || user.Role == "reseller" {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
+
+	data := dashboardAdminData{}
+	if counts, err := paneldb.GetCounts(d.MySQL); err == nil {
+		data.UserCount = counts.UserCount
+		data.DomainCount = counts.DomainCount
+	}
+
+	webtemplates.Render(w, "onboarding.html", onboardingPageData{
+		Chrome:             buildChrome(r, "Onboarding"),
+		Flashes:            auth.PopFlashes(w, r, d.Sessions),
+		Next:               safeNextPath(r.URL.Query().Get("next")),
+		OnboardingServices: onboardingServiceItems(chromeSite.LicenseType, data.UserCount),
+		ConfigSteps:        onboardingConfigSteps(chromeSite.LicenseType),
+		UserPlanSteps:      onboardingUserPlanSteps(chromeSite.LicenseType, data, d.MySQL),
 	})
 }
 
@@ -281,6 +336,23 @@ func emailCount() int {
 		}
 	}
 	return count
+}
+
+// HandleQuickStartDismiss handles POST /api/quickstart/dismiss: creates
+// ChromeQuickStartSkipFilePath (chrome.go) if it doesn't already exist, so
+// buildChrome's QuickStartShow never fires again.
+func (d *Dashboard) HandleQuickStartDismiss(w http.ResponseWriter, r *http.Request) {
+	if _, err := os.Stat(ChromeQuickStartSkipFilePath); os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Dir(ChromeQuickStartSkipFilePath), 0755); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "Could not save quick start state.")
+			return
+		}
+		if err := os.WriteFile(ChromeQuickStartSkipFilePath, nil, 0644); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "Could not save quick start state.")
+			return
+		}
+	}
+	writeJSON(w, map[string]bool{"ok": true})
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}) {

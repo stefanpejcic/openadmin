@@ -30,6 +30,17 @@ var chromeSite struct {
 // ChromeTourSkipFilePath marks that the onboarding tour has been dismissed.
 var ChromeTourSkipFilePath = "/etc/openpanel/openadmin/tour.skip"
 
+// ChromeQuickStartSkipFilePath marks that the post-login "Quick Start"
+// onboarding page has been dismissed.
+var ChromeQuickStartSkipFilePath = "/etc/openpanel/openadmin/config/quick_start.dismissed"
+
+// quickStartDismissed reports whether the Quick Start page has been
+// permanently dismissed.
+func quickStartDismissed() bool {
+	_, err := os.Stat(ChromeQuickStartSkipFilePath)
+	return err == nil
+}
+
 // ChromeOpenpanelRestartFlagPath / ChromeOpenadminRestartFlagPath are the
 // two restart-flag files checked when building the chrome's
 // restart-pending banner.

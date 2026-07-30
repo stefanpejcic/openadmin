@@ -50,6 +50,7 @@ func dashboardTestServer(t *testing.T, dash *Dashboard, role string) (*httptest.
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/dashboard", dash.ServeDashboard)
+	mux.HandleFunc("/onboarding", dash.ServeOnboardingPage)
 	mux.HandleFunc("/json/system", dash.ServeSystemInfo)
 	mux.HandleFunc("/json/combined_activity", dash.ServeCombinedActivity)
 	mux.HandleFunc("/json/user_activity_status", dash.ServeUserActivityStatus)
@@ -396,5 +397,87 @@ func TestServeUserActivityStatusDBErrorReturnsEmptyObject(t *testing.T) {
 	}
 	if rec.Body.String() != "{}\n" {
 		t.Fatalf("expected an empty JSON object on DB error, got %q", rec.Body.String())
+	}
+}
+
+// TestHandleQuickStartDismissCreatesSkipFile mirrors
+// TestHandleTourCompleteCreatesSkipFile in login_test.go -- same
+// skip-file-on-first-POST pattern, different feature.
+func TestHandleQuickStartDismissCreatesSkipFile(t *testing.T) {
+	dir := t.TempDir()
+	origPath := ChromeQuickStartSkipFilePath
+	ChromeQuickStartSkipFilePath = filepath.Join(dir, "quickstart.skip")
+	t.Cleanup(func() { ChromeQuickStartSkipFilePath = origPath })
+
+	dash := &Dashboard{}
+	req := httptest.NewRequest(http.MethodPost, "/api/quickstart/dismiss", nil)
+	rec := httptest.NewRecorder()
+	dash.HandleQuickStartDismiss(rec, req)
+
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"ok":true`) {
+		t.Fatalf("expected 200 {\"ok\":true}, got %d %q", rec.Code, rec.Body.String())
+	}
+	if _, err := os.Stat(ChromeQuickStartSkipFilePath); err != nil {
+		t.Fatalf("expected quick start skip file to be created, err=%v", err)
+	}
+
+	// A second call with the file already present should still succeed.
+	rec2 := httptest.NewRecorder()
+	dash.HandleQuickStartDismiss(rec2, req)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("expected 200 on second call, got %d", rec2.Code)
+	}
+}
+
+func TestServeOnboardingPageRendersForAdmin(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.ExpectQuery(`SELECT`).WillReturnRows(sqlmock.NewRows(
+		[]string{"user_count", "plan_count", "site_count", "domain_count"}).AddRow(1, 2, 3, 4))
+
+	dash := &Dashboard{MySQL: db}
+	srv, client := dashboardTestServer(t, dash, "admin")
+
+	resp, err := client.Get(srv.URL + "/onboarding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	// The intro screen plus all 3 steps are rendered server-side up front
+	// (Alpine just toggles which one is visible client-side), so every
+	// screen's heading should be present in the raw HTML regardless of JS
+	// execution.
+	for _, want := range []string{"Let's get your server ready", "Enable modules", "Server configuration", "Users and plans"} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected onboarding page to contain %q, got %q", want, truncate(string(body)))
+		}
+	}
+}
+
+func TestServeOnboardingPageRedirectsResellerToDashboard(t *testing.T) {
+	dash := &Dashboard{}
+	srv, client := dashboardTestServer(t, dash, "reseller")
+
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	resp, err := client.Get(srv.URL + "/onboarding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("expected 303 redirect, got %d", resp.StatusCode)
+	}
+	if loc := resp.Header.Get("Location"); loc != "/dashboard" {
+		t.Fatalf("expected redirect to /dashboard, got %q", loc)
 	}
 }

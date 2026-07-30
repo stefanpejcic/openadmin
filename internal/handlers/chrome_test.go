@@ -54,3 +54,19 @@ func TestBuildChromeUnreadNotificationsMixedReadAndUnread(t *testing.T) {
 		t.Fatalf("expected 2 unread, got %d", chrome.UnreadNotifications)
 	}
 }
+
+func TestQuickStartDismissedTracksSkipFile(t *testing.T) {
+	dir := t.TempDir()
+	origPath := ChromeQuickStartSkipFilePath
+	ChromeQuickStartSkipFilePath = filepath.Join(dir, "quick_start.dismissed")
+	t.Cleanup(func() { ChromeQuickStartSkipFilePath = origPath })
+
+	if quickStartDismissed() {
+		t.Fatalf("expected quickStartDismissed false before the skip file exists")
+	}
+
+	os.WriteFile(ChromeQuickStartSkipFilePath, nil, 0644)
+	if !quickStartDismissed() {
+		t.Fatalf("expected quickStartDismissed true once the skip file exists")
+	}
+}
