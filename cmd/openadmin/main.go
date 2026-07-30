@@ -22,6 +22,7 @@ import (
 	"openadmin/internal/license"
 	"openadmin/internal/mysqldb"
 	"openadmin/internal/server"
+	"openadmin/static"
 )
 
 func main() {
@@ -204,16 +205,9 @@ type appDeps struct {
 	BasicAuthEnabled  bool
 	BasicAuthUsername string
 	BasicAuthPassword string
-
-	StaticDir string // defaults to "static" if empty
 }
 
 func newHandler(d appDeps) (http.Handler, error) {
-	staticDir := d.StaticDir
-	if staticDir == "" {
-		staticDir = "static"
-	}
-
 	handlers.InitChromeSiteInfo(d.PublicIP, d.ServerHostname, d.ForceDomainValue, d.PanelVersion, d.LicenseType, d.DevMode, handlers.ModulesConfigFilePath)
 
 	sessions := auth.NewManager(d.SecretKey, d.UseTLS)
@@ -263,7 +257,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	resellers := &handlers.Resellers{DB: d.AdminDB, MySQL: d.MySQL, Sessions: sessions}
 	openpanelSettings := &handlers.OpenpanelSettings{Sessions: sessions}
 	defaultsSettings := &handlers.Defaults{MySQL: d.MySQL, Sessions: sessions}
-	generalStatic := &handlers.GeneralStatic{StaticDir: staticDir}
+	generalStatic := &handlers.GeneralStatic{Static: static.Files}
 	licensePage := &handlers.LicensePage{Sessions: sessions}
 	dnsTemplates := &handlers.DNSTemplates{Sessions: sessions}
 	firewall := &handlers.Firewall{Sessions: sessions}
@@ -324,7 +318,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static.Files)))
 
 	mux.HandleFunc("GET /login", login.ServeLoginPage)
 	mux.HandleFunc("GET /login/", login.ServeLoginPage)
@@ -764,6 +758,10 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /configservercsf/iframe/", auth.RequireAdmin(sessions, authOpts, firewall.ServeCSFIframe))
 	mux.HandleFunc("POST /configservercsf/iframe/", auth.RequireAdmin(sessions, authOpts, firewall.ServeCSFIframe))
 	mux.HandleFunc("GET /security/firewall", auth.RequireAdmin(sessions, authOpts, firewall.ServeFirewallSettings))
+	// csf.pl's own UI hardcodes this exact image URL (see ServeCSFImages);
+	// ServeMux matches it ahead of the general "/static/" pattern below
+	// since it's more specific, regardless of registration order.
+	mux.HandleFunc("GET /static/configservercsf/{filename...}", auth.RequireAdmin(sessions, authOpts, firewall.ServeCSFImages))
 	mux.HandleFunc("GET /login/token/{username}", auth.RequireLogin(sessions, authOpts, autologin.ServeLoginToken))
 	mux.HandleFunc("GET /domains/file-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeDomainTemplates))
 	mux.HandleFunc("POST /domains/file-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeDomainTemplates))

@@ -55,6 +55,30 @@ func TestBuildChromeUnreadNotificationsMixedReadAndUnread(t *testing.T) {
 	}
 }
 
+func TestInitChromeSiteInfoDetectsCustomCSS(t *testing.T) {
+	origPath := ChromeCustomCSSPath
+	t.Cleanup(func() { ChromeCustomCSSPath = origPath })
+
+	dir := t.TempDir()
+	ChromeCustomCSSPath = filepath.Join(dir, "custom.css")
+	InitChromeSiteInfo("", "", "", "", "", false, "")
+	if chromeSite.CustomCSSEnabled {
+		t.Fatalf("expected CustomCSSEnabled false when %s is absent", ChromeCustomCSSPath)
+	}
+
+	os.WriteFile(ChromeCustomCSSPath, []byte("body{}"), 0644)
+	InitChromeSiteInfo("", "", "", "", "", false, "")
+	if !chromeSite.CustomCSSEnabled {
+		t.Fatalf("expected CustomCSSEnabled true once %s exists", ChromeCustomCSSPath)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	c := buildChrome(req, "Title")
+	if !c.CustomCSSEnabled {
+		t.Fatalf("expected buildChrome to carry CustomCSSEnabled through to Chrome")
+	}
+}
+
 func TestQuickStartDismissedTracksSkipFile(t *testing.T) {
 	dir := t.TempDir()
 	origPath := ChromeQuickStartSkipFilePath

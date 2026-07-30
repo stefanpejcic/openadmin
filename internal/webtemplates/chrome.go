@@ -24,4 +24,5 @@ type Chrome struct {
 	UnreadNotifications int
 	RestartMessages     []string
 	TourShow            bool
+	CustomCSSEnabled    bool
 }

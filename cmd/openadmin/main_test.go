@@ -76,7 +76,6 @@ func TestNewHandlerEndToEnd(t *testing.T) {
 		LoginRatePerMin:   1000,
 		DemoMode:          false,
 		ValidateSessionIP: false, // the test client's remote addr can vary across requests
-		StaticDir:         t.TempDir(),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -180,6 +179,81 @@ func TestNewHandlerEndToEnd(t *testing.T) {
 	resp.Body.Close()
 }
 
+// TestNewHandlerServesEmbeddedStaticAssets exercises the real "/static/"
+// and "/{filename}" routes wired in newHandler(), confirming the
+// go:embed-based static package (see static/static.go) is actually reached
+// through routing -- not just correct in GeneralStatic's own unit tests.
+func TestNewHandlerServesEmbeddedStaticAssets(t *testing.T) {
+	dir := t.TempDir()
+	origPath := admindb.Path
+	admindb.Path = filepath.Join(dir, "users.db")
+	t.Cleanup(func() { admindb.Path = origPath })
+
+	origOverrideDir := handlers.GeneralOverrideDir
+	handlers.GeneralOverrideDir = t.TempDir() // isolate from the real /usr/local/admin
+	t.Cleanup(func() { handlers.GeneralOverrideDir = origOverrideDir })
+
+	adminDB, err := admindb.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { adminDB.Close() })
+
+	mysqlDB, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+
+	handler, err := newHandler(appDeps{
+		AdminDB:           adminDB,
+		MySQL:             mysqlDB,
+		SecretKey:         "integration-test-secret",
+		LoginBlockLimit:   20,
+		LoginRatePerMin:   1000,
+		ValidateSessionIP: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	// A bundled asset under static/dist, served via the embedded FS behind
+	// "/static/".
+	resp, err := http.Get(srv.URL + "/static/dist/output.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected /static/dist/output.css to be served from the embedded FS, got %d", resp.StatusCode)
+	}
+
+	// robots.txt has a bundled default and no admin override on this test
+	// box, so it should come from the same embedded FS via GeneralStatic.
+	resp, err = http.Get(srv.URL + "/robots.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected /robots.txt to be served from the embedded default, got %d", resp.StatusCode)
+	}
+
+	// custom.css has no bundled default and nothing is dropped in
+	// GeneralOverrideDir, so it must 404 rather than panic or 500.
+	resp, err = http.Get(srv.URL + "/custom.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected /custom.css to 404 when absent, got %d", resp.StatusCode)
+	}
+}
+
 func extractCSRFToken(t *testing.T, page string) string {
 	t.Helper()
 	const marker = `name="csrf_token" value="`
@@ -245,7 +319,6 @@ func TestTerminalWebsocketOverRealTLSServer(t *testing.T) {
 		LoginBlockLimit:   20,
 		LoginRatePerMin:   1000,
 		ValidateSessionIP: false,
-		StaticDir:         t.TempDir(),
 	})
 	if err != nil {
 		t.Fatal(err)

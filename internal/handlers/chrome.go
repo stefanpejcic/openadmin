@@ -25,7 +25,14 @@ var chromeSite struct {
 	LicenseType      string
 	DevMode          bool
 	ModulesConfig    string
+	CustomCSSEnabled bool
 }
+
+// ChromeCustomCSSPath is checked once at startup (see InitChromeSiteInfo):
+// if present, every page links it as an extra stylesheet. Picking up a new
+// file, or one placed after startup, needs a restart -- same tradeoff as
+// the other InitChromeSiteInfo values.
+var ChromeCustomCSSPath = "/usr/local/admin/custom.css"
 
 // ChromeTourSkipFilePath marks that the onboarding tour has been dismissed.
 var ChromeTourSkipFilePath = "/etc/openpanel/openadmin/tour.skip"
@@ -61,6 +68,7 @@ func InitChromeSiteInfo(publicIP, serverHostname, forceDomainValue, panelVersion
 	chromeSite.LicenseType = licenseType
 	chromeSite.DevMode = devMode
 	chromeSite.ModulesConfig = modulesConfigPath
+	chromeSite.CustomCSSEnabled = isRegularFile(ChromeCustomCSSPath)
 }
 
 // buildChrome computes the per-request chrome fields from the current
@@ -135,6 +143,7 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 		UnreadNotifications: unread,
 		RestartMessages:     restartMessages,
 		TourShow:            tourShow,
+		CustomCSSEnabled:    chromeSite.CustomCSSEnabled,
 	}
 }
 
@@ -161,5 +170,6 @@ func mergeChrome(data map[string]interface{}, r *http.Request, title string) map
 	data["UnreadNotifications"] = c.UnreadNotifications
 	data["RestartMessages"] = c.RestartMessages
 	data["TourShow"] = c.TourShow
+	data["CustomCSSEnabled"] = c.CustomCSSEnabled
 	return data
 }

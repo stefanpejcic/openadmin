@@ -14,21 +14,16 @@ var executablePaths = []string{
 	"/etc/openpanel/openlitespeed/start.sh",    // overwrites ols entrypoint
 }
 
-// vars (not consts) so tests can point them at scratch fixtures.
-var (
-	csfSymlinkTarget = "/etc/csf/ui/images/"
-	csfSymlinkName   = "/usr/local/admin/static/configservercsf"
-	cacheDir         = "/tmp/openadmin_cache"
-)
+// cacheDir is a var (not a const) so tests can point it at a scratch
+// fixture.
+var cacheDir = "/tmp/openadmin_cache"
 
 // RunStartupHousekeeping performs a set of fixed startup tasks: ensuring
-// known scripts are executable, recreating a symlink, and clearing the
-// on-disk cache directory.
+// known scripts are executable and clearing the on-disk cache directory.
 func RunStartupHousekeeping(logger *log.Logger) {
 	for _, p := range executablePaths {
 		makeExecutableIfExists(logger, p)
 	}
-	symlinkForce(logger, csfSymlinkTarget, csfSymlinkName)
 	clearCache(logger, cacheDir)
 }
 
@@ -46,24 +41,6 @@ func makeExecutableIfExists(logger *log.Logger, path string) {
 		return
 	}
 	logger.Printf("Made %s executable (+x)", path)
-}
-
-// symlinkForce removes whatever is at linkName (broken symlink, live
-// symlink, or regular file) and recreates it pointing at target. os.Lstat
-// (unlike os.Stat) succeeds for a broken symlink too, so a single check
-// covers both cases.
-func symlinkForce(logger *log.Logger, target, linkName string) {
-	if _, err := os.Lstat(linkName); err == nil {
-		if err := os.Remove(linkName); err != nil {
-			logger.Printf("Failed to create symlink %s -> %s: %v", linkName, target, err)
-			return
-		}
-	}
-	if err := os.Symlink(target, linkName); err != nil {
-		logger.Printf("Failed to create symlink %s -> %s: %v", linkName, target, err)
-		return
-	}
-	logger.Printf("Created symlink: %s -> %s", linkName, target)
 }
 
 func clearCache(logger *log.Logger, dir string) {

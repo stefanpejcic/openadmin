@@ -6,6 +6,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -41,6 +42,7 @@ func newFirewallTestServer(t *testing.T, f *Firewall) (*httptest.Server, *http.C
 	mux.HandleFunc("GET /configservercsf/iframe/", f.ServeCSFIframe)
 	mux.HandleFunc("POST /configservercsf/iframe/", f.ServeCSFIframe)
 	mux.HandleFunc("GET /security/firewall", f.ServeFirewallSettings)
+	mux.HandleFunc("GET /static/configservercsf/{filename...}", f.ServeCSFImages)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
 		auth.LoginUser(w, r, sessions, caller, "203.0.113.1")
 	})
@@ -186,6 +188,52 @@ func TestServeFirewallSettingsAvailable(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
+	}
+}
+
+func TestServeCSFImagesServesAllowedFile(t *testing.T) {
+	dir := t.TempDir()
+	origDir := csfImagesDir
+	csfImagesDir = dir
+	t.Cleanup(func() { csfImagesDir = origDir })
+
+	if err := os.WriteFile(filepath.Join(dir, "allow.gif"), []byte("gif89a"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	f := &Firewall{}
+	srv, client := newFirewallTestServer(t, f)
+
+	resp, err := client.Get(srv.URL + "/static/configservercsf/allow.gif")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	if string(body) != "gif89a" {
+		t.Fatalf("expected file contents served, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeCSFImagesBlocksTraversal(t *testing.T) {
+	dir := t.TempDir()
+	origDir := csfImagesDir
+	csfImagesDir = dir
+	t.Cleanup(func() { csfImagesDir = origDir })
+
+	f := &Firewall{}
+	srv, client := newFirewallTestServer(t, f)
+
+	resp, err := client.Get(srv.URL + "/static/configservercsf/../../../../etc/passwd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		t.Fatalf("expected traversal attempt to be rejected, got 200")
 	}
 }
 

@@ -4,9 +4,11 @@
 package handlers
 
 import (
+	"mime"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/gorilla/csrf"
@@ -23,6 +25,37 @@ type Firewall struct {
 
 // CSFScriptPath is the hardcoded path to the csf.pl script.
 var CSFScriptPath = "/usr/local/admin/modules/security/csf.pl"
+
+// csfImagesDir holds csf.pl's own UI icons. DisplayUI.pm hardcodes the
+// image src it emits as "/static/configservercsf/...", so that URL is
+// fixed regardless of how it's served on this end -- this serves the
+// directory directly instead of the old approach of symlinking it into
+// the static/ dir at startup (see internal/bootstrap/housekeeping.go),
+// which required static/ to stay a real directory rather than an
+// embedded FS.
+var csfImagesDir = "/etc/csf/ui/images"
+
+// ServeCSFImages handles GET /static/configservercsf/{filename...}.
+func (f *Firewall) ServeCSFImages(w http.ResponseWriter, r *http.Request) {
+	filename := r.PathValue("filename")
+	filePath, ok := safeJoinOr400(csfImagesDir, filename)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	info, err := os.Stat(filePath)
+	if err != nil || info.IsDir() {
+		http.NotFound(w, r)
+		return
+	}
+
+	mimeType := mime.TypeByExtension(filepath.Ext(filePath))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	w.Header().Set("Content-Type", mimeType)
+	http.ServeFile(w, r, filePath)
+}
 
 // firewallCommandAvailableRun / firewallCSFRun are injectable so tests
 // never shell out to a real binary.
