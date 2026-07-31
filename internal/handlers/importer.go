@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -90,6 +91,53 @@ func determineLogStatus(path string) string {
 		return "failed"
 	default:
 		return "unknown"
+	}
+}
+
+// importerNewLogWaitTimeout / importerNewLogWaitInterval bound how long
+// ServeImportFromBackup polls for the openpanel restore's log file to show
+// up in ImporterOpenPanelImportLogDir before redirecting back to the log
+// list. opencli user-restore is started fire-and-forget, so without this
+// wait the admin lands on the list before their run's log file exists and
+// has to refresh the page to see it (github.com/stefanpejcic/openpanel#1030).
+var (
+	importerNewLogWaitTimeout  = 3 * time.Second
+	importerNewLogWaitInterval = 100 * time.Millisecond
+)
+
+// snapshotLogFilenames returns the set of (non-directory) filenames
+// currently in dir, used as the "before" set for waitForNewImportLog.
+func snapshotLogFilenames(dir string) map[string]bool {
+	entries, err := os.ReadDir(dir)
+	seen := map[string]bool{}
+	if err != nil {
+		return seen
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			seen[e.Name()] = true
+		}
+	}
+	return seen
+}
+
+// waitForNewImportLog polls dir until a filename absent from before
+// appears, or importerNewLogWaitTimeout elapses -- whichever comes first.
+func waitForNewImportLog(dir string, before map[string]bool) {
+	deadline := time.Now().Add(importerNewLogWaitTimeout)
+	for {
+		entries, err := os.ReadDir(dir)
+		if err == nil {
+			for _, e := range entries {
+				if !e.IsDir() && !before[e.Name()] {
+					return
+				}
+			}
+		}
+		if time.Now().After(deadline) {
+			return
+		}
+		time.Sleep(importerNewLogWaitInterval)
 	}
 }
 
@@ -188,11 +236,13 @@ func (im *Importer) ServeImportFromBackup(w http.ResponseWriter, r *http.Request
 				http.Redirect(w, r, "/user/import", http.StatusSeeOther)
 				return
 			}
+			before := snapshotLogFilenames(ImporterOpenPanelImportLogDir)
 			if err := importerRestoreOpenPanelBackupRun(backupPath); err != nil {
 				auth.AddFlash(w, r, im.Sessions, err.Error(), "danger")
 				http.Redirect(w, r, "/user/import", http.StatusSeeOther)
 				return
 			}
+			waitForNewImportLog(ImporterOpenPanelImportLogDir, before)
 			auth.AddFlash(w, r, im.Sessions, fmt.Sprintf("Import process from %s (OpenPanel backup) has started.", backupPath), "success")
 			http.Redirect(w, r, "/import/"+panelType, http.StatusSeeOther)
 			return

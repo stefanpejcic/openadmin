@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 
@@ -318,6 +319,10 @@ func TestServeImportFromBackupOpenPanelPOSTSuccess(t *testing.T) {
 	}
 	t.Cleanup(func() { importerRestoreOpenPanelBackupRun = origRun })
 
+	origTimeout, origInterval := importerNewLogWaitTimeout, importerNewLogWaitInterval
+	importerNewLogWaitTimeout, importerNewLogWaitInterval = 200*time.Millisecond, 10*time.Millisecond
+	t.Cleanup(func() { importerNewLogWaitTimeout, importerNewLogWaitInterval = origTimeout, origInterval })
+
 	im := &Importer{}
 	srv, client := newImporterTestServer(t, im, "admin")
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return nil }
@@ -333,6 +338,44 @@ func TestServeImportFromBackupOpenPanelPOSTSuccess(t *testing.T) {
 	}
 	if captured != "/root/backup.tar.gz" {
 		t.Fatalf("expected the backup path passed through, got %q", captured)
+	}
+}
+
+// TestServeImportFromBackupOpenPanelPOSTWaitsForNewLog reproduces issue
+// #1030: opencli user-restore is started in the background and needs a
+// moment to write its log file, so the redirect back to the log list must
+// wait for that file to appear -- otherwise the admin lands on a list
+// without their new run and has to refresh to see it.
+func TestServeImportFromBackupOpenPanelPOSTWaitsForNewLog(t *testing.T) {
+	im := &Importer{}
+	srv, client := newImporterTestServer(t, im, "admin")
+
+	origTimeout, origInterval := importerNewLogWaitTimeout, importerNewLogWaitInterval
+	importerNewLogWaitTimeout, importerNewLogWaitInterval = 2*time.Second, 20*time.Millisecond
+	t.Cleanup(func() { importerNewLogWaitTimeout, importerNewLogWaitInterval = origTimeout, origInterval })
+
+	origRun := importerRestoreOpenPanelBackupRun
+	importerRestoreOpenPanelBackupRun = func(backupPath string) error {
+		// Simulate opencli taking a moment to write its log file after
+		// being started, rather than it existing the instant Start() returns.
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			os.WriteFile(filepath.Join(ImporterOpenPanelImportLogDir, "restore-new.log"),
+				[]byte("Starting restore\nPID: 999999999\n"), 0644)
+		}()
+		return nil
+	}
+	t.Cleanup(func() { importerRestoreOpenPanelBackupRun = origRun })
+
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return nil }
+	resp, err := client.PostForm(srv.URL+"/import/openpanel", url.Values{"path": {"/root/backup.tar.gz"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "restore-new.log") {
+		t.Fatalf("expected the new log file to already be listed after redirect (no refresh needed), got %s", truncate(string(body)))
 	}
 }
 
