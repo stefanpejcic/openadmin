@@ -52,11 +52,11 @@ var dockerTagVersionRe = regexp.MustCompile(`^(\d{1,3}|\d{1,2}(\.\d{1,2}){1,2})$
 // injectable so tests never make real network calls or shell out to real
 // binaries, matching the caddyFetchMetrics/localesFetchFolders pattern.
 var updatesFetchTagsRun = func() ([]string, error) {
-	return fetchTagNames("https://hub.docker.com/v2/repositories/openpanel/openpanel-ui/tags?page_size=100")
+	return fetchTagNames("https://hub.docker.com/v2/repositories/openpanel/openpanel/tags?page_size=100")
 }
 
 var updatesDockerHubTagsRun = func() ([]string, error) {
-	return fetchTagNames("https://hub.docker.com/v2/repositories/openpanel/openpanel-ui/tags")
+	return fetchTagNames("https://hub.docker.com/v2/repositories/openpanel/openpanel/tags")
 }
 
 func fetchTagNames(url string) ([]string, error) {
@@ -102,7 +102,7 @@ var updatesFallbackVersionRun = func() (string, error) {
 }
 
 var updatesPullImageRun = func(version string) error {
-	cmd, err := podman.Command("default", "pull", "openpanel/openpanel-ui:"+version)
+	cmd, err := podman.Command("default", "pull", "openpanel/openpanel:"+version)
 	if err != nil {
 		return err
 	}
