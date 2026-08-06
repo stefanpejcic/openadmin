@@ -51,9 +51,17 @@ GOOS=linux GOARCH=arm64 go build -buildvcs=false -o openadmin-arm64 ./cmd/openad
 
 ## Updating
 
-OpenAdmin is updated through the standard OpenPanel update process, but can still be independently updated using `opencli update --admin` command.
+OpenAdmin is updated through the standard OpenPanel update process, but can still be independently updated using:
 
-For source builds, pull the latest changes, rebuild the binary, and restart the OpenAdmin service: `service admin restart`.
+```
+opencli update --admin
+```
+
+For source builds, pull the latest changes, rebuild the binary, and restart the OpenAdmin service:
+
+```
+systemctl restart admin
+```
 
 ## Contributing
 
