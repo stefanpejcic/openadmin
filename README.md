@@ -69,11 +69,11 @@ Contributions are welcome.
 
 You can contribute by:
 
-* Reporting bugs
-* Suggesting new features
-* Improving documentation
-* Submitting pull requests
-* Developing plugins and extensions
+* [Reporting bugs](https://github.com/stefanpejcic/OpenPanel/issues/new?template=1_Bug_report.yaml&affected-versions=2.0.0&os=Ubuntu&title=Bug%20in%20OpenAdmin%20UI)
+* [Suggesting new features](https://github.com/stefanpejcic/OpenPanel/discussions/new?category=ideas)
+* [Improving documentation](https://github.com/stefanpejcic/OpenPanel/tree/main/website/docs/admin)
+* [Submitting pull requests](https://github.com/stefanpejcic/openadmin/pulls)
+* [Developing plugins and extensions](https://openpanel.com/docs/articles/dev-experience/custom-plugins/)
 
 Before submitting significant changes, please [open an issue](https://github.com/stefanpejcic/openadmin/issues/new/choose) to discuss your proposal.
 
@@ -93,9 +93,9 @@ Commercial support, consulting, and enterprise services are available from OpenP
 
 ## License
 
-OpenAdmin is free and open-source software licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
+OpenAdmin is an open-source software licensed under the **GNU General Public License v3.0 or later (GPL-3.0-or-later)**.
 
-Copyright (C) 2025 OpenPanel, LLC.
+Copyright (C) 2026 OpenPanel, LLC.
 Original author: Stefan Pejcic
 
 ### Plugin Exception
