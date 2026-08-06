@@ -1,6 +1,8 @@
 # OpenAdmin
 
-OpenAdmin is the administrative interface for **OpenPanel**, providing server administrators with a fast, modern, and lightweight dashboard for managing servers, users, services, system settings, and platform configuration.
+OpenAdmin is the administrative interface for [**OpenPanel**](https://openpanel.com), providing server administrators with a fast, modern, and lightweight dashboard for managing servers, users, services, system settings, and platform configuration.
+
+![openadmin screenshot](https://openpanel.com/img/landing/openadmin-illustration-dark.svg)
 
 Written in **Go**, OpenAdmin is designed to be highly efficient with minimal resource consumption while delivering a modern web experience using **Tremor** UI templates. A typical idle installation uses **approximately 15 MB of RAM**, making it suitable for everything from small VPS instances to large production servers.
 
