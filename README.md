@@ -15,7 +15,6 @@ The template is built using [tremor](https://tremor.so/), [tailwindcss](https://
 * Service management
 * System monitoring
 * Security configuration
-* Native integration with OpenPanel
 * Plugin and extension support
 * REST API integration
 
