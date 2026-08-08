@@ -89,6 +89,15 @@ var funcMap = template.FuncMap{
 	"hasSuffix": strings.HasSuffix,
 	"lower":     strings.ToLower,
 	"upper":     strings.ToUpper,
+	// localeFlag maps a language code to the country-flag icon that
+	// represents it, for languages that aren't already named after a
+	// country (e.g. "en" has no country of its own -- shown as GB).
+	"localeFlag": func(locale string) string {
+		if strings.ToLower(locale) == "en" {
+			return "gb"
+		}
+		return locale
+	},
 	"rstrip":    func(s, cutset string) string { return strings.TrimRight(s, cutset) },
 	"toInt": func(v interface{}) int {
 		switch t := v.(type) {
