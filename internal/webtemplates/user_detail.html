@@ -79,7 +79,7 @@
           else if (hash === '#edit') this.activeTab = 'edit';
           else if (hash === '#permissions') this.activeTab = 'permissions';
           else if (hash === '#delete') this.activeTab = 'delete';
-          else if (hash === '#overview') this.activeTab = 'info';
+          else if (hash === '#overview') this.activeTab = 'stats';
           else this.activeTab = 'stats';
 
           this.$nextTick(() => {
@@ -90,7 +90,7 @@
                   $store?.ipStore?.fetchIPs();
                   $store?.resellerStore?.fetchResellers();
               }
-              else if (this.activeTab === 'info') this.fetchCustomMessage();
+              else if (this.activeTab === 'stats') this.fetchCustomMessage();
           });
       }
   }"
@@ -154,7 +154,7 @@
             <ul data-orientation="horizontal" class="flex items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800" dir="ltr">
                 <li class="flex cursor-pointer">
                     <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'stats'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'stats'}">
-                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Statistics</span>
+                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Overview</span>
                     </a>
                 </li>
                 <li class="flex cursor-pointer">
@@ -167,12 +167,6 @@
                         <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Storage</span>
                     </a>
                 </li>
-                <li class="flex cursor-pointer">
-                    <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'info'; fetchCustomMessage()" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}">
-                        <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Overview</span>
-                    </a>
-                </li>
-
                 <li class="flex cursor-pointer">
                     <a class="group relative flex shrink-0 select-none items-center justify-center" @click="activeTab = 'permissions'" :class="{'text-blue-600 dark:text-blue-500': activeTab === 'permissions'}">
                         <span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent p-3 text-sm font-medium transition-all group-hover:text-gray-700 dark:group-hover:text-gray-400 group-hover:border-gray-300 dark:group-hover:border-gray-400 group-data-active:border-blue-500 group-data-active:text-blue-500 dark:group-data-active:border-blue-500 dark:group-data-active:text-blue-500 outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Permissions</span>
@@ -479,7 +473,7 @@
          <div class="hidden sm:flex p-4 divide-y divide-gray-200 px-2 dark:divide-gray-800 md:col-span-2">
             <nav aria-label="core navigation links" class="flex flex-1 flex-col space-y-4">
                <div>
-                  <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Docker</span>
+                  <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Containers</span>
                   <ul class="mt-1 space-y-2">
                      <li>
                         <a @click="activeTab = 'stats'; window.location.hash = 'stats'"  :class="{'text-blue-600 dark:text-blue-500': activeTab === 'stats'}" class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
@@ -488,7 +482,7 @@
                               <rect x="15" y="5" width="4" height="12" rx="1"></rect>
                               <rect x="7" y="8" width="4" height="9" rx="1"></rect>
                            </svg>
-                           Statistics
+                           Overview
                         </a>
                      </li>
                      <li>
@@ -513,14 +507,6 @@
                <div>
                   <span class="block h-6 text-xs font-medium leading-6 text-gray-500 dark:text-gray-500">Account</span>
                   <ul class="mt-1 space-y-2">
-                     <li>
-                        <a @click="activeTab = 'info'; fetchCustomMessage(); window.location.hash = 'info'"
-                           :class="{'text-blue-600 dark:text-blue-500': activeTab === 'info'}"
-                           class="cursor-pointer flex items-center gap-x-2.5 rounded p-2 text-sm font-medium transition-opacity hover:bg-gray-200/50 hover:dark:bg-gray-900">
-                        Overview
-                        </a>
-                     </li>
-
                      <li>
                         <a @click="activeTab = 'permissions'; window.location.hash = 'permissions'"
                            :class="{'text-blue-600 dark:text-blue-500': activeTab === 'permissions'}"
@@ -709,20 +695,20 @@
 </div>
                         </div>
                      </div>
-                     <div>
+                     <div x-data="{ open: false }">
                       <div class="flex justify-between mt-4 border-t border-gray-200 bg-gray-50 px-6 py-4 dark:border-gray-900 dark:bg-gray-950">
                         <div>
                           <h4 class="text-sm font-medium text-gray-900 dark:text-gray-50">Last updated:</h4>
                           <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-500">{{if .Stats}}{{index .Stats "timestamp"}}{{end}}</p>
                         </div>
                         <div>
-                          <button id="get_docker_history_usage" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 cursor-pointer">
-                            View Past Usage
+                          <button id="get_docker_history_usage" @click="open = !open" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 cursor-pointer">
+                            <span x-text="open ? 'Hide Past Usage' : 'View Past Usage'"></span>
                           </button>
                         </div>
                       </div>
 
-<div id="docker_stats_history" class="hidden overflow-x-auto">
+<div id="docker_stats_history" x-show="open" x-cloak class="overflow-x-auto">
   <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
     <table id="usage" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
       <thead>
@@ -745,7 +731,6 @@
 <script>
   const username = '{{lastSegment .Username `_`}}';
   const fetchButton = document.getElementById("get_docker_history_usage");
-  const container = document.getElementById("docker_stats_history");
   const tbody = document.getElementById("usageTableBody");
 
   let alreadyFetched = false;
@@ -753,8 +738,6 @@
   fetchButton.addEventListener("click", () => {
     if (alreadyFetched) return;
     alreadyFetched = true;
-
-    container.classList.remove("hidden");
 
     fetch(`/get_resource_usage_history/${username}`)
       .then(response => {
@@ -807,6 +790,53 @@
 </script>
                   </div>
                </div>
+
+               <div class="p-4 border-t border-gray-200 dark:border-gray-800">
+                  <div class="grid grid-cols-2 gap-4">
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Username:</span><span class="font-medium">{{firstSegment .Username "_"}}</span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium">{{.User.Email}}</span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Locale:</span><span class="flex items-center font-medium">
+                        {{if .Locale}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{localeFlag .Locale}}.svg" alt="Locale: {{.Locale}}"></img> {{upper .Locale}}{{else}}default{{end}}</span></div>
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">2FA status:</span><span class="font-medium">{{if .User.TwoFAEnabled}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{{end}}</span></div>
+
+        {{if index .EnvData "USER_ID"}}
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID (UID):</span><span class="font-medium">{{index .EnvData "USER_ID"}}</span></div>
+        {{else}}
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID (in database):</span><span class="font-medium">{{.User.ID}}</span></div>
+        {{end}}
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium flex"> {{.ServerIP}}<span class="hidden sm:flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{.IPType}}</span></span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="flex items-center font-medium">
+                        {{if .CountryCode}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .CountryCode}}.svg" alt="IP address location: {{.CountryCode}}"></img>{{end}} {{.CountryCode}}</span></div>
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Server:</span><span class="font-medium">{{.ServerName}}</span></div>
+
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Docker Context:</span><span class="font-medium">{{.DockerCtx}}</span></div>
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Home dir:</span><span class="font-medium">/home/{{.DockerCtx}}/</span></div>
+
+        {{if index .EnvData "WEB_SERVER"}}
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Web server:</span><span class="font-medium flex gap-1 items-center">{{index .EnvData "WEB_SERVER"}}</span></div>
+        {{end}}
+
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Varnish Caching:</span><span class="font-medium">{{if index .EnvData "PROXY_HTTP_PORT"}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Disabled</span>{{end}}</span></div>
+
+        {{if index .EnvData "MYSQL_TYPE"}}
+        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Database type:</span><span class="font-medium">{{if eq (index .EnvData "MYSQL_TYPE") "mysql"}}MySQL{{else if eq (index .EnvData "MYSQL_TYPE") "mariadb"}}MariaDB{{end}}</span></div>
+        {{end}}
+
+                     {{if .User.Owner.Valid}}
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Reseller:</span><span class="font-medium"><a href="/resellers">{{.User.Owner.String}}</a></span></div>
+                     {{end}}
+                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Setup time:</span><span class="font-medium">{{formatDateTime .User.RegisteredDate.String}}</span></div>
+
+{{if contains .Username "SUSPENDED_"}}
+  <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Suspended on:</span><span class="font-medium">{{replace (suspendedLabel .Username) "on: " ""}}</span></div>
+{{end}}
+
+                  </div>
+               </div>
+
                </div>
                <!-- END DOCKER STATS -->
 
@@ -1366,147 +1396,6 @@
                </div>
                <!-- END STORAGE -->
 
-               <!-- INFO -->
-               <div x-show="activeTab === 'info'" class="p-4" x-cloak>
-                  <div class="grid grid-cols-2 gap-4">
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Username:</span><span class="font-medium">{{firstSegment .Username "_"}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium">{{.User.Email}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Locale:</span><span class="flex items-center font-medium">
-                        {{if .Locale}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{localeFlag .Locale}}.svg" alt="Locale: {{.Locale}}"></img> {{upper .Locale}}{{else}}default{{end}}</span></div>
-
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">2FA status:</span><span class="font-medium">{{if .User.TwoFAEnabled}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{{end}}</span></div>
-
-        {{if index .EnvData "USER_ID"}}
-        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID (UID):</span><span class="font-medium">{{index .EnvData "USER_ID"}}</span></div>
-        {{else}}
-        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID (in database):</span><span class="font-medium">{{.User.ID}}</span></div>
-        {{end}}
-
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium flex"> {{.ServerIP}}<span class="hidden sm:flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{.IPType}}</span></span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="flex items-center font-medium">
-                        {{if .CountryCode}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .CountryCode}}.svg" alt="IP address location: {{.CountryCode}}"></img>{{end}} {{.CountryCode}}</span></div>
-
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Server:</span><span class="font-medium">{{.ServerName}}</span></div>
-
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Docker Context:</span><span class="font-medium">{{.DockerCtx}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Home dir:</span><span class="font-medium">/home/{{.DockerCtx}}/</span></div>
-
-        {{if index .EnvData "WEB_SERVER"}}
-        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Web server:</span><span class="font-medium flex gap-1 items-center">{{index .EnvData "WEB_SERVER"}}</span></div>
-        {{end}}
-
-        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Varnish Caching:</span><span class="font-medium">{{if index .EnvData "PROXY_HTTP_PORT"}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Disabled</span>{{end}}</span></div>
-
-        {{if index .EnvData "MYSQL_TYPE"}}
-        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Database type:</span><span class="font-medium">{{if eq (index .EnvData "MYSQL_TYPE") "mysql"}}MySQL{{else if eq (index .EnvData "MYSQL_TYPE") "mariadb"}}MariaDB{{end}}</span></div>
-        {{end}}
-
-                     {{if .User.Owner.Valid}}
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Reseller:</span><span class="font-medium"><a href="/resellers">{{.User.Owner.String}}</a></span></div>
-                     {{end}}
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Setup time:</span><span class="font-medium">{{formatDateTime .User.RegisteredDate.String}}</span></div>
-
-{{if contains .Username "SUSPENDED_"}}
-  <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Suspended on:</span><span class="font-medium">{{replace (suspendedLabel .Username) "on: " ""}}</span></div>
-{{end}}
-
-                  </div>
-                  <br>
-                  <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
-                       {{template "macro_tooltip" (dict "ID" "custom_message_for_this_user" "Label" "Custom message for user" "Description" "Plain text or HTML code to be displayed for this user on the Dashboard page." "Required" false)}}
-                    </span> <button type="button" class="hidden sm:flex save_custom_message_btn relative  items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
-                  </div>
-                  <textarea id="custom_message_for_this_user" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="5"></textarea>
-
-<button type="button" class="w-full mt-2 sm:hidden save_custom_message_btn relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
-
-<script>
-  const textarea = document.getElementById('custom_message_for_this_user');
-  const saveBtn = document.querySelector('.save_custom_message_btn');
-  var csrf_token = $('meta[name="csrf-token"]').attr('content');
-
-  async function saveCustomMessage() {
-    const message = textarea.value;
-
-    try {
-      const response = await fetch(`/get_custom_message_for_user/${username}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrf_token,
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ custom_message: message }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showToast(data.message || 'Saved successfully.', 'info');
-      } else {
-        const errorData = await response.json();
-        showToast(errorData.error || `Save failed (${response.status})`, 'error');
-      }
-    } catch (err) {
-      showToast('Error saving custom message for user.', 'error');
-    }
-  }
-
-  saveBtn.addEventListener('click', () => {
-    saveCustomMessage();
-  });
-</script>
-
-                  <br>
-                  <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
-                       {{template "macro_tooltip" (dict "ID" "private_notes_for_this_user" "Label" "Private notes" "Description" "Internal notes about this user, visible only to admins/resellers in OpenAdmin. Never shown to the user." "Required" false)}}
-                    </span> <button type="button" class="hidden sm:flex save_private_notes_btn relative  items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
-                  </div>
-                  <textarea id="private_notes_for_this_user" data-username="{{.Username}}" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="5">{{.Notes}}</textarea>
-
-<button type="button" class="w-full mt-2 sm:hidden save_private_notes_btn relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
-
-<script>
-  const notesTextarea = document.getElementById('private_notes_for_this_user');
-  const saveNotesBtns = document.querySelectorAll('.save_private_notes_btn');
-  var csrf_token_notes = $('meta[name="csrf-token"]').attr('content');
-
-  async function savePrivateNotes() {
-    const notes = notesTextarea.value;
-    const notesUsername = notesTextarea.dataset.username;
-
-    try {
-      const response = await fetch(`/get_user_notes/${notesUsername}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrf_token_notes,
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ notes: notes }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showToast(data.message || 'Saved successfully.', 'info');
-      } else {
-        const errorData = await response.json();
-        showToast(errorData.error || `Save failed (${response.status})`, 'error');
-      }
-    } catch (err) {
-      showToast('Error saving private notes for user.', 'error');
-    }
-  }
-
-  saveNotesBtns.forEach(function (btn) {
-    btn.addEventListener('click', () => {
-      savePrivateNotes();
-    });
-  });
-</script>
-                  <br>
-               </div>
-               <!-- INFO -->
-
                <!-- EDIT -->
                <div x-show="activeTab === 'edit'" class="p-4" x-cloak>
                   <form action="/user/edit/{{lastSegment .Username "_"}}" method="POST">
@@ -1645,6 +1534,100 @@
                   </div>
                         </div>
                   </form>
+                  <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+                  <br>
+                  <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                       {{template "macro_tooltip" (dict "ID" "custom_message_for_this_user" "Label" "Custom message for user" "Description" "Plain text or HTML code to be displayed for this user on the Dashboard page." "Required" false)}}
+                    </span> <button type="button" class="hidden sm:flex save_custom_message_btn relative  items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+                  </div>
+                  <textarea id="custom_message_for_this_user" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="5"></textarea>
+
+<button type="button" class="w-full mt-2 sm:hidden save_custom_message_btn relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+
+<script>
+  const textarea = document.getElementById('custom_message_for_this_user');
+  const saveBtn = document.querySelector('.save_custom_message_btn');
+  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+
+  async function saveCustomMessage() {
+    const message = textarea.value;
+
+    try {
+      const response = await fetch(`/get_custom_message_for_user/${username}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ custom_message: message }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showToast(data.message || 'Saved successfully.', 'info');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || `Save failed (${response.status})`, 'error');
+      }
+    } catch (err) {
+      showToast('Error saving custom message for user.', 'error');
+    }
+  }
+
+  saveBtn.addEventListener('click', () => {
+    saveCustomMessage();
+  });
+</script>
+
+                  <br>
+                  <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                       {{template "macro_tooltip" (dict "ID" "private_notes_for_this_user" "Label" "Private notes" "Description" "Internal notes about this user, visible only to admins/resellers in OpenAdmin. Never shown to the user." "Required" false)}}
+                    </span> <button type="button" class="hidden sm:flex save_private_notes_btn relative  items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+                  </div>
+                  <textarea id="private_notes_for_this_user" data-username="{{.Username}}" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="5">{{.Notes}}</textarea>
+
+<button type="button" class="w-full mt-2 sm:hidden save_private_notes_btn relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save</button>
+
+<script>
+  const notesTextarea = document.getElementById('private_notes_for_this_user');
+  const saveNotesBtns = document.querySelectorAll('.save_private_notes_btn');
+  var csrf_token_notes = $('meta[name="csrf-token"]').attr('content');
+
+  async function savePrivateNotes() {
+    const notes = notesTextarea.value;
+    const notesUsername = notesTextarea.dataset.username;
+
+    try {
+      const response = await fetch(`/get_user_notes/${notesUsername}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token_notes,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ notes: notes }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showToast(data.message || 'Saved successfully.', 'info');
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || `Save failed (${response.status})`, 'error');
+      }
+    } catch (err) {
+      showToast('Error saving private notes for user.', 'error');
+    }
+  }
+
+  saveNotesBtns.forEach(function (btn) {
+    btn.addEventListener('click', () => {
+      savePrivateNotes();
+    });
+  });
+</script>
+                  <br>
                </div>
                <!-- END EDIT -->
 
