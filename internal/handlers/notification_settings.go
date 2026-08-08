@@ -103,8 +103,8 @@ var notifServerActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"attack", "Unusual traffic or SYN flood", "Fires when suspicious traffic or DDoS attacks are detected."},
 	{"limit", "Out of Memory (OOM) errors", "Check journal logs for system services and user processes killed by OOM in the last 24 hours."},
 	{"dns", "DNS issue detected", "Triggered when the panel domain or nameservers are misconfigured or not resolving to this server. Disable if using external nameservers or Cloudflare proxy."},
-	{"login", "OpenAdmin login from new IP", "Triggered when the OpenAdmin panel is accessed from an unrecognized IP address."},
-	{"ssh", "SSH login from new IP", `Triggered when root SSH access is detected from an unknown IP address. IP can be whitelisted in "SSH Allowlist" below.`},
+	{"login", "OpenAdmin login from new IP", `Triggered when the OpenAdmin panel is accessed from an unrecognized IP address. IP can be whitelisted in "Login Whitelist" below.`},
+	{"ssh", "SSH login from new IP", `Triggered when root SSH access is detected from an unknown IP address. IP can be whitelisted in "Login Whitelist" below.`},
 	{"update", "New update available", "Triggered when a new version of OpenPanel is available for update."},
 }
 
@@ -336,6 +336,8 @@ func (n *NotificationSettings) HandleUpdate(w http.ResponseWriter, r *http.Reque
 
 	if err := n.updateSSHWhitelist(w, r); err != nil {
 		auth.AddFlash(w, r, n.Sessions, err.Error(), "error")
+	} else {
+		auth.AddFlash(w, r, n.Sessions, "Settings updated successfully.", "success")
 	}
 
 	http.Redirect(w, r, "/settings/notifications", http.StatusSeeOther)

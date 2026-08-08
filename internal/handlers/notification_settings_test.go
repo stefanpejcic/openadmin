@@ -85,7 +85,7 @@ func TestNotificationSettingsServeRendersHTML(t *testing.T) {
 	for _, want := range []string{
 		"Notification settings", "admin@example.com", "smtp.example.com",
 		"OpenPanel", "MySQL", "Server reboot", "User added",
-		"SSH Allowlist", "</html>",
+		"Login Whitelist", "</html>",
 	} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
