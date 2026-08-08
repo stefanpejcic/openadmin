@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -158,5 +160,100 @@ func TestFormValueOrNilDistinguishesAbsentFromEmpty(t *testing.T) {
 	}
 	if v := formValueOrNil(req, "present"); v == nil || *v != "" {
 		t.Fatalf("expected a non-nil empty string for a present-but-empty field, got %v", v)
+	}
+}
+
+func postTestSMTP(t *testing.T, ns *NotificationSettings, form url.Values) map[string]interface{} {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/settings/notifications/test-smtp", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+
+	ns.TestSMTP(rec, req)
+
+	var payload map[string]interface{}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	payload["__status"] = float64(rec.Code)
+	return payload
+}
+
+func TestTestSMTPRequiresServerAndPort(t *testing.T) {
+	withScratchNotificationConfig(t)
+	ns := &NotificationSettings{Sessions: auth.NewManager("test-secret", false)}
+
+	payload := postTestSMTP(t, ns, url.Values{"mail_default_sender": {"a@b.com"}})
+	if payload["__status"] != float64(http.StatusBadRequest) || !strings.Contains(fmt.Sprint(payload["error"]), "server") {
+		t.Fatalf("expected a missing-server error, got %v", payload)
+	}
+
+	payload = postTestSMTP(t, ns, url.Values{"mail_server": {"smtp.example.com"}, "mail_port": {"nope"}, "mail_default_sender": {"a@b.com"}})
+	if payload["__status"] != float64(http.StatusBadRequest) || !strings.Contains(fmt.Sprint(payload["error"]), "port") {
+		t.Fatalf("expected a missing-port error, got %v", payload)
+	}
+}
+
+func TestTestSMTPRequiresARecipient(t *testing.T) {
+	withScratchNotificationConfig(t)
+	ns := &NotificationSettings{Sessions: auth.NewManager("test-secret", false)}
+
+	payload := postTestSMTP(t, ns, url.Values{"mail_server": {"smtp.example.com"}, "mail_port": {"587"}})
+	if payload["__status"] != float64(http.StatusBadRequest) {
+		t.Fatalf("expected a bad request when no recipient can be derived, got %v", payload)
+	}
+}
+
+func TestTestSMTPSuccessReportsRecipient(t *testing.T) {
+	withScratchNotificationConfig(t)
+	ns := &NotificationSettings{Sessions: auth.NewManager("test-secret", false)}
+
+	origSend := mailerSendRun
+	var gotTo, gotSubject string
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error {
+		gotTo, gotSubject = to, subject
+		if cfg.Server != "smtp.example.com" || cfg.Port != 587 {
+			t.Fatalf("unexpected cfg passed to mailerSendRun: %+v", cfg)
+		}
+		return nil
+	}
+	t.Cleanup(func() { mailerSendRun = origSend })
+
+	payload := postTestSMTP(t, ns, url.Values{
+		"mail_server":         {"smtp.example.com"},
+		"mail_port":           {"587"},
+		"mail_default_sender": {"admin@example.com"},
+	})
+	if payload["success"] != true {
+		t.Fatalf("expected success, got %v", payload)
+	}
+	if gotTo != "admin@example.com" {
+		t.Fatalf("expected test email sent to admin@example.com, got %q", gotTo)
+	}
+	if gotSubject == "" {
+		t.Fatalf("expected a non-empty subject")
+	}
+}
+
+func TestTestSMTPFailureIsReportedNotErrored(t *testing.T) {
+	withScratchNotificationConfig(t)
+	ns := &NotificationSettings{Sessions: auth.NewManager("test-secret", false)}
+
+	origSend := mailerSendRun
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error {
+		return fmt.Errorf("connection refused")
+	}
+	t.Cleanup(func() { mailerSendRun = origSend })
+
+	payload := postTestSMTP(t, ns, url.Values{
+		"mail_server":         {"smtp.example.com"},
+		"mail_port":           {"587"},
+		"mail_default_sender": {"admin@example.com"},
+	})
+	if payload["__status"] != float64(http.StatusOK) {
+		t.Fatalf("SMTP send failures should still be a 200 with success:false, got status %v", payload["__status"])
+	}
+	if payload["success"] != false || !strings.Contains(fmt.Sprint(payload["error"]), "connection refused") {
+		t.Fatalf("expected a reported failure with the underlying error, got %v", payload)
 	}
 }

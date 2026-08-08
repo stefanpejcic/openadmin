@@ -574,6 +574,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux.HandleFunc("GET /settings/notifications", auth.RequireAdmin(sessions, authOpts, notificationSettings.ServeSettings))
 	mux.HandleFunc("POST /settings/notifications", auth.RequireAdmin(sessions, authOpts, notificationSettings.HandleUpdate))
+	mux.HandleFunc("POST /settings/notifications/test-smtp", auth.RequireAdmin(sessions, authOpts, notificationSettings.TestSMTP))
 
 	mux.HandleFunc("GET /server/timezone", auth.RequireAdmin(sessions, authOpts, serverUtils.ServeTimezone))
 	mux.HandleFunc("POST /server/timezone", auth.RequireAdmin(sessions, authOpts, serverUtils.ServeTimezone))

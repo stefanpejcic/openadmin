@@ -463,6 +463,14 @@
 </div>
 
 
+<div class="col-span-full flex items-center gap-3" x-data="smtpTest()">
+    <button type="button" @click="test" :disabled="loading"
+        class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">
+        <span x-show="!loading">Test SMTP connection</span>
+        <span x-show="loading">Testing&hellip;</span>
+    </button>
+    <span x-show="result" :class="ok ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'" class="text-sm" x-text="result"></span>
+</div>
 
 
         </div>
@@ -478,6 +486,47 @@
     {{template "chrome_after_main" .}}
     </div>
 </div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('smtpTest', () => ({
+        loading: false,
+        result: '',
+        ok: false,
+        async test() {
+            this.loading = true;
+            this.result = '';
+            const field = (name) => document.querySelector(`[name="${name}"]`).value;
+            try {
+                const response = await fetch('/settings/notifications/test-smtp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: new URLSearchParams({
+                        mail_server: field('mail_server'),
+                        mail_port: field('mail_port'),
+                        mail_use_tls: field('mail_use_tls'),
+                        mail_use_ssl: field('mail_use_ssl'),
+                        mail_username: field('mail_username'),
+                        mail_password: field('mail_password'),
+                        mail_default_sender: field('mail_default_sender'),
+                    })
+                });
+                const payload = await response.json();
+                this.ok = !!payload.success;
+                this.result = payload.success ? payload.message : (payload.error || 'SMTP test failed.');
+            } catch (e) {
+                this.ok = false;
+                this.result = 'Request failed: ' + e.message;
+            } finally {
+                this.loading = false;
+            }
+        }
+    }));
+});
+</script>
 {{template "chrome_scripts_bottom" .}}
 </body>
 </html>

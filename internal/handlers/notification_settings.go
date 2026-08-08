@@ -227,6 +227,52 @@ func (n *NotificationSettings) ServeSettings(w http.ResponseWriter, r *http.Requ
 	webtemplates.Render(w, "notification_settings.html", data)
 }
 
+// TestSMTP handles POST /settings/notifications/test-smtp. It sends a test
+// email using the SMTP fields currently in the form (which may not be saved
+// yet), so admins can verify credentials before clicking "Save changes".
+func (n *NotificationSettings) TestSMTP(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	cfg := mailerSMTPConfig{
+		Server:        strings.TrimSpace(r.FormValue("mail_server")),
+		UseSSL:        strings.EqualFold(r.FormValue("mail_use_ssl"), "true"),
+		UseTLS:        strings.EqualFold(r.FormValue("mail_use_tls"), "true"),
+		Username:      strings.TrimSpace(r.FormValue("mail_username")),
+		Password:      r.FormValue("mail_password"),
+		DefaultSender: strings.TrimSpace(r.FormValue("mail_default_sender")),
+	}
+
+	if cfg.Server == "" {
+		writeJSONError(w, http.StatusBadRequest, "SMTP server is required.")
+		return
+	}
+	if !isValidPort(r.FormValue("mail_port")) {
+		writeJSONError(w, http.StatusBadRequest, "A valid SMTP port is required.")
+		return
+	}
+	cfg.Port, _ = strconv.Atoi(r.FormValue("mail_port"))
+
+	recipient := cfg.DefaultSender
+	if recipient == "" {
+		recipient = cfg.Username
+	}
+	if recipient == "" {
+		recipient = config.Load(config.OpenpanelConfigPath).Get("DEFAULT", "email", "")
+	}
+	if !isValidEmail(recipient) {
+		writeJSONError(w, http.StatusBadRequest, "Set a default sender, username, or notification email to send the test to.")
+		return
+	}
+
+	body := "This is a test email from OpenAdmin confirming your SMTP settings are working."
+	if err := mailerSendRun(cfg, recipient, "OpenAdmin SMTP test", body); err != nil {
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{"success": true, "message": "Test email sent to " + recipient + "."})
+}
+
 func readSSHWhitelist() string {
 	raw, err := os.ReadFile(SSHWhitelistPath)
 	if err != nil {
