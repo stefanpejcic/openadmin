@@ -729,7 +729,12 @@
         <tr class="bg-gray-50 dark:bg-gray-900 sm:[&amp;_td:last-child]:pr-6 sm:[&amp;_th:last-child]:pr-6 sm:[&amp;_td:first-child]:pl-6 sm:[&amp;_th:first-child]:pl-6">
           <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
           <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU %</th>
+          <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU Usage</th>
           <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory %</th>
+          <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory Usage</th>
+          <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Tasks</th>
+          <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Bandwidth</th>
+          <th class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Warning</th>
         </tr>
       </thead>
       <tbody id="usageTableBody" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
@@ -769,7 +774,12 @@
 
           const timestamp = data.timestamp;
           const cpuPercent = data.cpu?.usage?.pct ?? 0;
+          const cpuUsage = data.cpu?.usage?.human ?? '-';
           const memPercent = data.memory?.usage_pct ?? 0;
+          const memUsage = `${data.memory?.used?.human ?? '-'} / ${data.memory?.total?.human ?? '-'}`;
+          const tasks = `${data.tasks?.current ?? '-'} / ${data.tasks?.limit ?? '-'}`;
+          const bandwidth = data.bandwidth?.total_sent?.human ?? '-';
+          const warning = data.warning ?? '-';
 
           const tr = document.createElement('tr');
           tr.className = "sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900";
@@ -777,7 +787,12 @@
           tr.innerHTML = `
             <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 time_readable">${timestamp}</td>
             <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${cpuPercent}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${cpuUsage}</td>
             <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${memPercent}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${memUsage}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${tasks}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${bandwidth}</td>
+            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${warning}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -785,7 +800,7 @@
       })
       .catch(error => {
         console.error(error);
-        tbody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-red-600">Error loading usage data: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-red-600">Error loading usage data: ${error.message}</td></tr>`;
       });
 
   });
