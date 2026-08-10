@@ -72,6 +72,7 @@ func newEmailsTestServer(t *testing.T, e *Emails) (*httptest.Server, *http.Clien
 	mux.HandleFunc("GET /emails/queue", e.ServeEmailsQueue)
 	mux.HandleFunc("POST /emails/queue/action", e.ServeEmailsQueueAction)
 	mux.HandleFunc("GET /emails/reports", e.ServeEmailsReports)
+	mux.HandleFunc("GET /emails/reports/view", e.ServeReportsIndex)
 	mux.HandleFunc("GET /emails/data/{filename}", e.ServeShowReport)
 	mux.HandleFunc("GET /emails/webmail/{email}", e.ServeEmailsWebmailLink)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
@@ -732,6 +733,111 @@ func TestServeEmailsReportsRendersHTMLAllBranches(t *testing.T) {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("running: expected body to contain %q, got %s", want, truncate(string(body)))
 		}
+	}
+}
+
+func TestServeEmailsReportsRunningWithReportsShowsIframe(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
+
+	dir := t.TempDir()
+	origIndex := EmailsReportsIndexFile
+	EmailsReportsIndexFile = filepath.Join(dir, "reports.html")
+	t.Cleanup(func() { EmailsReportsIndexFile = origIndex })
+	os.WriteFile(EmailsReportsIndexFile, []byte("{% extends 'base.html' %}\n\n{% block content %}\n<div>calendar</div>\n{% endblock %}"), 0644)
+
+	resp, err := client.Get(srv.URL + "/emails/reports")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	if !strings.Contains(string(body), `src="/emails/reports/view"`) {
+		t.Fatalf("expected an iframe pointed at /emails/reports/view once reports exist, got %s", truncate(string(body)))
+	}
+	if strings.Contains(string(body), "No reports yet") {
+		t.Fatalf("expected the placeholder to be replaced by the iframe, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeReportsIndexStripsJinjaAndWraps(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+
+	dir := t.TempDir()
+	origIndex := EmailsReportsIndexFile
+	EmailsReportsIndexFile = filepath.Join(dir, "reports.html")
+	t.Cleanup(func() { EmailsReportsIndexFile = origIndex })
+	os.WriteFile(EmailsReportsIndexFile, []byte("{% extends 'base.html' %}\n\n{% block content %}\n<div>calendar picker</div>\n{% endblock %}"), 0644)
+
+	resp, err := client.Get(srv.URL + "/emails/reports/view")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	if strings.Contains(string(body), "{%") {
+		t.Fatalf("expected leftover Jinja directives stripped, got %s", truncate(string(body)))
+	}
+	for _, want := range []string{"<div>calendar picker</div>", "/static/dist/output.css", "<!doctype html>"} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected wrapped standalone doc to contain %q, got %s", want, truncate(string(body)))
+		}
+	}
+}
+
+func TestServeReportsIndexMissingFileReturns404(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+
+	dir := t.TempDir()
+	origIndex := EmailsReportsIndexFile
+	EmailsReportsIndexFile = filepath.Join(dir, "does-not-exist.html")
+	t.Cleanup(func() { EmailsReportsIndexFile = origIndex })
+
+	resp, err := client.Get(srv.URL + "/emails/reports/view")
+	if err != nil {
+		t.Fatal(err)
+	}
+	io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+}
+
+func TestServeShowReportStripsJinjaWrapper(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+
+	dir := t.TempDir()
+	origDataDir := EmailsReportsDataDir
+	EmailsReportsDataDir = dir
+	t.Cleanup(func() { EmailsReportsDataDir = origDataDir })
+	os.WriteFile(filepath.Join(dir, "2026-Aug-10.html"), []byte("{% extends 'base.html' %}\n\n{% block content %}\n<div>Summary Reports</div>\n{% endblock %}"), 0644)
+
+	resp, err := client.Get(srv.URL + "/emails/data/2026-Aug-10.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	if strings.Contains(string(body), "{%") {
+		t.Fatalf("expected leftover Jinja directives stripped, got %s", truncate(string(body)))
+	}
+	if !strings.Contains(string(body), "<div>Summary Reports</div>") {
+		t.Fatalf("expected report content preserved, got %s", truncate(string(body)))
 	}
 }
 

@@ -65,7 +65,59 @@ var (
 	EmailsCaddyRedirectsPath = "/etc/openpanel/caddy/redirects.conf"
 	EmailsCaddyConfigDir     = "/etc/openpanel/caddy/"
 	EmailsReportsDataDir     = "/usr/local/admin/templates/emails/data"
+	EmailsReportsIndexFile   = "/usr/local/admin/templates/emails/reports.html"
 )
+
+// mailReportJinjaExtendsRe/BlockRe/EndblockRe strip the Jinja2 wrapper lines
+// still emitted by the mail-report generator, a holdover from OpenAdmin's
+// pre-Go, Flask-based UI where these files used to extend that app's own
+// base.html layout. That layout no longer exists, so left alone these three
+// lines would render as literal text at the top/bottom of the report; the
+// content between them is already plain, fully-rendered HTML (Tailwind
+// classes + a small amount of Alpine.js) with no other Jinja directives, so
+// stripping just these three fixed lines is enough to make the file usable
+// as a standalone document.
+var (
+	mailReportJinjaExtendsRe  = regexp.MustCompile(`(?m)^\{%-?\s*extends\s+['"][^'"]*['"]\s*-?%\}\s*\n?`)
+	mailReportJinjaBlockRe    = regexp.MustCompile(`(?m)^\{%-?\s*block\s+content\s*-?%\}\s*\n?`)
+	mailReportJinjaEndblockRe = regexp.MustCompile(`(?m)^\{%-?\s*endblock\s*-?%\}\s*\n?`)
+)
+
+// mailReportDocTemplate wraps a stripped report fragment in a minimal
+// standalone document that pulls in the same Tailwind build and Alpine.js
+// bundle OpenAdmin's own chrome uses, plus the same dark-mode class toggle,
+// so the report (which was authored against those same classes) renders
+// correctly whether opened directly or embedded in an iframe.
+const mailReportDocTemplate = `<!doctype html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>if(localStorage.getItem('color-theme')==='dark'||(!('color-theme' in localStorage)&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}</script>
+<link rel="stylesheet" href="/static/dist/output.css">
+<script defer src="/static/dist/js/alpinejs3xx.min.js"></script>
+</head>
+<body class="h-full bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white">
+%s
+</body>
+</html>
+`
+
+// prepareMailReportHTML strips the Jinja wrapper lines if present and, only
+// in that case, wraps the remaining content in a standalone document.
+// Report-data fragments that were never Jinja-wrapped (e.g. the per-month
+// day-index files fetched and parsed via innerHTML by reports.html's
+// calendar picker) are returned unchanged, since wrapping those in a full
+// document would break that innerHTML parsing.
+func prepareMailReportHTML(raw []byte) []byte {
+	if !mailReportJinjaExtendsRe.Match(raw) {
+		return raw
+	}
+	content := mailReportJinjaExtendsRe.ReplaceAll(raw, nil)
+	content = mailReportJinjaBlockRe.ReplaceAll(content, nil)
+	content = mailReportJinjaEndblockRe.ReplaceAll(content, nil)
+	return []byte(fmt.Sprintf(mailReportDocTemplate, content))
+}
 
 // emailsPodmanPsRun / emailsRestartMailserverRun are injectable so tests
 // never shell out to real podman/bash.
@@ -683,8 +735,10 @@ func (e *Emails) ServeEmailsReports(w http.ResponseWriter, r *http.Request) {
 			"Flashes": flashes,
 		}, r, "Email Reports"))
 	default:
+		_, err := os.Stat(EmailsReportsIndexFile)
 		webtemplates.Render(w, "emails_reports.html", mergeChrome(map[string]interface{}{
-			"Flashes": flashes,
+			"Flashes":      flashes,
+			"ReportsExist": err == nil,
 		}, r, "Email Reports"))
 	}
 }
@@ -692,7 +746,8 @@ func (e *Emails) ServeEmailsReports(w http.ResponseWriter, r *http.Request) {
 // ServeShowReport handles GET /emails/data/{filename}. No response caching
 // is applied, since these reports should always be served fresh. Reports
 // are dynamically generated HTML files (not part of this Go binary's
-// embedded template set), so they're served as raw bytes rather than run
+// embedded template set), so they're served as raw bytes (after stripping
+// any leftover Jinja wrapper, see prepareMailReportHTML) rather than run
 // through html/template.
 func (e *Emails) ServeShowReport(w http.ResponseWriter, r *http.Request) {
 	filename := r.PathValue("filename")
@@ -708,7 +763,20 @@ func (e *Emails) ServeShowReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(raw)
+	w.Write(prepareMailReportHTML(raw))
+}
+
+// ServeReportsIndex handles GET /emails/reports/view -- the iframe target
+// embedded by emails_reports.html (same pattern as the imunify/CSF iframes),
+// serving the report generator's own calendar-picker index page.
+func (e *Emails) ServeReportsIndex(w http.ResponseWriter, r *http.Request) {
+	raw, err := os.ReadFile(EmailsReportsIndexFile)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(prepareMailReportHTML(raw))
 }
 
 func isIPv4(value string) bool {

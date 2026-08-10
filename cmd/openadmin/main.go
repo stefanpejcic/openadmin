@@ -820,6 +820,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /emails/queue", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsQueue))
 	mux.HandleFunc("POST /emails/queue/action", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsQueueAction))
 	mux.HandleFunc("GET /emails/reports", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsReports))
+	mux.HandleFunc("GET /emails/reports/view", auth.RequireLogin(sessions, authOpts, emails.ServeReportsIndex))
 	mux.HandleFunc("GET /emails/data/{filename}", auth.RequireLogin(sessions, authOpts, emails.ServeShowReport))
 	mux.HandleFunc("GET /emails/webmail/{email}", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsWebmailLink))
 	mux.HandleFunc("GET /emails/domain-limits", auth.RequireLogin(sessions, authOpts, emails.ServeDomainLimits))
