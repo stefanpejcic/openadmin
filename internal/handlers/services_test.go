@@ -125,6 +125,29 @@ func TestGetServiceStatusFromCacheSystemd(t *testing.T) {
 	}
 }
 
+func TestGetServiceStatusFromCachePodmanUsesSocketUnit(t *testing.T) {
+	svc := map[string]interface{}{"real_name": "podman", "type": "system"}
+	// podman.service is transient/socket-activated: it's "inactive" almost
+	// always even when Podman is fully up, so the cache must be keyed off
+	// podman.socket rather than the bare real_name.
+	status := getServiceStatusFromCache(svc, nil, map[string]bool{
+		"podman":        false,
+		"podman.socket": true,
+	}, 5)
+	if status == nil || !*status {
+		t.Fatalf("expected true (up) via podman.socket, got %v", status)
+	}
+}
+
+func TestSystemdUnitForPodmanMapsToSocket(t *testing.T) {
+	if got := systemdUnitFor("podman"); got != "podman.socket" {
+		t.Fatalf("expected podman.socket, got %q", got)
+	}
+	if got := systemdUnitFor("sshd"); got != "sshd" {
+		t.Fatalf("expected unchanged real_name for non-podman service, got %q", got)
+	}
+}
+
 func TestServicesEditRoundTrip(t *testing.T) {
 	path := withScratchServicesConfig(t, `[{"name":"Caddy","real_name":"caddy","type":"docker"}]`)
 

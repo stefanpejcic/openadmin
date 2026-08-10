@@ -183,6 +183,39 @@ func TestAPIServeServicesStatusFiltersOnDashboardAndChecksBoth(t *testing.T) {
 	}
 }
 
+func TestAPIServeServicesStatusPodmanChecksSocketUnit(t *testing.T) {
+	withScratchServicesConfig(t, `[
+		{"name":"Podman","real_name":"podman","type":"system","on_dashboard":true}
+	]`)
+
+	origDocker := apiServicesDockerPSNamesRun
+	apiServicesDockerPSNamesRun = func() ([]string, error) { return nil, nil }
+	t.Cleanup(func() { apiServicesDockerPSNamesRun = origDocker })
+
+	origSystemctl := apiSystemctlIsActiveRun
+	// podman.service is transient/socket-activated and is "inactive" almost
+	// always even when Podman is fully up -- only podman.socket reflects
+	// real liveness, so that's the only unit this stub reports active.
+	apiSystemctlIsActiveRun = func(name string) (bool, error) { return name == "podman.socket", nil }
+	t.Cleanup(func() { apiSystemctlIsActiveRun = origSystemctl })
+
+	s := &APIServices{}
+	srv := httptest.NewServer(newAPIServicesMux(s))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/api/services/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	var got []map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&got)
+	if len(got) != 1 || got[0]["status"] != "Active" {
+		t.Fatalf("expected podman Active via podman.socket, got %+v", got)
+	}
+}
+
 func TestAPIServeServicesStatusDockerCheckErrorSurfacesAsErrorString(t *testing.T) {
 	withScratchServicesConfig(t, `[{"name":"Caddy","real_name":"caddy","type":"docker","on_dashboard":true}]`)
 

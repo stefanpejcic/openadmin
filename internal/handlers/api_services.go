@@ -88,7 +88,11 @@ var apiServicesDockerPSNamesRun = func() ([]string, error) {
 // A nonzero exit (the normal "not active" outcome) is not treated as an
 // error -- only a genuine invocation failure (e.g. systemctl missing) is.
 var apiSystemctlIsActiveRun = func(name string) (bool, error) {
-	cmd := exec.Command("systemctl", "is-active", name+".service")
+	unit := name
+	if !strings.Contains(unit, ".") {
+		unit += ".service"
+	}
+	cmd := exec.Command("systemctl", "is-active", unit)
 	err := cmd.Run()
 	if err == nil {
 		return true, nil
@@ -147,7 +151,7 @@ func (s *APIServices) ServeServicesStatus(w http.ResponseWriter, r *http.Request
 				}
 			}
 		} else {
-			active, err := apiSystemctlIsActiveRun(realName)
+			active, err := apiSystemctlIsActiveRun(systemdUnitFor(realName))
 			switch {
 			case err != nil:
 				status = "Error: " + err.Error()

@@ -186,6 +186,22 @@ func fetchAllDockerStatuses() map[string]bool {
 	return statuses
 }
 
+// systemdUnitFor resolves the systemd unit to query for a monitored
+// service's real_name. Podman's daemon is socket-activated (installer only
+// ever runs `systemctl enable --now podman.socket`; see PODMAN_INSTALL.sh
+// and sentinel.sh's identical podman.socket check) -- podman.service itself
+// sits idle except while actively handling an API request, so checking it
+// directly reports "inactive" almost continuously even though Podman is
+// fully up. The socket unit is what's actually enabled/running and reflects
+// real liveness.
+// https://github.com/stefanpejcic/OpenPanel/issues/1055
+func systemdUnitFor(realName string) string {
+	if realName == "podman" {
+		return "podman.socket"
+	}
+	return realName
+}
+
 func fetchAllSystemdStatuses(names []string) map[string]bool {
 	if len(names) == 0 {
 		return map[string]bool{}
@@ -228,7 +244,7 @@ func getServiceStatusFromCache(service map[string]interface{}, dockerCache, syst
 		return &up
 	}
 
-	up := systemdCache[realName]
+	up := systemdCache[systemdUnitFor(realName)]
 	return &up
 }
 
@@ -252,7 +268,7 @@ func (s *Services) ServeStatus(w http.ResponseWriter, r *http.Request) {
 	for _, svc := range services {
 		if t, _ := svc["type"].(string); t != "docker" {
 			if name, ok := svc["real_name"].(string); ok {
-				systemdNames = append(systemdNames, name)
+				systemdNames = append(systemdNames, systemdUnitFor(name))
 			}
 		}
 	}
