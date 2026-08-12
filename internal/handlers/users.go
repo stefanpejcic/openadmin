@@ -589,6 +589,8 @@ type userDetailPageData struct {
 	Locale            string
 	CountryCode       string
 	EnvData           map[string]string
+	PlanCPU           string
+	PlanRAM           string
 	Services          []composeServiceView
 	Features          []map[string]interface{}
 	HasCustomFeatures bool
@@ -747,10 +749,13 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	featureSet := "default"
+	var planCPU, planRAM string
 	if planRow, err := paneldb.GetPlanByID(u.MySQL, strconv.FormatInt(userData.PlanID, 10)); err == nil {
 		if fs, ok := planRow["feature_set"].(string); ok && fs != "" {
 			featureSet = fs
 		}
+		planCPU, _ = planRow["cpu"].(string)
+		planRAM, _ = planRow["ram"].(string)
 	}
 	featuresPath := FeatureSetPathForPlan(featureSet, userData.Owner.String)
 	hasCustomFeatures := false
@@ -775,6 +780,8 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Locale:            userLocale(userData.Context),
 		CountryCode:       countryCodeForIP(serverIP),
 		EnvData:           envData,
+		PlanCPU:           planCPU,
+		PlanRAM:           planRAM,
 		Services:          composeServicesForUser(u.MySQL, username),
 		Features:          features,
 		HasCustomFeatures: hasCustomFeatures,
