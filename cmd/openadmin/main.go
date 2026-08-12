@@ -276,7 +276,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	apiAuth := &handlers.APIAuth{DB: d.AdminDB, MySQL: d.MySQL, SecretKey: d.SecretKey}
 	apiWelcome := &handlers.APIWelcome{DB: d.AdminDB, SecretKey: d.SecretKey, Limiter: loginRateLimiter}
-	apiSettings := &handlers.APISettings{Sessions: sessions}
+	apiSettings := &handlers.APISettings{Sessions: sessions, SecretKey: d.SecretKey}
 	apiUsers := &handlers.APIUsers{MySQL: d.MySQL, PublicIP: d.PublicIP}
 	apiDomains := &handlers.APIDomains{MySQL: d.MySQL}
 	apiPlans := &handlers.APIPlans{MySQL: d.MySQL}

@@ -684,6 +684,14 @@ func TestServeEmailsReportsRendersHTMLAllBranches(t *testing.T) {
 	e := &Emails{}
 	srv, client := newEmailsTestServer(t, e)
 
+	// Point at a scratch path so this test's "no reports yet" expectation
+	// doesn't depend on whether the machine running the suite happens to
+	// have a real reports index file on disk (newEmailsTestServer doesn't
+	// scratch this path itself, unlike EmailsMailComposeFile/EmailsMailserverEnvFile).
+	origIndex := EmailsReportsIndexFile
+	EmailsReportsIndexFile = filepath.Join(t.TempDir(), "does-not-exist.html")
+	t.Cleanup(func() { EmailsReportsIndexFile = origIndex })
+
 	// not_installed: compose.yml missing (default scratch state).
 	resp, err := client.Get(srv.URL + "/emails/reports")
 	if err != nil {

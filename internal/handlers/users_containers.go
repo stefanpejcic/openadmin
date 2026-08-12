@@ -67,15 +67,23 @@ func composeStringOrEmpty(v interface{}) string {
 }
 
 // composeSizeToBytes converts a resolved compose memory limit into bytes.
-// podman-compose's resolved JSON normally emits this as a plain number of
+// podman-compose's resolved config normally emits this as a plain number of
 // bytes, but a string like "512M"/"0.5G" is handled defensively too, in
 // case some version leaves it unresolved. ok is false for a zero, missing,
 // or unparseable value -- matching the original page treating those as
-// "no limit set", not "limit is zero".
+// "no limit set", not "limit is zero". apiContainersData decodes the
+// resolved config with yaml.v3 (podman-compose's "config" output is YAML,
+// not JSON, even though it's JSON-compatible), which decodes a bare
+// integer literal into Go's int, not float64 -- unlike encoding/json --
+// so both numeric cases are needed here.
 func composeSizeToBytes(v interface{}) (bytes float64, ok bool) {
 	switch t := v.(type) {
 	case float64:
 		return t, t != 0
+	case int:
+		return float64(t), t != 0
+	case int64:
+		return float64(t), t != 0
 	case string:
 		s := strings.TrimSuffix(strings.TrimSpace(strings.ToUpper(t)), "B")
 		if s == "" || s == "0" {
