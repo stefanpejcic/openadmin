@@ -641,7 +641,15 @@ func (d *Defaults) ServeDefaultsFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *Defaults) handleDefaultsFilesPreview(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	// The browser's Validate button submits multipart/form-data (via
+	// FormData), which r.ParseForm() alone does not parse -- only
+	// ParseMultipartForm handles that, and it falls back to a plain
+	// ParseForm for non-multipart bodies (e.g. the urlencoded requests
+	// used in tests).
+	if err := r.ParseMultipartForm(32 << 20); err != nil && err != http.ErrNotMultipart {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	if err := os.MkdirAll(DefaultsTmpDir, 0755); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -743,7 +751,12 @@ func (d *Defaults) ServeUserFiles(w http.ResponseWriter, r *http.Request) {
 	composePath := "/home/" + context + "/docker-compose.yml"
 
 	if r.Method == http.MethodPost {
-		r.ParseForm()
+		// The browser submits this as multipart/form-data (via FormData),
+		// which r.ParseForm() alone does not parse.
+		if err := r.ParseMultipartForm(32 << 20); err != nil && err != http.ErrNotMultipart {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		if formHasKey(r, "env") {
 			os.WriteFile(envPath, []byte(r.PostFormValue("env")), 0644)
 		}
