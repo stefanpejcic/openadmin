@@ -98,12 +98,14 @@ func IsAuthenticated(r *http.Request) bool {
 }
 
 // LoginUser stores the user id and the IP the session was established from
-// (see ValidateSessionIP).
+// (see ValidateSessionIP). mgr.Get's error is deliberately ignored: per
+// gorilla/sessions, Get() still returns a usable new session (just with
+// IsNew=true) when the browser's existing cookie fails to decode -- e.g. a
+// stale cookie from before a secret rotation, or one a client tampered
+// with. That's the expected path for anyone logging back in with a bad
+// cookie, not a fatal error; the fresh session's Save below overwrites it.
 func LoginUser(w http.ResponseWriter, r *http.Request, mgr *Manager, u *admindb.User, clientIP string) error {
-	sess, err := mgr.Get(r)
-	if err != nil {
-		return err
-	}
+	sess, _ := mgr.Get(r)
 	sess.Values["user_id"] = u.ID
 	sess.Values["user_ip"] = clientIP
 	return sess.Save(r, w)
