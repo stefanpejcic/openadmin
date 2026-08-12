@@ -61,6 +61,19 @@ func TestUpdateContainerRAMOrCPUEnvFileNotFound(t *testing.T) {
 	}
 }
 
+func TestUpdateContainerPIDsEnvFileNotFound(t *testing.T) {
+	result, err := updateContainerRAMOrCPU("definitely-not-a-real-context-xyz", "web", "pids", "100")
+	if err != nil {
+		t.Fatalf("expected no unhandled error, got %v", err)
+	}
+	if !result.IsDict || result.Success {
+		t.Fatalf("expected a failure dict, got %+v", result)
+	}
+	if !strings.Contains(result.Message, ".env file not found at") {
+		t.Fatalf("unexpected message: %q", result.Message)
+	}
+}
+
 func TestUpdateContainerRAMOrCPUUnsupportedActionMessage(t *testing.T) {
 	// ServeManageContainer itself never lets an unsupported action reach
 	// updateContainerRAMOrCPU in the real app (it's pre-validated), but this
@@ -72,7 +85,7 @@ func TestUpdateContainerRAMOrCPUUnsupportedActionMessage(t *testing.T) {
 	if !result.IsDict || result.Success {
 		t.Fatalf("expected a failure dict, got %+v", result)
 	}
-	if result.Message != "Unsupported action: bogus. Use 'ram' or 'cpu'." {
+	if result.Message != "Unsupported action: bogus. Use 'ram', 'cpu', or 'pids'." {
 		t.Fatalf("unexpected message: %q", result.Message)
 	}
 }
@@ -366,6 +379,30 @@ func TestServeManageContainerCPUEnvFileNotFoundFlashesErrorMessage(t *testing.T)
 	}
 }
 
+func TestServeManageContainerPIDsEnvFileNotFoundFlashesErrorMessage(t *testing.T) {
+	mysqlDB, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+
+	u := &Users{MySQL: mysqlDB}
+	srv, client := newUsersTestServer(t, u, "admin")
+
+	resp, err := client.PostForm(srv.URL+"/containers/definitely-nonexistent-user-xyz/pids/web", url.Values{"value": {"100"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 after following the redirect chain, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	if !strings.Contains(string(body), ".env file not found at") {
+		t.Fatalf("expected the .env-not-found flash, got %s", truncate(string(body)))
+	}
+}
+
 // --- GET /containers/stats/{username} ---
 
 func TestServeContainersStatsReturnsJSONArray(t *testing.T) {
@@ -500,6 +537,34 @@ func TestComposeServicesForUserParsesResolvedConfig(t *testing.T) {
 	}
 	if v.MemoryLimitGB != "0.50" {
 		t.Fatalf("expected MemoryLimitGB 0.50, got %q", v.MemoryLimitGB)
+	}
+}
+
+func TestComposeServicesForUserParsesPIDsLimit(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	mock.ExpectQuery(`SELECT server FROM users`).
+		WithArgs("alice").
+		WillReturnRows(sqlmock.NewRows([]string{"server"}).AddRow("alice"))
+
+	orig := containerComposeCaptureRun
+	containerComposeCaptureRun = func(context, dir string, args ...string) (string, string, error) {
+		return `{"services":{"mysql":{
+			"container_name":"mysql",
+			"deploy":{"resources":{"limits":{"cpus":"0.5","memory":536870912,"pids":100}}}
+		}}}`, "", nil
+	}
+	t.Cleanup(func() { containerComposeCaptureRun = orig })
+
+	views := composeServicesForUser(mysqlDB, "alice")
+	if len(views) != 1 {
+		t.Fatalf("expected 1 service, got %d: %#v", len(views), views)
+	}
+	if got := views[0].PIDsLimit; got != "100" {
+		t.Fatalf("expected PIDsLimit 100, got %q", got)
 	}
 }
 

@@ -54,6 +54,7 @@ type composeServiceView struct {
 	Environment   []composeEnvView
 	CPULimit      string // raw "cpus" value (e.g. "0.5" or "0"), "" if unset -- "0" itself is NOT unlimited here, the template's JS decides that, matching the original page
 	MemoryLimitGB string // memory converted to GB and formatted to 2 decimals, "" if unset or zero
+	PIDsLimit     string // raw "pids" value (e.g. "100" or "0"), "" if unset
 }
 
 // composeStringOrEmpty stringifies a decoded JSON value, treating a missing
@@ -157,6 +158,7 @@ func composeServicesForUser(mysqlDB *sql.DB, username string) []composeServiceVi
 					if b, ok := composeSizeToBytes(limits["memory"]); ok {
 						view.MemoryLimitGB = strconv.FormatFloat(b/(1<<30), 'f', 2, 64)
 					}
+					view.PIDsLimit = composeStringOrEmpty(limits["pids"])
 				}
 			}
 		}
@@ -244,7 +246,7 @@ type containerActionResult struct {
 	Message string
 }
 
-// updateContainerRAMOrCPU updates a container's RAM or CPU limit. The
+// updateContainerRAMOrCPU updates a container's RAM, CPU, or PIDs limit. The
 // returned error is non-nil only for the one case that's genuinely
 // unhandled here (a restart_container() failure while resetting a limit to
 // 0/unlimited) -- callers should treat that as a bare 500, not a flash.
@@ -253,8 +255,8 @@ func updateContainerRAMOrCPU(context, containerName, action, value string) (cont
 	envVar := containerEnvVarSanitizeRe.ReplaceAllString(strings.ToUpper(containerName), "_") + "_" + strings.ToUpper(action)
 
 	lowerAction := strings.ToLower(action)
-	if lowerAction != "ram" && lowerAction != "cpu" {
-		return containerActionResult{IsDict: true, Message: fmt.Sprintf("Unsupported action: %s. Use 'ram' or 'cpu'.", action)}, nil
+	if lowerAction != "ram" && lowerAction != "cpu" && lowerAction != "pids" {
+		return containerActionResult{IsDict: true, Message: fmt.Sprintf("Unsupported action: %s. Use 'ram', 'cpu', or 'pids'.", action)}, nil
 	}
 
 	if lowerAction == "ram" {
@@ -288,9 +290,12 @@ func updateContainerRAMOrCPU(context, containerName, action, value string) (cont
 			}
 		} else {
 			var updateArgs []string
-			if lowerAction == "ram" {
+			switch lowerAction {
+			case "ram":
 				updateArgs = []string{"update", "--memory-swap", value, "--memory", value, containerName}
-			} else {
+			case "pids":
+				updateArgs = []string{"update", "--pids-limit", value, containerName}
+			default:
 				updateArgs = []string{"update", "--cpus", value, containerName}
 			}
 			if err := containerPodmanUpdateRun(context, path, updateArgs); err != nil {
@@ -363,7 +368,7 @@ func (u *Users) ServeManageContainer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action {
-	case "start", "stop", "restart", "cpu", "ram":
+	case "start", "stop", "restart", "cpu", "ram", "pids":
 	default:
 		http.Error(w, "Invalid action", http.StatusBadRequest)
 		return
@@ -372,7 +377,7 @@ func (u *Users) ServeManageContainer(w http.ResponseWriter, r *http.Request) {
 	context, _ := queryContextByUsername(u.MySQL, username)
 
 	switch action {
-	case "cpu", "ram":
+	case "cpu", "ram", "pids":
 		value := r.PostFormValue("value")
 		result, err := updateContainerRAMOrCPU(context, containerName, action, value)
 		if err != nil {
