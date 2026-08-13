@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
+	coresearch "openadmin/core/search"
 	"openadmin/internal/auth"
 	"openadmin/internal/paneldb"
 	"openadmin/internal/webtemplates"
@@ -40,21 +41,17 @@ func ResolveSearchJSONFilePath() string {
 	return SearchFallbackJSONPath
 }
 
-// ServeSearchFilter handles GET /search/pages.
+// ServeSearchFilter handles GET /search/pages. It prefers whichever
+// external file s.JSONFilePath resolved to (allowing a deployment to
+// customize or module-filter the index), but falls back to the index
+// embedded in the binary at build time if that file is missing --
+// deploys that only ship the binary still get a working search index.
 func (s *Search) ServeSearchFilter(w http.ResponseWriter, r *http.Request) {
 	const limitResults = 100
 
-	if _, err := os.Stat(s.JSONFilePath); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("[]"))
-		return
-	}
-
 	raw, err := os.ReadFile(s.JSONFilePath)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Error loading JSON data")
-		return
+		raw = coresearch.DefaultFilterJSON
 	}
 
 	var data []json.RawMessage

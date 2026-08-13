@@ -66,7 +66,7 @@ func newSearchTestServer(t *testing.T, s *Search, role string) (*httptest.Server
 	return srv, client
 }
 
-func TestServeSearchFilterMissingFileReturns404EmptyArray(t *testing.T) {
+func TestServeSearchFilterMissingFileFallsBackToEmbeddedDefault(t *testing.T) {
 	dir := t.TempDir()
 	s := &Search{JSONFilePath: filepath.Join(dir, "does-not-exist.json")}
 	srv, client := newSearchTestServer(t, s, "admin")
@@ -77,11 +77,11 @@ func TestServeSearchFilterMissingFileReturns404EmptyArray(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	if strings.TrimSpace(string(body)) != "[]" {
-		t.Fatalf("expected empty array body, got %s", truncate(string(body)))
+	if !strings.Contains(string(body), `"link":"/dashboard"`) {
+		t.Fatalf("expected embedded default filter.json content (dashboard entry), got %s", truncate(string(body)))
 	}
 }
 
