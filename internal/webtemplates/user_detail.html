@@ -106,8 +106,8 @@
                     <h2 class="text-sm font-medium text-slate-500">
                        <span class="inline-flex">
 {{if .CountryCode}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .CountryCode}}.svg" alt="IP address location: {{.CountryCode}}"></img></span><span>{{.ServerIP}} / {{end}}
-{{if or (eq (index .EnvData "TOTAL_CPU") "0") (not (index .EnvData "TOTAL_CPU"))}}&#8734;{{else}}{{index .EnvData "TOTAL_CPU"}}{{end}} Cores /
-{{$totalRam := index .EnvData "TOTAL_RAM"}}{{if or (eq $totalRam "0g") (not $totalRam)}}&#8734;{{else}}{{rstrip $totalRam "g"}} GB{{end}} Memory /
+{{if or (eq .PlanCPU "0") (not .PlanCPU)}}&#8734;{{else}}{{.PlanCPU}}{{end}} Cores /
+{{if or (eq .PlanRAM "0g") (not .PlanRAM)}}&#8734;{{else}}{{rstrip .PlanRAM "g"}} GB{{end}} Memory /
 {{if .Disk.DiskHard}}{{.StatsWidget.DiskHardHuman}}{{else}}&#8734;{{end}}
                     </h2>
                </div>
@@ -896,6 +896,7 @@
                                  <th x-show="columns.env" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Env</th>
                                  <th x-show="columns.cpu" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU</th>
                                  <th x-show="columns.ram" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory</th>
+                                 <th x-show="columns.pids" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">PIDs</th>
                                  <th x-show="columns.actions" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Actions</th>
                               </tr>
                            </thead>
@@ -1033,6 +1034,24 @@
                                        </div>
                                     </div>
                                  </td>
+                                 <td x-show="columns.pids" x-data="{
+                                    editing: false,
+                                    rawValue: '{{.PIDsLimit | jsStr}}',
+                                    PIDSinputValue: '{{if .PIDsLimit}}{{.PIDsLimit | jsStr}}{{else}}0{{end}}',
+                                    get isUnlimited() { return this.rawValue === '' || this.rawValue === '0'; },
+                                    get value() { return this.isUnlimited ? '∞' : this.rawValue; },
+                                    set value(val) { this.rawValue = val; this.PIDSinputValue = val; }}"
+                                    class="group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
+                                    <span x-show="!editing">
+                                       <span id="pids-usage-{{.Name}}">0</span>/<span class="font-medium text-gray-900 dark:text-gray-50" x-text="value"></span>
+                                       <a href="#" @click.prevent="editing = !editing" class="transform hidden group-hover:inline-block text-gray-400 hover:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
+                                    </span>
+                                    <form action="/containers/{{lastSegment $.Username `_`}}/pids/{{.Name}}" method="POST" x-show="editing" class="inline-flex items-center gap-1">
+                                       <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
+                                       <input x-model="PIDSinputValue" title="Max number of processes/threads that this service can use. 0 = unlimited" name="value" type="number" min="0" step="1" class="w-16 px-1 py-0.5 border rounded dark:bg-gray-700 dark:text-white" />
+                                       <button type="submit" class="px-1.5 py-0.5 text-white bg-blue-500 rounded hover:bg-blue-600">Save</button>
+                                    </form>
+                                 </td>
                                  <td x-show="columns.actions" id="actions-{{.Name}}" x-data="{ pullValue: 'false' }" class="py-1">
                                     <form method="POST" action="/containers/{{lastSegment $.Username `_`}}/start/{{.ContainerName}}">
                                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
@@ -1086,6 +1105,7 @@
                 env: false,
                 cpu: true,
                 ram: true,
+                pids: true,
                 actions: true
             },
             saveColumns() {
@@ -1095,7 +1115,7 @@
                 const saved = localStorage.getItem('columns-singe-user');
                 if (saved) {
                     try {
-                        this.columns = JSON.parse(saved);
+                        Object.assign(this.columns, JSON.parse(saved));
                     } catch (e) {
                         console.warn("Failed to parse columns-singe-user from localStorage", e);
                     }
@@ -1172,9 +1192,11 @@
                     var cpuCell = $('#cpu-' + containerId);
                     var ramText = $('#ram-usage-' + containerId);
                     var cpuText = $('#cpu-usage-' + containerId);
+                    var pidsText = $('#pids-usage-' + containerId);
 
                     var cpuUsage = parseFloat(container.CPU) || 0;
                     var memUsage = parseFloat(container.MemPerc) || 0;
+                    var pidsUsage = parseInt(container.PIDs !== undefined ? container.PIDs : container.PIDS, 10) || 0;
 
                     var cpuDashOffset = 78.54 * (1 - cpuUsage / 100);
                     var memDashOffset = 78.54 * (1 - memUsage / 100);
@@ -1217,6 +1239,8 @@
                         </div>
                     `;
                     ramCell.html(ramInfo);
+
+                    pidsText.html(`${pidsUsage}`);
 
                     var actionsInfo = `
                         <form method="POST" action="/containers/${username}/stop/${containerName}"><input type="hidden" name="csrf_token" value="{{.CSRFToken}}"><button type="submit" title="Click to disable" class="w-full relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded border px-2 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Enabled</button></form>

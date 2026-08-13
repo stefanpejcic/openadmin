@@ -12,55 +12,26 @@
     <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
     <header>
         <div  class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
             <div class="grow">
                 <h1 class="mb-1 text-xl font-bold">API Access</h1>
-                <h2 class="text-sm font-medium text-slate-500">Test API calls, view examples, follow logs, etc.</h2>
+                <h2 class="text-sm font-medium text-slate-500">Browse and test every API endpoint with the interactive reference below.</h2>
             </div>
             <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
 
                 {{if eq .APIStatus "on"}}
+<a href="/static/openapi.yaml" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 sm:w-fit gap-x-1.5 whitespace-nowrap border-black bg-black text-white hover:bg-gray-800">
+    Download spec
+</a>
 <form method="POST">
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
     <input type="hidden" name="action" value="off">
 <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Disable API access</button>
 </form>
-<a type="button" @click="showSection = !showSection; loadApiExamples()" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"> View Examples </a>
-
 {{end}}
             </div>
-        </div>
-
-
-
-        <!-- Initially Hidden, Show on Click -->
-        <div :class="{ 'hidden': !showSection }" class="mt-8 w-full md:items-stretch md:space-x-4 hidden">
-            <div class="sm:mx-auto sm:max-w-6xl">
-                <pre id="api_examples" class="relative overflow-auto p-2 bg-gray-800  text-white text-sm"></pre>
-            </div>
-
-
-        <script>
-            function loadApiExamples() {
-                var xhr = new XMLHttpRequest();
-                xhr.open("GET", "/settings/api/endpoints", true);
-                xhr.onreadystatechange = function () {
-                    if (xhr.readyState == 4 && xhr.status == 200) {
-                        var examples = xhr.responseText;
-                        displayExamples(examples);
-                    }
-                };
-                xhr.send();
-            }
-
-            function displayExamples(example) {
-                var examplesDiv = document.getElementById("api_examples");
-                examplesDiv.textContent = example;
-            }
-        </script>
-
         </div>
     </header>
 
@@ -107,141 +78,72 @@
 
 {{else if eq .APIStatus "on"}}
 
+<link rel="stylesheet" href="/static/vendor/swagger-ui/swagger-ui.css">
+<script src="/static/vendor/swagger-ui/swagger-ui-bundle.js"></script>
+<script src="/static/vendor/swagger-ui/swagger-ui-standalone-preset.js"></script>
 
-<div id="collapseAddNewUser" class="px-4">
+<style>
+    /* Swagger UI ships its own complete dark theme (html.dark-mode) plus a
+       lightbulb toggle that flips it based on the OS color-scheme
+       preference at mount time. We don't want a second, independent theme
+       control -- the disable-topbar-explore script below keeps
+       html.dark-mode in sync with this panel's own dark/light toggle
+       instead, so the built-in toggle button is hidden since clicking it
+       would fight that sync. */
+    .swagger-ui .topbar .dark-mode-toggle { display: none; }
+    .swagger-ui .topbar .download-url-input[disabled],
+    .swagger-ui .topbar .download-url-button[disabled] { opacity: .5; cursor: not-allowed; }
+    #swagger-ui-container { min-height: 60vh; }
+</style>
 
-    <div class="sm:mx-auto sm:max-w-2xl" style="display:block;">
-        <form id="httpRequestForm" method="POST" class="mt-8">
-            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-                <div class="col-span-full sm:col-span-3">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Method<span class="text-red-500 dark:text-red-500">*</span></label>
-                    <div class="relative w-full mt-2">
-                          <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name='method'>
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                            <option value="PUT">PUT</option>
-                            <option value="DELETE">DELETE</option>
-                            <option value="PATCH">PATCH</option>
-                          </select>
-                    </div>
-                </div>
-
-                <div class="col-span-full sm:col-span-3">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">URL<span class="text-red-500 dark:text-red-500">*</span></label>
-                    <div class="relative w-full mt-2">
-                        <input
-                            type="text"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="url" placeholder="/api/" autocomplete="off"/>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-
-           <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-
-                <div id="username" class="col-span-full sm:col-span-3" style="display:none;">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
-                    <div class="relative w-full mt-2">
-                        <input
-                            type="text"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="username" value="{{.CurrentUser}}" />
-                    </div>
-                </div>
-
-                <div id="password" class="col-span-full sm:col-span-3" style="display:none;">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Password<span class="text-red-500 dark:text-red-500">*</span></label>
-                    <div class="relative w-full mt-2">
-                        <input
-                            type="text"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="password" autocomplete="off"/>
-                    </div>
-                </div>
-
-                <div id="token" class="col-span-full sm:col-span-6" style="display:none;">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Token<span class="text-red-500 dark:text-red-500">*</span></label>
-                    <div class="relative w-full mt-2">
-                        <input
-                            type="text" name="token"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" autocomplete="off" />
-                    </div>
-                </div>
-
-
-                <div class="col-span-full sm:col-span-6">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Data</label>
-                    <div class="relative w-full mt-2">
-                        <input
-                            type="textarea"
-                            class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 json_data" name="json_data" />
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-
-
-<button type="submit" id="submit_button" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Send request</button>
-
-<button id="working" style="display:none;" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" disabled><span class="spinner-border spinner-border-sm" role="status"></span> Working</button>
-
-
-
-
-           <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-
-                <div class="col-span-full sm:col-span-6">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Curl command</label>
-                    <div class="relative w-full mt-2">
-                        <pre id="requestDetails" class="relative overflow-auto p-2 bg-gray-800  text-white  text-sm">GET /api/</pre>
-                    </div>
-                </div>
-
-
-                <div class="col-span-full sm:col-span-6">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="description">Response</label>
-                    <div class="relative w-full mt-2">
-                    <pre id="responseDisplay" class="relative overflow-auto p-2 bg-gray-800  text-white text-sm">
-{
-  "message": "API is working!"
-}
-</pre>
-                    </div>
-                </div>
-
-            </div>
-
-
-
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-
-
-
-            <div class="flex items-center justify-end space-x-4">
-
-            </div>
-        </form>
-
-
-API logs
-<pre id="log_content" class="relative overflow-auto p-2 bg-gray-800  text-white text-sm"></pre>
-
-
-    </div>
+<div id="swagger-ui-container" class="p-2 sm:p-4">
+    <div id="swagger-ui"></div>
 </div>
 
+<script>
+    // Swagger UI's own dark theme is keyed off a `dark-mode` class on
+    // <html>, seeded once from the OS color-scheme preference by its
+    // bundled (now-hidden) toggle button -- not from this panel's own
+    // dark/light setting. Mirror the panel's `dark` class onto it instead,
+    // so Swagger UI always matches what the user has chosen for the panel.
+    function syncSwaggerDarkMode() {
+        var isDark = document.documentElement.classList.contains('dark');
+        document.documentElement.classList.toggle('dark-mode', isDark);
+    }
 
+    window.addEventListener('load', function () {
+        syncSwaggerDarkMode();
 
+        window.ui = SwaggerUIBundle({
+            url: '/static/openapi.yaml',
+            dom_id: '#swagger-ui',
+            presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+            layout: 'StandaloneLayout',
+            deepLinking: true,
+            onComplete: function () {
+                {{if .Token}}
+                window.ui.preauthorizeApiKey('bearerAuth', {{.Token}});
+                {{end}}
+                // Re-sync: Swagger UI's own toggle component may have just
+                // overridden dark-mode with its OS-preference guess during
+                // mount, above.
+                syncSwaggerDarkMode();
+                // This page only ever serves this panel's own spec -- the
+                // topbar's URL field and "Explore" button would otherwise
+                // let a user point Swagger UI at an arbitrary spec/URL.
+                var urlInput = document.getElementById('download-url-input');
+                if (urlInput) { urlInput.disabled = true; }
+                var exploreBtn = document.querySelector('.download-url-button');
+                if (exploreBtn) { exploreBtn.disabled = true; }
+            }
+        });
 
-<script src="/static/pages/api_on.js" defer></script>
+        // Keep it in sync live as the user flips the panel's own toggle.
+        new MutationObserver(syncSwaggerDarkMode).observe(document.documentElement, {
+            attributes: true, attributeFilter: ['class']
+        });
+    });
+</script>
 
 {{else}}
 

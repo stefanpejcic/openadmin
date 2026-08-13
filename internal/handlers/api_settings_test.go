@@ -37,7 +37,7 @@ func newAPISettingsTestServer(t *testing.T) (*httptest.Server, *http.Client) {
 	}
 
 	sessions := auth.NewManager("test-secret", false)
-	h := &APISettings{Sessions: sessions}
+	h := &APISettings{Sessions: sessions, SecretKey: "test-secret"}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /settings/api", h.ServeAPISettings)
@@ -90,6 +90,33 @@ func TestServeAPISettingsGetRendersEnabledForm(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "Disable API access") {
 		t.Fatalf("expected the enabled-state form, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeAPISettingsGetRendersSwaggerUIWithPreauthorizedToken(t *testing.T) {
+	withScratchAPISettingsConfig(t, "on", "no")
+	srv, client := newAPISettingsTestServer(t)
+
+	resp, err := client.Get(srv.URL + "/settings/api")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	for _, want := range []string{
+		`url: '/static/openapi.yaml'`,
+		"/static/vendor/swagger-ui/swagger-ui-bundle.js",
+		"window.ui.preauthorizeApiKey('bearerAuth',",
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
+		}
+	}
+	if strings.Contains(string(body), "window.ui.preauthorizeApiKey('bearerAuth', \"\")") {
+		t.Fatalf("expected a non-empty pre-authorized token, got empty: %s", truncate(string(body)))
 	}
 }
 
@@ -157,6 +184,40 @@ func TestServeAPISettingsPostFallsBackToFlashWhenOpenCLIMissing(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "Error executing opencli") {
 		t.Fatalf("expected the opencli-error flash, got %s", truncate(string(body)))
+	}
+}
+
+// TestServeAPISettingsPostSuccessRedirectsWithoutRestartingService covers
+// the incident where toggling API access shelled out to `service admin
+// reload` -- restarting the very systemd service handling this request,
+// killing the connection before the client got a response. Since
+// apiFeatureEnabled() reads openpanel.config fresh on every request (see
+// api_common.go), no restart is needed or should happen: a fake `opencli`
+// on PATH simulates success, and a PATH with no real `service` binary
+// proves the handler doesn't try to invoke one -- if it still did, that
+// call would fail and the handler would 500 instead of redirecting.
+func TestServeAPISettingsPostSuccessRedirectsWithoutRestartingService(t *testing.T) {
+	withScratchAPISettingsConfig(t, "off", "no")
+	srv, client := newAPISettingsTestServer(t)
+
+	binDir := t.TempDir()
+	fakeOpenCLI := filepath.Join(binDir, "opencli")
+	os.WriteFile(fakeOpenCLI, []byte("#!/bin/sh\necho \"Updated api to $4\"\n"), 0755)
+	origPath := os.Getenv("PATH")
+	os.Setenv("PATH", binDir)
+	t.Cleanup(func() { os.Setenv("PATH", origPath) })
+
+	resp, err := client.PostForm(srv.URL+"/settings/api", url.Values{"action": {"on"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 after following the redirect to /settings/api, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	if strings.Contains(string(body), "reloading admin service encountered an error") {
+		t.Fatalf("handler still tries to restart the admin service: %s", truncate(string(body)))
 	}
 }
 

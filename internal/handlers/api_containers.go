@@ -181,9 +181,9 @@ func (c *APIContainers) ServeManageContainer(w http.ResponseWriter, r *http.Requ
 	username := r.PathValue("username")
 
 	switch action {
-	case "start", "stop", "restart", "cpu", "ram":
+	case "start", "stop", "restart", "cpu", "ram", "pids":
 	default:
-		writeJSONError(w, http.StatusBadRequest, "Invalid action. Use start, stop, restart, cpu, or ram.")
+		writeJSONError(w, http.StatusBadRequest, "Invalid action. Use start, stop, restart, cpu, ram, or pids.")
 		return
 	}
 
@@ -193,7 +193,7 @@ func (c *APIContainers) ServeManageContainer(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if action == "cpu" || action == "ram" {
+	if action == "cpu" || action == "ram" || action == "pids" {
 		var value string
 		haveValue := false
 		if apiIsJSONContentType(r) {

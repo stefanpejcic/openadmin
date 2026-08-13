@@ -19,7 +19,8 @@ import (
 
 // APISettings bundles the /settings/api* handlers.
 type APISettings struct {
-	Sessions *auth.Manager
+	Sessions  *auth.Manager
+	SecretKey string
 }
 
 // APILogPath is where API requests/responses get logged.
@@ -65,6 +66,7 @@ type apiSettingsPageData struct {
 	Flashes          []auth.Flash
 	BasicAuthEnabled string
 	APIStatus        string
+	Token            string
 }
 
 // ServeAPISettings handles GET/POST /settings/api and /settings/api/.
@@ -84,10 +86,13 @@ func (a *APISettings) ServeAPISettings(w http.ResponseWriter, r *http.Request) {
 		} else if strings.Contains(string(out), "Updated api to") {
 			notifySentinel("admin_api", "OpenAdmin API is $action", "API access for the administrator-level panel is now: $action.")
 
-			if _, err := exec.Command("service", "admin", "reload").CombinedOutput(); err != nil {
-				writeJSONError(w, http.StatusInternalServerError, "API was updated, but reloading admin service encountered an error: "+err.Error())
-				return
-			}
+			// No service restart/reload needed: apiFeatureEnabled() (and
+			// every other openpanel.config read in this codebase) loads
+			// fresh on every request rather than caching at process
+			// startup, so the new value takes effect on the very next
+			// request. Restarting the admin service here used to kill the
+			// connection handling this very POST mid-response, since it's
+			// the same process -- see the incident this comment replaced.
 			http.Redirect(w, r, "/settings/api", http.StatusSeeOther)
 			return
 		} else {
@@ -114,11 +119,22 @@ func (a *APISettings) ServeAPISettings(w http.ResponseWriter, r *http.Request) {
 	}
 	apiStatus := cfg.Get("PANEL", "api", "on")
 
+	// Pre-authorize the embedded Swagger UI with a freshly minted token for
+	// the logged-in admin, so "Try it out" works immediately against this
+	// same origin without a separate POST /api/ login step.
+	var token string
+	if basicAuthEnabled == "off" && apiStatus == "on" {
+		if u := auth.CurrentUser(r); u != nil {
+			token, _ = createAPIToken(u.Username, a.SecretKey)
+		}
+	}
+
 	webtemplates.Render(w, "settings_api.html", apiSettingsPageData{
 		Chrome:           buildChrome(r, "API"),
 		CSRFToken:        csrf.Token(r),
 		Flashes:          auth.PopFlashes(w, r, a.Sessions),
 		BasicAuthEnabled: basicAuthEnabled,
 		APIStatus:        apiStatus,
+		Token:            token,
 	})
 }

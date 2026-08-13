@@ -94,6 +94,62 @@ func TestLoginLogoutRoundTripOverHTTP(t *testing.T) {
 	}
 }
 
+// TestLoginUserSucceedsWithUndecodableExistingCookie covers a browser
+// arriving with a stale/corrupted OPENADMIN cookie (e.g. left over from
+// before a secret rotation, or tampered with). gorilla/sessions' Get()
+// still hands back a fresh, usable session in that case alongside a
+// decode error; LoginUser must not treat that error as fatal, or every
+// such login would 500 instead of just overwriting the bad cookie.
+func TestLoginUserSucceedsWithUndecodableExistingCookie(t *testing.T) {
+	db := withScratchAdminDB(t)
+	if err := db.CreateUser("admin", "hash", "admin"); err != nil {
+		t.Fatal(err)
+	}
+	u, err := db.UserByUsername("admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mgr := NewManager("test-secret", false)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/login-as-admin", func(w http.ResponseWriter, r *http.Request) {
+		if err := LoginUser(w, r, mgr, u, "203.0.113.1"); err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+	})
+	mux.HandleFunc("/whoami", func(w http.ResponseWriter, r *http.Request) {
+		if cu := CurrentUser(r); cu != nil {
+			io.WriteString(w, cu.Username)
+		} else {
+			io.WriteString(w, "anonymous")
+		}
+	})
+
+	srv := httptest.NewServer(WithUserLoader(mgr, db)(mux))
+	defer srv.Close()
+
+	client := newClient(t)
+	srvURL, _ := url.Parse(srv.URL)
+	client.Jar.SetCookies(srvURL, []*http.Cookie{{Name: SessionCookieName, Value: "not-a-valid-encoded-session"}})
+
+	resp, err := client.Get(srv.URL + "/login-as-admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 from login with a bad existing cookie, got %d", resp.StatusCode)
+	}
+
+	resp, _ = client.Get(srv.URL + "/whoami")
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if string(body) != "admin" {
+		t.Fatalf("expected admin after login despite bad prior cookie, got %q", body)
+	}
+}
+
 func TestFlashRoundTripAcrossRequests(t *testing.T) {
 	mgr := NewManager("test-secret", false)
 

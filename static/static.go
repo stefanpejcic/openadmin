@@ -7,5 +7,5 @@ package static
 
 import "embed"
 
-//go:embed dist images pages src robots.txt security.txt
+//go:embed dist images pages src vendor robots.txt security.txt openapi.yaml
 var Files embed.FS

@@ -389,6 +389,29 @@ func TestServeDefaultsFilesGetAndPost(t *testing.T) {
 	}
 }
 
+func TestServeDefaultsFilesPostWritesAutostart(t *testing.T) {
+	withScratchDefaultsPaths(t)
+	os.WriteFile(DefaultsAutostartServicesPath, []byte("old-autostart"), 0644)
+
+	d := &Defaults{}
+	srv, client := newDefaultsTestServer(t, d)
+
+	resp, err := client.PostForm(srv.URL+"/settings/defaults/files", url.Values{"autostart": {"mysql\nredis"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "autostart.services") || !strings.Contains(string(body), "mysql\nredis") {
+		t.Fatalf("expected rendered page to show autostart editor with new content, got %s", truncate(string(body)))
+	}
+
+	saved, _ := os.ReadFile(DefaultsAutostartServicesPath)
+	if string(saved) != "mysql\nredis" {
+		t.Fatalf("expected autostart file updated, got %q", saved)
+	}
+}
+
 func TestServeDefaultsFilesPutValidatesViaComposeConfig(t *testing.T) {
 	withScratchDefaultsPaths(t)
 
@@ -436,10 +459,14 @@ func TestServeDefaultsFilesDeleteResetsFromRemote(t *testing.T) {
 
 	origFetch := defaultsFetchRemoteRun
 	defaultsFetchRemoteRun = func(url string) (string, int, error) {
-		if strings.Contains(url, "docker-compose.yml") {
+		switch {
+		case strings.Contains(url, "docker-compose.yml"):
 			return "remote-compose", http.StatusOK, nil
+		case strings.Contains(url, "autostart.services"):
+			return "remote-autostart", http.StatusOK, nil
+		default:
+			return "remote-env", http.StatusOK, nil
 		}
-		return "remote-env", http.StatusOK, nil
 	}
 	t.Cleanup(func() { defaultsFetchRemoteRun = origFetch })
 
@@ -460,6 +487,10 @@ func TestServeDefaultsFilesDeleteResetsFromRemote(t *testing.T) {
 	composeSaved, _ := os.ReadFile(DefaultsComposeFilePath)
 	if string(composeSaved) != "remote-compose" {
 		t.Fatalf("expected compose reset from remote, got %q", composeSaved)
+	}
+	autostartSaved, _ := os.ReadFile(DefaultsAutostartServicesPath)
+	if string(autostartSaved) != "remote-autostart" {
+		t.Fatalf("expected autostart reset from remote, got %q", autostartSaved)
 	}
 }
 

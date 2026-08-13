@@ -44,6 +44,7 @@ var (
 	DefaultsAutostartServicesPath = "/etc/openpanel/docker/compose/1.0/autostart.services"
 	DefaultsRemoteComposeURL      = "https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/docker/compose/1.0/docker-compose.yml"
 	DefaultsRemoteEnvURL          = "https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/docker/compose/1.0/.env"
+	DefaultsRemoteAutostartURL    = "https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/docker/compose/1.0/autostart.services"
 	DefaultsTmpDir                = "/tmp/user_defaults"
 )
 
@@ -614,6 +615,9 @@ func (d *Defaults) ServeDefaultsFiles(w http.ResponseWriter, r *http.Request) {
 		if formHasKey(r, "compose") {
 			os.WriteFile(DefaultsComposeFilePath, []byte(r.PostFormValue("compose")), 0644)
 		}
+		if formHasKey(r, "autostart") {
+			os.WriteFile(DefaultsAutostartServicesPath, []byte(r.PostFormValue("autostart")), 0644)
+		}
 		auth.AddFlash(w, r, d.Sessions, "Files updated successfully!", "success")
 
 	case http.MethodPut:
@@ -626,7 +630,8 @@ func (d *Defaults) ServeDefaultsFiles(w http.ResponseWriter, r *http.Request) {
 
 	envContent, _ := readFileOrEmpty(DefaultsEnvPath)
 	composeContent, _ := readFileOrEmpty(DefaultsComposeFilePath)
-	fileContents := map[string]string{"env": envContent, "compose": composeContent}
+	autostartContent, _ := readFileOrEmpty(DefaultsAutostartServicesPath)
+	fileContents := map[string]string{"env": envContent, "compose": composeContent, "autostart": autostartContent}
 
 	if r.URL.Query().Get("output") == "json" {
 		writeJSON(w, fileContents)
@@ -634,14 +639,23 @@ func (d *Defaults) ServeDefaultsFiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "settings_defaults_templates.html", mergeChrome(map[string]interface{}{
-		"Env":     fileContents["env"],
-		"Compose": fileContents["compose"],
-		"Flashes": auth.PopFlashes(w, r, d.Sessions),
+		"Env":       fileContents["env"],
+		"Compose":   fileContents["compose"],
+		"Autostart": fileContents["autostart"],
+		"Flashes":   auth.PopFlashes(w, r, d.Sessions),
 	}, r, "Edit Defaults"))
 }
 
 func (d *Defaults) handleDefaultsFilesPreview(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	// The browser's Validate button submits multipart/form-data (via
+	// FormData), which r.ParseForm() alone does not parse -- only
+	// ParseMultipartForm handles that, and it falls back to a plain
+	// ParseForm for non-multipart bodies (e.g. the urlencoded requests
+	// used in tests).
+	if err := r.ParseMultipartForm(32 << 20); err != nil && err != http.ErrNotMultipart {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	if err := os.MkdirAll(DefaultsTmpDir, 0755); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -705,6 +719,7 @@ func (d *Defaults) handleDefaultsFilesReset(w http.ResponseWriter, r *http.Reque
 	for _, item := range []struct{ key, url, path string }{
 		{"compose", DefaultsRemoteComposeURL, DefaultsComposeFilePath},
 		{"env", DefaultsRemoteEnvURL, DefaultsEnvPath},
+		{"autostart", DefaultsRemoteAutostartURL, DefaultsAutostartServicesPath},
 	} {
 		body, status, err := defaultsFetchRemoteRun(item.url)
 		if err != nil {
@@ -743,7 +758,12 @@ func (d *Defaults) ServeUserFiles(w http.ResponseWriter, r *http.Request) {
 	composePath := "/home/" + context + "/docker-compose.yml"
 
 	if r.Method == http.MethodPost {
-		r.ParseForm()
+		// The browser submits this as multipart/form-data (via FormData),
+		// which r.ParseForm() alone does not parse.
+		if err := r.ParseMultipartForm(32 << 20); err != nil && err != http.ErrNotMultipart {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		if formHasKey(r, "env") {
 			os.WriteFile(envPath, []byte(r.PostFormValue("env")), 0644)
 		}

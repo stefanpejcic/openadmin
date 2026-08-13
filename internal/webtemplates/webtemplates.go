@@ -144,7 +144,7 @@ var funcMap = template.FuncMap{
 	// serviceColumns is the #services tab's column-visibility list, in
 	// display order -- a plain map/dict would work too, but html/template
 	// sorts map ranges by key, which would reorder the dropdown away from
-	// the Name/Image/Ports/Env/CPU/Memory/Actions order the JS column
+	// the Name/Image/Ports/Env/CPU/Memory/PIDs/Actions order the JS column
 	// state (userDetailPageData's settingsEditor) also uses.
 	"serviceColumns": func() []struct{ Key, Label string } {
 		return []struct{ Key, Label string }{
@@ -154,6 +154,7 @@ var funcMap = template.FuncMap{
 			{"env", "Environment"},
 			{"cpu", "CPU Usage"},
 			{"ram", "Memory Usage"},
+			{"pids", "PIDs Usage"},
 			{"actions", "Actions"},
 		}
 	},

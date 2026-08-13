@@ -246,6 +246,49 @@ func TestUsersDetailRendersHTML(t *testing.T) {
 	}
 }
 
+// TestUsersDetailShowsPlanLimitsNotEnvFile covers a bug where the
+// CPU/Memory summary in the page header was read from the user's own
+// /home/<context>/.env file (TOTAL_CPU/TOTAL_RAM) instead of the plan the
+// account is actually on. A user's .env is user-writable data, not a
+// source of truth for their plan's limits, and can drift from it (e.g. an
+// admin changes the plan without regenerating .env, or a user edits their
+// own compose overrides) -- the display must reflect the plans table.
+func TestUsersDetailShowsPlanLimitsNotEnvFile(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	mock.ExpectQuery(`SELECT u.username, u.id, u.email`).
+		WithArgs("alice", "SUSPENDED_%_alice").
+		WillReturnRows(sqlmock.NewRows([]string{"username", "id", "email", "owner", "twofa_enabled", "registered_date", "plan_id", "server"}).
+			AddRow("alice", int64(3), "alice@example.com", nil, true, "2025-06-01 10:00:00", int64(7), "alice"))
+	mock.ExpectQuery(`SELECT \* FROM plans WHERE id = \?`).
+		WithArgs("7").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "feature_set", "cpu", "ram"}).
+			AddRow(7, "default", "4", "8g"))
+
+	u := &Users{MySQL: mysqlDB}
+	srv, client := newUsersTestServer(t, u, "admin")
+
+	resp, err := client.Get(srv.URL + "/users/alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
+	}
+	got := string(body)
+	if !strings.Contains(got, "4 Cores") {
+		t.Fatalf("expected the plan's CPU limit (4) in the page, got %s", truncate(got))
+	}
+	if !strings.Contains(got, "8 GB") {
+		t.Fatalf("expected the plan's RAM limit (8 GB) in the page, got %s", truncate(got))
+	}
+}
+
 func TestUsersDetailNotFound(t *testing.T) {
 	mysqlDB, mock, err := sqlmock.New()
 	if err != nil {
