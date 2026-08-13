@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/csrf"
 
 	"openadmin/internal/auth"
+	"openadmin/internal/config"
 	"openadmin/internal/podman"
 	"openadmin/internal/webtemplates"
 )
@@ -46,6 +47,24 @@ var modulesRndcGenRun = func() {
 		return
 	}
 	_ = cmd.Start() // fire-and-forget; we don't wait for or track this process
+}
+
+// ensureNotificationServiceMonitored adds serviceName to notifications.ini's
+// [DEFAULT] services= list (via the same opencli path the notifications
+// settings page uses) if it isn't already present.
+func ensureNotificationServiceMonitored(serviceName string) {
+	notifConfig := config.Load(NotificationsConfigPath)
+	current := notifConfig.Get("DEFAULT", "services", "")
+	for _, s := range strings.Split(current, ",") {
+		if strings.TrimSpace(s) == serviceName {
+			return
+		}
+	}
+	newValue := serviceName
+	if trimmed := strings.TrimSpace(current); trimmed != "" {
+		newValue = trimmed + "," + serviceName
+	}
+	runOpenCLINotificationUpdate("services", newValue)
 }
 
 // updateServiceInDockerCompose comments/uncomments a `- service_name`
@@ -194,6 +213,7 @@ func (m *Modules) ServeModules(w http.ResponseWriter, r *http.Request) {
 			if _, err := os.Stat(ModulesRndcKeyPath); os.IsNotExist(err) {
 				modulesRndcGenRun()
 			}
+			ensureNotificationServiceMonitored("named")
 		}
 
 		os.WriteFile(ModulesOpenpanelRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)

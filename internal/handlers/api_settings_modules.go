@@ -63,6 +63,7 @@ func (a *APISettingsModules) handlePost(w http.ResponseWriter, r *http.Request) 
 		if _, err := os.Stat(ModulesRndcKeyPath); os.IsNotExist(err) {
 			modulesRndcGenRun()
 		}
+		ensureNotificationServiceMonitored("named")
 	}
 
 	os.WriteFile(ModulesOpenpanelRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)
