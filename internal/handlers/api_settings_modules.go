@@ -53,18 +53,21 @@ func (a *APISettingsModules) handlePost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	updateServiceInDockerCompose("phpmyadmin", strings.Contains(enabledModulesValue, "phpmyadmin"))
+	phpmyadminEnabled := strings.Contains(enabledModulesValue, "phpmyadmin")
+	updateServiceInDockerCompose("phpmyadmin", phpmyadminEnabled)
 	updateServiceInDockerCompose("clamav", strings.Contains(enabledModulesValue, "malware_scan"))
+	setNotificationServiceMonitored("phpmyadmin", phpmyadminEnabled)
 
 	// A raw substring check against the whole comma-joined value, same as
 	// the HTML admin page's handler -- would also trigger for any
 	// hypothetical module whose name merely contains "dns".
-	if strings.Contains(enabledModulesValue, "dns") {
+	dnsEnabled := strings.Contains(enabledModulesValue, "dns")
+	if dnsEnabled {
 		if _, err := os.Stat(ModulesRndcKeyPath); os.IsNotExist(err) {
 			modulesRndcGenRun()
 		}
-		ensureNotificationServiceMonitored("named")
 	}
+	setNotificationServiceMonitored("named", dnsEnabled)
 
 	os.WriteFile(ModulesOpenpanelRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)
 	writeJSON(w, map[string]interface{}{"success": true, "message": "Modules updated successfully."})

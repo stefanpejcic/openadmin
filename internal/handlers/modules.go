@@ -49,22 +49,33 @@ var modulesRndcGenRun = func() {
 	_ = cmd.Start() // fire-and-forget; we don't wait for or track this process
 }
 
-// ensureNotificationServiceMonitored adds serviceName to notifications.ini's
-// [DEFAULT] services= list (via the same opencli path the notifications
-// settings page uses) if it isn't already present.
-func ensureNotificationServiceMonitored(serviceName string) {
+// setNotificationServiceMonitored adds or removes serviceName from
+// notifications.ini's [DEFAULT] services= list (via the same opencli path
+// the notifications settings page uses), only writing when the list
+// actually needs to change.
+func setNotificationServiceMonitored(serviceName string, monitored bool) {
 	notifConfig := config.Load(NotificationsConfigPath)
-	current := notifConfig.Get("DEFAULT", "services", "")
-	for _, s := range strings.Split(current, ",") {
-		if strings.TrimSpace(s) == serviceName {
-			return
+	var services []string
+	present := false
+	for _, s := range strings.Split(notifConfig.Get("DEFAULT", "services", ""), ",") {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
 		}
+		if s == serviceName {
+			present = true
+			if !monitored {
+				continue
+			}
+		}
+		services = append(services, s)
 	}
-	newValue := serviceName
-	if trimmed := strings.TrimSpace(current); trimmed != "" {
-		newValue = trimmed + "," + serviceName
+	if monitored && !present {
+		services = append(services, serviceName)
+	} else if present == monitored {
+		return // already in the desired state
 	}
-	runOpenCLINotificationUpdate("services", newValue)
+	runOpenCLINotificationUpdate("services", strings.Join(services, ","))
 }
 
 // updateServiceInDockerCompose comments/uncomments a `- service_name`
@@ -195,7 +206,9 @@ func (m *Modules) ServeModules(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// added in 1.7.60 to autostart phpmyadmin when enabled module
-		updateServiceInDockerCompose("phpmyadmin", strings.Contains(enabledModulesValue, "phpmyadmin"))
+		phpmyadminEnabled := strings.Contains(enabledModulesValue, "phpmyadmin")
+		updateServiceInDockerCompose("phpmyadmin", phpmyadminEnabled)
+		setNotificationServiceMonitored("phpmyadmin", phpmyadminEnabled)
 		if strings.Contains(enabledModulesValue, "malware_scan") {
 			updateServiceInDockerCompose("clamav", true)
 		} else {
@@ -209,12 +222,13 @@ func (m *Modules) ServeModules(w http.ResponseWriter, r *http.Request) {
 		// for any hypothetical enabled module whose name merely contains
 		// "dns" as a substring. This is intentional, not a bug -- kept as a
 		// simple substring check rather than a proper membership check.
-		if strings.Contains(enabledModulesValue, "dns") {
+		dnsEnabled := strings.Contains(enabledModulesValue, "dns")
+		if dnsEnabled {
 			if _, err := os.Stat(ModulesRndcKeyPath); os.IsNotExist(err) {
 				modulesRndcGenRun()
 			}
-			ensureNotificationServiceMonitored("named")
 		}
+		setNotificationServiceMonitored("named", dnsEnabled)
 
 		os.WriteFile(ModulesOpenpanelRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)
 	}
