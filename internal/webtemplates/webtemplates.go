@@ -277,7 +277,7 @@ var funcMap = template.FuncMap{
 			n, _ = strconv.ParseFloat(t, 64)
 		}
 		if n == 0 {
-			return "&#8734;"
+			return "∞"
 		}
 		rounded := math.Round(n/1_000_000*100) / 100
 		s := strconv.FormatFloat(rounded, 'f', -1, 64)
