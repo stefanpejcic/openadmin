@@ -117,6 +117,11 @@ func (d *APISettingsDefaults) handlePost(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	if composeRaw, composeErr := os.ReadFile(DefaultsComposeFilePath); composeErr == nil {
+		updated := rewriteDefaultsComposeVarnishPort(string(composeRaw), varnishEnabled)
+		os.WriteFile(DefaultsComposeFilePath, []byte(updated), 0644)
+	}
+
 	if rawServices, ok := data["services"]; ok {
 		var selected []string
 		if list, ok := rawServices.([]interface{}); ok {

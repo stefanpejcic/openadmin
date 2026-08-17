@@ -398,6 +398,54 @@ func buildPHPVersionOptions(current string, phpVersionsData map[string]phpVersio
 	return options
 }
 
+// composePortLineRe matches whichever form of the varnish port variable is
+// currently on a webserver's ports line in the compose template: either the
+// docker-compose-only nested fallback ("${PROXY_HTTP_PORT:-${HTTP_PORT}}",
+// used until an account is created) or the flattened single-var form that
+// opencli's account-creation script and OpenPanel's live varnish toggle
+// both use (podman-compose can't resolve a nested ${VAR}).
+var composePortLineRe = regexp.MustCompile(`\$\{PROXY_HTTP_PORT(:-\$\{HTTP_PORT\})?\}|\$\{HTTP_PORT\}`)
+
+// defaultsComposeWebservers lists every webserver service in the compose
+// template whose ports line uses the varnish port variable -- the admin can
+// switch WEB_SERVER later without re-saving the Varnish toggle, so all of
+// them need to stay in sync, not just whichever one is selected today.
+var defaultsComposeWebservers = []string{"openlitespeed", "openresty", "nginx", "apache"}
+
+// rewriteDefaultsComposeVarnishPort mirrors OpenPanel's
+// docker.SwapWebserverComposePort (internal/modules/docker/proxy_ports.go)
+// and opencli's account-creation sed (user/add.sh): for each webserver
+// block (scoped between its `container_name:` line and its `HTTPS_PORT`
+// line) it rewrites the port-mapping variable to PROXY_HTTP_PORT (varnish
+// enabled) or HTTP_PORT (disabled), so the defaults template's
+// docker-compose.yml stays in sync with the VARNISH toggle instead of only
+// the .env file.
+func rewriteDefaultsComposeVarnishPort(content string, varnishEnabled bool) string {
+	replacement := "${HTTP_PORT}"
+	if varnishEnabled {
+		replacement = "${PROXY_HTTP_PORT}"
+	}
+
+	lines := strings.SplitAfter(content, "\n")
+	inBlock := false
+	for i, line := range lines {
+		trimmed := strings.TrimRight(line, " \t\r\n")
+		for _, webserver := range defaultsComposeWebservers {
+			if strings.HasSuffix(trimmed, "container_name: "+webserver) {
+				inBlock = true
+				break
+			}
+		}
+		if inBlock && composePortLineRe.MatchString(line) {
+			lines[i] = composePortLineRe.ReplaceAllLiteralString(line, replacement)
+		}
+		if inBlock && strings.Contains(line, "HTTPS_PORT") {
+			inBlock = false
+		}
+	}
+	return strings.Join(lines, "")
+}
+
 func dedupeSorted(items []string) []string {
 	set := map[string]bool{}
 	for _, i := range items {
@@ -480,6 +528,11 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 			auth.AddFlash(w, r, d.Sessions, "Failed to update defaults: "+err.Error(), "error")
 		} else {
 			auth.AddFlash(w, r, d.Sessions, "New defaults saved successfully!", "success")
+		}
+
+		if composeRaw, composeErr := os.ReadFile(DefaultsComposeFilePath); composeErr == nil {
+			updated := rewriteDefaultsComposeVarnishPort(string(composeRaw), varnishEnabled)
+			os.WriteFile(DefaultsComposeFilePath, []byte(updated), 0644)
 		}
 
 		// added in 1.7.58 to allow admin to set autostart services
