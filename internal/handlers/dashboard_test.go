@@ -323,6 +323,59 @@ func TestServeResourceUsageHistoryDataJSON(t *testing.T) {
 	}
 }
 
+func TestServeCombinedActivityResellerOnlySeesOwnedUsers(t *testing.T) {
+	dir := t.TempDir()
+	origLogsDir := CombinedActivityLogsDir
+	CombinedActivityLogsDir = dir
+	t.Cleanup(func() { CombinedActivityLogsDir = origLogsDir })
+
+	for user, action := range map[string]string{
+		"ownedclient": "2026-08-18 10:00:00 1.2.3.4 User ownedclient created domain owned.example.com",
+		"otherclient": "2026-08-18 10:00:00 1.2.3.4 User otherclient created domain other.example.com",
+	} {
+		userDir := filepath.Join(dir, user)
+		if err := os.MkdirAll(userDir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(userDir, "activity.log"), []byte(action+"\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.ExpectQuery(`SELECT users\.\*.*WHERE users\.owner = \?`).
+		WithArgs("testuser").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username"}).AddRow(1, "ownedclient"))
+
+	dash := &Dashboard{MySQL: db}
+	srv, client := dashboardTestServer(t, dash, "reseller")
+
+	resp, err := client.Get(srv.URL + "/json/combined_activity")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	var got map[string][]string
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("expected valid JSON, got %s: %v", body, err)
+	}
+	logs := got["combined_logs"]
+	if len(logs) != 1 || !strings.Contains(logs[0], "ownedclient") {
+		t.Fatalf("expected only ownedclient's activity, got %v", logs)
+	}
+	for _, l := range logs {
+		if strings.Contains(l, "otherclient") {
+			t.Fatalf("reseller must not see other accounts' activity, got %v", logs)
+		}
+	}
+}
+
 func TestServeCombinedActivityMissingDirReturnsEmpty(t *testing.T) {
 	dash := &Dashboard{}
 	req := httptest.NewRequest(http.MethodGet, "/json/combined_activity", nil)

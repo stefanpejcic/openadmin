@@ -510,11 +510,14 @@ type combinedActivityEntry struct {
 	line      string
 }
 
-// ServeCombinedActivity handles GET /json/combined_activity for the admin
-// (non-reseller) path -- reseller-scoped username filtering is not yet
-// implemented (see backlog).
+// CombinedActivityLogsDir is the per-user activity.log parent dir ServeCombinedActivity scans;
+// a package var (rather than a local const) so tests can point it at a temp dir.
+var CombinedActivityLogsDir = "/etc/openpanel/openpanel/core/users"
+
+// ServeCombinedActivity handles GET /json/combined_activity. Resellers only
+// see activity for accounts they own -- admins/users see everyone's.
 func (d *Dashboard) ServeCombinedActivity(w http.ResponseWriter, r *http.Request) {
-	const logsDir = "/etc/openpanel/openpanel/core/users"
+	logsDir := CombinedActivityLogsDir
 
 	entries, err := os.ReadDir(logsDir)
 	if err != nil {
@@ -522,10 +525,28 @@ func (d *Dashboard) ServeCombinedActivity(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	var ownedUsers map[string]bool
+	if user := auth.CurrentUser(r); user != nil && user.Role == "reseller" {
+		ownedUsers = map[string]bool{}
+		rows, err := paneldb.GetAllUsers(d.MySQL, user.Username)
+		if err != nil {
+			writeJSON(w, map[string][]string{"combined_logs": {}})
+			return
+		}
+		for _, row := range rows {
+			if username, ok := row["username"].(string); ok {
+				ownedUsers[username] = true
+			}
+		}
+	}
+
 	activityConf := userLogConfigs["activity"]
 	var candidates []combinedActivityEntry
 	for _, e := range entries {
 		if !e.IsDir() {
+			continue
+		}
+		if ownedUsers != nil && !ownedUsers[e.Name()] {
 			continue
 		}
 		logPath := logsDir + "/" + e.Name() + "/activity.log"
