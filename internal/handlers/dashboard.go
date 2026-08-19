@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -314,7 +315,9 @@ func toDisplayString(v interface{}) string {
 // handled here -- see the backlog -- so this undercounts on installs with
 // per-user rootless podman stacks.
 func localContainerCount() int {
-	out, err := exec.Command("podman", "container", "ls", "-a", "-q").Output()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "podman", "container", "ls", "-a", "-q").Output()
 	if err != nil {
 		return 0
 	}
@@ -325,7 +328,9 @@ func localContainerCount() int {
 // emailCount uses opencli's email list, without the postfix-accounts.cf
 // fallback file parsing (see backlog).
 func emailCount() int {
-	out, err := exec.Command("opencli", "email-setup", "email", "list").Output()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "opencli", "email-setup", "email", "list").Output()
 	if err != nil {
 		return 0
 	}
