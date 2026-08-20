@@ -687,6 +687,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /services/podman/images/{action}/{id...}", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageAction))
 	mux.HandleFunc("GET /services/podman/images/action-status", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageActionStatus))
 	mux.HandleFunc("GET /services/podman/images/check-update", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageCheckUpdate))
+	mux.HandleFunc("GET /services/podman/images/vulnerabilities", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageVulnerabilities))
 	mux.HandleFunc("GET /backups/user", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackups))
 	mux.HandleFunc("POST /backups/user/settings", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackupsSettings))
 	mux.HandleFunc("POST /backups/user/configuration", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackupsConfiguration))

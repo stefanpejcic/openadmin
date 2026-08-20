@@ -112,6 +112,14 @@ type podmanImageRow struct {
 	// actually run for this ref.
 	UpdateChecked   bool
 	UpdateAvailable bool
+
+	// Vulnerability-check state, populated from podmanVulnStatusCache --
+	// same on-demand-only model as the update check above (see
+	// podmanCheckImageVulnerabilitiesRun's doc comment), but there's no
+	// per-row check here, only the bulk "Check all for vulnerabilities"
+	// action, since a Trivy scan is much slower than a digest comparison.
+	VulnChecked bool
+	VulnCount   int
 }
 
 type podmanVolumeRow struct {
@@ -469,11 +477,26 @@ func podmanListImages(usage map[string]*podmanImageUsage, stackImages []string) 
 	}
 
 	updateStatus := podmanUpdateStatusSnapshot()
+	vulnStatus := podmanVulnStatusSnapshot()
 
 	rows := make([]podmanImageRow, 0, len(raw)+len(stackImages))
 	present := map[string]bool{}
+	seenIDs := map[string]bool{}
 	for _, item := range raw {
 		fullID := podmanStringField(item, "Id", "ID")
+		// `additionalimagestores` in storage.conf (the shared-storage setup
+		// every hosting user's rootless podman shares with root) makes
+		// `podman images` list the exact same image ID twice: once as
+		// root's own writable copy, once again as a read-only view through
+		// the additional store, differing only by a "ReadOnly": true field.
+		// Without this dedup every such image would render as two
+		// identical rows in the table.
+		if fullID != "" && seenIDs[fullID] {
+			continue
+		}
+		if fullID != "" {
+			seenIDs[fullID] = true
+		}
 		repo, tag := podmanImageRepoTag(item)
 		if repo != "<none>" && tag != "<none>" {
 			present[repo+":"+tag] = true
@@ -485,6 +508,11 @@ func podmanListImages(usage map[string]*podmanImageUsage, stackImages []string) 
 		var updateChecked, updateAvailable bool
 		if st, ok := updateStatus[repo+":"+tag]; ok {
 			updateChecked, updateAvailable = true, st.Available
+		}
+		var vulnChecked bool
+		var vulnCount int
+		if st, ok := vulnStatus[repo+":"+tag]; ok {
+			vulnChecked, vulnCount = true, st.Count
 		}
 		sizeBytes, _ := item["Size"].(float64)
 		rows = append(rows, podmanImageRow{
@@ -498,6 +526,8 @@ func podmanListImages(usage map[string]*podmanImageUsage, stackImages []string) 
 			SystemContainers: system,
 			UserContainers:   user,
 			UpdateChecked:    updateChecked,
+			VulnChecked:      vulnChecked,
+			VulnCount:        vulnCount,
 			UpdateAvailable:  updateAvailable,
 		})
 	}
@@ -717,18 +747,28 @@ var podmanFixSharedStorePermissionsRun = func(root string) {
 // Delete targets the shared image store directly (via --root) when one is
 // configured, precisely to route around the read-only-duplicate issue
 // podmanSharedImageStoreRoot documents -- a plain `podman rmi` against
-// root's default context is not used for delete.
+// root's default context is not used as the first attempt for that reason.
+// But not every image is actually routed through the shared store (e.g.
+// ones pulled before a shared-storage migration, or otherwise only present
+// in root's own default context) -- for those, `--root <sharedstore> rmi`
+// fails with "... : image not known" even though the image is real and
+// genuinely deletable via a plain `podman rmi`. So a "not known" failure
+// against the shared store falls back to a plain rmi against the default
+// context before giving up.
 //
-// Both reapply podmanFixSharedStorePermissionsRun afterward, win or lose
-// (a failed/partial pull can still have left new, badly-permissioned blob
-// files behind) -- see that function's doc comment for why skipping this
-// breaks every hosting user's own image pulls, not just root's.
+// All attempts reapply podmanFixSharedStorePermissionsRun afterward, win or
+// lose (a failed/partial pull can still have left new, badly-permissioned
+// blob files behind) -- see that function's doc comment for why skipping
+// this breaks every hosting user's own image pulls, not just root's.
 var podmanDeleteImageRun = func(id string) (string, error) {
 	root := podmanSharedImageStoreRoot()
 	var out string
 	var err error
 	if root != "" {
 		out, err = podmanRunRun("--root", root, "rmi", id)
+		if err != nil && strings.Contains(out, "image not known") {
+			out, err = podmanRunRun("rmi", id)
+		}
 	} else {
 		out, err = podmanRunRun("rmi", id)
 	}
@@ -770,6 +810,151 @@ func podmanUpdateStatusSnapshot() map[string]podmanUpdateStatus {
 		snap[k] = v
 	}
 	return snap
+}
+
+// podmanVulnDetail is one HIGH/CRITICAL finding from a Trivy scan.
+type podmanVulnDetail struct {
+	ID               string `json:"id"`                // e.g. CVE-2024-12345
+	Package          string `json:"package"`
+	InstalledVersion string `json:"installed_version"`
+	FixedVersion     string `json:"fixed_version"`      // empty if no fix is published yet
+	Severity         string `json:"severity"`
+	Title            string `json:"title"`
+	URL              string `json:"url"`
+}
+
+// podmanVulnStatus is one repository:tag's last-checked vulnerability scan
+// result (HIGH+CRITICAL only).
+type podmanVulnStatus struct {
+	Count     int
+	Details   []podmanVulnDetail
+	CheckedAt time.Time
+}
+
+// podmanVulnStatusCache holds the result of every "Check all for
+// vulnerabilities" run so far, keyed by repository:tag -- same on-demand,
+// in-memory-only model as podmanUpdateStatusCache above.
+var (
+	podmanVulnStatusMu    sync.Mutex
+	podmanVulnStatusCache = map[string]podmanVulnStatus{}
+)
+
+// podmanVulnStatusSnapshot returns a point-in-time copy of the cache, so
+// podmanListImages can read it without holding the lock across the whole
+// images-table build.
+func podmanVulnStatusSnapshot() map[string]podmanVulnStatus {
+	podmanVulnStatusMu.Lock()
+	defer podmanVulnStatusMu.Unlock()
+	snap := make(map[string]podmanVulnStatus, len(podmanVulnStatusCache))
+	for k, v := range podmanVulnStatusCache {
+		snap[k] = v
+	}
+	return snap
+}
+
+// PodmanTrivySocketPath is the root podman.socket's REST API socket that
+// Trivy's --podman-host flag targets, so trivy scans the local podman
+// store directly instead of trying (and failing) the Docker Engine it
+// checks first by default. Injectable for tests.
+var PodmanTrivySocketPath = "/run/podman/podman.sock"
+
+// trivyInstalled reports whether the trivy binary is on PATH.
+var trivyInstalled = func() bool {
+	_, err := exec.LookPath("trivy")
+	return err == nil
+}
+
+// trivyInstallRun runs Trivy's official install script, placing the
+// binary at /usr/local/bin/trivy. Injectable for tests.
+var trivyInstallRun = func() error {
+	cmd := exec.Command("sh", "-c", "curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("trivy install failed: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// podmanEnsureTrivyRun installs Trivy on first use if it isn't already
+// present -- there's no separate "install" step in the UI (see the Podman
+// page's "Check all for vulnerabilities" button), so the first bulk check
+// transparently installs it before scanning. Injectable for tests.
+var podmanEnsureTrivyRun = func() error {
+	if trivyInstalled() {
+		return nil
+	}
+	return trivyInstallRun()
+}
+
+// podmanCheckImageVulnerabilitiesRun runs a Trivy vulnerability-only scan
+// (HIGH/CRITICAL) against a locally-stored podman image and returns every
+// finding. --image-src podman skips Trivy's default Docker-Engine-first
+// lookup (which would otherwise waste time failing against a daemon that
+// doesn't exist here) and --podman-host points it at root podman's own
+// REST socket so it finds images already in the shared store without a
+// registry round trip. Injectable so tests never shell out to a real
+// trivy binary.
+var podmanCheckImageVulnerabilitiesRun = func(ref string) (details []podmanVulnDetail, err error) {
+	cmd := exec.Command("trivy", "image",
+		"--scanners", "vuln",
+		"--image-src", "podman",
+		"--podman-host", PodmanTrivySocketPath,
+		"--format", "json",
+		"--severity", "HIGH,CRITICAL",
+		"--quiet",
+		ref,
+	)
+	// trivy sometimes writes progress/warning lines to stderr even on
+	// success (e.g. DB update progress on first run); stdout alone is
+	// parsed as JSON, mirroring podmanRunRunStdout's reasoning above.
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	if runErr := cmd.Run(); runErr != nil {
+		return nil, runErr
+	}
+	return podmanParseHighCriticalVulns(stdout.Bytes())
+}
+
+// podmanParseHighCriticalVulns extracts every HIGH/CRITICAL finding from a
+// trivy `--format json` report. Split out from
+// podmanCheckImageVulnerabilitiesRun so the parsing logic is unit-testable
+// without a real trivy binary. The severity filter here is defensive/
+// redundant with the CLI's own --severity flag, not load-bearing.
+func podmanParseHighCriticalVulns(reportJSON []byte) ([]podmanVulnDetail, error) {
+	var report struct {
+		Results []struct {
+			Vulnerabilities []struct {
+				VulnerabilityID  string `json:"VulnerabilityID"`
+				PkgName          string `json:"PkgName"`
+				InstalledVersion string `json:"InstalledVersion"`
+				FixedVersion     string `json:"FixedVersion"`
+				Severity         string `json:"Severity"`
+				Title            string `json:"Title"`
+				PrimaryURL       string `json:"PrimaryURL"`
+			} `json:"Vulnerabilities"`
+		} `json:"Results"`
+	}
+	if err := json.Unmarshal(reportJSON, &report); err != nil {
+		return nil, err
+	}
+	details := []podmanVulnDetail{}
+	for _, result := range report.Results {
+		for _, v := range result.Vulnerabilities {
+			if v.Severity != "HIGH" && v.Severity != "CRITICAL" {
+				continue
+			}
+			details = append(details, podmanVulnDetail{
+				ID:               v.VulnerabilityID,
+				Package:          v.PkgName,
+				InstalledVersion: v.InstalledVersion,
+				FixedVersion:     v.FixedVersion,
+				Severity:         v.Severity,
+				Title:            v.Title,
+				URL:              v.PrimaryURL,
+			})
+		}
+	}
+	return details, nil
 }
 
 // podmanManifestDigestForPlatform picks out the digest of the sub-manifest
@@ -1004,8 +1189,8 @@ var (
 // ServePodmanImagesBulkStatus for progress.
 func (p *Podman) ServePodmanImagesBulkAction(w http.ResponseWriter, r *http.Request) {
 	action := r.PathValue("action")
-	if action != "pull-missing" && action != "delete-unused" && action != "check-updates" {
-		writeJSONError(w, http.StatusBadRequest, "Invalid action. Use pull-missing, delete-unused, or check-updates.")
+	if action != "pull-missing" && action != "delete-unused" && action != "check-updates" && action != "check-vulnerabilities" {
+		writeJSONError(w, http.StatusBadRequest, "Invalid action. Use pull-missing, delete-unused, check-updates, or check-vulnerabilities.")
 		return
 	}
 
@@ -1025,7 +1210,7 @@ func (p *Podman) ServePodmanImagesBulkAction(w http.ResponseWriter, r *http.Requ
 				refs = append(refs, row.FullID)
 			}
 		}
-	case "check-updates":
+	case "check-updates", "check-vulnerabilities":
 		for _, row := range images {
 			if !row.NotDownloaded && row.Repository != "<none>" && row.Tag != "<none>" {
 				refs = append(refs, row.Repository+":"+row.Tag)
@@ -1039,7 +1224,22 @@ func (p *Podman) ServePodmanImagesBulkAction(w http.ResponseWriter, r *http.Requ
 	pendingPodmanBulkMu.Unlock()
 
 	go func() {
+		if action == "check-vulnerabilities" && len(refs) > 0 {
+			pendingPodmanBulkMu.Lock()
+			result.Current = "Installing Trivy…"
+			pendingPodmanBulkMu.Unlock()
+			if err := podmanEnsureTrivyRun(); err != nil {
+				pendingPodmanBulkMu.Lock()
+				result.Done = true
+				result.Current = ""
+				result.Message = "Failed to install Trivy: " + err.Error()
+				pendingPodmanBulkMu.Unlock()
+				return
+			}
+		}
+
 		updatesAvailable := 0
+		vulnerableImages := 0
 		for _, ref := range refs {
 			pendingPodmanBulkMu.Lock()
 			result.Current = ref
@@ -1060,6 +1260,17 @@ func (p *Podman) ServePodmanImagesBulkAction(w http.ResponseWriter, r *http.Requ
 					podmanUpdateStatusMu.Unlock()
 					if available {
 						updatesAvailable++
+					}
+				}
+			case "check-vulnerabilities":
+				var details []podmanVulnDetail
+				details, err = podmanCheckImageVulnerabilitiesRun(ref)
+				if err == nil {
+					podmanVulnStatusMu.Lock()
+					podmanVulnStatusCache[ref] = podmanVulnStatus{Count: len(details), Details: details, CheckedAt: time.Now()}
+					podmanVulnStatusMu.Unlock()
+					if len(details) > 0 {
+						vulnerableImages++
 					}
 				}
 			}
@@ -1083,6 +1294,8 @@ func (p *Podman) ServePodmanImagesBulkAction(w http.ResponseWriter, r *http.Requ
 			result.Message = fmt.Sprintf("Removed %d/%d unused images.", succeeded, result.Total)
 		case "check-updates":
 			result.Message = fmt.Sprintf("Checked %d/%d images -- %d update(s) available.", succeeded, result.Total, updatesAvailable)
+		case "check-vulnerabilities":
+			result.Message = fmt.Sprintf("Checked %d/%d images -- %d image(s) have known HIGH/CRITICAL vulnerabilities.", succeeded, result.Total, vulnerableImages)
 		}
 		pendingPodmanBulkMu.Unlock()
 	}()
@@ -1100,4 +1313,26 @@ func (p *Podman) ServePodmanImagesBulkStatus(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	writeJSON(w, *pendingPodmanBulk)
+}
+
+// ServePodmanImageVulnerabilities handles GET
+// /services/podman/images/vulnerabilities: returns the cached Trivy
+// findings for one image ref, populated by the last "Check all for
+// vulnerabilities" run. Read-only lookup against podmanVulnStatusCache --
+// this never triggers a scan itself.
+func (p *Podman) ServePodmanImageVulnerabilities(w http.ResponseWriter, r *http.Request) {
+	ref := r.URL.Query().Get("ref")
+	if ref == "" {
+		writeJSONError(w, http.StatusBadRequest, "ref is required")
+		return
+	}
+
+	podmanVulnStatusMu.Lock()
+	st, ok := podmanVulnStatusCache[ref]
+	podmanVulnStatusMu.Unlock()
+	if !ok {
+		writeJSON(w, map[string]interface{}{"checked": false, "details": []podmanVulnDetail{}})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"checked": true, "details": st.Details})
 }

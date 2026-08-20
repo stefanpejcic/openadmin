@@ -221,6 +221,11 @@ function podmanPollBulkStatus(loadingLabel) {
         sortNetworks: { col: '', dir: '' },
         sortDiskUsage: { col: '', dir: '' },
 
+        vulnModalOpen: false,
+        vulnModalRef: '',
+        vulnModalLoading: false,
+        vulnModalDetails: [],
+
         init() {
             this.$watch('tab', value => { window.location.hash = value; });
             window.addEventListener('hashchange', () => {
@@ -236,6 +241,25 @@ function podmanPollBulkStatus(loadingLabel) {
         sortTable(tbodyId, stateVar, col, dir) {
             podmanSortRows(tbodyId, col, dir);
             this[stateVar] = { col: col, dir: dir };
+        },
+
+        // openVulnModal fetches the cached Trivy findings for one image
+        // ref (populated by the last 'Check all for vulnerabilities' run)
+        // and shows them in a modal -- read-only, never triggers a scan.
+        openVulnModal(ref) {
+            this.vulnModalOpen = true;
+            this.vulnModalRef = ref;
+            this.vulnModalLoading = true;
+            this.vulnModalDetails = [];
+            fetch('/services/podman/images/vulnerabilities?ref=' + encodeURIComponent(ref), { cache: 'no-store' })
+                .then(function (response) { return response.json(); })
+                .then((data) => {
+                    this.vulnModalDetails = data.details || [];
+                    this.vulnModalLoading = false;
+                })
+                .catch(() => {
+                    this.vulnModalLoading = false;
+                });
         }
     }">
 	<nav aria-label="Tabs" data-orientation="horizontal" dir="ltr">
@@ -294,6 +318,7 @@ function podmanPollBulkStatus(loadingLabel) {
             </div>
             <div class="flex items-center gap-2">
                 <button type="button" onclick="podmanBulkAction('check-updates', 'Checking images for updates', '')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Check all for updates</button>
+                <button type="button" onclick="podmanBulkAction('check-vulnerabilities', 'Checking images for vulnerabilities', '')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Check all for vulnerabilities</button>
                 <button type="button" onclick="podmanBulkAction('pull-missing', 'Downloading missing stack images', 'Pull every stack image that is not yet downloaded into the shared store?')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Download all</button>
                 <button type="button" onclick="podmanBulkAction('delete-unused', 'Removing unused images', 'Delete every currently unused image (0 system and 0 user containers)?\n\nThis cannot be undone.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-red-600 dark:text-red-500 bg-white dark:bg-gray-950 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">Delete unused</button>
             </div>
@@ -312,6 +337,7 @@ function podmanPollBulkStatus(loadingLabel) {
                             {{template "podman_sort_th" (dict "Label" "Containers" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "containers")}}
                             {{template "podman_sort_th" (dict "Label" "Created" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "created")}}
                             <th scope="col" class="whitespace-nowrap border-b px-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Update</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Vulnerabilities</th>
                             <th scope="col" class="whitespace-nowrap border-b px-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Delete</th>
                         </tr>
                     </thead>
@@ -356,6 +382,19 @@ function podmanPollBulkStatus(loadingLabel) {
                                         {{end}}
                                     {{else}}
                                     <span class="text-gray-400 dark:text-gray-600">—</span>
+                                    {{end}}
+                                </div>
+                            </td>
+                            <td class="p-4 text-sm py-2.5">
+                                <div class="flex items-center justify-end gap-2">
+                                    {{if or .NotDownloaded (eq .Repository "<none>") (eq .Tag "<none>")}}
+                                    <span class="text-gray-400 dark:text-gray-600">—</span>
+                                    {{else if not .VulnChecked}}
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Not checked</span>
+                                    {{else if gt .VulnCount 0}}
+                                    <button type="button" @click="openVulnModal('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 hover:bg-red-100 dark:hover:bg-red-400/20 cursor-pointer">{{.VulnCount}} HIGH/CRITICAL</button>
+                                    {{else}}
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Clean</span>
                                     {{end}}
                                 </div>
                             </td>
@@ -494,6 +533,57 @@ function podmanPollBulkStatus(loadingLabel) {
                 {{else}}
                 <p class="p-4 text-sm text-gray-500 dark:text-gray-500">Could not read disk usage.</p>
                 {{end}}
+            </div>
+        </div>
+    </div>
+
+    <!-- Vulnerability details modal -->
+    <template x-if="vulnModalOpen">
+        <div class="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm" @click="vulnModalOpen = false"></div>
+    </template>
+    <div x-show="vulnModalOpen" x-cloak x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="w-full sm:max-w-3xl flex flex-col rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" style="max-height:80vh" @click.stop>
+            <div class="flex items-center justify-between mb-4 shrink-0">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Vulnerabilities -- <span x-text="vulnModalRef"></span></h3>
+                <button @click="vulnModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <p x-show="vulnModalLoading" class="text-sm text-gray-500 dark:text-gray-500">Loading…</p>
+            <p x-show="!vulnModalLoading && vulnModalDetails.length === 0" class="text-sm text-gray-500 dark:text-gray-500">No cached findings for this image. Run "Check all for vulnerabilities" again if this seems stale.</p>
+
+            <div x-show="!vulnModalLoading && vulnModalDetails.length > 0" class="flex-1 overflow-y-auto" style="min-height:0">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead class="sticky top-0 bg-white dark:bg-gray-900">
+                        <tr class="border-y border-gray-200 dark:border-gray-800">
+                            <th class="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-gray-900 dark:text-gray-50">CVE</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-gray-900 dark:text-gray-50">Severity</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-gray-900 dark:text-gray-50">Package</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-gray-900 dark:text-gray-50">Installed</th>
+                            <th class="whitespace-nowrap px-3 py-2 text-left text-xs font-semibold text-gray-900 dark:text-gray-50">Fixed</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-900 dark:text-gray-50">Title</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                        <template x-for="v in vulnModalDetails" :key="v.id + v.package">
+                            <tr>
+                                <td class="whitespace-nowrap px-3 py-2 text-sm">
+                                    <a :href="v.url || ('https://nvd.nist.gov/vuln/detail/' + v.id)" target="_blank" rel="noopener" class="text-blue-600 hover:underline" x-text="v.id"></a>
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-2 text-sm">
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1"
+                                          :class="v.severity === 'CRITICAL' ? 'bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20' : 'bg-amber-50 text-amber-800 ring-amber-600/30 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20'"
+                                          x-text="v.severity"></span>
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-2 text-sm text-gray-600 dark:text-gray-400" x-text="v.package"></td>
+                                <td class="whitespace-nowrap px-3 py-2 text-sm text-gray-600 dark:text-gray-400" x-text="v.installed_version"></td>
+                                <td class="whitespace-nowrap px-3 py-2 text-sm text-gray-600 dark:text-gray-400" x-text="v.fixed_version || '—'"></td>
+                                <td class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400" x-text="v.title"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
