@@ -93,6 +93,15 @@ func CurrentUser(r *http.Request) *admindb.User {
 	return u
 }
 
+// WithCurrentUser stashes user on r's context in the same shape
+// WithUserLoader does from a session cookie, so a JSON REST API handler
+// (authenticated via a JWT bearer token instead, with no session cookie
+// at all) can delegate to an HTML page's handler that reads its acting
+// user via CurrentUser, without that call seeing a nil user and panicking.
+func WithCurrentUser(r *http.Request, u *admindb.User) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), userContextKey, u))
+}
+
 func IsAuthenticated(r *http.Request) bool {
 	return CurrentUser(r) != nil
 }

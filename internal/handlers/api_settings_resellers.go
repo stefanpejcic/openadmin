@@ -7,10 +7,12 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
+	"openadmin/internal/config"
 )
 
 // APISettingsResellers bundles the /api/settings/resellers handler.
@@ -193,4 +195,48 @@ func (a *APISettingsResellers) handlePost(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSONFailure(w, http.StatusBadRequest, message)
+}
+
+// ServeSettingsResellersEnabled handles GET/POST
+// /api/settings/resellers/enabled: the master on/off switch gating whether
+// reseller accounts can be created at all. Turning it off is refused
+// while any reseller account still exists -- they have to be deleted
+// first. JSON counterpart to resellers.go's handleToggleResellers.
+func (a *APISettingsResellers) ServeSettingsResellersEnabled(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, map[string]interface{}{"enabled": resellersEnabled()})
+		return
+	}
+
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if !apiDecodeJSONBody(r, &body) {
+		writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
+		return
+	}
+
+	if !body.Enabled {
+		count, err := countResellers(a.DB)
+		if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if count > 0 {
+			writeJSONError(w, http.StatusConflict, "Cannot disable resellers while "+strconv.Itoa(count)+" reseller account(s) still exist. Delete them first.")
+			return
+		}
+	}
+
+	data := config.Load(config.AdminConfigPath)
+	value := "no"
+	if body.Enabled {
+		value = "yes"
+	}
+	data.Set("RESELLERS", "enabled", value)
+	if err := config.Save(config.AdminConfigPath, data); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to save setting: "+err.Error())
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "enabled": body.Enabled})
 }

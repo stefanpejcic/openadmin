@@ -15,6 +15,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"openadmin/internal/paneldb"
 )
 
 // APIUsers bundles the /api/users handlers.
@@ -539,4 +541,26 @@ func (a *APIUsers) ServeAutologin(w http.ResponseWriter, r *http.Request) {
 
 	link := fmt.Sprintf("%s://%s:%s/login_autologin?username=%s&admin_token=%s", scheme, hostname, port, username, token)
 	writeJSON(w, map[string]string{"link": link})
+}
+
+// ServePermissionsReset handles POST /api/users/{username}/permissions/reset:
+// deletes the user's per-account features.txt override (if any), so their
+// permissions revert to following their plan's feature-set defaults. JSON
+// counterpart to users.go's HandleManage "permissions_reset" action.
+func (a *APIUsers) ServePermissionsReset(w http.ResponseWriter, r *http.Request) {
+	username := r.PathValue("username")
+	currentUser := APIUserFromContext(r)
+
+	userData, err := paneldb.GetUserDataByUsername(a.MySQL, username)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "User "+username+" not found")
+		return
+	}
+	if err := os.Remove(userFeaturesPath(userData.Context)); err != nil && !os.IsNotExist(err) {
+		writeJSONError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+
+	logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" reset permissions for user "+username+" to plan defaults")
+	writeJSON(w, map[string]interface{}{"success": true, "message": "Permissions for '" + username + "' reset to plan defaults"})
 }

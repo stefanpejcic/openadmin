@@ -298,6 +298,10 @@ func newHandler(d appDeps) (http.Handler, error) {
 	apiServerOps := &handlers.APIServerOps{}
 	apiServerProcesses := &handlers.APIServerProcesses{}
 	apiServerMigrate := &handlers.APIServerMigrate{}
+	apiServerSwap := &handlers.APIServerSwap{}
+	apiServicesPodman := &handlers.APIServicesPodman{MySQL: d.MySQL}
+	apiBackups := &handlers.APIBackups{}
+	apiUserExport := &handlers.APIUserExport{Users: users}
 	apiSettingsAdministrators := &handlers.APISettingsAdministrators{DB: d.AdminDB, LicenseChecker: d.LicenseChecker}
 	apiSettingsResellers := &handlers.APISettingsResellers{DB: d.AdminDB, Auth: apiAuth}
 	apiSettingsGeneral := &handlers.APISettingsGeneral{DevMode: d.DevMode}
@@ -345,6 +349,11 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("PATCH /api/users/{username}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUsers.ServeUsers)))
 	mux.HandleFunc("DELETE /api/users/{username}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUsers.ServeUsers)))
 	mux.HandleFunc("POST /api/users/{username}/autologin", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUsers.ServeAutologin)))
+	mux.HandleFunc("POST /api/users/{username}/permissions/reset", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUsers.ServePermissionsReset)))
+	mux.HandleFunc("GET /api/users/{username}/export/status", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUserExport.ServeStatus)))
+	mux.HandleFunc("POST /api/users/{username}/export/create", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUserExport.ServeCreate)))
+	mux.HandleFunc("GET /api/users/{username}/export/download/{filename...}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUserExport.ServeDownload)))
+	mux.HandleFunc("POST /api/users/{username}/export/delete", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUserExport.ServeDelete)))
 
 	mux.HandleFunc("GET /api/domains", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomains.ServeDomains)))
 	mux.HandleFunc("POST /api/domains/new", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomains.HandleAddDomain)))
@@ -485,9 +494,40 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/server/migrate", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerMigrate.ServeMigrate)))
 	mux.HandleFunc("POST /api/server/migrate", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerMigrate.ServeMigrate)))
 
+	mux.HandleFunc("GET /api/server/swap", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerSwap.ServeSwap)))
+	mux.HandleFunc("POST /api/server/swap/action/{action}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerSwap.ServeSwapAction)))
+	mux.HandleFunc("GET /api/server/swap/action-status", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerSwap.ServeSwapActionStatus)))
+
+	mux.HandleFunc("GET /api/services/podman", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeInfo)))
+	mux.HandleFunc("GET /api/services/podman/images", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeImages)))
+	mux.HandleFunc("GET /api/services/podman/volumes", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeVolumes)))
+	mux.HandleFunc("GET /api/services/podman/networks", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeNetworks)))
+	mux.HandleFunc("GET /api/services/podman/disk-usage", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeDiskUsage)))
+	mux.HandleFunc("POST /api/services/podman/images/{action}/{id...}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeImageAction)))
+	mux.HandleFunc("GET /api/services/podman/images/action-status", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeImageActionStatus)))
+	mux.HandleFunc("GET /api/services/podman/images/check-update", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeImageCheckUpdate)))
+	mux.HandleFunc("POST /api/services/podman/images/bulk/{action}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeImagesBulkAction)))
+	mux.HandleFunc("GET /api/services/podman/images/bulk-status", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeImagesBulkStatus)))
+	mux.HandleFunc("GET /api/services/podman/images/vulnerabilities", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServicesPodman.ServeImageVulnerabilities)))
+
+	mux.HandleFunc("GET /api/backups/system", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeSystemBackups)))
+	mux.HandleFunc("POST /api/backups/system/settings", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeSystemBackupsSettings)))
+	mux.HandleFunc("POST /api/backups/system/run", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeSystemBackupsRun)))
+	mux.HandleFunc("POST /api/backups/system/restore/{filename...}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeSystemBackupsRestore)))
+	mux.HandleFunc("POST /api/backups/system/delete/{filename...}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeSystemBackupsDelete)))
+	mux.HandleFunc("GET /api/backups/system/action-status", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeSystemBackupsActionStatus)))
+	mux.HandleFunc("GET /api/backups/user", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeUserBackups)))
+	mux.HandleFunc("POST /api/backups/user/settings", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeUserBackupsSettings)))
+	mux.HandleFunc("GET /api/backups/user/configuration", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeUserBackupsConfiguration)))
+	mux.HandleFunc("POST /api/backups/user/configuration", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeUserBackupsConfiguration)))
+	mux.HandleFunc("POST /api/backups/user/run", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeUserBackupsRun)))
+	mux.HandleFunc("GET /api/backups/user/action-status", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiBackups.ServeUserBackupsActionStatus)))
+
 	mux.HandleFunc("GET /api/settings/administrators", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsAdministrators.ServeSettingsAdministrators)))
 	mux.HandleFunc("POST /api/settings/administrators", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsAdministrators.ServeSettingsAdministrators)))
 	mux.HandleFunc("GET /api/settings/resellers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiSettingsResellers.ServeSettingsResellers)))
+	mux.HandleFunc("GET /api/settings/resellers/enabled", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsResellers.ServeSettingsResellersEnabled)))
+	mux.HandleFunc("POST /api/settings/resellers/enabled", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsResellers.ServeSettingsResellersEnabled)))
 	mux.HandleFunc("POST /api/settings/resellers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiSettingsResellers.ServeSettingsResellers)))
 	mux.HandleFunc("GET /api/settings/general", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsGeneral.ServeSettingsGeneral)))
 	mux.HandleFunc("POST /api/settings/general", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsGeneral.ServeSettingsGeneral)))
