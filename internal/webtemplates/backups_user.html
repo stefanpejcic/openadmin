@@ -18,13 +18,216 @@
             <div class="grow">
                 <h1 class="mb-1 text-xl font-bold">User Backups</h1>
             </div>
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <div class="flex text-center sm:text-start items-center gap-2">
+                    <dt class="text-sm text-gray-500 dark:text-gray-500">Schedule:</dt>
+                    {{if eq .ScheduleChoice "disabled"}}
+                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">{{.ScheduleLabel}}</span>
+                    {{else}}
+                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">{{.ScheduleLabel}}</span>
+                    {{end}}
+                </div>
+            </div>
         </div>
     </header>
 </div>
 
+<script>
+function backupsUserCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]').content;
+}
+
+// backupsUserRunNow fires `opencli docker-backup` in the background and
+// polls /backups/user/action-status until it completes, mirroring
+// backupsAction() in backups_system.html.
+function backupsUserRunNow() {
+    if (!confirm('Run backups for all users now?')) return;
+
+    showToast('Running backups for all users…', 'loading', true);
+
+    fetch('/backups/user/run', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': backupsUserCSRFToken()
+        }
+    }).catch(function () {
+        showToast('Failed to reach the server.', 'error');
+    });
+
+    let attempts = 0;
+    let timer;
+
+    function poll() {
+        fetch('/backups/user/action-status', { cache: 'no-store' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.done) {
+                    attempts++;
+                    if (attempts >= 600) {
+                        clearInterval(timer);
+                        showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
+                    }
+                    return;
+                }
+                clearInterval(timer);
+                showToast(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    setTimeout(function () { window.location.reload(); }, 1500);
+                }
+            })
+            .catch(function () {
+                attempts++;
+                if (attempts >= 600) {
+                    clearInterval(timer);
+                }
+            });
+    }
+
+    setTimeout(function () {
+        timer = setInterval(poll, 1500);
+    }, 1000);
+}
+</script>
+
+<div
+    x-data="{
+        tab: window.location.hash.replace('#', '') || 'settings',
+
+        init() {
+            this.$watch('tab', value => { window.location.hash = value; });
+            window.addEventListener('hashchange', () => {
+                this.tab = window.location.hash.replace('#', '') || 'settings';
+            });
+        }
+    }">
+	<nav aria-label="Tabs" data-orientation="horizontal" dir="ltr">
+		<div style="position: relative;">
+			<ul data-orientation="horizontal" class="flex bg-gray-50 dark:bg-gray-950 items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
+
+			<li class="flex">
+				<a @click="tab = 'settings'" :class="tab === 'settings' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Settings</span>
+				</a>
+			</li>
+
+			<li class="flex">
+				<a @click="tab = 'configuration'" :class="tab === 'configuration' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Configuration</span>
+				</a>
+			</li>
+
+			<li class="flex">
+				<a @click="tab = 'runs'" :class="tab === 'runs' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Runs</span>
+				</a>
+			</li>
+
+			</ul>
+		</div>
+	</nav>
+
 <div class="p-4 sm:p-6">
-    <p class="text-sm text-gray-500 dark:text-gray-500">Coming soon.</p>
+
+    <!-- SETTINGS -->
+    <div x-show="tab === 'settings'" role="tabpanel">
+        <div class="mb-4 rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-3 text-sm text-gray-600 dark:text-gray-400">
+            <strong>Disabled</strong> (default): each user manages their own backup from their own account -- nothing runs centrally. Choosing Daily/Weekly/Monthly instead runs backups for <em>every</em> user on that schedule, via the "opencli docker-backup" <a href="/server/crons" class="font-medium underline hover:no-underline">System Cron Job</a>. See the docs for the difference between <a href="https://openpanel.com/docs/articles/backups/configuring-backups/" target="_blank" class="font-medium underline hover:no-underline">user-defined and admin-defined backups</a>.
+        </div>
+        <div class="sm:mx-auto sm:max-w-2xl">
+            <form method="POST" action="/backups/user/settings" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+                <div class="form-group">
+                    <label for="schedule_choice">Schedule</label>
+                    <select id="schedule_choice" name="schedule_choice" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 mt-2">
+                        <option value="disabled" {{if eq .ScheduleChoice "disabled"}}selected{{end}}>Disabled -- user configured</option>
+                        <option value="daily" {{if eq .ScheduleChoice "daily"}}selected{{end}}>Daily</option>
+                        <option value="weekly" {{if eq .ScheduleChoice "weekly"}}selected{{end}}>Weekly</option>
+                        <option value="monthly" {{if eq .ScheduleChoice "monthly"}}selected{{end}}>Monthly</option>
+                    </select>
+                    <small class="form-hint">Daily/Weekly/Monthly all run at 03:00 server time. Fine-tune the exact time later from <a href="/server/crons" class="underline hover:no-underline">System Cron Jobs</a>.</small>
+                </div>
+
+                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONFIGURATION -->
+    <div x-show="tab === 'configuration'" x-cloak role="tabpanel" x-data="restoreComponentFor('backup_env', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/backups/backup.env')">
+        <div class="mb-4 rounded border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-400/10 p-3 text-sm text-amber-800 dark:text-amber-400">
+            This only applies to <strong>new users</strong> going forward -- it's the default <code class="font-mono">backup.env</code> every new account is provisioned with. It does not change any existing user's own backup settings.
+        </div>
+        <form method="POST" action="/backups/user/configuration" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+            <div class="form-group">
+                <div class="flex items-center justify-between">
+                    <label for="backup_env">Default backup.env</label>
+                    <button
+                      type="button"
+                      @click="restoreDefault"
+                      class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                      :disabled="loading">
+                      <template x-if="!loading"><span>Restore Default</span></template>
+                      <template x-if="loading">
+                        <svg class="animate-spin h-4 w-4 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                      </template>
+                    </button>
+                </div>
+                <textarea id="backup_env" name="backup_env" rows="24" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 font-mono text-xs shadow-sm outline-none transition-colors text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 mt-2">{{.BackupEnv}}</textarea>
+                <small class="form-hint">Destination (S3/WebDAV/SSH/etc.), retention, and notification settings. Path: /etc/openpanel/backups/backup.env</small>
+            </div>
+
+            <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600">Save</button>
+        </form>
+    </div>
+
+    <!-- RUNS -->
+    <div x-show="tab === 'runs'" x-cloak role="tabpanel">
+        <div class="flex items-center justify-end pb-4">
+            <button type="button" onclick="backupsUserRunNow()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Run Backup Now</button>
+        </div>
+        {{if .RunsLog}}
+        <pre class="w-full overflow-x-auto rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4 text-xs text-gray-800 dark:text-gray-200 whitespace-pre">{{.RunsLog}}</pre>
+        {{else}}
+        <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No backup runs recorded yet.</p>
+        {{end}}
+    </div>
+
 </div>
+</div>
+
+<script>
+// restoreComponentFor fetches githubFile's raw content straight from the
+// browser and drops it into the #<id> textarea -- purely client-side, no
+// server round trip, matching the same helper already duplicated across
+// settings_defaults_templates.html / domains_templates.html / etc. Doesn't
+// save on its own; the form's own Save button still has to be clicked.
+function restoreComponentFor(id, githubFile) {
+  return {
+    loading: false,
+    async restoreDefault() {
+      this.loading = true;
+      try {
+        const res = await fetch(githubFile);
+        if (!res.ok) throw new Error('Failed to fetch default configuration from GitHub');
+        const text = await res.text();
+        const textarea = document.getElementById(id);
+        if (textarea) textarea.value = text;
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        this.loading = false;
+      }
+    }
+  }
+}
+</script>
 
     </main>
 
