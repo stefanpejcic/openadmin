@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -124,6 +125,46 @@ func TestGetSwapStatusReadsThresholdFromNotificationsConfig(t *testing.T) {
 	}
 }
 
+// TestServeSwapGetRoundsTotalGBToTwoDecimalsTrimmed guards against a
+// regression where a non-round MB total (e.g. a real 1023 MB swapfile)
+// showed up in the GB-labeled field as a raw division result like
+// "0.9990234375" instead of a sensibly rounded "1".
+func TestServeSwapGetRoundsTotalGBToTwoDecimalsTrimmed(t *testing.T) {
+	origFree, origShow := swapFreeRun, swapShowRun
+	t.Cleanup(func() { swapFreeRun, swapShowRun = origFree, origShow })
+	swapShowRun = func() (string, error) { return "", nil }
+
+	cases := []struct {
+		totalMB int
+		wantGB  string
+	}{
+		{1023, "1"},
+		{1024, "1"},
+		{1536, "1.5"},
+		{100, "0.1"},
+	}
+	for _, c := range cases {
+		swapFreeRun = func() (string, error) {
+			return fmt.Sprintf("Swap:           %d           0        %d\n", c.totalMB, c.totalMB), nil
+		}
+
+		s := &Swap{}
+		srv, client := newSwapTestServer(t, s, "admin")
+
+		resp, err := client.Get(srv.URL + "/server/swap")
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		want := `id="swap_size_gb" type="number" min="0.125" step="0.125" value="` + c.wantGB + `"`
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("totalMB=%d: expected %q in body, got %s", c.totalMB, want, truncate(string(body)))
+		}
+	}
+}
+
 func TestServeSwapGetRendersHTML(t *testing.T) {
 	origFree, origShow := swapFreeRun, swapShowRun
 	swapFreeRun = func() (string, error) { return "Swap:           1024           0        1024\n", nil }
@@ -147,6 +188,13 @@ func TestServeSwapGetRendersHTML(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}
+	}
+
+	// The "Change allocation" field is labeled in GB -- its prefilled
+	// value must be the MB total converted to GB (1024 MB -> 1), not the
+	// raw MB number sitting next to a "GB" label.
+	if !strings.Contains(got, `id="swap_size_gb" type="number" min="0.125" step="0.125" value="1"`) {
+		t.Fatalf("expected swap_size_gb prefilled with GB value \"1\" (converted from 1024 MB), got %s", truncate(got))
 	}
 }
 

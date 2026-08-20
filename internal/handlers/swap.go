@@ -132,9 +132,20 @@ func getSwapStatus() swapStatus {
 // ServeSwap handles GET /server/swap.
 func (s *Swap) ServeSwap(w http.ResponseWriter, r *http.Request) {
 	status := getSwapStatus()
+
+	// The "Change allocation" field is labeled in GB, so its prefilled
+	// value must be converted from status.TotalMB (which is in MB) --
+	// pre-filling the raw MB number there previously showed e.g. "1024"
+	// next to a "GB" label instead of "1".
+	totalGB := "1"
+	if status.TotalMB > 0 {
+		totalGB = strings.TrimRight(strings.TrimRight(strconv.FormatFloat(float64(status.TotalMB)/1024, 'f', 2, 64), "0"), ".")
+	}
+
 	webtemplates.Render(w, "server_swap.html", mergeChrome(map[string]interface{}{
 		"Swap":         status,
 		"SwapFilePath": SwapFilePath,
+		"TotalGB":      totalGB,
 		"CSRFToken":    csrf.Token(r),
 		"Flashes":      auth.PopFlashes(w, r, s.Sessions),
 	}, r, "Swap"))
