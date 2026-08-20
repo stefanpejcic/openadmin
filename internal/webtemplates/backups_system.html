@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">System Backups</h1>
+            </div>
+        </div>
+    </header>
+</div>
+
+<script>
+function backupsCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]').content;
+}
+
+// backupsAction fires an async backup/restore (marked with X-Requested-With
+// so the server schedules it via a goroutine instead of blocking the
+// response on the opencli command) and polls /backups/system/action-status
+// until it completes -- mirroring podmanImageAction in server_podman.html.
+function backupsAction(url, loadingMessage, confirmMessage) {
+    if (confirmMessage && !confirm(confirmMessage)) return;
+
+    showToast(loadingMessage, 'loading', true);
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': backupsCSRFToken()
+        }
+    }).catch(function () {
+        showToast('Failed to reach the server.', 'error');
+    });
+
+    let attempts = 0;
+    let timer;
+
+    function poll() {
+        fetch('/backups/system/action-status', { cache: 'no-store' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.done) {
+                    attempts++;
+                    if (attempts >= 300) {
+                        clearInterval(timer);
+                        showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
+                    }
+                    return;
+                }
+                clearInterval(timer);
+                showToast(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    setTimeout(function () { window.location.reload(); }, 1500);
+                }
+            })
+            .catch(function () {
+                attempts++;
+                if (attempts >= 300) {
+                    clearInterval(timer);
+                }
+            });
+    }
+
+    setTimeout(function () {
+        timer = setInterval(poll, 1500);
+    }, 1000);
+}
+
+// backupsDelete removes one backup archive. A plain file delete completes
+// immediately (no opencli command involved), so this responds
+// synchronously -- no schedule-then-poll dance needed, unlike
+// run/restore above.
+function backupsDelete(url, confirmMessage) {
+    if (!confirm(confirmMessage)) return;
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': backupsCSRFToken()
+        }
+    })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            showToast(data.message, data.success ? 'success' : 'error');
+            if (data.success) {
+                setTimeout(function () { window.location.reload(); }, 1200);
+            }
+        })
+        .catch(function () {
+            showToast('Failed to reach the server.', 'error');
+        });
+}
+</script>
+
+<div
+    x-data="{
+        tab: window.location.hash.replace('#', '') || 'backups',
+        searchBackups: '',
+        searchRuns: '',
+
+        init() {
+            this.$watch('tab', value => { window.location.hash = value; });
+            window.addEventListener('hashchange', () => {
+                this.tab = window.location.hash.replace('#', '') || 'backups';
+            });
+        }
+    }">
+	<nav aria-label="Tabs" data-orientation="horizontal" dir="ltr">
+		<div style="position: relative;">
+			<ul data-orientation="horizontal" class="flex bg-gray-50 dark:bg-gray-950 items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
+
+			<li class="flex">
+				<a @click="tab = 'backups'" :class="tab === 'backups' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Backups</span>
+				</a>
+			</li>
+
+			<li class="flex">
+				<a @click="tab = 'runs'" :class="tab === 'runs' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Runs</span>
+				</a>
+			</li>
+
+			<li class="flex">
+				<a @click="tab = 'settings'" :class="tab === 'settings' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Settings</span>
+				</a>
+			</li>
+
+			</ul>
+		</div>
+	</nav>
+
+<div class="p-4 sm:p-6">
+
+    <!-- BACKUPS -->
+    <div x-show="tab === 'backups'" role="tabpanel">
+        <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+                <input x-model="searchBackups" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search backups..." type="search">
+                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="backupsAction('/backups/system/run', 'Running system backup', 'Run a new system configuration backup now?')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer">Run Backup Now</button>
+            </div>
+        </div>
+
+        {{if not .Destination}}
+        <p class="pb-4 text-sm text-amber-600 dark:text-amber-500">No backup destination configured yet -- set one on the Settings tab first.</p>
+        {{end}}
+
+        <div class="overflow-x-auto">
+            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                {{if .Archives}}
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Created</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .Archives}}
+                        <tr x-show="searchBackups === '' || '{{.Name | jsStr}}'.toLowerCase().includes(searchBackups.toLowerCase())" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm py-2.5 font-mono text-gray-900 dark:text-gray-50">{{.Name}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Size}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.ModTime}}</td>
+                            <td class="p-4 text-sm py-2.5">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button type="button" onclick="backupsAction('/backups/system/restore/{{.Name}}', 'Restoring {{.Name | jsStr}}…', 'Restore configuration from {{.Name | jsStr}}?\n\nThis overwrites the current system/user configuration files with the ones in this backup. Affected services may need a restart afterward.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Restore</button>
+                                    <button type="button" onclick="backupsDelete('/backups/system/delete/{{.Name}}', 'Delete backup {{.Name | jsStr}}?\n\nThis cannot be undone.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-red-600 dark:text-red-500 bg-white dark:bg-gray-950 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No backups found{{if .Destination}} in {{.Destination}}{{end}}.</p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <!-- RUNS -->
+    <div x-show="tab === 'runs'" x-cloak role="tabpanel">
+        <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+                <input x-model="searchRuns" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search runs..." type="search">
+                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                {{if .Runs}}
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Timestamp</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Action</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Status</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Archive</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Duration</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .Runs}}
+                        <tr x-show="searchRuns === '' || '{{.Archive | jsStr}}'.toLowerCase().includes(searchRuns.toLowerCase()) || '{{.Action | jsStr}}'.toLowerCase().includes(searchRuns.toLowerCase()) || '{{.Status | jsStr}}'.toLowerCase().includes(searchRuns.toLowerCase())" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Timestamp}}</td>
+                            <td class="p-4 text-sm py-2.5 font-medium text-gray-900 dark:text-gray-50 capitalize">{{.Action}}</td>
+                            <td class="p-4 text-sm py-2.5">
+                                {{if eq .Status "success"}}
+                                <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Success</span>
+                                {{else}}
+                                <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Failed</span>
+                                {{end}}
+                            </td>
+                            <td class="p-4 text-sm py-2.5 font-mono text-gray-600 dark:text-gray-400">{{.Archive}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Duration}}s</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Detail}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No backup runs recorded yet.</p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div x-show="tab === 'settings'" x-cloak role="tabpanel">
+        <div class="sm:mx-auto sm:max-w-2xl">
+            <div class="mb-4 rounded border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-400/10 p-3 text-sm text-blue-800 dark:text-blue-400">
+                Backups aren't run automatically -- use "Run Backup Now" on the Backups tab, or schedule <code class="font-mono">opencli backup</code> to run on its own (e.g. weekly) as a <a href="/server/crons" class="font-medium underline hover:no-underline">System Cron Job</a>.
+            </div>
+            <form method="POST" action="/backups/system" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+                <div class="form-group">
+                    <label for="destination">Destination</label>
+                    <input type="text" id="destination" name="destination" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 mt-2" value="{{.Destination}}" placeholder="/etc/openpanel/backups/system" autocomplete="off">
+                    <small class="form-hint">Directory where system configuration backup archives are stored. Created automatically if it doesn't exist.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="retention_days">Retention (days)</label>
+                    <input type="number" id="retention_days" name="retention_days" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 mt-2" value="{{.RetentionDays}}" min="-1">
+                    <small class="form-hint">Backups older than this are deleted after each new run. Use -1 to keep every backup indefinitely.</small>
+                </div>
+
+                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600">Save</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

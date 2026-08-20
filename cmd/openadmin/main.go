@@ -269,6 +269,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	waf := &handlers.WAF{Sessions: sessions}
 	sshHandlers := &handlers.SSH{Sessions: sessions}
 	podmanHandlers := &handlers.Podman{Sessions: sessions, MySQL: d.MySQL}
+	backupsHandlers := &handlers.Backups{Sessions: sessions}
 	search := &handlers.Search{MySQL: d.MySQL, Sessions: sessions, JSONFilePath: d.SearchJSONPath}
 	dnsCluster := &handlers.DNSCluster{Sessions: sessions, PublicIP: d.PublicIP}
 	emails := &handlers.Emails{Sessions: sessions, PublicIP: d.PublicIP, MasterPass: d.DovecotMasterPass}
@@ -685,6 +686,13 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /services/podman/images/{action}/{id...}", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageAction))
 	mux.HandleFunc("GET /services/podman/images/action-status", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageActionStatus))
 	mux.HandleFunc("GET /services/podman/images/check-update", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageCheckUpdate))
+	mux.HandleFunc("GET /backups/user", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackups))
+	mux.HandleFunc("GET /backups/system", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeSystemBackups))
+	mux.HandleFunc("POST /backups/system", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeSystemBackups))
+	mux.HandleFunc("POST /backups/system/run", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeSystemBackupsRun))
+	mux.HandleFunc("POST /backups/system/restore/{filename...}", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeSystemBackupsRestore))
+	mux.HandleFunc("POST /backups/system/delete/{filename...}", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeSystemBackupsDelete))
+	mux.HandleFunc("GET /backups/system/action-status", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeSystemBackupsActionStatus))
 	mux.HandleFunc("GET /services/limits", auth.RequireAdmin(sessions, authOpts, limits.ServeLimits))
 	mux.HandleFunc("POST /services/limits", auth.RequireAdmin(sessions, authOpts, limits.ServeLimits))
 	mux.HandleFunc("GET /services/logs", auth.RequireAdmin(sessions, authOpts, logs.ServeIndex))
