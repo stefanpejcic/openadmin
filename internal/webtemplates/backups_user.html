@@ -132,7 +132,7 @@ function backupsUserRunNow() {
     <!-- SETTINGS -->
     <div x-show="tab === 'settings'" role="tabpanel">
         <div class="mb-4 rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-3 text-sm text-gray-600 dark:text-gray-400">
-            <strong>Disabled</strong> (default): each user manages their own backup from their own account -- nothing runs centrally. Choosing Daily/Weekly/Monthly instead runs backups for <em>every</em> user on that schedule, via the "opencli docker-backup" <a href="/server/crons" class="font-medium underline hover:no-underline">System Cron Job</a>. See the docs for the difference between <a href="https://openpanel.com/docs/articles/backups/configuring-backups/" target="_blank" class="font-medium underline hover:no-underline">user-defined and admin-defined backups</a>.
+            <strong>Disabled</strong> (default): each user manages their own backup from their own account when backups module is enabled -- nothing runs centrally. Choosing Daily/Weekly/Monthly instead runs backups for <em>every</em> user on that schedule, via the "opencli docker-backup" <a href="/server/crons" class="font-medium underline hover:no-underline">System Cron Job</a>. See the docs for the difference between <a href="https://openpanel.com/docs/articles/backups/configuring-backups/" target="_blank" class="font-medium underline hover:no-underline">user-defined and admin-defined backups</a>.
         </div>
         <div class="sm:mx-auto sm:max-w-2xl">
             <form method="POST" action="/backups/user/settings" class="space-y-4">
@@ -189,8 +189,13 @@ function backupsUserRunNow() {
 
     <!-- RUNS -->
     <div x-show="tab === 'runs'" x-cloak role="tabpanel">
-        <div class="flex items-center justify-end pb-4">
+        <div class="flex items-center justify-end gap-2 pb-4">
+            {{if ne .ScheduleChoice "disabled"}}
             <button type="button" onclick="backupsUserRunNow()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Run Backup Now</button>
+            {{else}}
+            <span class="text-sm text-gray-500 dark:text-gray-500">Only available in Admin Configured mode -- set a schedule on the <a href="#settings" class="underline hover:no-underline" @click="tab = 'settings'">Settings tab</a>.</span>
+            <button type="button" disabled class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out pointer-events-none border-gray-200 dark:border-gray-800 text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-gray-900">Run Backup Now</button>
+            {{end}}
         </div>
         {{if .RunsLog}}
         <pre class="w-full overflow-x-auto rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4 text-xs text-gray-800 dark:text-gray-200 whitespace-pre">{{.RunsLog}}</pre>

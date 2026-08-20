@@ -304,8 +304,17 @@ var (
 // docker-backup` in the background (it loops every active user, so this
 // can take a while) and lets the browser poll
 // ServeUserBackupsActionStatus, mirroring the system backups page's
-// run/restore.
+// run/restore. Only meaningful in Admin Configured mode -- in Disabled
+// (User Configured) mode there's no central config for `opencli
+// docker-backup` to act on, since each user's own settings apply instead
+// -- so this refuses to run there, even if called directly rather than
+// through the (also-disabled) button.
 func (b *Backups) ServeUserBackupsRun(w http.ResponseWriter, r *http.Request) {
+	if backupsUserSchedule() == backupScheduleChoices["disabled"] {
+		writeJSONError(w, http.StatusBadRequest, "Backups are Disabled (User Configured mode) -- switch to Daily/Weekly/Monthly on the Settings tab to run a central backup.")
+		return
+	}
+
 	result := &backupActionResult{}
 	pendingUserBackupActionMu.Lock()
 	pendingUserBackupAction = result
