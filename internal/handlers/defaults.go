@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	htmltemplate "html/template"
 	"io"
 	"net/http"
 	"os"
@@ -600,7 +601,14 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		"VarnishEnabled":     varnishEnabled,
 		"PHPVersionOptions":  buildPHPVersionOptions(phpVersion, phpVersionsData),
 		"AvailableServices":  availableServices,
-		"ActiveServicesJSON": string(activeJSON),
+		// template.JS tells html/template's contextual autoescaper this
+		// value is already valid JS/JSON, not a plain string to be
+		// re-encoded -- without it, the autoescaper wraps the array in an
+		// extra layer of JSON-string quoting inside the <script> block, so
+		// JSON.parse() on the page yields a string instead of an array and
+		// `new Set(...)` on that string ends up splitting it into
+		// individual characters instead of service names.
+		"ActiveServicesJSON": htmltemplate.JS(activeJSON),
 		"PHPFPMGroups":       buildPHPFPMGroups(phpFPM, phpVersionsData),
 		"OtherGroups":        buildOtherDefaultsGroups(defaults),
 		"CSRFToken":          csrf.Token(r),

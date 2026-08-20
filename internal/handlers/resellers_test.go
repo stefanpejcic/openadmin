@@ -13,6 +13,7 @@ import (
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
+	"openadmin/internal/config"
 	"openadmin/internal/paneldb"
 )
 
@@ -21,6 +22,20 @@ func withScratchResellersConfigDir(t *testing.T) {
 	orig := paneldb.ResellerConfigDir
 	paneldb.ResellerConfigDir = t.TempDir()
 	t.Cleanup(func() { paneldb.ResellerConfigDir = orig })
+
+	// Resellers are off by default (resellersEnabled() in resellers.go);
+	// point admin.ini at a scratch file with them already turned on so
+	// existing tests exercising create/update/etc. don't all need to know
+	// about the master switch -- TestServeResellersToggle* below cover that
+	// switch itself directly.
+	origAdminConfig := config.AdminConfigPath
+	config.AdminConfigPath = filepath.Join(t.TempDir(), "admin.ini")
+	data := config.Data{}
+	data.Set("RESELLERS", "enabled", "yes")
+	if err := config.Save(config.AdminConfigPath, data); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { config.AdminConfigPath = origAdminConfig })
 }
 
 func newResellersTestServer(t *testing.T, rs *Resellers, loginAsRole string) (*httptest.Server, *http.Client, *admindb.DB) {
@@ -139,6 +154,108 @@ func TestServeResellersPostCreate(t *testing.T) {
 	}
 	if u.Role != "reseller" {
 		t.Fatalf("expected role reseller, got %q", u.Role)
+	}
+}
+
+// TestServeResellersCreateBlockedWhenDisabled deliberately does NOT call
+// withScratchResellersConfigDir (which enables resellers) -- it points
+// AdminConfigPath at an empty scratch file instead, so resellersEnabled()
+// falls back to its "no" default.
+func TestServeResellersCreateBlockedWhenDisabled(t *testing.T) {
+	origAdminConfig := config.AdminConfigPath
+	config.AdminConfigPath = filepath.Join(t.TempDir(), "admin.ini")
+	t.Cleanup(func() { config.AdminConfigPath = origAdminConfig })
+
+	rs := &Resellers{}
+	srv, client, db := newResellersTestServer(t, rs, "admin")
+
+	resp, err := client.PostForm(srv.URL+"/resellers", url.Values{
+		"action": {"create"}, "username": {"newreseller"}, "password": {"secret123"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "Error: Resellers are disabled.") {
+		t.Fatalf("expected disabled-resellers error flash, got %s", truncate(string(body)))
+	}
+	if _, err := db.UserByUsername("newreseller"); err == nil {
+		t.Fatal("expected no reseller to have been created")
+	}
+}
+
+func TestServeResellersToggleEnableThenDisable(t *testing.T) {
+	origAdminConfig := config.AdminConfigPath
+	config.AdminConfigPath = filepath.Join(t.TempDir(), "admin.ini")
+	t.Cleanup(func() { config.AdminConfigPath = origAdminConfig })
+
+	// paneldb.ResellerConfigDir also needs a scratch dir for the reseller
+	// account files created/deleted below, but we do NOT want
+	// withScratchResellersConfigDir's AdminConfigPath override (it defaults
+	// resellers to enabled) -- so replicate just the ResellerConfigDir half.
+	origResellerDir := paneldb.ResellerConfigDir
+	paneldb.ResellerConfigDir = t.TempDir()
+	t.Cleanup(func() { paneldb.ResellerConfigDir = origResellerDir })
+
+	rs := &Resellers{}
+	srv, client, db := newResellersTestServer(t, rs, "admin")
+
+	if resellersEnabled() {
+		t.Fatal("expected disabled by default")
+	}
+
+	resp, err := client.PostForm(srv.URL+"/resellers", url.Values{"action": {"enable_resellers"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "Resellers enabled.") {
+		t.Fatalf("expected enabled success flash, got %s", truncate(string(body)))
+	}
+	if !resellersEnabled() {
+		t.Fatal("expected resellersEnabled() to be true after enabling")
+	}
+
+	// Create one reseller, then disabling should be refused.
+	if _, err := client.PostForm(srv.URL+"/resellers", url.Values{
+		"action": {"create"}, "username": {"blocker"}, "password": {"secret123"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.PostForm(srv.URL+"/resellers", url.Values{"action": {"disable_resellers"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "Cannot disable resellers while 1 reseller account(s) still exist") {
+		t.Fatalf("expected blocked-disable flash, got %s", truncate(string(body)))
+	}
+	if !resellersEnabled() {
+		t.Fatal("expected resellersEnabled() to still be true after a blocked disable")
+	}
+
+	// Remove the reseller directly (the "delete" action shells out to
+	// opencli, which isn't available in this sandbox), then disabling
+	// should succeed.
+	if err := db.DeleteUser("blocker"); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = client.PostForm(srv.URL+"/resellers", url.Values{"action": {"disable_resellers"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "Resellers disabled.") {
+		t.Fatalf("expected disabled success flash, got %s", truncate(string(body)))
+	}
+	if resellersEnabled() {
+		t.Fatal("expected resellersEnabled() to be false after disabling")
 	}
 }
 

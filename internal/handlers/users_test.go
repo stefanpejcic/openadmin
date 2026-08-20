@@ -361,6 +361,37 @@ func TestManageUserUnsuspendStripsLastUnderscoreSegment(t *testing.T) {
 	}
 }
 
+func TestManageUserPermissionsResetDeletesCustomFeaturesFile(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	mock.ExpectQuery(`SELECT u.username, u.id, u.email`).
+		WithArgs("alice", "SUSPENDED_%_alice").
+		WillReturnRows(sqlmock.NewRows([]string{"username", "id", "email", "owner", "twofa_enabled", "registered_date", "plan_id", "server"}).
+			AddRow("alice", int64(3), "alice@example.com", nil, true, "2025-06-01 10:00:00", int64(1), "alice"))
+
+	u := &Users{MySQL: mysqlDB}
+	srv, client := newUsersTestServer(t, u, "admin")
+
+	// userFeaturesPath("alice") points at a real system path
+	// (/home/alice/features.txt) not writable/removable in this sandbox --
+	// the important thing is os.Remove's IsNotExist case is treated as
+	// success rather than an error, matching a user who was never
+	// customized in the first place.
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := client.PostForm(srv.URL+"/user/permissions_reset/alice", url.Values{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	loc := resp.Header.Get("Location")
+	resp.Body.Close()
+	if loc != "/users/alice#permissions" {
+		t.Fatalf("expected redirect to /users/alice#permissions, got %q (status %d)", loc, resp.StatusCode)
+	}
+}
+
 func TestManageUserInvalidActionFlagged(t *testing.T) {
 	mysqlDB, _, err := sqlmock.New()
 	if err != nil {

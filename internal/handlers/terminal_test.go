@@ -100,7 +100,10 @@ func TestServeHostTerminalPageAllowsNonResellerRoles(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("role %q: expected 200, got %d: %s", role, resp.StatusCode, truncate(string(body)))
 		}
-		for _, want := range []string{"Web Terminal", "id=\"terminal\"", "</html>"} {
+		// "Server" is the breadcrumb group label for /terminal's sidebar
+		// section (Server > Terminal) -- a past regression let this fall
+		// through to a bare "Web Terminal" crumb with no group prefix.
+		for _, want := range []string{"Web Terminal", "id=\"terminal\"", "</html>", ">Server<"} {
 			if !strings.Contains(string(body), want) {
 				t.Fatalf("role %q: expected body to contain %q, got %s", role, want, truncate(string(body)))
 			}

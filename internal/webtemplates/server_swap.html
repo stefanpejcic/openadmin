@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">Swap</h1>
+                <h2 class="text-sm font-medium text-slate-500">View and manage the server's swap allocation.</h2>
+            </div>
+        </div>
+    </header>
+</div>
+
+<script>
+function swapCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]').content;
+}
+
+// swapAction fires an async resize/drop and polls /server/swap/action-status
+// until it completes, mirroring podmanImageAction in server_podman.html.
+function swapAction(action, body, loadingMessage, confirmMessage) {
+    if (confirmMessage && !confirm(confirmMessage)) return;
+
+    showToast(loadingMessage, 'loading', true);
+
+    fetch('/server/swap/action/' + action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': swapCSRFToken()
+        },
+        body: body || ''
+    }).catch(function () {
+        showToast('Failed to reach the server.', 'error');
+    });
+
+    let attempts = 0;
+    let timer;
+
+    function poll() {
+        fetch('/server/swap/action-status', { cache: 'no-store' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.done) {
+                    attempts++;
+                    if (attempts >= 300) {
+                        clearInterval(timer);
+                        showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
+                    }
+                    return;
+                }
+                clearInterval(timer);
+                showToast(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    setTimeout(function () { window.location.reload(); }, 1500);
+                }
+            })
+            .catch(function () {
+                attempts++;
+                if (attempts >= 300) {
+                    clearInterval(timer);
+                }
+            });
+    }
+
+    setTimeout(function () {
+        timer = setInterval(poll, 1500);
+        poll();
+    }, 300);
+}
+
+function swapDrop() {
+    swapAction('drop', '', 'Clearing swap…', 'This will run swapoff/swapon on all swap devices, briefly moving swapped-out memory back to RAM. Continue?');
+}
+
+function swapResize() {
+    const gb = document.getElementById('swap_size_gb').value;
+    const mb = Math.round(parseFloat(gb) * 1024);
+    if (!mb || mb < 128) {
+        showToast('Enter a swap size of at least 0.125 GB.', 'error');
+        return;
+    }
+    swapAction('resize', 'size_mb=' + encodeURIComponent(mb), 'Resizing swap to ' + gb + ' GB…', 'This will briefly disable swap while the file is recreated at the new size. Continue?');
+}
+</script>
+
+<div class="px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Current usage</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Swap usage as reported by <code>free -m</code>. Alerts fire above {{.Swap.ThresholdPercent}}%.</p>
+        </div>
+        <div class="md:col-span-2">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="rounded border border-gray-200 dark:border-gray-800 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-500">Total</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Swap.TotalMB}} MB</p>
+                </div>
+                <div class="rounded border border-gray-200 dark:border-gray-800 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-500">Used</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Swap.UsedMB}} MB ({{.Swap.UsedPercent}}%)</p>
+                </div>
+                <div class="rounded border border-gray-200 dark:border-gray-800 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-500">Free</p>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Swap.FreeMB}} MB</p>
+                </div>
+            </div>
+
+            <div class="mt-4 relative overflow-x-auto">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Device</th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Type</th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Size</th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Used</th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{if .Swap.Devices}}
+                        {{range .Swap.Devices}}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-900">
+                            <td class="p-4 text-sm text-gray-900 dark:text-gray-50">{{.Name}}</td>
+                            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{.Type}}</td>
+                            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{.SizeMB}} MB</td>
+                            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{.UsedMB}} MB</td>
+                            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{.Priority}}</td>
+                        </tr>
+                        {{end}}
+                        {{else}}
+                        <tr><td colspan="5" class="p-4 text-sm text-gray-400">No swap devices are currently active.</td></tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Change allocation</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Recreates the swap file at <code>{{.SwapFilePath}}</code> with the new size and re-enables it. {{if .Swap.ManagedFileExists}}A managed swap file already exists.{{else}}No managed swap file exists yet -- this will create one.{{end}}</p>
+        </div>
+        <div class="md:col-span-2">
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label for="swap_size_gb" class="block text-sm font-medium text-gray-900 dark:text-gray-50 mb-1">Swap size (GB)</label>
+                    <input id="swap_size_gb" type="number" min="0.125" step="0.125" value="{{if .Swap.TotalMB}}{{.Swap.TotalMB}}{{else}}1024{{end}}" class="relative block w-40 appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-100 dark:bg-gray-950">
+                </div>
+                <button type="button" onclick="swapResize()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 cursor-pointer">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Drop swap</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Runs <code>swapoff -a; swapon -a</code>, the same cleanup Sentinel performs automatically when swap usage crosses the threshold above -- it moves swapped-out pages back into RAM without changing the swap size.</p>
+        </div>
+        <div class="md:col-span-2">
+            <button type="button" onclick="swapDrop()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">Drop Swap</button>
+        </div>
+    </div>
+
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

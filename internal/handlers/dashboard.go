@@ -796,13 +796,17 @@ var diskUsagePseudoFstypes = map[string]bool{
 	"devpts": true, "tmpfs": true, "mqueue": true, "debugfs": true, "tracefs": true,
 	"securityfs": true, "pstore": true, "bpf": true, "autofs": true, "rpc_pipefs": true,
 	"binfmt_misc": true, "hugetlbfs": true, "configfs": true, "fusectl": true,
-	"nsfs": true, "fuse.fuse-overlayfs": true,
+	"nsfs": true, "fuse.fuse-overlayfs": true, "ramfs": true,
 }
 
 // diskUsageSnapshot lists mounted filesystems (skipping pseudo-filesystems
-// and the /snap, /boot, /etc/bind prefixes), each with a statfs-derived
-// usage summary (used = total - free-including-reserved-blocks; percent =
-// used / (used + free-available-to-non-root) * 100).
+// and the /snap, /boot, /etc/bind, /run prefixes), each with a
+// statfs-derived usage summary (used = total - free-including-reserved-
+// blocks; percent = used / (used + free-available-to-non-root) * 100).
+// /run is excluded by prefix (on top of tmpfs already being a pseudo
+// fstype) because systemd mounts some of its own bind-credential dirs
+// under it as "ramfs" -- also now a pseudo fstype, but the prefix exclusion
+// is the more robust fix against whatever else might show up there.
 func diskUsageSnapshot() []map[string]interface{} {
 	raw, err := os.ReadFile("/proc/mounts")
 	if err != nil {
@@ -821,7 +825,7 @@ func diskUsageSnapshot() []map[string]interface{} {
 		if seen[mountpoint] {
 			continue
 		}
-		if strings.HasPrefix(mountpoint, "/snap") || strings.HasPrefix(mountpoint, "/boot") || strings.HasPrefix(mountpoint, "/etc/bind") || strings.HasPrefix(mountpoint, "/var/lib/containers/storage") {
+		if strings.HasPrefix(mountpoint, "/snap") || strings.HasPrefix(mountpoint, "/boot") || strings.HasPrefix(mountpoint, "/etc/bind") || strings.HasPrefix(mountpoint, "/var/lib/containers/storage") || strings.HasPrefix(mountpoint, "/run") {
 			continue
 		}
 		if diskUsagePseudoFstypes[fstype] && !strings.Contains(fstype, "sshfs") {

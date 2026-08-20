@@ -463,7 +463,7 @@
 
 
 {{if not .IsReseller}}
-<li x-data="{ open: false, active: {{if hasPrefix .CurrentPath "/backups"}}true{{else}}false{{end}} }" class="relative">
+<li x-data="{ open: false, active: {{if or (or (or (hasPrefix .CurrentPath "/backups") (hasPrefix .CurrentPath "/user/import")) (hasPrefix .CurrentPath "/import/cpanel")) (hasPrefix .CurrentPath "/import/cyberpanel")}}true{{else}}false{{end}} }" class="relative">
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Backups -->
@@ -489,16 +489,25 @@
         <!-- User Backups -->
         <li>
             <a data-active="{{if hasPrefix .CurrentPath "/backups/user"}}true{{else}}false{{end}}" class="relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/backups/user">
-                Users
+                User backups
             </a>
         </li>
 
         <!-- System Backups -->
         <li>
             <a data-active="{{if hasPrefix .CurrentPath "/backups/system"}}true{{else}}false{{end}}" class="relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/backups/system">
-                System
+                System backups
             </a>
         </li>
+
+        {{if eq .LicenseType "Enterprise"}}
+        <!-- Import account -->
+        <li>
+            <a data-active="{{if or (hasPrefix .CurrentPath "/user/import") (hasPrefix .CurrentPath "/import/cpanel") (hasPrefix .CurrentPath "/import/cyberpanel")}}true{{else}}false{{end}}" class="relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/user/import">
+                Import account
+            </a>
+        </li>
+        {{end}}
     </ul>
 </li>
 {{end}}
@@ -588,7 +597,7 @@
     </ul>
 </li>
 
-<li x-data="{ open: false, active: {{if or (or (or (or (or (or (or (or (or (or (or (or (or (hasPrefix .CurrentPath "/server/root-password") (hasPrefix .CurrentPath "/server/ssh")) (hasPrefix .CurrentPath "/server/resource-usage")) (hasPrefix .CurrentPath "/server/reboot")) (hasPrefix .CurrentPath "/server/reboot")) (hasPrefix .CurrentPath "/server/timezone")) (hasPrefix .CurrentPath "/terminal")) (hasPrefix .CurrentPath "/server/processes")) (hasPrefix .CurrentPath "/server/migrate")) (hasPrefix .CurrentPath "/server/crons")) (hasPrefix .CurrentPath "/user/import")) (hasPrefix .CurrentPath "/server/demo-mode")) (hasPrefix .CurrentPath "/import/cpanel")) (hasPrefix .CurrentPath "/import/cyberpanel")}}true{{else}}false{{end}} }" class="relative">
+<li x-data="{ open: false, active: {{if or (or (or (or (or (or (or (or (or (or (hasPrefix .CurrentPath "/server/root-password") (hasPrefix .CurrentPath "/server/ssh")) (hasPrefix .CurrentPath "/server/resource-usage")) (hasPrefix .CurrentPath "/server/reboot")) (hasPrefix .CurrentPath "/server/timezone")) (hasPrefix .CurrentPath "/terminal")) (hasPrefix .CurrentPath "/server/processes")) (hasPrefix .CurrentPath "/server/migrate")) (hasPrefix .CurrentPath "/server/crons")) (hasPrefix .CurrentPath "/server/demo-mode")) (hasPrefix .CurrentPath "/server/swap")}}true{{else}}false{{end}} }" class="relative">
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Advanced -->
@@ -598,7 +607,7 @@
                 <path d="M13 15l3 0"/>
                 <path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/>
             </svg>
-            Advanced
+            Server
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
             <path d="M12 16L6 10H18L12 16Z"></path>
@@ -618,7 +627,7 @@
         <!-- Crons -->
         <li>
             <a data-active="{{if hasPrefix .CurrentPath "/server/crons"}}true{{else}}false{{end}}" class="relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/server/crons">
-                System Cron Jobs
+                Scheduled Actions
             </a>
         </li>
 
@@ -663,6 +672,13 @@
         </li>
 
         {{if not .IsReseller}}
+        <!-- Swap -->
+        <li>
+            <a data-active="{{if hasPrefix .CurrentPath "/server/swap"}}true{{else}}false{{end}}" class="relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/server/swap">
+                Swap
+            </a>
+        </li>
+
         <!-- Migrate -->
         <li>
             <a data-active="{{if hasPrefix .CurrentPath "/server/migrate"}}true{{else}}false{{end}}" class="relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/server/migrate">
@@ -670,14 +686,6 @@
             </a>
         </li>
 
-        {{if eq .LicenseType "Enterprise"}}
-        <!-- cPanel -->
-        <li>
-            <a data-active="{{if or (or (hasPrefix .CurrentPath "/user/import") (hasPrefix .CurrentPath "/import/cpanel")) (hasPrefix .CurrentPath "/import/cyberpanel")}}true{{else}}false{{end}}" class="relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/user/import">
-                Import from backup
-            </a>
-        </li>
-        {{end}}
         {{end}}
 
         <!-- Demo Mode -->
@@ -923,11 +931,13 @@
 
 
 
-                    {{else if or (hasPrefix .CurrentPath "/server/") (hasPrefix .CurrentPath "/user/import")}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Advanced</span></div></li>
+                    {{else if or (hasPrefix .CurrentPath "/server/") (hasPrefix .CurrentPath "/terminal")}}
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Server</span></div></li>
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
 
-
+                    {{else if or (or (hasPrefix .CurrentPath "/backups") (hasPrefix .CurrentPath "/user/import")) (or (hasPrefix .CurrentPath "/import/cpanel") (hasPrefix .CurrentPath "/import/cyberpanel"))}}
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Backups</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
 
 
                     {{end}}

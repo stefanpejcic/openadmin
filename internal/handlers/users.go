@@ -950,8 +950,24 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/users/"+username+"#permissions", http.StatusSeeOther)
 		return
 
+	case "permissions_reset":
+		userData, err := paneldb.GetUserDataByUsername(u.MySQL, username)
+		if err != nil {
+			auth.AddFlash(w, r, u.Sessions, "Error: User "+username+" not found", "error")
+			http.Redirect(w, r, "/users", http.StatusSeeOther)
+			return
+		}
+		if err := os.Remove(userFeaturesPath(userData.Context)); err != nil && !os.IsNotExist(err) {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" reset permissions for user "+username+" to plan defaults")
+		auth.AddFlash(w, r, u.Sessions, "Permissions for '"+username+"' reset to plan defaults", "success")
+		http.Redirect(w, r, "/users/"+username+"#permissions", http.StatusSeeOther)
+		return
+
 	default:
-		auth.AddFlash(w, r, u.Sessions, "Invalid user action, valid options are: edit, suspend, unsuspend, delete, permissions", "error")
+		auth.AddFlash(w, r, u.Sessions, "Invalid user action, valid options are: edit, suspend, unsuspend, delete, permissions, permissions_reset", "error")
 	}
 
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
@@ -959,15 +975,16 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 
 type userCreatePageData struct {
 	webtemplates.Chrome
-	Plans          []paneldb.RowMap
-	MySQLIsDown    bool
-	WebServer      string
-	MySQLType      string
-	VarnishEnabled bool
-	Webservers     []userCreateOption
-	SQLOptions     []userCreateOption
-	CSRFToken      string
-	Flashes        []auth.Flash
+	Plans            []paneldb.RowMap
+	MySQLIsDown      bool
+	WebServer        string
+	MySQLType        string
+	VarnishEnabled   bool
+	Webservers       []userCreateOption
+	SQLOptions       []userCreateOption
+	ResellersEnabled bool
+	CSRFToken        string
+	Flashes          []auth.Flash
 }
 
 type userCreateOption struct {
@@ -1072,16 +1089,17 @@ func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 	webServer, mysqlType, varnish := readUserCreateDefaultsEnv()
 
 	webtemplates.Render(w, "user_add.html", userCreatePageData{
-		Chrome:         buildChrome(r, "Add User"),
-		Plans:          plans,
-		MySQLIsDown:    mysqlIsDown,
-		WebServer:      webServer,
-		MySQLType:      mysqlType,
-		VarnishEnabled: varnish,
-		Webservers:     userCreateWebservers,
-		SQLOptions:     userCreateSQLOptions,
-		CSRFToken:      csrf.Token(r),
-		Flashes:        auth.PopFlashes(w, r, u.Sessions),
+		Chrome:           buildChrome(r, "Add User"),
+		Plans:            plans,
+		MySQLIsDown:      mysqlIsDown,
+		WebServer:        webServer,
+		MySQLType:        mysqlType,
+		VarnishEnabled:   varnish,
+		Webservers:       userCreateWebservers,
+		SQLOptions:       userCreateSQLOptions,
+		ResellersEnabled: resellersEnabled(),
+		CSRFToken:        csrf.Token(r),
+		Flashes:          auth.PopFlashes(w, r, u.Sessions),
 	})
 }
 

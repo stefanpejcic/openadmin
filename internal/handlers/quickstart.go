@@ -277,6 +277,26 @@ func quickStartDNSConfigured() bool {
 	return false
 }
 
+// quickStartPodmanImagesReady reports whether the Podman images a fresh
+// account actually needs are already downloaded: redis, plus at least one
+// of the three webserver images (nginx/apache/openlitespeed). Only
+// already-downloaded images count -- podmanListImages(nil, nil) with no
+// stack refs never synthesizes a NotDownloaded row, so every row here is
+// real.
+func quickStartPodmanImagesReady() bool {
+	hasRedis, hasWebserver := false, false
+	for _, img := range podmanListImages(nil, nil) {
+		repo := strings.ToLower(img.Repository)
+		if strings.Contains(repo, "redis") {
+			hasRedis = true
+		}
+		if strings.Contains(repo, "nginx") || strings.Contains(repo, "apache") || strings.Contains(repo, "openlitespeed") {
+			hasWebserver = true
+		}
+	}
+	return hasRedis && hasWebserver
+}
+
 // quickStartUpdatePreferencesCustomized reports whether the update
 // preference differs from the factory default ("minor_and_major": both
 // autoupdate and autopatch "on").
@@ -416,6 +436,13 @@ func onboardingConfigSteps(licenseType string) []quickStartStep {
 			Offer:       []string{"Port rules", "Allow/deny lists", "Rate limiting"},
 			Href:        "/security/firewall",
 			Done:        firewallCommandAvailableRun("csf"),
+		},
+		{
+			Label:       "Download required Podman images",
+			Description: "New accounts need Redis and a webserver image (Nginx, Apache, or OpenLiteSpeed) already downloaded so account creation doesn't stall on a first-time pull.",
+			Offer:       []string{"Redis", "Nginx / Apache / OpenLiteSpeed", "Faster account creation"},
+			Href:        "/services/podman#images",
+			Done:        quickStartPodmanImagesReady(),
 		},
 	}
 

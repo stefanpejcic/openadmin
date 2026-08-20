@@ -21,10 +21,27 @@
                     <h2 class="text-sm font-medium text-slate-500">Create and manage Reseller users.</h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <form method="POST" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    {{if .ResellersEnabled}}
+                    <input type="hidden" name="action" value="disable_resellers">
+                    <button type="submit" {{if gt .ResellerCount 0}}disabled title="Delete all {{.ResellerCount}} reseller account(s) first"{{end}} class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit cursor-pointer">Disable Resellers</button>
+                    {{else}}
+                    <input type="hidden" name="action" value="enable_resellers">
+                    <button type="submit" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 sm:w-fit cursor-pointer">Enable Resellers</button>
+                    {{end}}
+                </form>
+                {{if .ResellersEnabled}}
                 <a id="tour-create-reseller-btn" @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0 cursor-pointer">Create New</a>
+                {{end}}
                 </div>
             </div>
 
+            {{if not .ResellersEnabled}}
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">Reseller accounts are disabled. Click <strong>Enable Resellers</strong> above to allow creating them.</p>
+            {{end}}
+
+        {{if .ResellersEnabled}}
         <div :class="{ 'hidden': !showSection }" class="mt-8 w-full md:items-stretch md:space-x-4 hidden">
 
 <div id="create_user_form" class="sm:mx-auto" style="display:block;">
@@ -90,6 +107,7 @@ document.getElementById("togglePassword").addEventListener("click", function() {
 
 
         </div>
+        {{end}}
         </header>
     </div>
 

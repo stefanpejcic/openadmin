@@ -245,6 +245,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	limits := &handlers.Limits{Sessions: sessions}
 	logs := &handlers.Logs{Sessions: sessions}
 	reboot := &handlers.Reboot{Sessions: sessions}
+	swap := &handlers.Swap{Sessions: sessions}
 	caddySettings := &handlers.Caddy{Sessions: sessions}
 	phpSettings := &handlers.PHP{Sessions: sessions, MySQL: d.MySQL}
 	migrate := &handlers.Migrate{Sessions: sessions}
@@ -718,6 +719,10 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /server/reboot", auth.RequireAdmin(sessions, authOpts, reboot.ServeReboot))
 	mux.HandleFunc("POST /server/reboot", auth.RequireAdmin(sessions, authOpts, reboot.ServeReboot))
 	mux.HandleFunc("GET /server/reboot/status", auth.RequireAdmin(sessions, authOpts, reboot.ServeRebootStatus))
+
+	mux.HandleFunc("GET /server/swap", auth.RequireAdmin(sessions, authOpts, swap.ServeSwap))
+	mux.HandleFunc("POST /server/swap/action/{action}", auth.RequireAdmin(sessions, authOpts, swap.ServeSwapAction))
+	mux.HandleFunc("GET /server/swap/action-status", auth.RequireAdmin(sessions, authOpts, swap.ServeSwapActionStatus))
 	mux.HandleFunc("GET /settings/caddy", auth.RequireAdmin(sessions, authOpts, caddySettings.ServeSettings))
 	mux.HandleFunc("POST /settings/caddy", auth.RequireAdmin(sessions, authOpts, caddySettings.ServeSettings))
 	mux.HandleFunc("GET /settings/caddy/metrics", auth.RequireAdmin(sessions, authOpts, caddySettings.ServeMetrics))
@@ -858,6 +863,11 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /json/backup-files", auth.RequireAdmin(sessions, authOpts, importer.ServeListBackupFiles))
 	mux.HandleFunc("GET /json/transfers", auth.RequireAdmin(sessions, authOpts, importer.ServeListTransfers))
 	mux.HandleFunc("GET /json/transfers/{username}", auth.RequireLogin(sessions, authOpts, importer.ServeListTransfersFor))
+
+	mux.HandleFunc("GET /user/export/status/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserExportStatus))
+	mux.HandleFunc("POST /user/export/create/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserExportCreate))
+	mux.HandleFunc("GET /user/export/download/{username}/{filename...}", auth.RequireLogin(sessions, authOpts, users.ServeUserExportDownload))
+	mux.HandleFunc("POST /user/export/delete/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserExportDelete))
 	mux.HandleFunc("GET /import/transfer/", auth.RequireAdmin(sessions, authOpts, importer.ServeImportTransfer))
 	mux.HandleFunc("POST /import/transfer/", auth.RequireAdmin(sessions, authOpts, importer.ServeImportTransfer))
 	// No auth wrapper: these are public files, served without a

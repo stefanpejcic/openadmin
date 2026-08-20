@@ -15,6 +15,7 @@ import (
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
+	"openadmin/internal/config"
 	"openadmin/internal/paneldb"
 	"openadmin/internal/webtemplates"
 )
@@ -29,6 +30,31 @@ type Resellers struct {
 var resellerValidActions = map[string]bool{
 	"create": true, "reset_password": true, "rename_user": true, "update": true,
 	"suspend": true, "unsuspend": true, "delete": true, "disable_2fa": true, "disable_passkeys": true,
+}
+
+// resellersEnabled reports whether reseller functionality is turned on
+// (admin.ini's [RESELLERS] enabled=yes). Off by default -- an admin has to
+// explicitly turn it on (from this page) before any reseller account can
+// be created; see handleToggleResellers for the reverse direction, which
+// refuses to turn it back off while any reseller account still exists.
+func resellersEnabled() bool {
+	return config.Load(config.AdminConfigPath).Get("RESELLERS", "enabled", "no") == "yes"
+}
+
+// countResellers returns how many admindb accounts currently have the
+// "reseller" role.
+func countResellers(db *admindb.DB) (int, error) {
+	users, err := db.AllUsers()
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, u := range users {
+		if strings.EqualFold(u.Role, "reseller") {
+			count++
+		}
+	}
+	return count, nil
 }
 
 type resellerRow struct {
@@ -109,6 +135,14 @@ func (rs *Resellers) handlePost(w http.ResponseWriter, r *http.Request, currentU
 		username = currentUser.Username
 	}
 
+	// The master on/off toggle has no username -- handled separately,
+	// before the "username required" check below applies to everything
+	// else.
+	if action == "enable_resellers" || action == "disable_resellers" {
+		rs.handleToggleResellers(w, r, action)
+		return
+	}
+
 	if !resellerValidActions[action] || username == "" {
 		auth.AddFlash(w, r, rs.Sessions, "Error: Missing required fields.", "error")
 		return
@@ -123,6 +157,38 @@ func (rs *Resellers) handlePost(w http.ResponseWriter, r *http.Request, currentU
 	} else {
 		auth.AddFlash(w, r, rs.Sessions, "Error: "+message, "error")
 	}
+}
+
+// handleToggleResellers handles the "enable_resellers"/"disable_resellers"
+// actions: the master switch gating whether reseller accounts can be
+// created at all. Turning it off is refused while any reseller account
+// still exists -- they have to be deleted first.
+func (rs *Resellers) handleToggleResellers(w http.ResponseWriter, r *http.Request, action string) {
+	if action == "disable_resellers" {
+		count, err := countResellers(rs.DB)
+		if err != nil {
+			auth.AddFlash(w, r, rs.Sessions, "Error: "+err.Error(), "error")
+			return
+		}
+		if count > 0 {
+			auth.AddFlash(w, r, rs.Sessions, fmt.Sprintf("Error: Cannot disable resellers while %d reseller account(s) still exist. Delete them first.", count), "error")
+			return
+		}
+	}
+
+	data := config.Load(config.AdminConfigPath)
+	value := "no"
+	message := "Resellers disabled."
+	if action == "enable_resellers" {
+		value = "yes"
+		message = "Resellers enabled. You can now create reseller accounts."
+	}
+	data.Set("RESELLERS", "enabled", value)
+	if err := config.Save(config.AdminConfigPath, data); err != nil {
+		auth.AddFlash(w, r, rs.Sessions, "Error: Failed to save setting: "+err.Error(), "error")
+		return
+	}
+	auth.AddFlash(w, r, rs.Sessions, message, "success")
 }
 
 func (rs *Resellers) runAction(action, username, password string, r *http.Request, currentUser *admindb.User) (success bool, message string) {
@@ -153,7 +219,12 @@ func (rs *Resellers) runAction(action, username, password string, r *http.Reques
 	case "create":
 		// Unlike administrators.go's own "create" case, there's no
 		// Enterprise-license gate here -- reseller account creation isn't
-		// restricted by license tier.
+		// restricted by license tier. There IS the master on/off switch
+		// though -- checked here too (not just hiding the form) since a
+		// direct POST could otherwise bypass it.
+		if !resellersEnabled() {
+			return false, "Resellers are disabled. Enable them on this page first."
+		}
 		hash, err := auth.GeneratePasswordHash(password)
 		if err != nil {
 			return false, "Failed creating a new reseller user: " + username
@@ -233,8 +304,10 @@ func (rs *Resellers) render(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "users_resellers.html", mergeChrome(map[string]interface{}{
-		"Users":   rows,
-		"Flashes": auth.PopFlashes(w, r, rs.Sessions),
+		"Users":            rows,
+		"ResellersEnabled": resellersEnabled(),
+		"ResellerCount":    len(rows),
+		"Flashes":          auth.PopFlashes(w, r, rs.Sessions),
 	}, r, "Resellers"))
 }
 

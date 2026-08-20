@@ -354,6 +354,43 @@ NGINX_ENABLED="true"
 	}
 }
 
+// TestServeDefaultsGetHTMLAutostartDataIsRawJSONArray guards against a
+// regression where html/template's contextual autoescaper, seeing a plain
+// Go string interpolated inside <script type="application/json">, wrapped
+// it in an extra layer of JSON-string quoting (["a","b"] became
+// "[\"a\",\"b\"]"). The page's JS does JSON.parse() on this element's
+// textContent and feeds the result into `new Set(...)` -- a double-encoded
+// value parses back into a plain string, and Set() on a string splits it
+// into individual characters instead of service names, so every
+// "is this service active" checkbox silently comes out unchecked.
+func TestServeDefaultsGetHTMLAutostartDataIsRawJSONArray(t *testing.T) {
+	withScratchDefaultsPaths(t)
+	os.WriteFile(DefaultsEnvPath, []byte(`WEB_SERVER="nginx"
+MYSQL_TYPE="mariadb"
+`), 0644)
+	os.WriteFile(DefaultsComposeFilePath, []byte("services:\n  nginx:\n  mariadb:\n"), 0644)
+	os.WriteFile(DefaultsAutostartServicesPath, []byte("nginx\nmariadb\n"), 0644)
+
+	origPHP := defaultsPHPWatchRun
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return nil, nil }
+	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
+
+	d := &Defaults{}
+	srv, client := newDefaultsTestServer(t, d)
+
+	resp, err := client.Get(srv.URL + "/settings/defaults")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+
+	if !strings.Contains(got, `type="application/json">["nginx","mariadb"]</script>`) {
+		t.Fatalf("expected a raw (non-double-encoded) JSON array in the autostart-data script tag, got %s", truncate(got))
+	}
+}
+
 func TestServeDefaultsFilesGetAndPost(t *testing.T) {
 	withScratchDefaultsPaths(t)
 	os.WriteFile(DefaultsEnvPath, []byte("old-env"), 0644)

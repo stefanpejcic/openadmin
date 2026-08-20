@@ -198,6 +198,47 @@ func TestOnboardingConfigStepsEnterpriseOnlyItems(t *testing.T) {
 	}
 }
 
+func TestOnboardingConfigStepsIncludesPodmanImagesStepForBothLicenses(t *testing.T) {
+	for _, license := range []string{"Community", "Enterprise"} {
+		found := false
+		for _, s := range onboardingConfigSteps(license) {
+			if s.Label == "Download required Podman images" {
+				found = true
+				if s.Href != "/services/podman#images" {
+					t.Fatalf("expected step to link to /services/podman#images, got %q", s.Href)
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("expected %q config steps to include the Podman images step", license)
+		}
+	}
+}
+
+func TestQuickStartPodmanImagesReady(t *testing.T) {
+	orig := podmanRunRun
+	t.Cleanup(func() { podmanRunRun = orig })
+
+	cases := []struct {
+		name   string
+		images string
+		want   bool
+	}{
+		{"neither", `[{"Names":["docker.io/library/mysql:8"]}]`, false},
+		{"redis only", `[{"Names":["docker.io/library/redis:7"]}]`, false},
+		{"webserver only", `[{"Names":["docker.io/library/nginx:alpine"]}]`, false},
+		{"both", `[{"Names":["docker.io/library/redis:7"]},{"Names":["docker.io/library/nginx:alpine"]}]`, true},
+		{"apache counts as webserver", `[{"Names":["docker.io/library/redis:7"]},{"Names":["docker.io/library/apache:2"]}]`, true},
+		{"openlitespeed counts as webserver", `[{"Names":["docker.io/library/redis:7"]},{"Names":["litespeedtech/openlitespeed:latest"]}]`, true},
+	}
+	for _, c := range cases {
+		podmanRunRun = func(args ...string) (string, error) { return c.images, nil }
+		if got := quickStartPodmanImagesReady(); got != c.want {
+			t.Fatalf("%s: quickStartPodmanImagesReady() = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
 func TestOnboardingUserPlanStepsWording(t *testing.T) {
 	data := dashboardAdminData{UserCount: 0, DomainCount: 0}
 
