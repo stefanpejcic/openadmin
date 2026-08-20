@@ -268,6 +268,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	imunify := &handlers.Imunify{Sessions: sessions}
 	waf := &handlers.WAF{Sessions: sessions}
 	sshHandlers := &handlers.SSH{Sessions: sessions}
+	podmanHandlers := &handlers.Podman{Sessions: sessions, MySQL: d.MySQL}
 	search := &handlers.Search{MySQL: d.MySQL, Sessions: sessions, JSONFilePath: d.SearchJSONPath}
 	dnsCluster := &handlers.DNSCluster{Sessions: sessions, PublicIP: d.PublicIP}
 	emails := &handlers.Emails{Sessions: sessions, PublicIP: d.PublicIP, MasterPass: d.DovecotMasterPass}
@@ -678,6 +679,12 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /services/ftp", auth.RequireAdmin(sessions, authOpts, ftp.ServeAccounts))
 	mux.HandleFunc("GET /services/ftp/settings", auth.RequireAdmin(sessions, authOpts, ftp.ServeSettings))
 	mux.HandleFunc("POST /services/ftp/settings", auth.RequireAdmin(sessions, authOpts, ftp.ServeSettings))
+	mux.HandleFunc("GET /services/podman", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodman))
+	mux.HandleFunc("POST /services/podman/images/bulk/{action}", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImagesBulkAction))
+	mux.HandleFunc("GET /services/podman/images/bulk-status", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImagesBulkStatus))
+	mux.HandleFunc("POST /services/podman/images/{action}/{id...}", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageAction))
+	mux.HandleFunc("GET /services/podman/images/action-status", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageActionStatus))
+	mux.HandleFunc("GET /services/podman/images/check-update", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodmanImageCheckUpdate))
 	mux.HandleFunc("GET /services/limits", auth.RequireAdmin(sessions, authOpts, limits.ServeLimits))
 	mux.HandleFunc("POST /services/limits", auth.RequireAdmin(sessions, authOpts, limits.ServeLimits))
 	mux.HandleFunc("GET /services/logs", auth.RequireAdmin(sessions, authOpts, logs.ServeIndex))

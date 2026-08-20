@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">Podman</h1>
+            </div>
+        </div>
+    </header>
+</div>
+
+<script>
+// clearLoadingToasts removes any still-open "loading" toast. showToast only
+// auto-clears a stale loading toast when a NON-loading one replaces it, so
+// a caller that wants to update an in-progress toast's text (rather than
+// just stack a new one on top) has to do this itself first.
+function clearLoadingToasts() {
+    activeToasts.filter(function (t) { return t.type === 'loading'; }).forEach(function (t) { removeToast(t.element); });
+}
+
+function podmanCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]').content;
+}
+
+// podmanImageAction fires an async delete/pull for one image (marked with
+// X-Requested-With so the server schedules it via a goroutine instead of
+// blocking the response on the podman command) and polls
+// /services/podman/images/action-status until it completes -- mirroring
+// submitServiceAction in services_status.html. id is the image's full ID
+// for a delete, or the repository:tag ref to pull for a pull (which also
+// covers a not-yet-downloaded stack image, since that has no ID yet).
+function podmanImageAction(action, id, loadingMessage, confirmMessage) {
+    if (confirmMessage && !confirm(confirmMessage)) return;
+
+    showToast(loadingMessage, 'loading', true);
+
+    fetch('/services/podman/images/' + action + '/' + id, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': podmanCSRFToken()
+        }
+    }).catch(function () {
+        showToast('Failed to reach the server.', 'error');
+    });
+
+    let attempts = 0;
+    let timer;
+
+    function poll() {
+        fetch('/services/podman/images/action-status?id=' + encodeURIComponent(id), { cache: 'no-store' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.done) {
+                    attempts++;
+                    if (attempts >= 300) {
+                        clearInterval(timer);
+                        showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
+                    }
+                    return;
+                }
+                clearInterval(timer);
+                showToast(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    setTimeout(function () { window.location.reload(); }, 1500);
+                }
+            })
+            .catch(function () {
+                attempts++;
+                if (attempts >= 300) {
+                    clearInterval(timer);
+                }
+            });
+    }
+
+    setTimeout(function () {
+        timer = setInterval(poll, 1500);
+    }, 1000);
+}
+
+// podmanSortRows reorders tbodyId's direct <tr> children in place by their
+// data-sort-<col> attribute (e.g. col "size" reads data-sort-size, exposed
+// as el.dataset.sortSize per the browser's automatic dash-to-camelCase
+// mapping). Purely a DOM reorder -- moving a <tr> via appendChild doesn't
+// touch its Alpine bindings (x-show for search, etc.), so this composes
+// cleanly with the existing per-row search filtering. Numeric-looking
+// values sort numerically -- including plain-decimal ones AND Go's
+// scientific-notation float formatting (e.g. a raw byte count can render
+// as "5.38848552e+08"), which a plain digit-only regex would misdetect as
+// non-numeric and silently fall back to a wrong lexicographic order for
+// (e.g. "9.5e+07" sorting after "1.2e+08" as strings, backwards from the
+// actual 95000000 < 120000000). Everything else falls back to a
+// locale-aware, numeric-aware string compare so e.g. "7.10-fpm" still
+// orders after "7.9-fpm" instead of before it.
+function podmanSortRows(tbodyId, col, dir) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const attr = 'sort' + col.charAt(0).toUpperCase() + col.slice(1);
+    const rows = Array.from(tbody.querySelectorAll(':scope > tr'));
+    const numericRe = /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/;
+    rows.sort(function (a, b) {
+        const av = a.dataset[attr] || '';
+        const bv = b.dataset[attr] || '';
+        const bothNumeric = numericRe.test(av) && numericRe.test(bv);
+        const cmp = bothNumeric ? (parseFloat(av) - parseFloat(bv)) : av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' });
+        return dir === 'asc' ? cmp : -cmp;
+    });
+    rows.forEach(function (r) { tbody.appendChild(r); });
+}
+
+// podmanCheckImageUpdate fires a single, synchronous digest check against
+// the registry for one image (fast -- no schedule-then-poll needed, unlike
+// pull/delete) and reloads the page once it's back so the row picks up the
+// Up to date / Update available badge.
+function podmanCheckImageUpdate(ref) {
+    showToast('Checking ' + ref + ' for updates…', 'loading', true);
+
+    fetch('/services/podman/images/check-update?ref=' + encodeURIComponent(ref), { cache: 'no-store' })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            if (data.error) {
+                showToast('Failed to check ' + ref + ': ' + data.error, 'error');
+                return;
+            }
+            showToast(ref + ' is ' + (data.available ? 'out of date -- update available.' : 'up to date.'), data.available ? 'info' : 'success');
+            setTimeout(function () { window.location.reload(); }, 1200);
+        })
+        .catch(function () {
+            showToast('Failed to reach the server.', 'error');
+        });
+}
+
+// podmanBulkAction fires "pull every missing stack image", "delete every
+// unused image", or "check every image for updates", then polls
+// /services/podman/images/bulk-status, updating the loading toast's text
+// with live progress until it's done.
+function podmanBulkAction(action, loadingLabel, confirmMessage) {
+    if (confirmMessage && !confirm(confirmMessage)) return;
+
+    fetch('/services/podman/images/bulk/' + action, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': podmanCSRFToken()
+        }
+    })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+            if (!data.total) {
+                showToast('Nothing to do.', 'info');
+                return;
+            }
+            podmanPollBulkStatus(loadingLabel);
+        })
+        .catch(function () {
+            showToast('Failed to reach the server.', 'error');
+        });
+}
+
+function podmanPollBulkStatus(loadingLabel) {
+    let attempts = 0;
+    let timer;
+
+    function poll() {
+        fetch('/services/podman/images/bulk-status', { cache: 'no-store' })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (!data.done) {
+                    clearLoadingToasts();
+                    showToast(loadingLabel + ' (' + data.completed + '/' + data.total + (data.current ? ': ' + data.current : '') + ')…', 'loading', true);
+                    attempts++;
+                    if (attempts >= 600) {
+                        clearInterval(timer);
+                        showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
+                    }
+                    return;
+                }
+                clearInterval(timer);
+                clearLoadingToasts();
+                const failedSuffix = (data.failed && data.failed.length) ? ' Failed: ' + data.failed.join(', ') : '';
+                showToast(data.message + failedSuffix, (data.failed && data.failed.length) ? 'error' : 'success');
+                setTimeout(function () { window.location.reload(); }, 1500);
+            })
+            .catch(function () {
+                attempts++;
+                if (attempts >= 600) {
+                    clearInterval(timer);
+                }
+            });
+    }
+
+    clearLoadingToasts();
+    showToast(loadingLabel + '…', 'loading', true);
+    setTimeout(function () {
+        timer = setInterval(poll, 1500);
+    }, 1000);
+}
+</script>
+
+<div
+    x-data="{
+        tab: window.location.hash.replace('#', '') || 'info',
+        searchImages: '',
+        searchVolumes: '',
+        searchNetworks: '',
+        sortImages: { col: '', dir: '' },
+        sortVolumes: { col: '', dir: '' },
+        sortNetworks: { col: '', dir: '' },
+
+        init() {
+            this.$watch('tab', value => { window.location.hash = value; });
+            window.addEventListener('hashchange', () => {
+                this.tab = window.location.hash.replace('#', '') || 'info';
+            });
+        },
+
+        // sortTable reorders tbodyId's <tr> elements by their
+        // data-sort-<col> attribute (frontend-only -- no server round
+        // trip) and records the active column/direction on stateVar (one
+        // of sortImages/sortVolumes/sortNetworks) so the header arrows'
+        // :class bindings can dim the active one, matching /users' style.
+        sortTable(tbodyId, stateVar, col, dir) {
+            podmanSortRows(tbodyId, col, dir);
+            this[stateVar] = { col: col, dir: dir };
+        }
+    }">
+	<nav aria-label="Tabs" data-orientation="horizontal" dir="ltr">
+		<div style="position: relative;">
+			<ul data-orientation="horizontal" class="flex bg-gray-50 dark:bg-gray-950 items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
+
+			<li class="flex">
+				<a @click="tab = 'info'" :class="tab === 'info' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Info</span>
+				</a>
+			</li>
+
+			<li class="flex">
+				<a @click="tab = 'images'" :class="tab === 'images' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Images</span>
+				</a>
+			</li>
+
+			<li class="flex">
+				<a @click="tab = 'volumes'" :class="tab === 'volumes' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Volumes</span>
+				</a>
+			</li>
+
+			<li class="flex">
+				<a @click="tab = 'networks'" :class="tab === 'networks' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Networks</span>
+				</a>
+			</li>
+
+			</ul>
+		</div>
+	</nav>
+
+<div class="p-4 sm:p-6">
+
+    <!-- INFO -->
+    <div x-show="tab === 'info'" role="tabpanel">
+        <pre class="w-full overflow-x-auto rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4 text-xs text-gray-800 dark:text-gray-200 whitespace-pre">{{.Info}}</pre>
+    </div>
+
+    <!-- IMAGES -->
+    <div x-show="tab === 'images'" x-cloak role="tabpanel">
+        <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+                <input x-model="searchImages" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search images..." type="search">
+                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="podmanBulkAction('check-updates', 'Checking images for updates', '')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Check all for updates</button>
+                <button type="button" onclick="podmanBulkAction('pull-missing', 'Downloading missing stack images', 'Pull every stack image that is not yet downloaded into the shared store?')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Download all</button>
+                <button type="button" onclick="podmanBulkAction('delete-unused', 'Removing unused images', 'Delete every currently unused image (0 system and 0 user containers)?\n\nThis cannot be undone.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-red-600 dark:text-red-500 bg-white dark:bg-gray-950 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">Delete unused</button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                {{if .Images}}
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                            {{template "podman_sort_th" (dict "Label" "Repository" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "repository")}}
+                            {{template "podman_sort_th" (dict "Label" "Tag" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "tag")}}
+                            {{template "podman_sort_th" (dict "Label" "Image ID" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "id")}}
+                            {{template "podman_sort_th" (dict "Label" "Size" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "size")}}
+                            {{template "podman_sort_th" (dict "Label" "Containers" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "containers")}}
+                            {{template "podman_sort_th" (dict "Label" "Created" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "created")}}
+                            <th scope="col" class="whitespace-nowrap border-b px-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Update</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="podman-images-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .Images}}
+                        <tr x-show="searchImages === '' || '{{.Repository | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Tag | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.ID | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Size | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase())" data-sort-repository="{{.Repository}}" data-sort-tag="{{.Tag}}" data-sort-id="{{.ID}}" data-sort-size="{{.SizeBytes}}" data-sort-containers="{{add .SystemContainers .UserContainers}}" data-sort-created="{{.Created}}" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm py-2.5 font-medium text-gray-900 dark:text-gray-50">{{.Repository}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Tag}}</td>
+                            <td class="p-4 text-sm py-2.5 font-mono text-gray-600 dark:text-gray-400">{{if .NotDownloaded}}—{{else}}{{.ID}}{{end}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{if .NotDownloaded}}—{{else}}{{.Size}}{{end}}</td>
+                            <td class="p-4 text-sm py-2.5">
+                                <div class="flex flex-wrap items-center gap-1">
+                                    {{if .NotDownloaded}}
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-amber-50 text-amber-800 ring-amber-600/30 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20">Not downloaded</span>
+                                    {{else}}
+                                        {{if gt .SystemContainers 0}}
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">{{.SystemContainers}} system</span>
+                                        {{end}}
+                                        {{if gt .UserContainers 0}}
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">{{.UserContainers}} user</span>
+                                        {{end}}
+                                        {{if and (eq .SystemContainers 0) (eq .UserContainers 0)}}
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Unused</span>
+                                        {{end}}
+                                    {{end}}
+                                </div>
+                            </td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{if .NotDownloaded}}—{{else}}{{.Created}}{{end}}</td>
+                            <td class="p-4 text-sm py-2.5">
+                                <div class="flex items-center justify-end gap-2">
+                                    {{if .NotDownloaded}}
+                                    <button type="button" onclick="podmanImageAction('pull', '{{.Repository | jsStr}}:{{.Tag | jsStr}}', 'Pulling {{.Repository | jsStr}}:{{.Tag | jsStr}}…', '')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Pull</button>
+                                    {{else if and (ne .Repository "<none>") (ne .Tag "<none>")}}
+                                        {{if not .UpdateChecked}}
+                                        <button type="button" onclick="podmanCheckImageUpdate('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Check</button>
+                                        {{else if .UpdateAvailable}}
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Update available</span>
+                                        <button type="button" onclick="podmanImageAction('pull', '{{.Repository | jsStr}}:{{.Tag | jsStr}}', 'Pulling {{.Repository | jsStr}}:{{.Tag | jsStr}}…', 'Update {{.Repository | jsStr}}:{{.Tag | jsStr}}?\n\nThis re-pulls the image from the registry. It will NOT change any containers already running from it -- after the pull finishes, stop/remove and re-create (down/up) the containers using this image to actually apply the update.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 hover:bg-amber-100 dark:hover:bg-amber-400/20 cursor-pointer">Update</button>
+                                        {{else}}
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Up to date</span>
+                                        <button type="button" onclick="podmanCheckImageUpdate('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Recheck</button>
+                                        {{end}}
+                                    {{else}}
+                                    <span class="text-gray-400 dark:text-gray-600">—</span>
+                                    {{end}}
+                                </div>
+                            </td>
+                            <td class="p-4 text-sm py-2.5">
+                                <div class="flex items-center justify-end gap-2">
+                                    {{if and (not .NotDownloaded) (eq .SystemContainers 0) (eq .UserContainers 0)}}
+                                    <button type="button" onclick="podmanImageAction('delete', '{{.FullID | jsStr}}', 'Deleting {{.Repository | jsStr}}:{{.Tag | jsStr}}…', 'Delete image {{.Repository | jsStr}}:{{.Tag | jsStr}} ({{.ID}})?\n\nThis cannot be undone.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-red-600 dark:text-red-500 bg-white dark:bg-gray-950 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">Delete</button>
+                                    {{else}}
+                                    <span class="text-gray-400 dark:text-gray-600">—</span>
+                                    {{end}}
+                                </div>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No images found.</p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <!-- VOLUMES -->
+    <div x-show="tab === 'volumes'" x-cloak role="tabpanel">
+        <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+                <input x-model="searchVolumes" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search volumes..." type="search">
+                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                {{if .Volumes}}
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                            {{template "podman_sort_th" (dict "Label" "Name" "StateVar" "sortVolumes" "TbodyID" "podman-volumes-tbody" "Key" "name")}}
+                            {{template "podman_sort_th" (dict "Label" "Driver" "StateVar" "sortVolumes" "TbodyID" "podman-volumes-tbody" "Key" "driver")}}
+                            {{template "podman_sort_th" (dict "Label" "Mountpoint" "StateVar" "sortVolumes" "TbodyID" "podman-volumes-tbody" "Key" "mountpoint")}}
+                            {{template "podman_sort_th" (dict "Label" "Created" "StateVar" "sortVolumes" "TbodyID" "podman-volumes-tbody" "Key" "created")}}
+                        </tr>
+                    </thead>
+                    <tbody id="podman-volumes-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .Volumes}}
+                        <tr x-show="searchVolumes === '' || '{{.Name | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Driver | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Mountpoint | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase())" data-sort-name="{{.Name}}" data-sort-driver="{{.Driver}}" data-sort-mountpoint="{{.Mountpoint}}" data-sort-created="{{.Created}}" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm py-2.5 font-medium text-gray-900 dark:text-gray-50">{{.Name}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Driver}}</td>
+                            <td class="p-4 text-sm py-2.5 font-mono text-xs text-gray-600 dark:text-gray-400">{{.Mountpoint}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Created}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No volumes found.</p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <!-- NETWORKS -->
+    <div x-show="tab === 'networks'" x-cloak role="tabpanel">
+        <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+                <input x-model="searchNetworks" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search networks..." type="search">
+                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                {{if .Networks}}
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                            {{template "podman_sort_th" (dict "Label" "Name" "StateVar" "sortNetworks" "TbodyID" "podman-networks-tbody" "Key" "name")}}
+                            {{template "podman_sort_th" (dict "Label" "Network ID" "StateVar" "sortNetworks" "TbodyID" "podman-networks-tbody" "Key" "id")}}
+                            {{template "podman_sort_th" (dict "Label" "Driver" "StateVar" "sortNetworks" "TbodyID" "podman-networks-tbody" "Key" "driver")}}
+                            {{template "podman_sort_th" (dict "Label" "Subnet" "StateVar" "sortNetworks" "TbodyID" "podman-networks-tbody" "Key" "subnet")}}
+                            {{template "podman_sort_th" (dict "Label" "Created" "StateVar" "sortNetworks" "TbodyID" "podman-networks-tbody" "Key" "created")}}
+                        </tr>
+                    </thead>
+                    <tbody id="podman-networks-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .Networks}}
+                        <tr x-show="searchNetworks === '' || '{{.Name | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.ID | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Driver | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Subnet | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase())" data-sort-name="{{.Name}}" data-sort-id="{{.ID}}" data-sort-driver="{{.Driver}}" data-sort-subnet="{{.Subnet}}" data-sort-created="{{.Created}}" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm py-2.5 font-medium text-gray-900 dark:text-gray-50">{{.Name}}</td>
+                            <td class="p-4 text-sm py-2.5 font-mono text-gray-600 dark:text-gray-400">{{.ID}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Driver}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Subnet}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Created}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No networks found.</p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>
+
+{{/* podman_sort_th renders one sortable column header, matching the
+     stacked asc/desc arrow style used on /users -- but wired to
+     sortTable() (frontend-only DOM reordering by that column's
+     data-sort-<Key> attribute) instead of a server round trip. Args:
+     Label (header text), StateVar (bare Alpine data property name, e.g.
+     "sortImages" -- unquoted, since it's referenced as an identifier, not
+     a string literal), TbodyID (the target <tbody> id), Key (matches the
+     "sort<Key>" part of each row's data-sort-<Key> attribute, e.g. "size"
+     for data-sort-size). */}}
+{{define "podman_sort_th"}}
+<th scope="col" class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+    <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+        <span>{{.Label}}</span>
+        <div class="-space-y-2">
+            <a @click="sortTable('{{.TbodyID}}', '{{.StateVar}}', '{{.Key}}', 'desc')" class="cursor-pointer"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50" :class="{{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'desc' ? 'opacity-30' : ''"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+            <a @click="sortTable('{{.TbodyID}}', '{{.StateVar}}', '{{.Key}}', 'asc')" class="cursor-pointer"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50" :class="{{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'asc' ? 'opacity-30' : ''"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+        </div>
+    </div>
+</th>
+{{end}}
