@@ -219,6 +219,7 @@ function podmanPollBulkStatus(loadingLabel) {
         sortImages: { col: '', dir: '' },
         sortVolumes: { col: '', dir: '' },
         sortNetworks: { col: '', dir: '' },
+        sortDiskUsage: { col: '', dir: '' },
 
         init() {
             this.$watch('tab', value => { window.location.hash = value; });
@@ -242,26 +243,32 @@ function podmanPollBulkStatus(loadingLabel) {
 			<ul data-orientation="horizontal" class="flex bg-gray-50 dark:bg-gray-950 items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
 
 			<li class="flex">
-				<a @click="tab = 'info'" :class="tab === 'info' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+				<a @click="tab = 'info'" :class="tab === 'info' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
 						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Info</span>
 				</a>
 			</li>
 
 			<li class="flex">
-				<a @click="tab = 'images'" :class="tab === 'images' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+				<a @click="tab = 'images'" :class="tab === 'images' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
 						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Images</span>
 				</a>
 			</li>
 
 			<li class="flex">
-				<a @click="tab = 'volumes'" :class="tab === 'volumes' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+				<a @click="tab = 'volumes'" :class="tab === 'volumes' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
 						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Volumes</span>
 				</a>
 			</li>
 
 			<li class="flex">
-				<a @click="tab = 'networks'" :class="tab === 'networks' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center" role="tab">
+				<a @click="tab = 'networks'" :class="tab === 'networks' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
 						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Networks</span>
+				</a>
+			</li>
+
+			<li class="flex">
+				<a @click="tab = 'diskusage'" :class="tab === 'diskusage' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Disk Usage</span>
 				</a>
 			</li>
 
@@ -451,6 +458,41 @@ function podmanPollBulkStatus(loadingLabel) {
                 </table>
                 {{else}}
                 <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No networks found.</p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <!-- DISK USAGE -->
+    <div x-show="tab === 'diskusage'" x-cloak role="tabpanel">
+        <p class="pb-4 text-sm text-gray-500 dark:text-gray-500">Images reflects the whole shared image store (every hosting user's images, since image content lives in one shared location) -- Containers and Volumes are root's own local podman only, not aggregated across hosting users.</p>
+        <div class="overflow-x-auto">
+            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+                {{if .DiskUsage}}
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                            {{template "podman_sort_th" (dict "Label" "Type" "StateVar" "sortDiskUsage" "TbodyID" "podman-diskusage-tbody" "Key" "type")}}
+                            {{template "podman_sort_th" (dict "Label" "Total" "StateVar" "sortDiskUsage" "TbodyID" "podman-diskusage-tbody" "Key" "total")}}
+                            {{template "podman_sort_th" (dict "Label" "Active" "StateVar" "sortDiskUsage" "TbodyID" "podman-diskusage-tbody" "Key" "active")}}
+                            {{template "podman_sort_th" (dict "Label" "Size" "StateVar" "sortDiskUsage" "TbodyID" "podman-diskusage-tbody" "Key" "size")}}
+                            {{template "podman_sort_th" (dict "Label" "Reclaimable" "StateVar" "sortDiskUsage" "TbodyID" "podman-diskusage-tbody" "Key" "reclaimable")}}
+                        </tr>
+                    </thead>
+                    <tbody id="podman-diskusage-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .DiskUsage}}
+                        <tr data-sort-type="{{.Type}}" data-sort-total="{{.Total}}" data-sort-active="{{.Active}}" data-sort-size="{{.SizeBytes}}" data-sort-reclaimable="{{.ReclaimableBytes}}" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm py-2.5 font-medium text-gray-900 dark:text-gray-50">{{.Type}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Total}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Active}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Size}}</td>
+                            <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Reclaimable}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+                {{else}}
+                <p class="p-4 text-sm text-gray-500 dark:text-gray-500">Could not read disk usage.</p>
                 {{end}}
             </div>
         </div>

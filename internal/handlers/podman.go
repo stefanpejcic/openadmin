@@ -595,6 +595,53 @@ func podmanListNetworks() []podmanNetworkRow {
 	return rows
 }
 
+type podmanDiskUsageRow struct {
+	Type             string
+	Total            int
+	Active           int
+	Size             string
+	SizeBytes        float64 // raw value backing Size, for numeric sort
+	Reclaimable      string
+	ReclaimableBytes float64 // raw value backing Reclaimable, for numeric sort
+}
+
+// podmanSystemDiskUsage runs `podman system df --format json` (root/default
+// context only) and maps it into display rows. The Images row genuinely
+// reflects the WHOLE shared image store (every hosting user's images
+// included, not just root's own) -- image content lives in one shared
+// location, so there's only one store to measure -- but the
+// Containers/Volumes rows are root's own local podman only, since
+// containers and volumes (unlike images) are NOT shared across contexts.
+// A run/parse failure yields an empty (not nil-panic) list.
+func podmanSystemDiskUsage() []podmanDiskUsageRow {
+	out, err := podmanRunRunStdout("system", "df", "--format", "json")
+	if err != nil {
+		return []podmanDiskUsageRow{}
+	}
+	var raw []map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &raw); err != nil {
+		return []podmanDiskUsageRow{}
+	}
+
+	rows := make([]podmanDiskUsageRow, 0, len(raw))
+	for _, item := range raw {
+		total, _ := item["Total"].(float64)
+		active, _ := item["Active"].(float64)
+		sizeBytes, _ := item["RawSize"].(float64)
+		reclaimableBytes, _ := item["RawReclaimable"].(float64)
+		rows = append(rows, podmanDiskUsageRow{
+			Type:             podmanStringField(item, "Type"),
+			Total:            int(total),
+			Active:           int(active),
+			Size:             podmanStringField(item, "Size"),
+			SizeBytes:        sizeBytes,
+			Reclaimable:      podmanStringField(item, "Reclaimable"),
+			ReclaimableBytes: reclaimableBytes,
+		})
+	}
+	return rows
+}
+
 // ServePodman handles GET /server/podman.
 func (p *Podman) ServePodman(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "server_podman.html", mergeChrome(map[string]interface{}{
@@ -602,6 +649,7 @@ func (p *Podman) ServePodman(w http.ResponseWriter, r *http.Request) {
 		"Images":    podmanListImages(podmanImageUsageCounts(p.MySQL), podmanStackImages()),
 		"Volumes":   podmanListVolumes(),
 		"Networks":  podmanListNetworks(),
+		"DiskUsage": podmanSystemDiskUsage(),
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, p.Sessions),
 	}, r, "Podman"))
