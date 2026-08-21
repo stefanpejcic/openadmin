@@ -589,6 +589,8 @@ type userDetailPageData struct {
 	Locale            string
 	CountryCode       string
 	EnvData           map[string]string
+	WebserverOptions  []string
+	InstalledLocales  []string
 	PlanCPU           string
 	PlanRAM           string
 	Services          []composeServiceView
@@ -780,6 +782,8 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Locale:            userLocale(userData.Context),
 		CountryCode:       countryCodeForIP(serverIP),
 		EnvData:           envData,
+		WebserverOptions:  userWebserverOptions,
+		InstalledLocales:  installedLocaleCodes(),
 		PlanCPU:           planCPU,
 		PlanRAM:           planRAM,
 		Services:          composeServicesForUser(u.MySQL, username),

@@ -56,6 +56,7 @@ func newUsersTestServer(t *testing.T, u *Users, role string) (*httptest.Server, 
 	mux.HandleFunc("POST /get_custom_message_for_user/{username}", u.HandleCustomMessage)
 	mux.HandleFunc("POST /containers/{username}/{action}/{container_name}", u.ServeManageContainer)
 	mux.HandleFunc("GET /containers/stats/{username}", u.ServeContainersStats)
+	mux.HandleFunc("POST /users/{username}/account-setting/{field}", u.ServeUserAccountSetting)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
 		auth.LoginUser(w, r, sessions, caller, "203.0.113.1")
 	})

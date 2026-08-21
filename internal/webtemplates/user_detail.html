@@ -17,6 +17,7 @@
 <div
   x-data="{
       activeTab: 'stats',
+      exportMode: 'backup',
       diskInfo: [],
       diskUsage: [],
       loading: false,
@@ -88,6 +89,7 @@
               else if (this.activeTab === 'logins') $store?.loginsStore?.fetchloginLogs();
               else if (this.activeTab === 'edit' || this.activeTab === 'delete') {
                   $store?.ipStore?.fetchIPs();
+                  $store?.planStore?.fetchPlans();
                   $store?.resellerStore?.fetchResellers();
               }
               else if (this.activeTab === 'stats') this.fetchCustomMessage();
@@ -805,12 +807,34 @@
 
                <div class="p-4 border-t border-gray-200 dark:border-gray-800">
                   <div class="grid grid-cols-2 gap-4">
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Username:</span><span class="font-medium">{{firstSegment .Username "_"}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium">{{.User.Email}}</span></div>
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Locale:</span><span class="flex items-center font-medium">
-                        {{if .Locale}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{localeFlag .Locale}}.svg" alt="Locale: {{.Locale}}"></img> {{upper .Locale}}{{else}}default{{end}}</span></div>
+                     <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Username:</span><span class="font-medium flex items-center gap-1">{{firstSegment .Username "_"}}
+                        <a href="#edit" @click="activeTab='edit'; window.location.hash='edit'" class="hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Edit username"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
+                        </span></div>
+                     <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Email address:</span><span class="font-medium flex items-center gap-1">{{.User.Email}}
+                        <a href="#edit" @click="activeTab='edit'; window.location.hash='edit'" class="hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Edit email address"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
+                        </span></div>
+                     <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50" x-data="{ editing: false }"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Locale:</span>
+                        <span x-show="!editing" class="flex items-center font-medium">
+                        {{if .Locale}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{localeFlag .Locale}}.svg" alt="Locale: {{.Locale}}"></img> {{upper .Locale}}{{else}}default{{end}}
+                        <a href="#" @click.prevent="editing = true" class="ml-1 hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Change locale"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
+                        </span>
+                        <form x-show="editing" @click.stop="editing = true" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/locale" class="flex items-center gap-2">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <select name="value" class="text-sm rounded border px-2 py-1 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white">
+                              {{range .InstalledLocales}}<option value="{{.}}" {{if eq . $.Locale}}selected{{end}}>{{upper .}}</option>{{end}}
+                           </select>
+                           <button type="submit" class="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 cursor-pointer">Save</button>
+                        </form>
+                     </div>
 
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">2FA status:</span><span class="font-medium">{{if .User.TwoFAEnabled}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{{end}}</span></div>
+                     <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50" x-data="{ editing: false }"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">2FA status:</span><span x-show="!editing" class="font-medium flex items-center gap-1">{{if .User.TwoFAEnabled}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span><a href="#" @click.prevent="editing = true" class="hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Disable 2FA"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{{end}}</span>
+                        {{if .User.TwoFAEnabled}}
+                        <form x-show="editing" @click.stop="editing = true" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/twofa" onsubmit="return confirm('Disable Two-Factor Authentication for this user?')">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <button type="submit" class="px-2 py-1 text-xs text-white bg-red-600 rounded hover:bg-red-700 cursor-pointer">Disable 2FA</button>
+                        </form>
+                        {{end}}
+                     </div>
 
         {{if index .EnvData "USER_ID"}}
         <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID (UID):</span><span class="font-medium">{{index .EnvData "USER_ID"}}</span></div>
@@ -818,23 +842,63 @@
         <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">User ID (in database):</span><span class="font-medium">{{.User.ID}}</span></div>
         {{end}}
 
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium flex"> {{.ServerIP}}<span class="hidden sm:flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{.IPType}}</span></span></div>
+                     <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">IP address:</span><span class="font-medium flex items-center"> {{.ServerIP}}<span class="hidden sm:flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20 ml-1">{{.IPType}}</span>
+                        <a href="#edit" @click="activeTab='edit'; window.location.hash='edit'" class="ml-1 hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Change IP address"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
+                        </span></div>
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Geo Location:</span><span class="flex items-center font-medium">
                         {{if .CountryCode}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .CountryCode}}.svg" alt="IP address location: {{.CountryCode}}"></img>{{end}} {{.CountryCode}}</span></div>
 
-                     <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Server:</span><span class="font-medium">{{.ServerName}}</span></div>
+                     <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Server:</span><span class="font-medium flex items-center gap-1">{{.ServerName}}
+                        {{if eq .LicenseType "Enterprise"}}<a href="#export" @click="activeTab='export'; exportMode='transfer'; window.location.hash='export'" class="hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Transfer to another server"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>{{end}}
+                        </span></div>
 
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Docker Context:</span><span class="font-medium">{{.DockerCtx}}</span></div>
                      <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Home dir:</span><span class="font-medium">/home/{{.DockerCtx}}/</span></div>
 
         {{if index .EnvData "WEB_SERVER"}}
-        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Web server:</span><span class="font-medium flex gap-1 items-center">{{index .EnvData "WEB_SERVER"}}</span></div>
+        <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50" x-data="{ editing: false }"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Web server:</span>
+           <span x-show="!editing" class="font-medium flex gap-1 items-center">{{index .EnvData "WEB_SERVER"}}
+              <a href="#" @click.prevent="editing = true" class="hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Change web server"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
+           </span>
+           <form x-show="editing" @click.stop="editing = true" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/webserver" class="flex items-center gap-2">
+              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+              <select name="value" class="text-sm rounded border px-2 py-1 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white">
+                 {{$currentWS := index .EnvData "WEB_SERVER"}}
+                 {{range .WebserverOptions}}<option value="{{.}}" {{if eq . $currentWS}}selected{{end}}>{{.}}</option>{{end}}
+              </select>
+              <button type="submit" class="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 cursor-pointer">Save</button>
+           </form>
+        </div>
         {{end}}
 
-        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Varnish Caching:</span><span class="font-medium">{{if index .EnvData "PROXY_HTTP_PORT"}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Disabled</span>{{end}}</span></div>
+        <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50" x-data="{ editing: false, varnishOn: {{if index .EnvData `PROXY_HTTP_PORT`}}true{{else}}false{{end}} }"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Varnish Caching:</span>
+           <span x-show="!editing" class="font-medium flex items-center gap-1"><span :class="varnishOn ? 'inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20' : 'inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20'" x-text="varnishOn ? 'Enabled' : 'Disabled'"></span>
+              <a href="#" @click.prevent="editing = true" class="hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Change Varnish caching"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
+           </span>
+           <form x-show="editing" @click.stop="editing = true" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/varnish" class="flex items-center gap-2">
+              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+              <select name="value" class="text-sm rounded border px-2 py-1 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white">
+                 <option value="enable" {{if index .EnvData "PROXY_HTTP_PORT"}}selected{{end}}>Enabled</option>
+                 <option value="disable" {{if not (index .EnvData "PROXY_HTTP_PORT")}}selected{{end}}>Disabled</option>
+              </select>
+              <button type="submit" class="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 cursor-pointer">Save</button>
+           </form>
+        </div>
 
         {{if index .EnvData "MYSQL_TYPE"}}
-        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Database type:</span><span class="font-medium">{{if eq (index .EnvData "MYSQL_TYPE") "mysql"}}MySQL{{else if eq (index .EnvData "MYSQL_TYPE") "mariadb"}}MariaDB{{end}}</span></div>
+        <div class="group flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50" x-data="{ editing: false }"><span class="text-sm capitalize text-gray-600 dark:text-gray-400">Database type:</span>
+           <span x-show="!editing" class="font-medium flex items-center gap-1">{{if eq (index .EnvData "MYSQL_TYPE") "mysql"}}MySQL{{else if eq (index .EnvData "MYSQL_TYPE") "mariadb"}}MariaDB{{end}}
+              <a href="#" @click.prevent="editing = true" class="hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Change database type"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
+           </span>
+           <form x-show="editing" @click.stop="editing = true" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/database_type" class="flex items-center gap-2">
+              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+              <select name="value" class="text-sm rounded border px-2 py-1 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white">
+                 <option value="mysql" {{if eq (index .EnvData "MYSQL_TYPE") "mysql"}}selected{{end}}>MySQL</option>
+                 <option value="mariadb" {{if eq (index .EnvData "MYSQL_TYPE") "mariadb"}}selected{{end}}>MariaDB</option>
+              </select>
+              <button type="submit" class="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 cursor-pointer">Save</button>
+           </form>
+        </div>
         {{end}}
 
                      {{if .User.Owner.Valid}}
@@ -1855,7 +1919,7 @@
 
                {{if eq .LicenseType "Enterprise"}}
             <!-- EXPORT USER -->
-            <div x-show="activeTab === 'export'" x-data="{ exportMode: 'backup' }" class="p-4" x-cloak>
+            <div x-show="activeTab === 'export'" class="p-4" x-cloak>
 
               <div class="relative w-full text-left sm:mx-auto sm:max-w-xl mb-6">
                 <div class="flex gap-2 rounded border border-gray-200 dark:border-gray-800 p-1 bg-gray-50 dark:bg-gray-950">

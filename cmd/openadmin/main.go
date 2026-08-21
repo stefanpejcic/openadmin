@@ -658,6 +658,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /get_custom_message_for_user/{username}", auth.RequireLogin(sessions, authOpts, users.HandleCustomMessage))
 	mux.HandleFunc("POST /get_custom_message_for_user/{username}", auth.RequireLogin(sessions, authOpts, users.HandleCustomMessage))
 	mux.HandleFunc("POST /containers/{username}/{action}/{container_name}", auth.RequireLogin(sessions, authOpts, users.ServeManageContainer))
+	mux.HandleFunc("POST /users/{username}/account-setting/{field}", auth.RequireLogin(sessions, authOpts, users.ServeUserAccountSetting))
 	mux.HandleFunc("GET /containers/stats/{username}", auth.RequireLogin(sessions, authOpts, users.ServeContainersStats))
 
 	mux.HandleFunc("GET /domains", auth.RequireAdmin(sessions, authOpts, domains.ServeList))
