@@ -30,6 +30,7 @@ type Resellers struct {
 var resellerValidActions = map[string]bool{
 	"create": true, "reset_password": true, "rename_user": true, "update": true,
 	"suspend": true, "unsuspend": true, "delete": true, "disable_2fa": true, "disable_passkeys": true,
+	"update_branding": true,
 }
 
 // resellersEnabled reports whether reseller functionality is turned on
@@ -70,14 +71,16 @@ type resellerRow struct {
 	CurrentDiskBlocks int    `json:"current_disk_blocks"`
 	MaxDiskBlocks     int    `json:"max_disk_blocks"`
 	AllowedPlans      []int  `json:"allowed_plans"`
+	LogoURL           string `json:"logo_url"`
 }
 
 type resellerData struct {
-	MaxAccounts       int   `json:"max_accounts"`
-	CurrentAccounts   int   `json:"current_accounts"`
-	AllowedPlans      []int `json:"allowed_plans"`
-	CurrentDiskBlocks int   `json:"current_disk_blocks"`
-	MaxDiskBlocks     int   `json:"max_disk_blocks"`
+	MaxAccounts       int    `json:"max_accounts"`
+	CurrentAccounts   int    `json:"current_accounts"`
+	AllowedPlans      []int  `json:"allowed_plans"`
+	CurrentDiskBlocks int    `json:"current_disk_blocks"`
+	MaxDiskBlocks     int    `json:"max_disk_blocks"`
+	LogoURL           string `json:"logo_url"`
 }
 
 func defaultResellerData() resellerData {
@@ -131,8 +134,16 @@ func (rs *Resellers) handlePost(w http.ResponseWriter, r *http.Request, currentU
 	password := r.PostFormValue("password")
 
 	if currentUser.Role == "reseller" {
-		action = "reset_password"
-		username = currentUser.Username
+		if action == "update_branding" {
+			// The one other self-service action a reseller can take
+			// besides resetting their own password: setting their own
+			// logo URL. Still forced to their own username, same as the
+			// reset_password override below.
+			username = currentUser.Username
+		} else {
+			action = "reset_password"
+			username = currentUser.Username
+		}
 	}
 
 	// The master on/off toggle has no username -- handled separately,
@@ -250,6 +261,18 @@ func (rs *Resellers) runAction(action, username, password string, r *http.Reques
 		}
 		return runOpenCLI(adminCommandError, args...)
 
+	case "update_branding":
+		// Reseller self-service (or admin, from the Resellers list page):
+		// sets only the logo URL, leaving plans/limits untouched -- see
+		// update_reseller_account in opencli's admin.sh, which only
+		// touches fields whose flag is actually passed.
+		logoURL := r.FormValue("logo_url")
+		ok, out := runOpenCLI(adminCommandError, "opencli", "admin", "update", username, "--logo_url="+logoURL)
+		if !ok {
+			return false, opencliResultMessage(ok, out)
+		}
+		return true, "Branding updated for " + username + "."
+
 	case "suspend":
 		return runOpenCLI(adminCommandError, "opencli", "admin", "suspend", username)
 	case "unsuspend":
@@ -295,6 +318,7 @@ func (rs *Resellers) render(w http.ResponseWriter, r *http.Request) {
 			CurrentDiskBlocks: rd.CurrentDiskBlocks,
 			MaxDiskBlocks:     rd.MaxDiskBlocks,
 			AllowedPlans:      rd.AllowedPlans,
+			LogoURL:           rd.LogoURL,
 		})
 	}
 
@@ -370,9 +394,11 @@ func (rs *Resellers) ServeAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rd := readResellerData(currentUser.Username)
 	webtemplates.Render(w, "users_password_reseller.html", mergeChrome(map[string]interface{}{
-		"Username":    "",
-		"SelfService": true,
-		"Flashes":     auth.PopFlashes(w, r, rs.Sessions),
+		"Username":     "",
+		"SelfService":  true,
+		"ResellerData": rd,
+		"Flashes":      auth.PopFlashes(w, r, rs.Sessions),
 	}, r, "Change Password"))
 }

@@ -454,4 +454,77 @@ func TestServeAccountAllowedForReseller(t *testing.T) {
 	if !strings.Contains(string(body), "Change your reseller account password.") {
 		t.Fatalf("expected self-service copy, got %s", truncate(string(body)))
 	}
+	if !strings.Contains(string(body), `name="logo_url"`) {
+		t.Fatalf("expected a Branding section with a logo_url field, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeResellersEditFormUpdatePageIncludesBrandingSection(t *testing.T) {
+	withScratchResellersConfigDir(t)
+	rs := &Resellers{}
+	srv, client, db := newResellersTestServer(t, rs, "admin")
+	hash, _ := auth.GeneratePasswordHash("pw")
+	db.CreateUser("bob-reseller", hash, "reseller")
+	os.WriteFile(filepath.Join(paneldb.ResellerConfigDir, "bob-reseller.json"),
+		[]byte(`{"max_accounts": 5, "logo_url": "https://example.com/logo.png"}`), 0644)
+
+	resp, err := client.Get(srv.URL + "/resellers/update/bob-reseller")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "https://example.com/logo.png") {
+		t.Fatalf("expected the reseller's logo_url pre-filled, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeResellersUpdateBrandingIsAValidAction(t *testing.T) {
+	// "update_branding" must pass the resellerValidActions gate -- confirmed
+	// by NOT getting the "Missing required fields" flash that unknown or
+	// disallowed actions get. It'll still fail past that point since no real
+	// opencli binary is on PATH in tests, but that's a separate concern
+	// (exercised by admin-only actions like "update"/"rename_user" too,
+	// which have no dedicated success test for the same reason).
+	withScratchResellersConfigDir(t)
+	rs := &Resellers{}
+	srv, client, db := newResellersTestServer(t, rs, "admin")
+	hash, _ := auth.GeneratePasswordHash("pw")
+	db.CreateUser("bob-reseller", hash, "reseller")
+
+	resp, err := client.PostForm(srv.URL+"/resellers", url.Values{
+		"action": {"update_branding"}, "username": {"bob-reseller"}, "logo_url": {"https://example.com/logo.png"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if strings.Contains(string(body), "Missing required fields") {
+		t.Fatalf("expected update_branding to be recognized as a valid action, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeResellersPostAsResellerUpdateBrandingForcesSelfUsername(t *testing.T) {
+	// A reseller submitting update_branding with no username at all (or
+	// someone else's) still passes the "username required" check below,
+	// because handlePost forces username = self for this action before that
+	// check runs -- if it hadn't, this would flash "Missing required fields"
+	// instead of falling through to runAction (and failing there only
+	// because no real opencli binary is on PATH in tests).
+	withScratchResellersConfigDir(t)
+	rs := &Resellers{}
+	srv, client, _ := newResellersTestServer(t, rs, "reseller")
+
+	resp, err := client.PostForm(srv.URL+"/resellers", url.Values{
+		"action": {"update_branding"}, "logo_url": {"https://example.com/logo.png"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if strings.Contains(string(body), "Missing required fields") {
+		t.Fatalf("expected username to have been forced to self, got %s", truncate(string(body)))
+	}
 }

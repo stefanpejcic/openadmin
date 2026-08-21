@@ -5760,9 +5760,10 @@ paths:
       security:
       - bearerAuth: []
     post:
-      summary: Runs one reseller-account action (create/reset_password/rename_user/update/suspend/unsuspend/delete/disable_2fa/disable_passkeys);
-        a caller with the reseller role can only ever reset their own password through this endpoint regardless
-        of the submitted action/username.
+      summary: Runs one reseller-account action (create/reset_password/rename_user/update/update_branding/suspend/unsuspend/delete/disable_2fa/disable_passkeys);
+        a caller with the reseller role can only ever reset their own password or update their own branding
+        through this endpoint (username is forced to self for both) -- any other submitted action is
+        downgraded to reset_password regardless of what was submitted.
       description: '**Access:** Any authenticated user.'
       operationId: post_settings_resellers
       tags:
@@ -5789,6 +5790,12 @@ paths:
                 max_disk_blocks:
                   type: string
                   example: '1048576'
+                logo_url:
+                  type: string
+                  example: https://example.com/logo.png
+                  description: Used only with action=update_branding. A URL for a logo shown instead
+                    of the default OpenPanel logo, throughout the OpenPanel app for every account this
+                    reseller owns (excluding the login page). Empty clears it back to the default.
               example:
                 action: update
                 username: reseller1

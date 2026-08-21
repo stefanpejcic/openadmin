@@ -24,6 +24,7 @@ type APISettingsResellers struct {
 var apiResellerActions = map[string]bool{
 	"create": true, "reset_password": true, "rename_user": true, "update": true,
 	"suspend": true, "unsuspend": true, "delete": true, "disable_2fa": true, "disable_passkeys": true,
+	"update_branding": true,
 }
 
 type apiResellerActionBody struct {
@@ -35,6 +36,7 @@ type apiResellerActionBody struct {
 	AllowedPlans  string `json:"allowed_plans"`
 	MaxAccounts   string `json:"max_accounts"`
 	MaxDiskBlocks string `json:"max_disk_blocks"`
+	LogoURL       string `json:"logo_url"`
 }
 
 // ServeSettingsResellers handles GET/POST /api/settings/resellers. Wrap
@@ -85,6 +87,7 @@ func (a *APISettingsResellers) ServeSettingsResellers(w http.ResponseWriter, r *
 			CurrentDiskBlocks: rd.CurrentDiskBlocks,
 			MaxDiskBlocks:     rd.MaxDiskBlocks,
 			AllowedPlans:      rd.AllowedPlans,
+			LogoURL:           rd.LogoURL,
 		})
 	}
 	writeJSON(w, rows)
@@ -100,12 +103,16 @@ func (a *APISettingsResellers) handlePost(w http.ResponseWriter, r *http.Request
 	action := body.Action
 	username := body.Username
 
-	// A reseller caller can only ever reset their own password through
-	// this endpoint -- whatever action/username were submitted is
-	// overridden before anything else runs.
+	// A reseller caller can only ever reset their own password or set
+	// their own branding through this endpoint -- any other action/
+	// username submitted is overridden before anything else runs.
 	if actingUser.Role == "reseller" {
-		action = "reset_password"
-		username = actingUser.Username
+		if action == "update_branding" {
+			username = actingUser.Username
+		} else {
+			action = "reset_password"
+			username = actingUser.Username
+		}
 	}
 
 	if !apiResellerActions[action] || username == "" {
@@ -173,6 +180,15 @@ func (a *APISettingsResellers) handlePost(w http.ResponseWriter, r *http.Request
 		var out string
 		ok, out = runOpenCLI(adminCommandError, args...)
 		message = opencliResultMessage(ok, out)
+
+	case "update_branding":
+		var out string
+		ok, out = runOpenCLI(adminCommandError, "opencli", "admin", "update", username, "--logo_url="+body.LogoURL)
+		if ok {
+			message = "Branding updated for " + username + "."
+		} else {
+			message = opencliResultMessage(ok, out)
+		}
 
 	case "suspend":
 		var out string
