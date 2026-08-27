@@ -15,14 +15,22 @@ import (
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
+	"openadmin/internal/license"
 	"openadmin/internal/paneldb"
 	"openadmin/internal/webtemplates"
 )
 
 // Plans bundles the /plans handlers.
 type Plans struct {
-	MySQL    *sql.DB
-	Sessions *auth.Manager
+	MySQL          *sql.DB
+	Sessions       *auth.Manager
+	LicenseChecker *license.Checker // nil on Community
+}
+
+// hasEnterpriseAccess reports whether the current request has an active
+// Enterprise license, required to set a plan's upsell target.
+func (p *Plans) hasEnterpriseAccess() bool {
+	return p.LicenseChecker != nil && p.LicenseChecker.Valid()
 }
 
 var featureSetsDir = "/etc/openpanel/openpanel/features/"
@@ -132,11 +140,12 @@ func compareAny(a, b interface{}) bool {
 
 type newPlanPageData struct {
 	webtemplates.Chrome
-	FormData    map[string]string
-	FeatureSets []string
-	OtherPlans  []paneldb.RowMap
-	CSRFToken   string
-	Flashes     []auth.Flash
+	FormData      map[string]string
+	FeatureSets   []string
+	OtherPlans    []paneldb.RowMap
+	HasEnterprise bool
+	CSRFToken     string
+	Flashes       []auth.Flash
 }
 
 // upsellCandidatePlans returns every plan the current user is allowed to
@@ -189,12 +198,13 @@ func sqlIDMatches(rowID interface{}, id string) bool {
 // ServeNewForm handles GET /plans/new.
 func (p *Plans) ServeNewForm(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "plan_new.html", newPlanPageData{
-		Chrome:      buildChrome(r, "New Plan"),
-		FormData:    map[string]string{},
-		FeatureSets: fetchFeatureSets(auth.CurrentUser(r)),
-		OtherPlans:  upsellCandidatePlans(p.MySQL, auth.CurrentUser(r), ""),
-		CSRFToken:   csrf.Token(r),
-		Flashes:     auth.PopFlashes(w, r, p.Sessions),
+		Chrome:        buildChrome(r, "New Plan"),
+		FormData:      map[string]string{},
+		FeatureSets:   fetchFeatureSets(auth.CurrentUser(r)),
+		OtherPlans:    upsellCandidatePlans(p.MySQL, auth.CurrentUser(r), ""),
+		HasEnterprise: p.hasEnterpriseAccess(),
+		CSRFToken:     csrf.Token(r),
+		Flashes:       auth.PopFlashes(w, r, p.Sessions),
 	})
 }
 
@@ -224,8 +234,10 @@ func (p *Plans) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 	success, output := runOpenCLI("", args...)
 	if success {
-		if planID, err := paneldb.GetPlanIDByName(p.MySQL, r.FormValue("name")); err == nil {
-			_ = paneldb.SetPlanUpsell(p.MySQL, planID, r.FormValue("upsell_plan_id"), r.FormValue("upsell_url"))
+		if p.hasEnterpriseAccess() {
+			if planID, err := paneldb.GetPlanIDByName(p.MySQL, r.FormValue("name")); err == nil {
+				_ = paneldb.SetPlanUpsell(p.MySQL, planID, r.FormValue("upsell_plan_id"), r.FormValue("upsell_url"))
+			}
 		}
 		if output == "" {
 			output = "Plan created successfully."
@@ -251,12 +263,13 @@ func (p *Plans) HandleDelete(w http.ResponseWriter, r *http.Request) {
 
 type editPlanPageData struct {
 	webtemplates.Chrome
-	PlanID      string
-	Plan        paneldb.RowMap
-	FeatureSets []string
-	OtherPlans  []paneldb.RowMap
-	CSRFToken   string
-	Flashes     []auth.Flash
+	PlanID        string
+	Plan          paneldb.RowMap
+	FeatureSets   []string
+	OtherPlans    []paneldb.RowMap
+	HasEnterprise bool
+	CSRFToken     string
+	Flashes       []auth.Flash
 }
 
 // ServeEdit handles GET/POST /plans/{plan_id}.
@@ -279,13 +292,14 @@ func (p *Plans) ServeEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "plan_edit.html", editPlanPageData{
-		Chrome:      buildChrome(r, "Edit Plan"),
-		PlanID:      planID,
-		Plan:        plan,
-		FeatureSets: fetchFeatureSets(auth.CurrentUser(r)),
-		OtherPlans:  upsellCandidatePlans(p.MySQL, auth.CurrentUser(r), planID),
-		CSRFToken:   csrf.Token(r),
-		Flashes:     auth.PopFlashes(w, r, p.Sessions),
+		Chrome:        buildChrome(r, "Edit Plan"),
+		PlanID:        planID,
+		Plan:          plan,
+		FeatureSets:   fetchFeatureSets(auth.CurrentUser(r)),
+		OtherPlans:    upsellCandidatePlans(p.MySQL, auth.CurrentUser(r), planID),
+		HasEnterprise: p.hasEnterpriseAccess(),
+		CSRFToken:     csrf.Token(r),
+		Flashes:       auth.PopFlashes(w, r, p.Sessions),
 	})
 }
 
@@ -319,7 +333,9 @@ func (p *Plans) handleEditPost(w http.ResponseWriter, r *http.Request, planID st
 
 	success, output := runOpenCLI("", args...)
 	if success {
-		_ = paneldb.SetPlanUpsell(p.MySQL, planID, r.FormValue("upsell_plan_id"), r.FormValue("upsell_url"))
+		if p.hasEnterpriseAccess() {
+			_ = paneldb.SetPlanUpsell(p.MySQL, planID, r.FormValue("upsell_plan_id"), r.FormValue("upsell_url"))
+		}
 		auth.AddFlash(w, r, p.Sessions, output, "success")
 	} else {
 		auth.AddFlash(w, r, p.Sessions, output, "error")

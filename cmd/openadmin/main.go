@@ -228,7 +228,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	dash := &handlers.Dashboard{MySQL: d.MySQL, Sessions: sessions, AdminDB: d.AdminDB}
 	admins := &handlers.Administrators{DB: d.AdminDB, Sessions: sessions, LicenseChecker: d.LicenseChecker}
-	plans := &handlers.Plans{MySQL: d.MySQL, Sessions: sessions}
+	plans := &handlers.Plans{MySQL: d.MySQL, Sessions: sessions, LicenseChecker: d.LicenseChecker}
 	twofa := &handlers.TwoFA{DB: d.AdminDB, Sessions: sessions}
 	passkeys := &handlers.Passkeys{DB: d.AdminDB, Sessions: sessions}
 	notifications := &handlers.Notifications{Sessions: sessions}
@@ -286,7 +286,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	apiSettings := &handlers.APISettings{Sessions: sessions, SecretKey: d.SecretKey}
 	apiUsers := &handlers.APIUsers{MySQL: d.MySQL, PublicIP: d.PublicIP}
 	apiDomains := &handlers.APIDomains{MySQL: d.MySQL}
-	apiPlans := &handlers.APIPlans{MySQL: d.MySQL}
+	apiPlans := &handlers.APIPlans{MySQL: d.MySQL, LicenseChecker: d.LicenseChecker}
 	apiContainers := &handlers.APIContainers{MySQL: d.MySQL}
 	apiDNS := &handlers.APIDNS{PublicIP: d.PublicIP}
 	apiServices := &handlers.APIServices{}

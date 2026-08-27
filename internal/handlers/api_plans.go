@@ -12,12 +12,20 @@ import (
 	"strconv"
 	"strings"
 
+	"openadmin/internal/license"
 	"openadmin/internal/paneldb"
 )
 
 // APIPlans bundles the /api/plans handlers.
 type APIPlans struct {
-	MySQL *sql.DB
+	MySQL          *sql.DB
+	LicenseChecker *license.Checker // nil on Community
+}
+
+// hasEnterpriseAccess reports whether the current request has an active
+// Enterprise license, required to set a plan's upsell target.
+func (p *APIPlans) hasEnterpriseAccess() bool {
+	return p.LicenseChecker != nil && p.LicenseChecker.Valid()
 }
 
 // jsonStringOr returns data[key] formatted as a string, or fallback if the
@@ -151,10 +159,22 @@ func (p *APIPlans) handleCreate(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "reseller="+actingUser.Username)
 	}
 
+	_, hasUpsellID := data["upsell_plan_id"]
+	_, hasUpsellURL := data["upsell_url"]
+	if (hasUpsellID || hasUpsellURL) && !p.hasEnterpriseAccess() {
+		writeJSONStatus(w, http.StatusForbidden, map[string]interface{}{
+			"success": false,
+			"error":   "This feature requires a valid Enterprise license.",
+		})
+		return
+	}
+
 	stdout, stderr, returncode := apiRunCapture(args...)
 	if returncode == 0 {
-		if planID, err := paneldb.GetPlanIDByName(p.MySQL, jsonStringOr(data, "name", "")); err == nil {
-			_ = paneldb.SetPlanUpsell(p.MySQL, planID, jsonStringOr(data, "upsell_plan_id", ""), jsonStringOr(data, "upsell_url", ""))
+		if hasUpsellID || hasUpsellURL {
+			if planID, err := paneldb.GetPlanIDByName(p.MySQL, jsonStringOr(data, "name", "")); err == nil {
+				_ = paneldb.SetPlanUpsell(p.MySQL, planID, jsonStringOr(data, "upsell_plan_id", ""), jsonStringOr(data, "upsell_url", ""))
+			}
 		}
 		msg := strings.TrimSpace(stdout)
 		if msg == "" {
@@ -231,6 +251,16 @@ func (p *APIPlans) handleEdit(w http.ResponseWriter, r *http.Request, planIDStr 
 		data = map[string]interface{}{}
 	}
 
+	_, hasUpsellID := data["upsell_plan_id"]
+	_, hasUpsellURL := data["upsell_url"]
+	if (hasUpsellID || hasUpsellURL) && !p.hasEnterpriseAccess() {
+		writeJSONStatus(w, http.StatusForbidden, map[string]interface{}{
+			"success": false,
+			"error":   "This feature requires a valid Enterprise license.",
+		})
+		return
+	}
+
 	diskLimit := jsonTruthyStringOr(data, "disk_limit", "0")
 
 	args := []string{
@@ -254,8 +284,6 @@ func (p *APIPlans) handleEdit(w http.ResponseWriter, r *http.Request, planIDStr 
 
 	output, runErr := apiCheckOutputRun(args...)
 	if runErr == nil {
-		_, hasUpsellID := data["upsell_plan_id"]
-		_, hasUpsellURL := data["upsell_url"]
 		if hasUpsellID || hasUpsellURL {
 			// A PATCH may send only one of the two upsell fields; the other
 			// must be preserved rather than wiped by SetPlanUpsell (which
