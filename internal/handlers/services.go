@@ -330,6 +330,7 @@ func serviceActionMessage(realName, container, action string, success bool, rawM
 	if success {
 		return "Successfully " + action + "ed service '" + realName + "'.", "success"
 	}
+	reason := strings.TrimSpace(rawMessage)
 	switch {
 	case realName == "openpanel":
 		cmdMap := map[string]string{
@@ -337,9 +338,17 @@ func serviceActionMessage(realName, container, action string, success bool, rawM
 			"stop":    "cd /root && podman-compose down openpanel",
 			"restart": "cd /root && podman-compose down openpanel && podman-compose up -d openpanel",
 		}
-		return "Failed to " + action + " service '" + realName + "'. Try from terminal: '" + cmdMap[action] + "'", "error"
+		msg := "Failed to " + action + " service '" + realName + "'."
+		if reason != "" {
+			msg += " Reason: " + reason
+		}
+		return msg + " Try from terminal: '" + cmdMap[action] + "'", "error"
 	case container == "system":
-		return "Failed to " + action + " service '" + realName + "'. Try from terminal: 'systemctl " + action + " " + realName + "'", "error"
+		msg := "Failed to " + action + " service '" + realName + "'."
+		if reason != "" {
+			msg += " Reason: " + reason
+		}
+		return msg + " Try from terminal: 'systemctl " + action + " " + realName + "'", "error"
 	default:
 		return "Failed to " + action + " service '" + realName + "': " + rawMessage, "error"
 	}
