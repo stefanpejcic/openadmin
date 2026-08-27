@@ -153,6 +153,9 @@ func (p *APIPlans) handleCreate(w http.ResponseWriter, r *http.Request) {
 
 	stdout, stderr, returncode := apiRunCapture(args...)
 	if returncode == 0 {
+		if planID, err := paneldb.GetPlanIDByName(p.MySQL, jsonStringOr(data, "name", "")); err == nil {
+			_ = paneldb.SetPlanUpsell(p.MySQL, planID, jsonStringOr(data, "upsell_plan_id", ""), jsonStringOr(data, "upsell_url", ""))
+		}
 		msg := strings.TrimSpace(stdout)
 		if msg == "" {
 			msg = "Plan created successfully."
@@ -251,6 +254,17 @@ func (p *APIPlans) handleEdit(w http.ResponseWriter, r *http.Request, planIDStr 
 
 	output, runErr := apiCheckOutputRun(args...)
 	if runErr == nil {
+		_, hasUpsellID := data["upsell_plan_id"]
+		_, hasUpsellURL := data["upsell_url"]
+		if hasUpsellID || hasUpsellURL {
+			// A PATCH may send only one of the two upsell fields; the other
+			// must be preserved rather than wiped by SetPlanUpsell (which
+			// always writes both columns).
+			current, _ := paneldb.GetPlanByID(p.MySQL, planIDStr)
+			upsellID := jsonStringOr(data, "upsell_plan_id", jsonStringOr(current, "upsell_plan_id", ""))
+			upsellURL := jsonStringOr(data, "upsell_url", jsonStringOr(current, "upsell_url", ""))
+			_ = paneldb.SetPlanUpsell(p.MySQL, planIDStr, upsellID, upsellURL)
+		}
 		writeJSON(w, map[string]interface{}{"success": true, "message": output})
 		return
 	}

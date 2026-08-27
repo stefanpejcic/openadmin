@@ -21,6 +21,7 @@ import (
 	"openadmin/internal/handlers"
 	"openadmin/internal/license"
 	"openadmin/internal/mysqldb"
+	"openadmin/internal/paneldb"
 	"openadmin/internal/server"
 	"openadmin/static"
 )
@@ -104,6 +105,9 @@ func main() {
 	mysqlDB, err := mysqldb.Open()
 	if err != nil {
 		appLog.Printf("MySQL not available yet (%v) -- dashboard panel data will show its error fallback until it is.", err)
+	}
+	if err := paneldb.EnsurePlansSchema(mysqlDB); err != nil {
+		appLog.Printf("could not ensure plans.upsell_plan_id/upsell_url columns exist: %v", err)
 	}
 
 	publicIP := detectPublicIP()

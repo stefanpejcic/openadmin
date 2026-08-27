@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/csrf"
@@ -133,8 +134,56 @@ type newPlanPageData struct {
 	webtemplates.Chrome
 	FormData    map[string]string
 	FeatureSets []string
+	OtherPlans  []paneldb.RowMap
 	CSRFToken   string
 	Flashes     []auth.Flash
+}
+
+// upsellCandidatePlans returns every plan the current user is allowed to
+// see, for populating the "Upsell plan" dropdown -- optionally excluding
+// excludeID (a plan can't upsell to itself).
+func upsellCandidatePlans(db *sql.DB, currentUser *admindb.User, excludeID string) []paneldb.RowMap {
+	if db == nil {
+		return nil
+	}
+	var allowed []int
+	if currentUser.Role == "reseller" {
+		ids, ok := paneldb.AllowedPlansForReseller(currentUser.Username)
+		if !ok {
+			return nil
+		}
+		allowed = ids
+	}
+	plans, err := paneldb.GetAllPlans(db, allowed)
+	if err != nil {
+		return nil
+	}
+	if excludeID == "" {
+		return plans
+	}
+	filtered := plans[:0]
+	for _, plan := range plans {
+		if sqlIDMatches(plan["id"], excludeID) {
+			continue
+		}
+		filtered = append(filtered, plan)
+	}
+	return filtered
+}
+
+// sqlIDMatches compares a RowMap "id" value (driver-returned, usually
+// int64 or []byte) against a string plan ID from a form/path value.
+func sqlIDMatches(rowID interface{}, id string) bool {
+	switch v := rowID.(type) {
+	case int64:
+		return strconv.FormatInt(v, 10) == id
+	case []byte:
+		return string(v) == id
+	case string:
+		return v == id
+	default:
+		return false
+	}
 }
 
 // ServeNewForm handles GET /plans/new.
@@ -143,6 +192,7 @@ func (p *Plans) ServeNewForm(w http.ResponseWriter, r *http.Request) {
 		Chrome:      buildChrome(r, "New Plan"),
 		FormData:    map[string]string{},
 		FeatureSets: fetchFeatureSets(auth.CurrentUser(r)),
+		OtherPlans:  upsellCandidatePlans(p.MySQL, auth.CurrentUser(r), ""),
 		CSRFToken:   csrf.Token(r),
 		Flashes:     auth.PopFlashes(w, r, p.Sessions),
 	})
@@ -174,6 +224,9 @@ func (p *Plans) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 	success, output := runOpenCLI("", args...)
 	if success {
+		if planID, err := paneldb.GetPlanIDByName(p.MySQL, r.FormValue("name")); err == nil {
+			_ = paneldb.SetPlanUpsell(p.MySQL, planID, r.FormValue("upsell_plan_id"), r.FormValue("upsell_url"))
+		}
 		if output == "" {
 			output = "Plan created successfully."
 		}
@@ -201,6 +254,7 @@ type editPlanPageData struct {
 	PlanID      string
 	Plan        paneldb.RowMap
 	FeatureSets []string
+	OtherPlans  []paneldb.RowMap
 	CSRFToken   string
 	Flashes     []auth.Flash
 }
@@ -229,6 +283,7 @@ func (p *Plans) ServeEdit(w http.ResponseWriter, r *http.Request) {
 		PlanID:      planID,
 		Plan:        plan,
 		FeatureSets: fetchFeatureSets(auth.CurrentUser(r)),
+		OtherPlans:  upsellCandidatePlans(p.MySQL, auth.CurrentUser(r), planID),
 		CSRFToken:   csrf.Token(r),
 		Flashes:     auth.PopFlashes(w, r, p.Sessions),
 	})
@@ -264,6 +319,7 @@ func (p *Plans) handleEditPost(w http.ResponseWriter, r *http.Request, planID st
 
 	success, output := runOpenCLI("", args...)
 	if success {
+		_ = paneldb.SetPlanUpsell(p.MySQL, planID, r.FormValue("upsell_plan_id"), r.FormValue("upsell_url"))
 		auth.AddFlash(w, r, p.Sessions, output, "success")
 	} else {
 		auth.AddFlash(w, r, p.Sessions, output, "error")
