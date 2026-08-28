@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -59,6 +60,7 @@ type plansListPageData struct {
 	MySQLIsDown   bool
 	SortCol       string
 	SortDirection string
+	HasEnterprise bool
 	CSRFToken     string
 	Flashes       []auth.Flash
 }
@@ -92,6 +94,7 @@ func (p *Plans) ServeList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *Plans) renderList(w http.ResponseWriter, r *http.Request, plans []paneldb.RowMap, mysqlIsDown bool) {
+	annotateUpsellPlanNames(plans)
 	if r.URL.Query().Get("output") == "json" {
 		writeJSON(w, map[string]interface{}{"plans": plans})
 		return
@@ -102,9 +105,28 @@ func (p *Plans) renderList(w http.ResponseWriter, r *http.Request, plans []panel
 		MySQLIsDown:   mysqlIsDown,
 		SortCol:       r.URL.Query().Get("sort"),
 		SortDirection: r.URL.Query().Get("direction"),
+		HasEnterprise: p.hasEnterpriseAccess(),
 		CSRFToken:     csrf.Token(r),
 		Flashes:       auth.PopFlashes(w, r, p.Sessions),
 	})
+}
+
+// annotateUpsellPlanNames sets each row's "upsell_plan_name" by resolving
+// upsell_plan_id against the other plans in the same result set.
+func annotateUpsellPlanNames(plans []paneldb.RowMap) {
+	names := make(map[string]interface{}, len(plans))
+	for _, plan := range plans {
+		id := fmt.Sprintf("%v", plan["id"])
+		names[id] = plan["name"]
+	}
+	for _, plan := range plans {
+		upsellID := plan["upsell_plan_id"]
+		if upsellID == nil {
+			continue
+		}
+		id := fmt.Sprintf("%v", upsellID)
+		plan["upsell_plan_name"] = names[id]
+	}
 }
 
 func sortRowMaps(rows []paneldb.RowMap, col string, desc bool) {

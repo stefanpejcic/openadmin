@@ -69,6 +69,9 @@
                     {{template "plan_column_toggle" (dict "Col" "ftp_limit" "Label" "FTP accounts")}}
                     {{template "plan_column_toggle" (dict "Col" "feature_set" "Label" "Feature Set")}}
                     {{template "plan_column_toggle" (dict "Col" "user_count" "Label" "Users using a plan")}}
+                    {{if .HasEnterprise}}
+                    {{template "plan_column_toggle" (dict "Col" "upsell" "Label" "Upsell")}}
+                    {{end}}
                 </ul>
             </div>
         </div>
@@ -98,7 +101,9 @@
 {{template "plan_sort_th" (dict "Show" "columns.ftp_limit" "Col" "ftp_limit" "Label" "FTP accounts" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
 {{template "plan_sort_th" (dict "Show" "columns.feature_set" "Col" "feature_set" "Label" "Feature Set" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
 {{template "plan_sort_th" (dict "Show" "columns.user_count" "Col" "user_count" "Label" "Used by" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
-
+{{if .HasEnterprise}}
+                                <th x-show="columns.upsell" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Upsell</th>
+{{end}}
                                 <th id="tour-plans-edit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Edit</th>
                             </tr>
                         </thead>
@@ -163,6 +168,15 @@
                                         {{index . "user_count"}}
                                     {{end}}
                                     </td>
+
+{{if $root.HasEnterprise}}
+                                <td x-show="columns.upsell" class="p-4 text-xs relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">
+                                    {{$upsellName := index . "upsell_plan_name"}}
+                                    {{$upsellURL := index . "upsell_url"}}
+                                    {{if $upsellName}}<div>{{$upsellName}}</div>{{end}}
+                                    {{if $upsellURL}}<div class="text-gray-400 dark:text-gray-500">{{$upsellURL}}</div>{{end}}
+                                </td>
+{{end}}
 
                                 <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
 
@@ -256,7 +270,8 @@ function plansTable() {
             name: true,
             ram: true,
             websites_limit: true,
-            user_count: true
+            user_count: true,
+            upsell: true
         },
         count: {{len .Plans}},
 
