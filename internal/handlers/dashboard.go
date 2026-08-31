@@ -498,7 +498,7 @@ func (d *Dashboard) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 // ServeUserActivityStatus handles GET /json/user_activity_status. This is
 // always computed fresh, never cached.
 func (d *Dashboard) ServeUserActivityStatus(w http.ResponseWriter, r *http.Request) {
-	status, err := paneldb.ActiveUserSessions(d.MySQL)
+	status, err := activeSessionUsernamesRun()
 	if err != nil {
 		status = map[string]string{}
 	}

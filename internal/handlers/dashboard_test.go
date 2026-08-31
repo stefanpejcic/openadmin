@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -396,19 +395,13 @@ func TestServeCombinedActivityMissingDirReturnsEmpty(t *testing.T) {
 }
 
 func TestServeUserActivityStatusReturnsActiveUsers(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatal(err)
+	orig := activeSessionUsernamesRun
+	activeSessionUsernamesRun = func() (map[string]string, error) {
+		return map[string]string{"alice": "active", "bob": "active"}, nil
 	}
-	defer db.Close()
-	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT DISTINCT u.username
-		FROM active_sessions s
-		JOIN users u ON u.id = s.user_id
-		WHERE s.expires_at > NOW()
-	`)).WillReturnRows(sqlmock.NewRows([]string{"username"}).AddRow("alice").AddRow("bob"))
+	defer func() { activeSessionUsernamesRun = orig }()
 
-	dash := &Dashboard{MySQL: db}
+	dash := &Dashboard{}
 	req := httptest.NewRequest(http.MethodGet, "/json/user_activity_status", nil)
 	rec := httptest.NewRecorder()
 
@@ -426,20 +419,14 @@ func TestServeUserActivityStatusReturnsActiveUsers(t *testing.T) {
 	}
 }
 
-func TestServeUserActivityStatusDBErrorReturnsEmptyObject(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatal(err)
+func TestServeUserActivityStatusRedisErrorReturnsEmptyObject(t *testing.T) {
+	orig := activeSessionUsernamesRun
+	activeSessionUsernamesRun = func() (map[string]string, error) {
+		return nil, errors.New("redis unreachable")
 	}
-	defer db.Close()
-	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT DISTINCT u.username
-		FROM active_sessions s
-		JOIN users u ON u.id = s.user_id
-		WHERE s.expires_at > NOW()
-	`)).WillReturnError(sql.ErrConnDone)
+	defer func() { activeSessionUsernamesRun = orig }()
 
-	dash := &Dashboard{MySQL: db}
+	dash := &Dashboard{}
 	req := httptest.NewRequest(http.MethodGet, "/json/user_activity_status", nil)
 	rec := httptest.NewRecorder()
 
@@ -449,7 +436,7 @@ func TestServeUserActivityStatusDBErrorReturnsEmptyObject(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 	if rec.Body.String() != "{}\n" {
-		t.Fatalf("expected an empty JSON object on DB error, got %q", rec.Body.String())
+		t.Fatalf("expected an empty JSON object on redis error, got %q", rec.Body.String())
 	}
 }
 

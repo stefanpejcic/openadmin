@@ -36,32 +36,6 @@ func GetUserAndPlanCount(db *sql.DB) (userCount, planCount int, err error) {
 	return userCount, planCount, err
 }
 
-// ActiveUserSessions returns every username with a currently-unexpired row
-// in active_sessions, mapped to the literal string "active" (the value is
-// always this same constant).
-func ActiveUserSessions(db *sql.DB) (map[string]string, error) {
-	rows, err := db.Query(`
-		SELECT DISTINCT u.username
-		FROM active_sessions s
-		JOIN users u ON u.id = s.user_id
-		WHERE s.expires_at > NOW()
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	status := map[string]string{}
-	for rows.Next() {
-		var username string
-		if err := rows.Scan(&username); err != nil {
-			return nil, err
-		}
-		status[username] = "active"
-	}
-	return status, rows.Err()
-}
-
 // DockerContexts returns the number of distinct per-user podman contexts,
 // plus 1 for root's own local/default stack.
 func DockerContexts(db *sql.DB) (int, error) {
