@@ -54,6 +54,27 @@ var imunifyStartDetachedRun = func() {
 	_ = cmd.Run()
 }
 
+// imunifyWaitForPortRun polls imunifyIsPortOpenRun for a few seconds after
+// a fresh start instead of relying on a single immediate re-check.
+// "opencli imunify start" returning (or the port accepting a bare TCP
+// connection) doesn't mean the app behind it has finished initializing --
+// a single dial right after start can race a still-warming-up backend,
+// which is why the GUI previously failed to load on the first open after a
+// cold start but worked on the very next one (by then the backend had
+// caught up).
+var imunifyWaitForPortRun = func(host string, port int) bool {
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if imunifyIsPortOpenRun(host, port) {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+}
+
 // imunifyGetTokenRun returns ("", false) for both a nonzero exit and a
 // failure to even start the binary.
 var imunifyGetTokenRun = func() (string, bool) {
@@ -95,7 +116,7 @@ func (im *Imunify) ServeImunifyGUI(w http.ResponseWriter, r *http.Request) {
 
 	if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
 		imunifyStartDetachedRun()
-		if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
+		if !imunifyWaitForPortRun("127.0.0.1", 9000) {
 			webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Running)"))
 			return
 		}
@@ -167,7 +188,7 @@ func (im *Imunify) ServeImunifyPHP(w http.ResponseWriter, r *http.Request) {
 	}
 	if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
 		imunifyStartDetachedRun()
-		if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
+		if !imunifyWaitForPortRun("127.0.0.1", 9000) {
 			webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Running)"))
 			return
 		}

@@ -99,6 +99,9 @@ func TestServeImunifyGUINotRunningStartsDetached(t *testing.T) {
 	started := false
 	withStubbedImunifyRunners(t, true, false, "", false)
 	imunifyStartDetachedRun = func() { started = true }
+	origWait := imunifyWaitForPortRun
+	imunifyWaitForPortRun = func(string, int) bool { return false }
+	t.Cleanup(func() { imunifyWaitForPortRun = origWait })
 	im := &Imunify{}
 	srv, client := newImunifyTestServer(t, im)
 
