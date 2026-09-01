@@ -17,7 +17,7 @@ type APIBackups struct{}
 // ServeSystemBackups handles GET /api/backups/system.
 func (a *APIBackups) ServeSystemBackups(w http.ResponseWriter, r *http.Request) {
 	data := config.Load(BackupsConfigPath)
-	destination := data.Get("BACKUP", "destination", "")
+	destination := data.Get("BACKUP", "destination", defaultBackupDestination)
 	retentionDays := data.Get("BACKUP", "retention_days", "-1")
 
 	writeJSON(w, map[string]interface{}{
@@ -39,13 +39,17 @@ func (a *APIBackups) ServeSystemBackupsSettings(w http.ResponseWriter, r *http.R
 		writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
 		return
 	}
+	destination := body.Destination
+	if destination == "" {
+		destination = defaultBackupDestination
+	}
 	retentionDays := body.RetentionDays
 	if retentionDays == "" {
 		retentionDays = "-1"
 	}
 
 	data := config.Load(BackupsConfigPath)
-	data.Set("BACKUP", "destination", body.Destination)
+	data.Set("BACKUP", "destination", destination)
 	data.Set("BACKUP", "retention_days", retentionDays)
 	if err := config.Save(BackupsConfigPath, data); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Failed to save backup settings: "+err.Error())

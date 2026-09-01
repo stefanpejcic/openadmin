@@ -38,6 +38,12 @@ var (
 	BackupsRunsPath   = "/var/log/openpanel/admin/system-backup-runs.jsonl"
 )
 
+// defaultBackupDestination mirrors the destination field's placeholder in
+// backups_system.html: if no destination has ever been configured, this is
+// what a backup run/settings save falls back to, instead of silently
+// running (or letting the admin "run" a backup) with no destination set.
+const defaultBackupDestination = "/etc/openpanel/backups/system"
+
 type backupRun struct {
 	Timestamp string `json:"timestamp"`
 	Action    string `json:"action"`
@@ -358,6 +364,9 @@ func (b *Backups) ServeSystemBackups(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		r.ParseForm()
 		destination := strings.TrimSpace(r.PostFormValue("destination"))
+		if destination == "" {
+			destination = defaultBackupDestination
+		}
 		retentionDays := strings.TrimSpace(r.PostFormValue("retention_days"))
 		if retentionDays == "" {
 			retentionDays = "-1"
@@ -376,7 +385,7 @@ func (b *Backups) ServeSystemBackups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := config.Load(BackupsConfigPath)
-	destination := data.Get("BACKUP", "destination", "")
+	destination := data.Get("BACKUP", "destination", defaultBackupDestination)
 	retentionDays := data.Get("BACKUP", "retention_days", "-1")
 
 	webtemplates.Render(w, "backups_system.html", mergeChrome(map[string]interface{}{
@@ -418,6 +427,15 @@ var backupRunOpencli = func(args ...string) (string, error) {
 // ServeSystemBackupsActionStatus, mirroring the images tab's async
 // pull/delete in podman.go.
 func (b *Backups) ServeSystemBackupsRun(w http.ResponseWriter, r *http.Request) {
+	data := config.Load(BackupsConfigPath)
+	if data.Get("BACKUP", "destination", "") == "" {
+		data.Set("BACKUP", "destination", defaultBackupDestination)
+		if err := config.Save(BackupsConfigPath, data); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "Failed to set default backup destination: "+err.Error())
+			return
+		}
+	}
+
 	result := &backupActionResult{}
 	pendingBackupActionMu.Lock()
 	pendingBackupAction = result
@@ -488,11 +506,7 @@ func (b *Backups) ServeSystemBackupsDelete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	destination := config.Load(BackupsConfigPath).Get("BACKUP", "destination", "")
-	if destination == "" {
-		writeJSON(w, map[string]interface{}{"success": false, "message": "No backup destination configured."})
-		return
-	}
+	destination := config.Load(BackupsConfigPath).Get("BACKUP", "destination", defaultBackupDestination)
 
 	path := filepath.Join(destination, filename)
 	var sizeBytes int64
