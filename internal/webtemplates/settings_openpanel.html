@@ -564,6 +564,47 @@ When enabled, users will see a 'How-to' widget in their OpenPanel Dashboard, wit
     </div>
 </div>
 
+<div class="col-span-full sm:col-span-3" x-data="{ onboarding: {{if eq (.ConfigData.Get "USERS" "onboarding" "") "yes"}}true{{else}}false{{end}}, tooltip: false }">
+    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium flex items-center gap-1" for="onboarding_toggle">
+        Display onboarding wizard
+        <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16">
+            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/>
+            </svg>
+            <template x-if="tooltip">
+                <div x-transition
+                     class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg"
+                     style="top: 100%; right: 0;">
+When enabled, users who haven't finished it yet will see a first-login setup wizard on their Dashboard, guiding them through choosing a webserver, default PHP version, database server, backup destination, and 2FA/passkey setup.
+            </div>
+            </template>
+        </span>
+    </label>
+
+    <div class="relative w-full mt-2 flex-grow flex items-center space-x-3">
+        <!-- Toggle Switch -->
+        <button
+            type="button"
+            role="switch"
+            :aria-checked="onboarding.toString()"
+            @click="onboarding = !onboarding"
+            :class="onboarding ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
+            class="group relative isolate inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 h-5 w-9"
+        >
+            <span
+                :class="onboarding ? 'translate-x-4' : 'translate-x-0'"
+                class="pointer-events-none relative inline-block transform appearance-none rounded-full border-none shadow-lg outline-none transition-all duration-150 ease-in-out bg-white dark:bg-gray-50 h-4 w-4"
+            ></span>
+        </button>
+
+        <!-- Label -->
+        <span class="text-sm text-gray-900 dark:text-gray-500" x-text="onboarding ? 'Yes' : 'No'"></span>
+
+        <!-- Hidden input -->
+        <input type="hidden" name="onboarding" :value="onboarding ? 'yes' : 'no'">
+    </div>
+</div>
+
 <div class="col-span-full sm:col-span-3" x-data="{ found_a_bug_link: {{if eq (.ConfigData.Get "USERS" "found_a_bug_link" "") "yes"}}true{{else}}false{{end}}, tooltip: false }">
     <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium flex items-center gap-1" for="found_a_bug_link_toggle">
         Display link to report bugs
