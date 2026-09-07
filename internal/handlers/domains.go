@@ -72,6 +72,37 @@ func readCaddyFileForDomain(domainURL string) (ssl, status, waf, hsts string) {
 	return ssl, status, waf, hsts
 }
 
+// annotateDomainsWithWebserverInfo sets "webserver" and "varnish" on each
+// domain row, reusing the same .env-based detection as the /users/<username>
+// page (readEnvFile, WEB_SERVER, PROXY_HTTP_PORT presence). The webserver
+// config is per user, not per domain, so this looks it up at most once per
+// owner username and reuses that for every domain the owner has.
+func annotateDomainsWithWebserverInfo(db *sql.DB, domains []paneldb.RowMap) {
+	type webserverInfo struct {
+		webserver string
+		varnish   string
+	}
+	cache := map[string]webserverInfo{}
+
+	for _, dom := range domains {
+		username, _ := dom["username"].(string)
+		info, ok := cache[username]
+		if !ok {
+			context, _ := queryContextByUsername(db, username)
+			env := readEnvFile(context)
+			info.webserver = env["WEB_SERVER"]
+			if _, hasVarnish := env["PROXY_HTTP_PORT"]; hasVarnish {
+				info.varnish = "on"
+			} else {
+				info.varnish = "off"
+			}
+			cache[username] = info
+		}
+		dom["webserver"] = info.webserver
+		dom["varnish"] = info.varnish
+	}
+}
+
 type domainsListPageData struct {
 	webtemplates.Chrome
 	Domains       []paneldb.RowMap
@@ -99,11 +130,13 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 		dom["waf"] = waf
 		dom["hsts"] = hsts
 	}
+	annotateDomainsWithWebserverInfo(d.MySQL, domains)
 
 	columnKeyMap := map[string]string{
 		"id": "domain_id", "name": "domain_url", "docroot": "docroot",
 		"status": "status", "php": "php_version", "waf": "waf",
 		"ssl": "ssl", "hsts": "hsts", "owner": "username",
+		"webserver": "webserver",
 	}
 	if sortCol := r.URL.Query().Get("sort"); sortCol != "" {
 		if key, ok := columnKeyMap[sortCol]; ok {

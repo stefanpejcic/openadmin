@@ -241,6 +241,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	dnsZoneEditor := &handlers.DNSZoneEditor{MySQL: d.MySQL, Sessions: sessions}
 	caddyFileEditor := &handlers.CaddyFileEditor{MySQL: d.MySQL, Sessions: sessions}
 	vhostFileEditor := &handlers.VHostFileEditor{MySQL: d.MySQL, Sessions: sessions}
+	configFileEditor := &handlers.ConfigFileEditor{MySQL: d.MySQL, Sessions: sessions}
 	sslPage := &handlers.SSLPage{Sessions: sessions}
 	accessLogs := &handlers.AccessLogs{MySQL: d.MySQL, Sessions: sessions}
 	goAccessStats := &handlers.GoAccessStats{Sessions: sessions}
@@ -675,19 +676,22 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /domains/vhost", auth.RequireAdmin(sessions, authOpts, vhostFileEditor.ServeEditVHostFile))
 	mux.HandleFunc("GET /domains/vhost/{username}/{domain_name}", auth.RequireAdmin(sessions, authOpts, vhostFileEditor.ServeEditVHostFile))
 	mux.HandleFunc("POST /domains/vhost/{username}/{domain_name}", auth.RequireAdmin(sessions, authOpts, vhostFileEditor.ServeEditVHostFile))
+	mux.HandleFunc("GET /domains/config", auth.RequireAdmin(sessions, authOpts, configFileEditor.ServeEditConfigFile))
+	mux.HandleFunc("GET /domains/config/{username}", auth.RequireAdmin(sessions, authOpts, configFileEditor.ServeEditConfigFile))
 	mux.HandleFunc("GET /domains/ssl/{domain_name}", auth.RequireAdmin(sessions, authOpts, sslPage.ServeSSL))
 	mux.HandleFunc("GET /domains/log", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/log/", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/log/{domain_name}", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/stats/{current_username}/{domain_name}", auth.RequireAdmin(sessions, authOpts, goAccessStats.ServeStats))
 	// POST /domains/{feature}/toggle, POST /domains/dns/{domain_name},
-	// POST /domains/caddy/{domain_name}, and POST /domains/ssl/{domain_name}
-	// all share the same two-segment shape and genuinely overlap at single
-	// URLs like /domains/dns/toggle or /domains/ssl/toggle -- "dns"/
-	// "caddy"/"ssl" are themselves valid {feature} values for the toggle
-	// route, so the ambiguity is real, and Go's ServeMux refuses to
-	// register genuinely overlapping patterns at all. Dispatched manually
-	// here rather than registered as four separate conflicting patterns.
+	// POST /domains/caddy/{domain_name}, POST /domains/config/{username},
+	// and POST /domains/ssl/{domain_name} all share the same two-segment
+	// shape and genuinely overlap at single URLs like /domains/dns/toggle
+	// or /domains/ssl/toggle -- "dns"/"caddy"/"config"/"ssl" are themselves
+	// valid {feature} values for the toggle route, so the ambiguity is
+	// real, and Go's ServeMux refuses to register genuinely overlapping
+	// patterns at all. Dispatched manually here rather than registered as
+	// five separate conflicting patterns.
 	mux.HandleFunc("POST /domains/{seg2}/{seg3}", auth.RequireAdmin(sessions, authOpts, func(w http.ResponseWriter, r *http.Request) {
 		seg2, seg3 := r.PathValue("seg2"), r.PathValue("seg3")
 		switch {
@@ -700,6 +704,9 @@ func newHandler(d appDeps) (http.Handler, error) {
 		case seg2 == "caddy":
 			r.SetPathValue("domain_name", seg3)
 			caddyFileEditor.ServeEditCaddyFile(w, r)
+		case seg2 == "config":
+			r.SetPathValue("username", seg3)
+			configFileEditor.ServeEditConfigFile(w, r)
 		case seg2 == "ssl":
 			r.SetPathValue("domain_name", seg3)
 			sslPage.ServeSSL(w, r)

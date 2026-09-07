@@ -15,6 +15,7 @@ import (
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
+	"openadmin/internal/paneldb"
 )
 
 // phpVersionsEOLFetch is protected by a package-level sync.Once, so it can
@@ -109,6 +110,38 @@ func TestReadCaddyFileForDomainDefaultsWhenMissing(t *testing.T) {
 	ssl, status, waf, hsts := readCaddyFileForDomain("nonexistent.com")
 	if ssl != "none" || status != "suspended" || waf != "none" || hsts != "off" {
 		t.Fatalf("unexpected defaults: ssl=%q status=%q waf=%q hsts=%q", ssl, status, waf, hsts)
+	}
+}
+
+func TestAnnotateDomainsWithWebserverInfoQueriesContextOncePerOwner(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	// Two domains owned by the same "alice" -- the context lookup should
+	// only run once and be reused for the second domain, since the
+	// webserver config is per user, not per domain.
+	mock.ExpectQuery(`SELECT server FROM users WHERE username = \?`).
+		WithArgs("alice").
+		WillReturnRows(sqlmock.NewRows([]string{"server"}).AddRow("alice-ctx"))
+
+	domains := []paneldb.RowMap{
+		{"domain_url": "one.example.com", "username": "alice"},
+		{"domain_url": "two.example.com", "username": "alice"},
+	}
+	annotateDomainsWithWebserverInfo(mysqlDB, domains)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("expected exactly one context lookup for the shared owner, got: %v", err)
+	}
+	for _, dom := range domains {
+		if _, ok := dom["webserver"]; !ok {
+			t.Fatalf("expected webserver key to be set on %v", dom)
+		}
+		if dom["varnish"] != "off" {
+			t.Fatalf("expected varnish=off when PROXY_HTTP_PORT is absent, got %v", dom["varnish"])
+		}
 	}
 }
 
