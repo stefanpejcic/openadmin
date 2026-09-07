@@ -590,6 +590,7 @@ type userDetailPageData struct {
 	CountryCode       string
 	EnvData           map[string]string
 	WebserverOptions  []string
+	DefaultPHPVersion string
 	InstalledLocales  []string
 	PlanCPU           string
 	PlanRAM           string
@@ -783,6 +784,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		CountryCode:       countryCodeForIP(serverIP),
 		EnvData:           envData,
 		WebserverOptions:  userWebserverOptions,
+		DefaultPHPVersion: defaultPHPVersionFor(username),
 		InstalledLocales:  installedLocaleCodes(),
 		PlanCPU:           planCPU,
 		PlanRAM:           planRAM,

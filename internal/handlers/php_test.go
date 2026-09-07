@@ -72,6 +72,9 @@ func newPHPTestServerWithRole(t *testing.T, p *PHP, role string) (*httptest.Serv
 	mux.HandleFunc("POST /settings/php", p.ServePHP)
 	mux.HandleFunc("GET /json/php/default_version/{username}", p.ServePHPDefaultVersion)
 	mux.HandleFunc("POST /json/php/default_version/{username}", p.ServePHPDefaultVersion)
+	mux.HandleFunc("GET /php/{username}/available", p.ServePHPAvailableVersions)
+	mux.HandleFunc("GET /php/{value}", p.ServePHPVersion)
+	mux.HandleFunc("POST /php/{value}", p.ServePHPVersion)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
 		auth.LoginUser(w, r, sessions, caller, "203.0.113.1")
 	})
