@@ -31,7 +31,8 @@ type notificationsPageData struct {
 // <STATUS> <title...> MESSAGE: <message>"). Kind selects which of the
 // message body's special renderings (RAM/CPU/OOM/disk usage, or a plain
 // message possibly containing a "Log file:"/"detailed report:" link)
-// applies.
+// applies. Kind "logfile"/"report"/"crashlog" cover a plain message that
+// contains a "Log file:"/"detailed report:"/"Crashlog:" link respectively.
 type notificationRow struct {
 	Index  int
 	Time   string
@@ -183,6 +184,13 @@ func parseNotificationRow(raw string, index int) notificationRow {
 			row.Kind = "report"
 			row.Before = message[:idx]
 			rest := strings.TrimSpace(message[idx+len("detailed report:"):])
+			row.LinkText = rest
+			segs := strings.Split(rest, "/")
+			row.LinkHref = "/services/crashlogs/log/?log_name=" + segs[len(segs)-1]
+		} else if idx := strings.Index(message, "Crashlog:"); idx != -1 {
+			row.Kind = "crashlog"
+			row.Before = message[:idx]
+			rest := strings.TrimSpace(message[idx+len("Crashlog:"):])
 			row.LinkText = rest
 			segs := strings.Split(rest, "/")
 			row.LinkHref = "/services/crashlogs/log/?log_name=" + segs[len(segs)-1]

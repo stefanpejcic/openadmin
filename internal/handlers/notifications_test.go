@@ -76,6 +76,7 @@ func TestNotificationsViewRendersHTMLForEachMessageKind(t *testing.T) {
 		"2026-01-01 13:00:00 UNREAD Disk usage MESSAGE: Disk usage: 90% | Partitions: /dev/sda1 90%",
 		"2026-01-01 14:00:00 UNREAD Update finished MESSAGE: Update completed. Log file: /var/log/openpanel/admin/updates/2026-01-01.log",
 		"2026-01-01 15:00:00 UNREAD Crash detected MESSAGE: Service crashed, see detailed report: /var/log/openpanel/admin/crashes/2026-01-01.log",
+		"2026-01-01 15:30:00 UNREAD High load MESSAGE: Load: 272 | Crashlog: /var/log/openpanel/admin/crashlog/1788526911.txt",
 		"2026-01-01 16:00:00 READ Plain notice MESSAGE: Just a plain message",
 	}, "\n")+"\n"), 0644)
 
@@ -96,6 +97,7 @@ func TestNotificationsViewRendersHTMLForEachMessageKind(t *testing.T) {
 	for _, want := range []string{
 		"High memory usage", "50%", "80%", "OOM kills detected", "alice",
 		"Disk usage", "90%", "Log file:", "detailed report:", "Just a plain message",
+		"Load: 272", "Crashlog:", `/services/crashlogs/log/?log_name=1788526911.txt`,
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
