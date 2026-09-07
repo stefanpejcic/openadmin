@@ -376,16 +376,20 @@ func buildOtherDefaultsGroups(defaults map[string]map[string]interface{}) []defa
 	return groups
 }
 
-// defaultsPHPVersionList is the hardcoded version list shown in the
-// DEFAULT_PHP_VERSION <select>.
-var defaultsPHPVersionList = []string{"8.5", "8.4", "8.3", "8.2", "8.1", "8.0", "7.4", "7.3", "7.2", "7.1", "7.0", "5.6"}
-
 // buildPHPVersionOptions precomputes each <option>'s display label
 // (version + status label + "Current Default" suffix) so the template
-// doesn't need to do string composition.
+// doesn't need to do string composition. The version list itself is
+// discovered from phpIniDir (see php.go) rather than hardcoded, so a newly
+// added PHP version shows up here as soon as its ini file exists, newest
+// first -- same as the previous hardcoded list's order.
 func buildPHPVersionOptions(current string, phpVersionsData map[string]phpVersionStatus) []phpVersionOption {
-	options := make([]phpVersionOption, 0, len(defaultsPHPVersionList))
-	for _, v := range defaultsPHPVersionList {
+	versionList, err := discoverPHPVersions(phpIniDir)
+	if err != nil {
+		versionList = nil
+	}
+	options := make([]phpVersionOption, 0, len(versionList))
+	for i := len(versionList) - 1; i >= 0; i-- {
+		v := versionList[i]
 		label := v
 		if status, ok := phpVersionsData[v]; ok {
 			label += " (" + status.StatusLabel + ")"

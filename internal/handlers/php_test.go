@@ -23,21 +23,27 @@ import (
 
 var errPHPTestSetFailed = errors.New("simulated opencli failure")
 
+// withScratchPHPPaths points phpOptionsPath/phpIniDir at a fresh temp dir.
+// Since version discovery scans phpIniDir for "<major>.<minor>.ini" files,
+// a version only shows up in tests that actually create its ini file --
+// there's no more hardcoded list of "known" versions to fall back on.
 func withScratchPHPPaths(t *testing.T) {
 	t.Helper()
 	dir := t.TempDir()
 	origOptions := phpOptionsPath
-	origIni := phpIniPaths
+	origIniDir := phpIniDir
 	phpOptionsPath = filepath.Join(dir, "options.txt")
-	newIni := make(map[string]string, len(origIni))
-	for k := range origIni {
-		newIni[k] = filepath.Join(dir, k+".ini")
-	}
-	phpIniPaths = newIni
+	phpIniDir = dir
 	t.Cleanup(func() {
 		phpOptionsPath = origOptions
-		phpIniPaths = origIni
+		phpIniDir = origIniDir
 	})
+}
+
+// phpIniTestPath returns the scratch-dir path for a version label (e.g.
+// "8.4"), for use after withScratchPHPPaths.
+func phpIniTestPath(label string) string {
+	return filepath.Join(phpIniDir, label+".ini")
 }
 
 func newPHPTestServer(t *testing.T, p *PHP) (*httptest.Server, *http.Client) {
@@ -96,7 +102,8 @@ func newPHPTestServerWithRole(t *testing.T, p *PHP, role string) (*httptest.Serv
 
 func TestServePHPGetRendersAllVersions(t *testing.T) {
 	withScratchPHPPaths(t)
-	os.WriteFile(phpIniPaths["php72"], []byte("memory_limit=256M"), 0644)
+	os.WriteFile(phpIniTestPath("7.2"), []byte("memory_limit=256M"), 0644)
+	os.WriteFile(phpIniTestPath("5.6"), []byte(""), 0644)
 
 	p := &PHP{}
 	srv, client := newPHPTestServer(t, p)
@@ -124,9 +131,36 @@ func TestServePHPGetRendersAllVersions(t *testing.T) {
 	}
 }
 
+// TestServePHPGetDiscoversNewlyAddedVersion is a regression test for
+// https://github.com/stefanpejcic/OpenPanel/issues/1110: a PHP version
+// (e.g. 8.5) must show up on the page as soon as its ini file exists on
+// disk, without any code change.
+func TestServePHPGetDiscoversNewlyAddedVersion(t *testing.T) {
+	withScratchPHPPaths(t)
+	os.WriteFile(phpIniTestPath("8.5"), []byte("opcache.enable=1"), 0644)
+
+	p := &PHP{}
+	srv, client := newPHPTestServer(t, p)
+
+	resp, err := client.Get(srv.URL + "/settings/php")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	if !strings.Contains(got, `name="php85"`) {
+		t.Fatalf("expected php85 textarea to be rendered, got %s", truncate(got))
+	}
+	if !strings.Contains(got, "PHP 8.5 INI") {
+		t.Fatalf("expected 8.5 version label, got %s", truncate(got))
+	}
+}
+
 func TestServePHPGetJSON(t *testing.T) {
 	withScratchPHPPaths(t)
 	os.WriteFile(phpOptionsPath, []byte("upload_max_filesize=64M"), 0644)
+	os.WriteFile(phpIniTestPath("7.2"), []byte(""), 0644)
 
 	p := &PHP{}
 	srv, client := newPHPTestServer(t, p)
@@ -146,7 +180,7 @@ func TestServePHPGetJSON(t *testing.T) {
 		t.Fatalf("expected options content in JSON, got %+v", parsed)
 	}
 	if _, ok := parsed["php72"]; !ok {
-		t.Fatalf("expected php72 key present in JSON output even though it can't be saved, got %+v", parsed)
+		t.Fatalf("expected php72 key present in JSON output for a discovered 7.2.ini, got %+v", parsed)
 	}
 }
 
@@ -177,6 +211,7 @@ func TestServePHPPostSavesOptions(t *testing.T) {
 
 func TestServePHPPostSavesVersionIni(t *testing.T) {
 	withScratchPHPPaths(t)
+	os.WriteFile(phpIniTestPath("8.4"), []byte(""), 0644)
 
 	p := &PHP{}
 	srv, client := newPHPTestServer(t, p)
@@ -191,7 +226,7 @@ func TestServePHPPostSavesVersionIni(t *testing.T) {
 		t.Fatalf("expected success flash, got %s", truncate(string(body)))
 	}
 
-	saved, err := os.ReadFile(phpIniPaths["php84"])
+	saved, err := os.ReadFile(phpIniTestPath("8.4"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +237,7 @@ func TestServePHPPostSavesVersionIni(t *testing.T) {
 
 func TestServePHPPostPhp72NowSaves(t *testing.T) {
 	withScratchPHPPaths(t)
-	os.WriteFile(phpIniPaths["php72"], []byte("original content"), 0644)
+	os.WriteFile(phpIniTestPath("7.2"), []byte("original content"), 0644)
 
 	p := &PHP{}
 	srv, client := newPHPTestServer(t, p)
@@ -217,7 +252,7 @@ func TestServePHPPostPhp72NowSaves(t *testing.T) {
 		t.Fatalf("expected php72 save to succeed, got %s", truncate(string(body)))
 	}
 
-	saved, err := os.ReadFile(phpIniPaths["php72"])
+	saved, err := os.ReadFile(phpIniTestPath("7.2"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,6 +263,7 @@ func TestServePHPPostPhp72NowSaves(t *testing.T) {
 
 func TestServePHPPostOptionsTakesPriorityOverVersions(t *testing.T) {
 	withScratchPHPPaths(t)
+	os.WriteFile(phpIniTestPath("8.4"), []byte(""), 0644)
 
 	p := &PHP{}
 	srv, client := newPHPTestServer(t, p)
@@ -245,8 +281,12 @@ func TestServePHPPostOptionsTakesPriorityOverVersions(t *testing.T) {
 		t.Fatal("expected version save to be skipped when options is non-empty")
 	}
 
-	if _, err := os.Stat(phpIniPaths["php84"]); !os.IsNotExist(err) {
-		t.Fatalf("expected php84.ini to not be created, err=%v", err)
+	saved, err := os.ReadFile(phpIniTestPath("8.4"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(saved) != "" {
+		t.Fatalf("expected php84.ini to remain untouched, got %q", saved)
 	}
 }
 

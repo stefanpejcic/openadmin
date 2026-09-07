@@ -24,7 +24,8 @@ func newAPISettingsPHPTestServer(t *testing.T) (*httptest.Server, *http.Client) 
 func TestAPISettingsPHPGetReturnsAllFiles(t *testing.T) {
 	withScratchPHPPaths(t)
 	os.WriteFile(phpOptionsPath, []byte("memory_limit=256M"), 0644)
-	os.WriteFile(phpIniPaths["php82"], []byte("upload_max_filesize=64M"), 0644)
+	os.WriteFile(phpIniTestPath("8.2"), []byte("upload_max_filesize=64M"), 0644)
+	os.WriteFile(phpIniTestPath("5.6"), []byte(""), 0644)
 
 	srv, client := newAPISettingsPHPTestServer(t)
 	resp, err := client.Get(srv.URL + "/api/settings/php")
@@ -47,7 +48,7 @@ func TestAPISettingsPHPGetReturnsAllFiles(t *testing.T) {
 		t.Fatalf("expected php82 content, got %+v", out)
 	}
 	if out["php56"] != "" {
-		t.Fatalf("expected empty string for a missing file, got %q", out["php56"])
+		t.Fatalf("expected empty string for an empty discovered file, got %q", out["php56"])
 	}
 }
 
@@ -68,6 +69,7 @@ func TestAPISettingsPHPPostRequiresJSON(t *testing.T) {
 
 func TestAPISettingsPHPPostUpdatesOptionsAndVersions(t *testing.T) {
 	withScratchPHPPaths(t)
+	os.WriteFile(phpIniTestPath("8.2"), []byte(""), 0644)
 	srv, client := newAPISettingsPHPTestServer(t)
 
 	resp := postJSON(t, client, srv.URL+"/api/settings/php", `{"options": "memory_limit=512M", "php82": "opcache.enable=1"}`)
@@ -93,7 +95,7 @@ func TestAPISettingsPHPPostUpdatesOptionsAndVersions(t *testing.T) {
 	if string(savedOptions) != "memory_limit=512M" {
 		t.Fatalf("expected options.txt written, got %q", savedOptions)
 	}
-	savedIni, _ := os.ReadFile(phpIniPaths["php82"])
+	savedIni, _ := os.ReadFile(phpIniTestPath("8.2"))
 	if string(savedIni) != "opcache.enable=1" {
 		t.Fatalf("expected php82 ini written, got %q", savedIni)
 	}

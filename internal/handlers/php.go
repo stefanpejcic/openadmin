@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/csrf"
@@ -22,43 +26,64 @@ type PHP struct {
 	MySQL    *sql.DB
 }
 
-// phpVersionKeys lists all PHP version keys in display order (dropping
-// "options", which is handled separately).
-var phpVersionKeys = []string{
-	"php56", "php70", "php71", "php72", "php73", "php74",
-	"php80", "php81", "php82", "php83", "php84",
-}
-
 var phpOptionsPath = "/etc/openpanel/php/options.txt"
-var phpIniPaths = map[string]string{
-	"php56": "/etc/openpanel/php/ini/5.6.ini",
-	"php70": "/etc/openpanel/php/ini/7.0.ini",
-	"php71": "/etc/openpanel/php/ini/7.1.ini",
-	"php72": "/etc/openpanel/php/ini/7.2.ini",
-	"php73": "/etc/openpanel/php/ini/7.3.ini",
-	"php74": "/etc/openpanel/php/ini/7.4.ini",
-	"php80": "/etc/openpanel/php/ini/8.0.ini",
-	"php81": "/etc/openpanel/php/ini/8.1.ini",
-	"php82": "/etc/openpanel/php/ini/8.2.ini",
-	"php83": "/etc/openpanel/php/ini/8.3.ini",
-	"php84": "/etc/openpanel/php/ini/8.4.ini",
+
+// phpIniDir holds one "<major>.<minor>.ini" file per installed PHP version
+// (e.g. "8.5.ini"). The settings/php page and every other PHP-version
+// picker discover their version list by scanning this directory instead of
+// a hardcoded list, so a new PHP release shows up as soon as its ini file
+// is dropped in -- no code change needed.
+var phpIniDir = "/etc/openpanel/php/ini"
+
+// phpIniFileRE matches an ini filename directly in phpIniDir, e.g. "8.5.ini".
+var phpIniFileRE = regexp.MustCompile(`^(\d+)\.(\d+)\.ini$`)
+
+// phpVersionKey derives the form/query key used for a version throughout
+// this file (e.g. "8.5" -> "php85") by stripping the dot -- matches the
+// scheme the templates and JS already use.
+func phpVersionKey(label string) string {
+	return "php" + strings.ReplaceAll(label, ".", "")
 }
 
-// phpVersionLabels maps each key to its human-readable version string
-// (inserting a "." between the two trailing digits, e.g. "php74" -> "7.4").
-var phpVersionLabels = map[string]string{
-	"php56": "5.6", "php70": "7.0", "php71": "7.1", "php72": "7.2",
-	"php73": "7.3", "php74": "7.4", "php80": "8.0", "php81": "8.1",
-	"php82": "8.2", "php83": "8.3", "php84": "8.4",
-}
+// discoverPHPVersions scans dir for "<major>.<minor>.ini" files and returns
+// their version labels (e.g. "8.5"), sorted oldest to newest. A missing
+// directory yields an empty slice rather than an error.
+func discoverPHPVersions(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
 
-// phpSavableVersions lists every version key accepted by the POST handler
-// below. This must stay in sync with phpVersionKeys above -- omitting a
-// version here would let its ini textarea render fine but make submitting
-// it silently a no-op, silently dropping edits.
-var phpSavableVersions = []string{
-	"php56", "php70", "php71", "php72", "php73", "php74",
-	"php80", "php81", "php82", "php83", "php84",
+	type version struct{ major, minor int }
+	found := map[string]version{}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		m := phpIniFileRE.FindStringSubmatch(entry.Name())
+		if m == nil {
+			continue
+		}
+		major, _ := strconv.Atoi(m[1])
+		minor, _ := strconv.Atoi(m[2])
+		found[m[1]+"."+m[2]] = version{major, minor}
+	}
+
+	labels := make([]string, 0, len(found))
+	for label := range found {
+		labels = append(labels, label)
+	}
+	sort.Slice(labels, func(i, j int) bool {
+		vi, vj := found[labels[i]], found[labels[j]]
+		if vi.major != vj.major {
+			return vi.major < vj.major
+		}
+		return vi.minor < vj.minor
+	})
+	return labels, nil
 }
 
 // readFileOrEmpty returns "" for a missing file; any other read error
@@ -76,6 +101,12 @@ func readFileOrEmpty(path string) (string, error) {
 
 // ServePHP handles GET/POST /settings/php.
 func (p *PHP) ServePHP(w http.ResponseWriter, r *http.Request) {
+	versionLabels, err := discoverPHPVersions(phpIniDir)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		r.ParseForm()
 
@@ -86,13 +117,15 @@ func (p *PHP) ServePHP(w http.ResponseWriter, r *http.Request) {
 			}
 			auth.AddFlash(w, r, p.Sessions, "PHP options saved successfully!", "success")
 		} else {
-			for _, version := range phpSavableVersions {
-				if content, ok := r.PostForm[version]; ok {
-					if err := os.WriteFile(phpIniPaths[version], []byte(content[0]), 0644); err != nil {
+			for _, label := range versionLabels {
+				key := phpVersionKey(label)
+				if content, ok := r.PostForm[key]; ok {
+					path := filepath.Join(phpIniDir, label+".ini")
+					if err := os.WriteFile(path, []byte(content[0]), 0644); err != nil {
 						http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 						return
 					}
-					auth.AddFlash(w, r, p.Sessions, version+" INI file saved successfully!", "success")
+					auth.AddFlash(w, r, p.Sessions, key+" INI file saved successfully!", "success")
 				}
 			}
 		}
@@ -107,15 +140,17 @@ func (p *PHP) ServePHP(w http.ResponseWriter, r *http.Request) {
 	fileContents["options"] = optionsContent
 
 	type versionFile struct{ Key, Label, Content string }
-	versions := make([]versionFile, 0, len(phpVersionKeys))
-	for _, key := range phpVersionKeys {
-		content, err := readFileOrEmpty(phpIniPaths[key])
+	versions := make([]versionFile, 0, len(versionLabels))
+	for _, label := range versionLabels {
+		key := phpVersionKey(label)
+		path := filepath.Join(phpIniDir, label+".ini")
+		content, err := readFileOrEmpty(path)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		fileContents[key] = content
-		versions = append(versions, versionFile{Key: key, Label: phpVersionLabels[key], Content: content})
+		versions = append(versions, versionFile{Key: key, Label: label, Content: content})
 	}
 
 	if r.URL.Query().Get("output") == "json" {

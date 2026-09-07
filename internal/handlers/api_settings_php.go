@@ -6,6 +6,7 @@ package handlers
 import (
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
 // APISettingsPHP bundles the /api/settings/php handler.
@@ -39,8 +40,14 @@ func (a *APISettingsPHP) handlePost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	for _, version := range phpSavableVersions {
-		val, present := data[version]
+	versionLabels, err := discoverPHPVersions(phpIniDir)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	for _, label := range versionLabels {
+		key := phpVersionKey(label)
+		val, present := data[key]
 		if !present || val == nil {
 			continue
 		}
@@ -48,11 +55,11 @@ func (a *APISettingsPHP) handlePost(w http.ResponseWriter, r *http.Request) {
 		if !isString {
 			continue
 		}
-		if err := os.WriteFile(phpIniPaths[version], []byte(s), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(phpIniDir, label+".ini"), []byte(s), 0644); err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		updated = append(updated, version)
+		updated = append(updated, key)
 	}
 
 	writeJSON(w, map[string]interface{}{"success": true, "updated": updated})
@@ -67,13 +74,18 @@ func (a *APISettingsPHP) handleGet(w http.ResponseWriter, r *http.Request) {
 	}
 	fileContents["options"] = optionsContent
 
-	for _, key := range phpVersionKeys {
-		content, err := readFileOrEmpty(phpIniPaths[key])
+	versionLabels, err := discoverPHPVersions(phpIniDir)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	for _, label := range versionLabels {
+		content, err := readFileOrEmpty(filepath.Join(phpIniDir, label+".ini"))
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		fileContents[key] = content
+		fileContents[phpVersionKey(label)] = content
 	}
 
 	writeJSON(w, fileContents)
