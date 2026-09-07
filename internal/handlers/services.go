@@ -118,6 +118,11 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 
 	switch action {
 	case "start":
+		// Force-remove any leftover container by this name first -- it
+		// may be wedged in a transitional state (e.g. stuck "Stopping"
+		// after a crashed conmon/OCI process) that `compose up -d` can't
+		// recover from on its own. Best-effort: no-op if none exists.
+		_ = podmanForceRemoveContainer(svc)
 		out, err := runCompose("up", "-d", svc)
 		return err == nil, string(out)
 	case "stop":
@@ -129,13 +134,13 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 		}
 		return err == nil, string(out)
 	case "restart":
-		_, downErr := runCompose("down", svc)
-		if downErr != nil {
-			// A graceful stop can't clear a container wedged in a
-			// transitional state (e.g. stuck "Stopping" after a crashed
-			// conmon/OCI process) -- force it out before recreating.
-			_ = podmanForceRemoveContainer(svc)
-		}
+		_, _ = runCompose("down", svc)
+		// Always force-remove afterward, even when `down` reports
+		// success -- it can still leave the container wedged in a
+		// transitional state (e.g. stuck "Stopping" after a crashed
+		// conmon/OCI process), which then blocks `compose up -d` from
+		// recreating it.
+		_ = podmanForceRemoveContainer(svc)
 		out, err := runCompose("up", "-d", svc)
 		if err == nil && serviceName == "openpanel" {
 			// Emptied, not removed: the chrome banner checks for
@@ -584,6 +589,11 @@ func realManageService(serviceName, action string) (bool, string) {
 
 	switch action {
 	case "start":
+		// Force-remove any leftover container by this name first -- it
+		// may be wedged in a transitional state (e.g. stuck "Stopping"
+		// after a crashed conmon/OCI process) that `compose up -d` can't
+		// recover from on its own. Best-effort: no-op if none exists.
+		_ = podmanForceRemoveContainer(svc)
 		out, err := runCompose("up", "-d", svc)
 		return err == nil, string(out)
 	case "stop":
@@ -595,13 +605,13 @@ func realManageService(serviceName, action string) (bool, string) {
 		}
 		return err == nil, string(out)
 	case "restart":
-		_, downErr := runCompose("down", svc)
-		if downErr != nil {
-			// A graceful stop can't clear a container wedged in a
-			// transitional state (e.g. stuck "Stopping" after a crashed
-			// conmon/OCI process) -- force it out before recreating.
-			_ = podmanForceRemoveContainer(svc)
-		}
+		_, _ = runCompose("down", svc)
+		// Always force-remove afterward, even when `down` reports
+		// success -- it can still leave the container wedged in a
+		// transitional state (e.g. stuck "Stopping" after a crashed
+		// conmon/OCI process), which then blocks `compose up -d` from
+		// recreating it.
+		_ = podmanForceRemoveContainer(svc)
 		out, err := runCompose("up", "-d", svc)
 		if err == nil && serviceName == "openpanel" {
 			// Emptied, not removed: the chrome banner checks for
