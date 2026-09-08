@@ -122,6 +122,7 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 		domains = nil
 	}
 
+	tlsIndex := getCaddyTLSIndex()
 	for _, dom := range domains {
 		domainURL, _ := dom["domain_url"].(string)
 		ssl, status, waf, hsts := readCaddyFileForDomain(domainURL)
@@ -129,6 +130,12 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 		dom["status"] = status
 		dom["waf"] = waf
 		dom["hsts"] = hsts
+
+		health := checkDomainSSLHealth(domainURL, ssl, tlsIndex)
+		dom["ssl_problem"] = health.Status
+		if !health.NotAfter.IsZero() {
+			dom["ssl_expires"] = health.NotAfter.Format("2006-01-02")
+		}
 	}
 	annotateDomainsWithWebserverInfo(d.MySQL, domains)
 
