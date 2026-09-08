@@ -10,16 +10,10 @@ import (
 	"strings"
 )
 
-// SecretKeyPath is the on-disk location of the app secret. Var (not const)
-// so tests can point it at a scratch fixture.
+// SecretKeyPath is the on-disk location of the app secret, var not const so tests can point it at a scratch fixture
 var SecretKeyPath = "/etc/openpanel/openadmin/secret.key"
 
-// LoadSecretKey reads SecretKeyPath. Normally the file is provisioned by
-// the installer before the app ever runs, but for a from-source build/dev
-// box (or a fresh install run out of order) there's no reason to hard-fail
-// if it's missing: the secret only needs to be unique per server and
-// stable across restarts, so this generates and persists a new one on the
-// spot rather than requiring a manual provisioning step first.
+// LoadSecretKey reads SecretKeyPath, normally provisioned by the installer, but on a from-source/dev box where it's missing this just generates and persists a new one since it only needs to be unique and stable across restarts
 func LoadSecretKey() (string, error) {
 	raw, err := os.ReadFile(SecretKeyPath)
 	if err == nil {
@@ -31,10 +25,7 @@ func LoadSecretKey() (string, error) {
 	return GenerateAndPersistSecret(SecretKeyPath)
 }
 
-// GenerateAndPersistSecret creates a new random, hex-encoded secret and
-// writes it to path (creating parent directories as needed) with
-// owner-only permissions, so the same value is reused on subsequent
-// startups instead of a fresh one being minted every time.
+// GenerateAndPersistSecret creates a random hex-encoded secret and writes it to path with owner-only permissions, so subsequent startups reuse it instead of minting a fresh one
 func GenerateAndPersistSecret(path string) (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -51,11 +42,7 @@ func GenerateAndPersistSecret(path string) (string, error) {
 	return secret, nil
 }
 
-// deriveKey turns the raw secret file content into a fixed-size key for a
-// given purpose (session signing vs. CSRF), so the two primitives don't
-// share key material even though they're derived from the same on-disk
-// secret. The derived key only needs to be stable across restarts of this
-// process, which hashing the same on-disk secret gives us.
+// deriveKey turns the raw secret into a fixed-size key per purpose (session signing vs CSRF) so they don't share key material despite coming from the same on-disk secret
 func deriveKey(secret, purpose string) []byte {
 	sum := sha256.Sum256([]byte(purpose + ":" + secret))
 	return sum[:]

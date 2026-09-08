@@ -27,8 +27,7 @@ func TestLoadSecretKeyReadsExistingFile(t *testing.T) {
 
 func TestLoadSecretKeyGeneratesAndPersistsWhenMissing(t *testing.T) {
 	dir := t.TempDir()
-	// A nested, not-yet-existing directory, to also exercise the
-	// parent-directory creation.
+	// nested, not-yet-existing directory, to also exercise parent-directory creation
 	path := filepath.Join(dir, "nested", "secret.key")
 
 	orig := SecretKeyPath
@@ -51,7 +50,7 @@ func TestLoadSecretKeyGeneratesAndPersistsWhenMissing(t *testing.T) {
 		t.Fatalf("expected the persisted file to match the returned secret, got %q vs %q", string(raw), got)
 	}
 
-	// A second load must reuse the same persisted value, not mint a new one.
+	// a second load must reuse the same persisted value, not mint a new one
 	got2, err := LoadSecretKey()
 	if err != nil {
 		t.Fatal(err)
