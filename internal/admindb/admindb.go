@@ -1,10 +1,4 @@
-// Package admindb wraps OpenAdmin's SQLite users.db: the "user" and
-// "webauthn_credential" tables backing admin login, 2FA, and passkey
-// credentials.
-//
-// The schema includes the totp_secret/totp_enabled columns and the
-// webauthn_credential table, both backfilled onto existing databases at
-// startup by migrate() below.
+// Package admindb wraps OpenAdmin's SQLite users.db: the user and webauthn_credential tables backing admin login, 2FA, and passkeys. migrate() below backfills totp columns and the webauthn table onto existing databases at startup.
 package admindb
 
 import (
@@ -15,8 +9,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Path is a var (not const) so tests can point it at a scratch fixture
-// instead of the real /etc path.
+// Path is a var not const so tests can point it at a scratch fixture instead of the real /etc path
 var Path = "/etc/openpanel/openadmin/users.db"
 
 var ErrNotFound = errors.New("admindb: not found")
@@ -45,16 +38,13 @@ type WebauthnCredential struct {
 	CreatedAt    time.Time
 }
 
-// Open opens Path and ensures the schema exists, running idempotent
-// migrations against an existing database if needed.
+// Open opens Path, ensures the schema exists, and runs idempotent migrations if needed
 func Open() (*DB, error) {
 	sqlDB, err := sql.Open("sqlite", Path)
 	if err != nil {
 		return nil, err
 	}
-	// SQLite only safely supports one writer at a time; database/sql's
-	// pool would otherwise open concurrent connections that each think
-	// they hold the write lock.
+	// sqlite only supports one writer at a time, database/sql's pool would otherwise open concurrent connections that each think they hold the write lock
 	sqlDB.SetMaxOpenConns(1)
 
 	db := &DB{sql: sqlDB}
@@ -182,9 +172,7 @@ func (db *DB) CredentialByCredentialID(credentialID string) (*WebauthnCredential
 	return &c, nil
 }
 
-// CredentialsByUserID lists all passkeys registered to a user (for the
-// passkeys management page and for building WebAuthn allow-credential
-// lists).
+// CredentialsByUserID lists all passkeys registered to a user, for the passkeys management page and building WebAuthn allow-credential lists
 func (db *DB) CredentialsByUserID(userID int64) ([]WebauthnCredential, error) {
 	rows, err := db.sql.Query(
 		`SELECT id, user_id, credential_id, public_key, sign_count, name, created_at FROM webauthn_credential WHERE user_id = ?`,
@@ -217,10 +205,7 @@ func (db *DB) UpdateCredentialSignCount(credentialID string, signCount uint32) e
 	return err
 }
 
-// CreateUser inserts a new user row. password must already be hashed (see
-// auth.GeneratePasswordHash). If the username already exists, this returns
-// a plain error rather than ErrNotFound -- a duplicate username is a
-// distinct condition from "not found".
+// CreateUser inserts a new user row, password must already be hashed (see auth.GeneratePasswordHash). Returns a plain error not ErrNotFound if the username exists, since that's a different condition.
 func (db *DB) CreateUser(username, passwordHash, role string) error {
 	_, err := db.sql.Exec(
 		`INSERT INTO user (username, password_hash, role, is_active) VALUES (?, ?, ?, 1)`,
@@ -229,8 +214,7 @@ func (db *DB) CreateUser(username, passwordHash, role string) error {
 	return err
 }
 
-// SetActive backs the admin-suspend/reactivate action available from the
-// administrators list.
+// SetActive backs the admin-suspend/reactivate action from the administrators list
 func (db *DB) SetActive(username string, active bool) error {
 	_, err := db.sql.Exec(`UPDATE user SET is_active = ? WHERE username = ?`, active, username)
 	return err
@@ -260,9 +244,7 @@ func (db *DB) AllUsers() ([]User, error) {
 	return out, rows.Err()
 }
 
-// UpdatePasswordHash updates a user's stored password hash. The caller is
-// responsible for any role-based permission checks first -- see
-// handlers.Administrators.
+// UpdatePasswordHash updates a user's stored password hash, caller must do role-based permission checks first, see handlers.Administrators
 func (db *DB) UpdatePasswordHash(username, passwordHash string) error {
 	_, err := db.sql.Exec(`UPDATE user SET password_hash = ? WHERE username = ?`, passwordHash, username)
 	return err
@@ -291,8 +273,7 @@ func (db *DB) DeleteCredentialsByUserID(userID int64) error {
 	return err
 }
 
-// CreateCredential inserts a new WebauthnCredential row for a registered
-// passkey.
+// CreateCredential inserts a new WebauthnCredential row for a registered passkey
 func (db *DB) CreateCredential(userID int64, credentialID, publicKey string, signCount uint32, name string) (int64, error) {
 	res, err := db.sql.Exec(
 		`INSERT INTO webauthn_credential (user_id, credential_id, public_key, sign_count, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -304,8 +285,7 @@ func (db *DB) CreateCredential(userID int64, credentialID, publicKey string, sig
 	return res.LastInsertId()
 }
 
-// CredentialBelongsToUser reports whether the credential with the given id
-// belongs to the given user.
+// CredentialBelongsToUser reports whether the credential with the given id belongs to the given user
 func (db *DB) CredentialBelongsToUser(credentialID, userID int64) bool {
 	var count int
 	err := db.sql.QueryRow(`SELECT COUNT(*) FROM webauthn_credential WHERE id = ? AND user_id = ?`, credentialID, userID).Scan(&count)

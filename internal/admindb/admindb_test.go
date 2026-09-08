@@ -48,10 +48,7 @@ func TestOpenMigratesPreExisting2FAlessDatabase(t *testing.T) {
 	Path = filepath.Join(dir, "users.db")
 	t.Cleanup(func() { Path = orig })
 
-	// Simulate a users.db created before the totp_secret/totp_enabled
-	// columns existed, matching what create_user()'s CREATE TABLE produced
-	// on old installs -- Open() must backfill them via ensure_2fa_columns()
-	// parity without erroring or dropping existing rows.
+	// simulate a users.db from before the totp columns existed, Open() must backfill them without erroring or dropping rows
 	raw, err := sql.Open("sqlite", Path)
 	if err != nil {
 		t.Fatal(err)

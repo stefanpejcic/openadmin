@@ -88,9 +88,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Loading the dovecot master pass is fatal at startup if the file is
-	// missing, matching the same fatal-at-startup treatment already used
-	// for auth.LoadSecretKey above.
+	// dovecot master pass is fatal at startup too, same as LoadSecretKey above
 	dovecotMasterPass, err := handlers.LoadDovecotMasterPass()
 	if err != nil {
 		appLog.Printf("%v", err)
@@ -100,8 +98,7 @@ func main() {
 	// Runs once at startup, best-effort (failures are logged, never fatal).
 	handlers.EnsureMasterUser(dovecotMasterPass)
 
-	// MySQL connects lazily per query (see mysqldb.Open's doc comment), so a
-	// down/not-yet-configured database at boot isn't fatal here.
+	// mysql connects lazily per query, so a down/unconfigured db at boot isn't fatal here
 	mysqlDB, err := mysqldb.Open()
 	if err != nil {
 		appLog.Printf("MySQL not available yet (%v) -- dashboard panel data will show its error fallback until it is.", err)
@@ -114,11 +111,7 @@ func main() {
 	licenseKey := config.Openpanel().Get("LICENSE", "key", "")
 	licType := license.Type(licenseKey)
 
-	// licenseChecker is nil for Community installs: RequireEnterprise
-	// treats a nil checker as "not licensed", so Enterprise-only routes
-	// (none exist in this Go build yet -- see the migration backlog) fail
-	// closed by default rather than needing every call site to remember a
-	// separate Community check.
+	// nil checker means Community install, RequireEnterprise treats nil as not-licensed so it fails closed by default
 	var licenseChecker *license.Checker
 	if licType == "Enterprise" {
 		licenseChecker = license.NewChecker(licenseKey, publicIP)
@@ -178,10 +171,7 @@ func main() {
 	}
 }
 
-// appDeps bundles everything newHandler needs to build the full router +
-// middleware chain, factored out of main() so it can be exercised directly
-// by an end-to-end test with scratch/mock dependencies instead of the real
-// system paths (which need root).
+// appDeps bundles what newHandler needs, split out of main() so tests can build it with mocks instead of real system paths
 type appDeps struct {
 	AdminDB *admindb.DB
 	MySQL   *sql.DB
@@ -362,13 +352,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux.HandleFunc("GET /api/domains", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomains.ServeDomains)))
 	mux.HandleFunc("POST /api/domains/new", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomains.HandleAddDomain)))
-	// GET/POST /api/domains/docroot/{domain}, GET/POST /api/domains/{domain_name}/dns,
-	// GET/POST /api/domains/{domain_name}/caddy, GET/POST /api/domains/{domain_name}/ssl,
-	// GET /api/domains/{domain_name}/log, and POST /api/domains/{action}/{domain}
-	// all share the same two-segment shape and genuinely overlap at single
-	// URLs like /api/domains/docroot/dns -- Go's ServeMux refuses to register
-	// genuinely overlapping patterns at all, so this is dispatched manually,
-	// same as the equivalent HTML-page /domains/{seg2}/{seg3} routes above.
+	// these routes overlap at URLs like /api/domains/docroot/dns so ServeMux can't register them separately, dispatch manually like the HTML /domains/{seg2}/{seg3} routes above
 	mux.HandleFunc("GET /api/domains/{seg2}/{seg3}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(func(w http.ResponseWriter, r *http.Request) {
 		seg2, seg3 := r.PathValue("seg2"), r.PathValue("seg3")
 		switch {
@@ -654,11 +638,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /json/ips", auth.RequireAdmin(sessions, authOpts, users.ServeIPs))
 	mux.HandleFunc("GET /get_resource_usage_history/{username}", auth.RequireLogin(sessions, authOpts, users.ServeResourceUsageHistory))
 	mux.HandleFunc("GET /client/disk/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserDiskInfo))
-	// /json/{userLogType}/{username} -- see ServeUserLog's doc comment for
-	// why this is registered with a whole wildcard segment rather than a
-	// literal "user-" prefix fused onto <log_type>. This has one more path
-	// segment than GET /json/{resource} above, so the two patterns don't
-	// collide.
+	// wildcard segment instead of a literal "user-" prefix, see ServeUserLog's comment; one more path segment than /json/{resource} above so they don't collide
 	mux.HandleFunc("GET /json/{userLogType}/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserLog))
 	mux.HandleFunc("GET /get_custom_message_for_user/{username}", auth.RequireLogin(sessions, authOpts, users.HandleCustomMessage))
 	mux.HandleFunc("POST /get_custom_message_for_user/{username}", auth.RequireLogin(sessions, authOpts, users.HandleCustomMessage))
@@ -683,15 +663,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /domains/log/", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/log/{domain_name}", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/stats/{current_username}/{domain_name}", auth.RequireAdmin(sessions, authOpts, goAccessStats.ServeStats))
-	// POST /domains/{feature}/toggle, POST /domains/dns/{domain_name},
-	// POST /domains/caddy/{domain_name}, POST /domains/config/{username},
-	// and POST /domains/ssl/{domain_name} all share the same two-segment
-	// shape and genuinely overlap at single URLs like /domains/dns/toggle
-	// or /domains/ssl/toggle -- "dns"/"caddy"/"config"/"ssl" are themselves
-	// valid {feature} values for the toggle route, so the ambiguity is
-	// real, and Go's ServeMux refuses to register genuinely overlapping
-	// patterns at all. Dispatched manually here rather than registered as
-	// five separate conflicting patterns.
+	// these overlap at URLs like /domains/dns/toggle since dns/caddy/config/ssl are also valid {feature} values, so dispatch manually instead of five conflicting patterns
 	mux.HandleFunc("POST /domains/{seg2}/{seg3}", auth.RequireAdmin(sessions, authOpts, func(w http.ResponseWriter, r *http.Request) {
 		seg2, seg3 := r.PathValue("seg2"), r.PathValue("seg3")
 		switch {
@@ -720,9 +692,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /services/admin/status", auth.RequireAdmin(sessions, authOpts, services.ServeAdminStatus))
 	mux.HandleFunc("GET /services/action-status", auth.RequireAdmin(sessions, authOpts, services.ServeActionStatus))
 	mux.HandleFunc("GET /services/monitored", auth.RequireAdmin(sessions, authOpts, services.ServeMonitored))
-	// SECURITY: /services/edit is guarded here just like every sibling
-	// route in this group. An unauthenticated config-write endpoint would
-	// be a real gap, so it's protected rather than left open.
+	// SECURITY: /services/edit needs the same guard as its siblings, don't leave a config-write endpoint unauthenticated
 	mux.HandleFunc("GET /services/edit", auth.RequireAdmin(sessions, authOpts, services.ServeEdit))
 	mux.HandleFunc("POST /services/edit", auth.RequireAdmin(sessions, authOpts, services.ServeEdit))
 	mux.HandleFunc("GET /service/{action}/{service_name}", auth.RequireAdmin(sessions, authOpts, services.HandleManageService))
@@ -839,15 +809,12 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /configservercsf/iframe/", auth.RequireAdmin(sessions, authOpts, firewall.ServeCSFIframe))
 	mux.HandleFunc("POST /configservercsf/iframe/", auth.RequireAdmin(sessions, authOpts, firewall.ServeCSFIframe))
 	mux.HandleFunc("GET /security/firewall", auth.RequireAdmin(sessions, authOpts, firewall.ServeFirewallSettings))
-	// csf.pl's own UI hardcodes this exact image URL (see ServeCSFImages);
-	// ServeMux matches it ahead of the general "/static/" pattern below
-	// since it's more specific, regardless of registration order.
+	// csf.pl's UI hardcodes this exact image URL, ServeMux matches it ahead of the general "/static/" pattern since it's more specific
 	mux.HandleFunc("GET /static/configservercsf/{filename...}", auth.RequireAdmin(sessions, authOpts, firewall.ServeCSFImages))
 	mux.HandleFunc("GET /login/token/{username}", auth.RequireLogin(sessions, authOpts, autologin.ServeLoginToken))
 	mux.HandleFunc("GET /domains/file-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeDomainTemplates))
 	mux.HandleFunc("POST /domains/file-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeDomainTemplates))
-	// No auth wrapper: authenticated instead by its own one-time HMAC code
-	// check against openpanel.config, not a login session.
+	// no auth wrapper, checks its own one-time HMAC code against openpanel.config instead
 	mux.HandleFunc("POST /send_email", mailer.ServeSendEmail)
 	mux.HandleFunc("GET /server/processes", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcesses))
 	mux.HandleFunc("GET /server/processes/{pid}/{action}", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcessAction))
@@ -855,8 +822,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
 	mux.HandleFunc("GET /security/imunify/", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyGUI))
 	mux.HandleFunc("GET /security/imunify/assets/static/{filename...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyStatic))
-	// Exempt from CSRF checks: proxies to a PHP app with its own CSRF
-	// handling, unrelated to gorilla/csrf's session-cookie-based checks.
+	// exempt from CSRF, proxies to a PHP app that handles its own CSRF
 	mux.HandleFunc("GET /imav/{path...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyPHP))
 	mux.HandleFunc("POST /imav/{path...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyPHP))
 	mux.HandleFunc("GET /security/waf", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFStatus))
@@ -873,22 +839,14 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /search/websites/{site_name}", auth.RequireAdmin(sessions, authOpts, search.ServeSearchWebsites))
 	mux.HandleFunc("GET /search/users", auth.RequireLogin(sessions, authOpts, search.ServeSearchUsers))
 	mux.HandleFunc("GET /search/users/{username}", auth.RequireLogin(sessions, authOpts, search.ServeSearchUsers))
-	// Wildcard fallback behind the more specific literal /domains routes
-	// above. Go's net/http.ServeMux has no "one or more segments" wildcard
-	// that doesn't also match the empty remainder, which would conflict
-	// with (and panic against) the exact "/domains/" registration above.
-	// A single-segment {domain_name} avoids that conflict at the cost of
-	// not matching multi-segment paths like "/domains/example.com/extra"
-	// (unreachable via the real UI, which never constructs such a URL).
+	// wildcard fallback behind the specific /domains routes above, single-segment {domain_name} avoids conflicting with the exact "/domains/" registration (ServeMux has no wildcard that skips the empty remainder)
 	mux.HandleFunc("GET /domains/{domain_name}", auth.RequireAdmin(sessions, authOpts, search.ServeDomainOwner))
 	mux.HandleFunc("GET /domains/dns-cluster", auth.RequireAdmin(sessions, authOpts, dnsCluster.ServeDNSCluster))
 	mux.HandleFunc("POST /domains/dns-cluster", auth.RequireAdmin(sessions, authOpts, dnsCluster.ServeDNSCluster))
 	mux.HandleFunc("GET /domains/dns-cluster/{ip}", auth.RequireAdmin(sessions, authOpts, dnsCluster.ServeDNSClusterInfo))
 	mux.HandleFunc("GET /emails/settings", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsSettings))
 	mux.HandleFunc("POST /emails/settings", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsSettings))
-	// SECURITY: these 5 routes previously had no auth decorator at all
-	// (see the comment above ServeUpdatePassword in emails.go) --
-	// RequireLogin closes that gap.
+	// SECURITY: these 5 routes had no auth decorator before, see the comment above ServeUpdatePassword in emails.go, RequireLogin closes that gap
 	mux.HandleFunc("POST /emails/api/update-password", auth.RequireLogin(sessions, authOpts, emails.ServeUpdatePassword))
 	mux.HandleFunc("POST /emails/api/quota-set", auth.RequireLogin(sessions, authOpts, emails.ServeQuotaSet))
 	mux.HandleFunc("POST /emails/api/quota-del", auth.RequireLogin(sessions, authOpts, emails.ServeQuotaDel))
@@ -926,8 +884,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /user/export/delete/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserExportDelete))
 	mux.HandleFunc("GET /import/transfer/", auth.RequireAdmin(sessions, authOpts, importer.ServeImportTransfer))
 	mux.HandleFunc("POST /import/transfer/", auth.RequireAdmin(sessions, authOpts, importer.ServeImportTransfer))
-	// No auth wrapper: these are public files, served without a
-	// login/admin decorator.
+	// no auth wrapper, these are public files
 	mux.HandleFunc("GET /{filename}", generalStatic.ServeFile)
 
 	csrfMiddleware := csrf.Protect(deriveCSRFKey(d.SecretKey),
@@ -943,20 +900,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	handler = auth.ValidateSessionIPMiddleware(sessions, authOpts)(handler)
 	handler = auth.WithUserLoader(sessions, d.AdminDB)(handler)
 
-	// /send_email is exempt from CSRF checks: it's authenticated by its own
-	// one-time HMAC code, not a browser session, so it can't carry a CSRF
-	// cookie/token pair. /imav/... is also exempt: it proxies to a PHP app
-	// with its own CSRF handling. /api/... is exempt too: every route in the
-	// api blueprint is bearer-token (JWT) authenticated, not session/cookie
-	// based, so there's no CSRF token to check in the first place --
-	// EXCEPT /api/tour/complete, /api/quickstart/dismiss, and
-	// /api/docker-tags, which all live under that path but are actually
-	// plain session-authenticated routes (registered directly in
-	// login.py/updates.py, not the api blueprint) and were never marked
-	// @csrf.exempt there, so they keep going through the normal CSRF check.
-	// gorilla/csrf has no first-class per-route exemption, so this splits
-	// the chain: everything else goes through csrfMiddleware, these bypass
-	// it entirely.
+	// /send_email (own HMAC code) and /imav/ (proxies a PHP app with its own CSRF) are exempt, and so is /api/ since it's bearer-token auth, except tour/complete, quickstart/dismiss, and docker-tags which are actually session-authenticated and still need the check; gorilla/csrf has no per-route exemption so we split the chain here instead
 	apiCSRFExemptExceptions := map[string]bool{
 		"/api/tour/complete":      true,
 		"/api/quickstart/dismiss": true,
@@ -975,31 +919,20 @@ func newHandler(d appDeps) (http.Handler, error) {
 		})
 	}(handler, withoutCSRF)
 	if !d.UseTLS {
-		// gorilla/csrf enforces a same-origin Referer/Origin check on every
-		// unsafe-method request unless it's explicitly told the request came
-		// in over plaintext HTTP (csrf.PlaintextHTTPRequest) -- otherwise a
-		// plain-HTTP deployment (the default before a domain/cert is
-		// configured, see bootstrap's cert-discovery logging above) would
-		// reject every POST with "referer not supplied" the moment a client
-		// doesn't send one, which not all HTTP clients do.
+		// gorilla/csrf checks Referer/Origin on unsafe methods unless told the request is plaintext HTTP, otherwise a plain-HTTP deployment (the default before a cert is set up) would reject POSTs missing a referer
 		next := handler
 		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			next.ServeHTTP(w, csrf.PlaintextHTTPRequest(r))
 		})
 	}
 
-	// Outermost: an optional network-level Basic Auth gate in front of the
-	// whole panel (see /security/basic_auth), checked before session
-	// cookies, CSRF, or routing even come into play.
+	// outermost: optional network-level Basic Auth gate, checked before sessions, CSRF, or routing
 	handler = auth.BasicAuthMiddleware(d.BasicAuthEnabled, d.BasicAuthUsername, d.BasicAuthPassword)(handler)
 
 	return handler, nil
 }
 
-// deriveCSRFKey keeps the CSRF signing key independently derived from the
-// same on-disk secret as the session key (see auth.deriveKey's doc comment
-// for why these shouldn't share key material), hashed down to exactly 32
-// bytes as gorilla/csrf's underlying AES-256 usage requires.
+// deriveCSRFKey derives the CSRF key from the same on-disk secret as the session key but independently (see auth.deriveKey for why), hashed to the 32 bytes gorilla/csrf's AES-256 needs
 func deriveCSRFKey(secret string) []byte {
 	sum := sha256.Sum256([]byte("csrf:" + secret))
 	return sum[:]
@@ -1027,10 +960,7 @@ func osHostname() string {
 	return h
 }
 
-// detectPublicIP does not perform the external ip.openpanel.com/ifconfig.me
-// lookups (and their 1h cache) -- see the backlog -- this only does the
-// local fallback (open a UDP "connection" to a public IP to learn which
-// local interface/address routing would use).
+// detectPublicIP only does the local fallback (dial a UDP "connection" to learn the local routing address), not the ip.openpanel.com/ifconfig.me lookups, see backlog
 func detectPublicIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
@@ -1052,8 +982,7 @@ func openpanelVersion() string {
 	return strings.TrimSpace(string(out))
 }
 
-// adminPortAtStartup computes the admin port once at process startup, not
-// re-queried per-request.
+// adminPortAtStartup computes the admin port once at process startup, not re-queried per request
 func adminPortAtStartup() string {
 	out, err := exec.Command("opencli", "admin", "port").Output()
 	if err != nil {

@@ -1,17 +1,10 @@
-// Password hashing compatible with the Werkzeug security hash format, so
-// existing password hashes in users.db can be reused without forcing a
-// reset.
+// Password hashing compatible with Werkzeug's hash format, so existing hashes in users.db keep working without a forced reset.
 //
-// Format: "<method>$<salt>$<hash_hex>". Two methods exist in the wild:
-//   - "scrypt:n:r:p" (bare "scrypt" defaults to n=32768, r=8, p=1). Key
-//     length is 64 bytes.
-//   - "pbkdf2:hash_name:iterations" (bare "pbkdf2" defaults to
-//     sha256/600000). Key length is the underlying hash's size.
+// Format is "<method>$<salt>$<hash_hex>", with two methods in the wild:
+//   - "scrypt:n:r:p" (bare "scrypt" defaults n=32768, r=8, p=1), 64-byte key
+//   - "pbkdf2:hash_name:iterations" (bare "pbkdf2" defaults sha256/600000), key length is the hash's own size
 //
-// A hash starting with "$6$" is glibc's SHA-512-crypt instead (what `opencli
-// admin new`/`password` produce via `openssl passwd -6`) and is verified
-// separately -- it doesn't fit the "<method>$<salt>$<hash>" shape above,
-// since the salt itself is "$"-delimited from an optional rounds= prefix.
+// a "$6$" hash is glibc's SHA-512-crypt instead (what `opencli admin new`/`password` produce) and is verified separately since its salt is "$"-delimited from an optional rounds= prefix, not the shape above
 package auth
 
 import (
@@ -54,8 +47,7 @@ func CheckPasswordHash(pwhash, password string) bool {
 	return hmac.Equal([]byte(got), []byte(wantHash))
 }
 
-// GeneratePasswordHash hashes password using scrypt:32768:8:1 with a
-// 16-character salt.
+// GeneratePasswordHash hashes password using scrypt:32768:8:1 with a 16-character salt
 func GeneratePasswordHash(password string) (string, error) {
 	salt, err := randomSalt(16)
 	if err != nil {

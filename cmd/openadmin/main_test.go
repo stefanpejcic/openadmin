@@ -33,11 +33,7 @@ import (
 	"openadmin/internal/server"
 )
 
-// TestNewHandlerEndToEnd exercises the actual router + middleware chain
-// built by newHandler() -- the piece that isn't covered by any package's
-// own unit tests -- against scratch dependencies (no real system paths, no
-// root required): full login -> dashboard -> logout flow, CSRF enforcement
-// on POST /login, and that unauthenticated requests get redirected.
+// TestNewHandlerEndToEnd exercises the real router+middleware chain from newHandler() against scratch deps, no root needed: login -> dashboard -> logout, CSRF on POST /login, and redirects for unauthenticated requests
 func TestNewHandlerEndToEnd(t *testing.T) {
 	dir := t.TempDir()
 	origPath := admindb.Path
@@ -109,11 +105,7 @@ func TestNewHandlerEndToEnd(t *testing.T) {
 	resp.Body.Close()
 	token := extractCSRFToken(t, string(body))
 
-	// 3. POST without the CSRF token must be rejected, not silently
-	// accepted -- proves the middleware is actually wired in, not just
-	// present in the import graph. The status is 400 (not gorilla/csrf's
-	// own default 403), matching modules/general/errors.py's
-	// handle_csrf_error(), which is wired in as the CSRF error handler.
+	// 3. POST without the CSRF token must be rejected (400, our own handle_csrf_error, not gorilla/csrf's default 403), proving the middleware is actually wired in
 	resp, err = client.PostForm(srv.URL+"/login", url.Values{
 		"username": {"admin"},
 		"password": {"integration-test-password"},
@@ -137,9 +129,7 @@ func TestNewHandlerEndToEnd(t *testing.T) {
 	}
 	body, _ = io.ReadAll(resp.Body)
 	resp.Body.Close()
-	// A first-ever login lands on the onboarding wizard (see finalizeLogin
-	// in login.go), not the dashboard directly -- it hasn't been dismissed
-	// yet in this fresh test admindb.
+	// a first-ever login lands on the onboarding wizard (see finalizeLogin in login.go), not the dashboard, since it hasn't been dismissed in this fresh test admindb
 	if resp.Request.URL.Path != "/onboarding" {
 		t.Fatalf("expected successful login to land on onboarding, ended at %q (body: %s)", resp.Request.URL.Path, truncateBody(string(body)))
 	}
@@ -179,10 +169,7 @@ func TestNewHandlerEndToEnd(t *testing.T) {
 	resp.Body.Close()
 }
 
-// TestNewHandlerServesEmbeddedStaticAssets exercises the real "/static/"
-// and "/{filename}" routes wired in newHandler(), confirming the
-// go:embed-based static package (see static/static.go) is actually reached
-// through routing -- not just correct in GeneralStatic's own unit tests.
+// TestNewHandlerServesEmbeddedStaticAssets checks the real "/static/" and "/{filename}" routes in newHandler() actually reach the go:embed static package, not just GeneralStatic's own unit tests
 func TestNewHandlerServesEmbeddedStaticAssets(t *testing.T) {
 	dir := t.TempDir()
 	origPath := admindb.Path
@@ -220,8 +207,7 @@ func TestNewHandlerServesEmbeddedStaticAssets(t *testing.T) {
 	srv := httptest.NewServer(handler)
 	defer srv.Close()
 
-	// A bundled asset under static/dist, served via the embedded FS behind
-	// "/static/".
+	// a bundled asset under static/dist, served via the embedded FS behind "/static/"
 	resp, err := http.Get(srv.URL + "/static/dist/output.css")
 	if err != nil {
 		t.Fatal(err)
@@ -231,8 +217,7 @@ func TestNewHandlerServesEmbeddedStaticAssets(t *testing.T) {
 		t.Fatalf("expected /static/dist/output.css to be served from the embedded FS, got %d", resp.StatusCode)
 	}
 
-	// robots.txt has a bundled default and no admin override on this test
-	// box, so it should come from the same embedded FS via GeneralStatic.
+	// robots.txt has a bundled default and no admin override here, so it should come from the embedded FS via GeneralStatic
 	resp, err = http.Get(srv.URL + "/robots.txt")
 	if err != nil {
 		t.Fatal(err)
@@ -242,8 +227,7 @@ func TestNewHandlerServesEmbeddedStaticAssets(t *testing.T) {
 		t.Fatalf("expected /robots.txt to be served from the embedded default, got %d", resp.StatusCode)
 	}
 
-	// custom.css has no bundled default and nothing is dropped in
-	// GeneralOverrideDir, so it must 404 rather than panic or 500.
+	// custom.css has no bundled default and nothing dropped in GeneralOverrideDir, so it must 404 not panic or 500
 	resp, err = http.Get(srv.URL + "/custom.css")
 	if err != nil {
 		t.Fatal(err)
@@ -266,25 +250,11 @@ func extractCSRFToken(t *testing.T, page string) string {
 	if end == -1 {
 		t.Fatalf("malformed CSRF token field in login page HTML")
 	}
-	// html/template HTML-escapes attribute values (e.g. "+" -> "&#43;"); a
-	// real browser decodes this automatically when reading the DOM
-	// attribute, so the test must too rather than submitting the escaped
-	// literal text back as the form value.
+	// html/template HTML-escapes attribute values (e.g. "+" -> "&#43;"), a real browser decodes that reading the DOM so the test must too, not submit the escaped literal back as the form value
 	return html.UnescapeString(rest[:end])
 }
 
-// TestTerminalWebsocketOverRealTLSServer is a full end-to-end regression
-// test for a real bug that reached production: /ws/terminal 500'd with
-// "response does not implement http.Hijacker" whenever a browser negotiated
-// HTTP/2 over TLS, since gorilla/websocket's Upgrade() needs to hijack the
-// raw net.Conn, which HTTP/2 doesn't support. internal/server/server_test.go
-// already regression-tests that Run() disables HTTP/2 at the ALPN level in
-// isolation, but that test doesn't exercise the actual authenticated
-// /ws/terminal route through the real middleware chain -- this test does,
-// using the actual newHandler()+server.Run() code path (not
-// httptest.NewTLSServer, which has its own independent TLS setup and would
-// never have caught this bug), with a real login and a real TLS client that
-// offers "h2" via ALPN exactly like a browser does.
+// TestTerminalWebsocketOverRealTLSServer regression-tests a real prod bug: /ws/terminal 500'd with "response does not implement http.Hijacker" when a browser negotiated HTTP/2 over TLS, since gorilla/websocket needs to hijack the raw conn. server_test.go already checks Run() disables HTTP/2 at the ALPN level in isolation, but this exercises the real authenticated route through newHandler()+server.Run() with a real TLS client offering h2, which httptest.NewTLSServer wouldn't have caught
 func TestTerminalWebsocketOverRealTLSServer(t *testing.T) {
 	dir := t.TempDir()
 	origPath := admindb.Path
@@ -328,10 +298,7 @@ func TestTerminalWebsocketOverRealTLSServer(t *testing.T) {
 	handlers.TerminalDisableFlagPath = filepath.Join(dir, "disable_openadmin_terminal_ui")
 	t.Cleanup(func() { handlers.TerminalDisableFlagPath = origDisable })
 
-	// Wrap with the real AccessLogMiddleware, exactly like main() does --
-	// this middleware wraps http.ResponseWriter in a statusRecorder that
-	// must forward http.Hijacker or every websocket route 500s regardless
-	// of the HTTP/1.1-vs-2 ALPN outcome (a real bug this test caught).
+	// wrap with the real AccessLogMiddleware like main() does, its statusRecorder must forward http.Hijacker or every websocket route 500s regardless of ALPN (a real bug this test caught)
 	origAccessLog := bootstrap.AccessLogPath
 	bootstrap.AccessLogPath = filepath.Join(dir, "access.log")
 	t.Cleanup(func() { bootstrap.AccessLogPath = origAccessLog })
@@ -358,10 +325,7 @@ func TestTerminalWebsocketOverRealTLSServer(t *testing.T) {
 	}
 	client.Jar = jar
 
-	// Wait for the server to actually be listening, then fetch the login
-	// page for a real CSRF token in the same request (retrying the ready
-	// check via a second GET would issue a second, different CSRF cookie
-	// negotiation and desync the token from what the client jar sends back).
+	// wait for the server to be listening, then fetch the login page for a CSRF token in the same request, a second ready-check GET would issue a different CSRF cookie and desync the token from what the client jar sends
 	var body []byte
 	deadline := time.Now().Add(3 * time.Second)
 	for {
@@ -378,11 +342,7 @@ func TestTerminalWebsocketOverRealTLSServer(t *testing.T) {
 	}
 	token := extractCSRFToken(t, string(body))
 
-	// gorilla/csrf additionally requires a matching Referer header on any
-	// state-changing request made over HTTPS (a real browser always sends
-	// one on a same-origin form submit; a bare http.Client PostForm doesn't
-	// set one at all, which would otherwise fail this check with the same
-	// generic "CSRF token missing or incorrect" error).
+	// gorilla/csrf also requires a matching Referer on state-changing HTTPS requests, a browser always sends one but bare http.Client PostForm doesn't, so set it manually or the check fails
 	form := url.Values{
 		"username":   {"admin"},
 		"password":   {"integration-test-password"},
@@ -404,9 +364,7 @@ func TestTerminalWebsocketOverRealTLSServer(t *testing.T) {
 		t.Fatalf("login failed, still on /login. status=%d body=%s", resp.StatusCode, truncateBody(string(loginBody)))
 	}
 
-	// The actual regression check: a real WebSocket client, over TLS,
-	// offering h2/http1.1 via ALPN like a real browser, hitting the real
-	// authenticated /ws/terminal route through the real middleware chain.
+	// the actual regression check: a real TLS WebSocket client offering h2/http1.1 via ALPN, hitting the real authenticated /ws/terminal route
 	dialer := websocket.Dialer{
 		Jar: jar,
 		TLSClientConfig: &tls.Config{

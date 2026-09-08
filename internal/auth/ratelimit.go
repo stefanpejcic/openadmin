@@ -6,9 +6,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// PerIPLimiter is a generic per-IP token bucket used for rate limiting the
-// login and passkey endpoints (see login.go). State is kept in memory only,
-// so a restart clears all limits.
+// PerIPLimiter is a generic per-IP token bucket for rate limiting the login and passkey endpoints (see login.go), state is in memory only so a restart clears all limits
 type PerIPLimiter struct {
 	mu       sync.Mutex
 	limiters map[string]*rate.Limiter
@@ -16,8 +14,7 @@ type PerIPLimiter struct {
 	burst    int
 }
 
-// NewPerIPLimiter creates a limiter allowing `burst` requests immediately
-// and refilling at `perMinute` requests/minute thereafter.
+// NewPerIPLimiter creates a limiter allowing `burst` requests immediately, refilling at `perMinute` requests/minute after
 func NewPerIPLimiter(perMinute, burst int) *PerIPLimiter {
 	return &PerIPLimiter{
 		limiters: make(map[string]*rate.Limiter),

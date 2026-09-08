@@ -9,19 +9,15 @@ import (
 	"openadmin/internal/server"
 )
 
-// Options bundles the config-driven knobs the middleware needs, injected
-// explicitly (rather than reaching into a global config singleton) so
-// behavior is easy to unit test and easy to see at the call site.
+// Options bundles the config-driven knobs the middleware needs, injected explicitly instead of a global config singleton so it's easy to test and see at the call site
 type Options struct {
-	// DemoMode disables non-GET requests while the panel is running in demo mode.
+	// disables non-GET requests while the panel is running in demo mode
 	DemoMode bool
-	// ValidateSessionIP enables the IP-pinning check that terminates a
-	// session if the client's IP changes mid-session.
+	// terminates a session if the client's IP changes mid-session
 	ValidateSessionIP bool
 }
 
-// demoModeBlocked rejects non-GET requests with a flash message while demo
-// mode is on, redirecting back to the referring page (or /dashboard).
+// demoModeBlocked rejects non-GET requests with a flash message while demo mode is on, redirecting back to the referring page or /dashboard
 func demoModeBlocked(w http.ResponseWriter, r *http.Request, mgr *Manager, opts Options) bool {
 	if !opts.DemoMode || r.Method == http.MethodGet {
 		return false
@@ -35,10 +31,7 @@ func demoModeBlocked(w http.ResponseWriter, r *http.Request, mgr *Manager, opts 
 	return true
 }
 
-// RequireLogin redirects anonymous requests to /login?next=<relative path>.
-// Using a relative path (rather than an absolute URL) makes the redirect
-// inherently same-origin, so there's no need for a separate same-domain
-// guard on next -- a relative path can't point off-domain.
+// RequireLogin redirects anonymous requests to /login?next=<relative path>. A relative path keeps the redirect same-origin so there's no need for a separate same-domain guard.
 func RequireLogin(mgr *Manager, opts Options, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !IsAuthenticated(r) {
@@ -52,8 +45,7 @@ func RequireLogin(mgr *Manager, opts Options, next http.HandlerFunc) http.Handle
 	}
 }
 
-// RequireAdmin requires an authenticated session (like RequireLogin) plus
-// rejects the "reseller" role with a 403.
+// RequireAdmin is RequireLogin plus a 403 for the "reseller" role
 func RequireAdmin(mgr *Manager, opts Options, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !IsAuthenticated(r) {
@@ -76,9 +68,7 @@ func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login?next="+url.QueryEscape(next), http.StatusSeeOther)
 }
 
-// ValidateSessionIPMiddleware terminates a session if the client's current
-// IP no longer matches the IP the session was established from. Skipped for
-// /api, /login, /send_email, and /static, and gated by opts.ValidateSessionIP.
+// ValidateSessionIPMiddleware terminates a session if the client's current IP no longer matches the one the session was established from, skipped for /api, /login, /send_email, /static, and gated by opts.ValidateSessionIP
 func ValidateSessionIPMiddleware(mgr *Manager, opts Options) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -114,14 +104,7 @@ func shouldSkipIPValidation(path string) bool {
 	}
 }
 
-// BasicAuthMiddleware gates every request behind an HTTP Basic Auth prompt
-// when enabled, on top of (and before) the panel's own session-based login.
-// It's a network-level challenge -- like an old-style htaccess prompt in
-// front of the whole app -- so it covers /login itself. /api, /send_email,
-// and /imav are exempt: they're authenticated by their own bearer
-// token/HMAC/proxy scheme rather than a browser, and /api in particular
-// already uses the Authorization header for its bearer token, which a Basic
-// challenge would collide with.
+// BasicAuthMiddleware gates every request behind an HTTP Basic Auth prompt when enabled, before the panel's own session login, like an old-style htaccess prompt covering /login too. /api, /send_email, /imav are exempt since they're authenticated by their own bearer/HMAC/proxy scheme, and /api's Authorization header would collide with a Basic challenge anyway.
 func BasicAuthMiddleware(enabled bool, username, password string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if !enabled {
