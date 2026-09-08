@@ -604,6 +604,10 @@ func (d *Dashboard) ServeResourceUsage(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, loadUsageSnapshot())
 	case "cpu":
 		writeJSON(w, cpuUsageSnapshot())
+	case "io":
+		writeJSON(w, ioUsageSnapshot())
+	case "network":
+		writeJSON(w, networkUsageSnapshot())
 	default:
 		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("Invalid resource '%s' requested", resource))
 	}
@@ -677,6 +681,88 @@ func cpuUsageSnapshot() map[string]float64 {
 			percent = (1 - idleDelta/totalDelta) * 100
 		}
 		result[fmt.Sprintf("core_%d", i)] = math.Round(percent*10) / 10
+	}
+	return result
+}
+
+// ioUsageSnapshot reads per-device disk I/O counters from /proc/diskstats.
+// Field positions and the sectors-to-bytes conversion (x 512) follow the
+// kernel's documented diskstats format (Documentation/admin-guide/iostats.rst).
+// loop and ram devices are skipped as noise; everything else (including
+// partitions) is reported, one entry per device name.
+func ioUsageSnapshot() map[string]interface{} {
+	raw, err := os.ReadFile("/proc/diskstats")
+	if err != nil {
+		return map[string]interface{}{}
+	}
+	const sectorSize = 512
+
+	result := map[string]interface{}{}
+	for _, line := range strings.Split(string(raw), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 14 {
+			continue
+		}
+		name := fields[2]
+		if strings.HasPrefix(name, "loop") || strings.HasPrefix(name, "ram") {
+			continue
+		}
+		get := func(i int) uint64 {
+			v, _ := strconv.ParseUint(fields[i], 10, 64)
+			return v
+		}
+		result[name] = map[string]interface{}{
+			"read_count":  get(3),
+			"write_count": get(7),
+			"read_bytes":  get(5) * sectorSize,
+			"write_bytes": get(9) * sectorSize,
+			"read_time":   get(6),
+			"write_time":  get(10),
+			"busy_time":   get(12),
+		}
+	}
+	return result
+}
+
+// networkUsageSnapshot reads per-interface network counters from
+// /proc/net/dev. Field order matches /proc/net/dev's documented layout:
+// 8 receive counters (bytes, packets, errs, drop, fifo, frame, compressed,
+// multicast) followed by 8 transmit counters (bytes, packets, errs, drop,
+// fifo, colls, carrier, compressed).
+func networkUsageSnapshot() map[string]interface{} {
+	raw, err := os.ReadFile("/proc/net/dev")
+	if err != nil {
+		return map[string]interface{}{}
+	}
+
+	result := map[string]interface{}{}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if !strings.Contains(line, ":") {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		iface := strings.TrimSpace(parts[0])
+		if iface == "" {
+			continue
+		}
+		fields := strings.Fields(parts[1])
+		if len(fields) < 16 {
+			continue
+		}
+		get := func(i int) uint64 {
+			v, _ := strconv.ParseUint(fields[i], 10, 64)
+			return v
+		}
+		result[iface] = map[string]interface{}{
+			"bytes_recv":   get(0),
+			"packets_recv": get(1),
+			"errin":        get(2),
+			"dropin":       get(3),
+			"bytes_sent":   get(8),
+			"packets_sent": get(9),
+			"errout":       get(10),
+			"dropout":      get(11),
+		}
 	}
 	return result
 }
