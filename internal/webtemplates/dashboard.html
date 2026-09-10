@@ -287,9 +287,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
 const renderNewsItems = (items) => {
     newsContent.innerHTML = '';
-    items.forEach(({ title, description, slug, formattedDate }) => {
+    items.forEach(({ title, description, slug, image, formattedDate }) => {
         const newsItemDiv = document.createElement('div');
         newsItemDiv.classList.add('flex', 'items-center', 'py-2');
+
+        if (image) {
+            const imgLink = document.createElement('a');
+            imgLink.href = `https://openpanel.com/blog/${slug}`;
+            imgLink.target = '_blank';
+            const imgElement = document.createElement('img');
+            imgElement.src = image;
+            imgElement.alt = title;
+            imgElement.classList.add('h-12', 'w-12', 'flex-shrink-0', 'rounded-md', 'object-cover', 'me-3');
+            imgElement.onerror = () => imgLink.remove();
+            imgLink.appendChild(imgElement);
+            newsItemDiv.appendChild(imgLink);
+        }
 
         const contentDiv = document.createElement('div');
         contentDiv.classList.add('flex-1');
