@@ -274,6 +274,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	apiAuth := &handlers.APIAuth{DB: d.AdminDB, MySQL: d.MySQL, SecretKey: d.SecretKey}
 	apiWelcome := &handlers.APIWelcome{DB: d.AdminDB, SecretKey: d.SecretKey, Limiter: loginRateLimiter}
+	apiLogin := &handlers.APILogin{DB: d.AdminDB, Sessions: sessions, Limiter: loginRateLimiter}
 	apiSettings := &handlers.APISettings{Sessions: sessions, SecretKey: d.SecretKey}
 	apiUsers := &handlers.APIUsers{MySQL: d.MySQL, PublicIP: d.PublicIP}
 	apiDomains := &handlers.APIDomains{MySQL: d.MySQL}
@@ -335,6 +336,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/", handlers.RequireAPIFeatureEnabled(apiWelcome.ServeWelcome))
 	mux.HandleFunc("POST /api/", handlers.RequireAPIFeatureEnabled(apiWelcome.ServeWelcome))
 	mux.HandleFunc("GET /api/whoami", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiWelcome.ServeWhoami)))
+	mux.HandleFunc("POST /api/login", handlers.RequireAPIFeatureEnabled(apiLogin.HandleAPILogin))
 
 	mux.HandleFunc("GET /api/users", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUsers.ServeUsers)))
 	mux.HandleFunc("POST /api/users", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUsers.ServeUsers)))
@@ -812,6 +814,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	// csf.pl's UI hardcodes this exact image URL, ServeMux matches it ahead of the general "/static/" pattern since it's more specific
 	mux.HandleFunc("GET /static/configservercsf/{filename...}", auth.RequireAdmin(sessions, authOpts, firewall.ServeCSFImages))
 	mux.HandleFunc("GET /login/token/{username}", auth.RequireLogin(sessions, authOpts, autologin.ServeLoginToken))
+	mux.HandleFunc("GET /login/sso/{token}", apiLogin.HandleSSOLogin)
 	mux.HandleFunc("GET /domains/file-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeDomainTemplates))
 	mux.HandleFunc("POST /domains/file-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeDomainTemplates))
 	// no auth wrapper, checks its own one-time HMAC code against openpanel.config instead
