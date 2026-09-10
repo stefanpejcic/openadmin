@@ -373,6 +373,13 @@ var funcMap = template.FuncMap{
 		}
 		return template.JS(strconv.Itoa(*v))
 	},
+	// nl2br escapes s and turns literal `\n` (sentinel.sh's flattened
+	// newline marker, see unescapeNewlines) into <br> so multi-line
+	// notification text wraps onto new lines instead of running on.
+	"nl2br": func(s string) template.HTML {
+		escaped := template.HTMLEscapeString(s)
+		return template.HTML(strings.ReplaceAll(escaped, `\n`, "<br>"))
+	},
 }
 
 var templates = template.Must(template.New("").Funcs(funcMap).ParseFS(files, "*.html"))
