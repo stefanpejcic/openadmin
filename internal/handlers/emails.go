@@ -595,7 +595,7 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 			"Emails":           nil,
 			"EmailPairs":       [][2]string{},
 			"Flashes":          auth.PopFlashes(w, r, e.Sessions),
-		}, r, "Emails"))
+		}, r, "Accounts"))
 		return
 	}
 
@@ -613,7 +613,7 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 		"Emails":           accounts,
 		"EmailPairs":       pairs,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
-	}, r, "Emails"))
+	}, r, "Accounts"))
 }
 
 func getEmailQueue() []map[string]interface{} {
