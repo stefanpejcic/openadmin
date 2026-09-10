@@ -141,6 +141,38 @@ func TestRequireEnterpriseGate(t *testing.T) {
 	}
 }
 
+// TestBackgroundRecheckDoesNotDeadlock guards against the pattern
+// StartBackgroundRecheck's goroutine must not fall back into: holding
+// c.mu.Lock() across a checkStartup() call, which locks c.mu itself
+// (RWMutex isn't reentrant, so that wedges every future Valid() call).
+func TestBackgroundRecheckDoesNotDeadlock(t *testing.T) {
+	withScratchCache(t)
+	withMockAPI(t, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "<response><status>Active</status></response>")
+	})
+
+	c := NewChecker("enterprise-test-key", "203.0.113.1")
+
+	done := make(chan struct{})
+	go func() {
+		valid := c.checkStartup()
+		c.mu.Lock()
+		c.valid = valid
+		c.mu.Unlock()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("recheck cycle deadlocked")
+	}
+
+	if !c.Valid() {
+		t.Fatal("expected Valid() to return true and not hang after a recheck cycle")
+	}
+}
+
 func writeStaleCache(t *testing.T, c cacheFile) {
 	t.Helper()
 	f, err := os.Create(CacheFilePath)

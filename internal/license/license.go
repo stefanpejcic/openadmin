@@ -94,8 +94,10 @@ func (c *Checker) StartBackgroundRecheck() {
 	go func() {
 		for {
 			time.Sleep(c.recheckInterval())
+			// checkStartup locks c.mu itself for hasFailure/failureSince, so don't hold it here too -- RWMutex isn't reentrant and that deadlocks every future Valid() call
+			valid := c.checkStartup()
 			c.mu.Lock()
-			c.valid = c.checkStartup()
+			c.valid = valid
 			c.mu.Unlock()
 		}
 	}()
