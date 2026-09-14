@@ -142,6 +142,98 @@ func TestServeGeneralGetRendersCurrentValues(t *testing.T) {
 	}
 }
 
+// TestServeGeneralGetRendersSSLSectionViaOpencli covers the new SSL
+// section's status for a domain opencli manages.
+func TestServeGeneralGetRendersSSLSectionViaOpencli(t *testing.T) {
+	withScratchGeneralGetters(t, "2083", "2087", "srv.example.net", "openpanel")
+
+	confDir := withScratchCaddyDomainsDir(t)
+	if err := os.WriteFile(filepath.Join(confDir, "srv.example.net.conf"), []byte("srv.example.net {\n}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	origOpencli := opencliSSLRun
+	opencliSSLRun = func(args ...string) (string, string, int, error) {
+		if strings.Join(args, " ") == "srv.example.net status" {
+			return "AutoSSL\n", "", 0, nil
+		}
+		return "", "not stubbed: " + strings.Join(args, " "), 1, nil
+	}
+	t.Cleanup(func() { opencliSSLRun = origOpencli })
+
+	g := &General{}
+	srv, client := newGeneralTestServer(t, g)
+
+	resp, err := client.Get(srv.URL + "/settings/general")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	if !strings.Contains(got, "Auto SSL") {
+		t.Fatalf("expected Auto SSL status, got %s", truncate(got))
+	}
+	if !strings.Contains(got, `href="/domains/ssl/srv.example.net"`) {
+		t.Fatalf("expected a Manage SSL link to /domains/ssl/srv.example.net, got %s", truncate(got))
+	}
+}
+
+// TestServeGeneralGetRendersSSLSectionViaCaddyfileFallback covers the SSL
+// section for a domain with no per-user conf file (the panel's own
+// hostname), which is read straight from the main Caddyfile instead.
+func TestServeGeneralGetRendersSSLSectionViaCaddyfileFallback(t *testing.T) {
+	withScratchGeneralGetters(t, "2083", "2087", "panel.example.net", "openpanel")
+	withScratchCaddyDomainsDir(t) // left empty -> domainConfMissingOrEmpty is true
+
+	dir := t.TempDir()
+	caddyfilePath := filepath.Join(dir, "Caddyfile")
+	if err := os.WriteFile(caddyfilePath, []byte("panel.example.net {\n  reverse_proxy localhost:2087\n\n  tls {\n    on_demand\n  }\n}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	orig := sslMainCaddyfilePath
+	sslMainCaddyfilePath = caddyfilePath
+	t.Cleanup(func() { sslMainCaddyfilePath = orig })
+
+	g := &General{}
+	srv, client := newGeneralTestServer(t, g)
+
+	resp, err := client.Get(srv.URL + "/settings/general")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	if !strings.Contains(got, "Auto SSL") {
+		t.Fatalf("expected Auto SSL status from the Caddyfile fallback, got %s", truncate(got))
+	}
+	if !strings.Contains(got, `href="/domains/ssl/panel.example.net"`) {
+		t.Fatalf("expected a Manage SSL link to /domains/ssl/panel.example.net, got %s", truncate(got))
+	}
+}
+
+func TestServeGeneralGetSSLSectionWithNoDomain(t *testing.T) {
+	withScratchGeneralGetters(t, "2083", "2087", "", "openpanel")
+
+	g := &General{}
+	srv, client := newGeneralTestServer(t, g)
+
+	resp, err := client.Get(srv.URL + "/settings/general")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	if !strings.Contains(got, "No domain configured for the panel.") {
+		t.Fatalf("expected the no-domain message, got %s", truncate(got))
+	}
+	if strings.Contains(got, "Manage SSL") {
+		t.Fatalf("expected no Manage SSL link without a domain, got %s", truncate(got))
+	}
+}
+
 func TestServeGeneralGetJSON(t *testing.T) {
 	withScratchGeneralGetters(t, "2083", "2087", "srv.example.net", "openpanel")
 

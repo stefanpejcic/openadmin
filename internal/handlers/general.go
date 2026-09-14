@@ -114,6 +114,31 @@ func generalHostname() string {
 	return h
 }
 
+// generalSSLStatus reports the current SSL setting ("autossl"/"custom
+// ssl"/"") for the panel's own domain, for the new SSL section on this
+// page. Mirrors ServeSSL's own status resolution (domains_ssl.go/
+// domains_ssl_caddyfile.go): opencli for a domain it manages, the main
+// Caddyfile's own `tls` directive for one it doesn't (e.g. this domain,
+// which is configured directly in the Caddyfile rather than as a
+// per-user domain).
+func generalSSLStatus(domain string) string {
+	if domain == "" || !isDomain(domain) {
+		return ""
+	}
+	if domainConfMissingOrEmpty(domain) {
+		setting, _, found := caddyfileDomainSSLInfo(domain)
+		if !found {
+			return ""
+		}
+		return setting
+	}
+	stdout, _, exitCode, err := opencliSSLRun(domain, "status")
+	if err != nil || exitCode != 0 {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(stdout))
+}
+
 // ServeGeneral handles GET/POST /settings/general.
 func (g *General) ServeGeneral(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -212,13 +237,16 @@ func (g *General) ServeGeneral(w http.ResponseWriter, r *http.Request) {
 		devModeStr = "on"
 	}
 
+	forceDomain := generalAdminDomain()
 	data := map[string]interface{}{
-		"ServerHostname": generalHostname(),
-		"Port":           generalOpenpanelPort(),
-		"AdminPort":      generalOpenadminPort(),
-		"Proxy":          generalOpenpanelProxy(),
-		"ForceDomain":    generalAdminDomain(),
-		"DevMode":        devModeStr,
+		"ServerHostname":      generalHostname(),
+		"Port":                generalOpenpanelPort(),
+		"AdminPort":           generalOpenadminPort(),
+		"Proxy":               generalOpenpanelProxy(),
+		"ForceDomain":         forceDomain,
+		"ForceDomainIsDomain": isDomain(forceDomain),
+		"SSLCurrentSetting":   generalSSLStatus(forceDomain),
+		"DevMode":             devModeStr,
 	}
 
 	if r.URL.Query().Get("output") == "json" {
