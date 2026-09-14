@@ -9,14 +9,16 @@
 // rather than fixing them, since real users may already depend on (or have
 // worked around) this exact behavior:
 //
-//  1. Every POST with action=custom or action=autossl ends by trying to
-//     redirect to a route name that doesn't actually exist anywhere in this
-//     app. Building that URL always fails, turning into a bare 500 response.
-//     So today, clicking "Switch back to AutoSSL" or submitting the
-//     custom-certificate form always 500s -- the underlying opencli command
-//     still runs and its flash message is still queued before the crash,
-//     but the user only sees it if they separately navigate to another page
-//     afterward.
+//  1. Every POST with action=autossl ends by trying to redirect to a route
+//     name that doesn't actually exist anywhere in this app. Building that
+//     URL always fails, turning into a bare 500 response. So today,
+//     clicking "Switch back to AutoSSL" always 500s -- the underlying
+//     opencli command still runs and its flash message is still queued
+//     before the crash, but the user only sees it if they separately
+//     navigate to another page afterward. (action=custom used to share this
+//     bug too, back when it took filesystem paths instead of a pasted
+//     cert/key; now that it stages the pasted content itself, it redirects
+//     back to the SSL page properly instead.)
 //  2. In the GET-rendering code, `keys` is only ever assigned once the SSL
 //     status check succeeds; if the `opencli domains-ssl <domain> status`
 //     call fails (nonzero exit, or the subprocess call itself errors),
@@ -32,7 +34,9 @@ package handlers
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -69,6 +73,67 @@ var opencliSSLRun = func(args ...string) (stdout, stderr string, exitCode int, e
 		return outBuf.String(), errBuf.String(), 0, runErr
 	}
 	return outBuf.String(), errBuf.String(), 0, nil
+}
+
+// domainWhoOwnsContextRun runs `opencli domains-whoowns <domain> --context`,
+// which prints "<username> <context>" for the domain's owner. Injectable so
+// tests never shell out to a real opencli binary.
+var domainWhoOwnsContextRun = func(domain string) (string, error) {
+	out, err := exec.Command("opencli", "domains-whoowns", domain, "--context").Output()
+	return string(out), err
+}
+
+// domainOwnerContext resolves the docker-context (Linux username under
+// /home/) that owns domainName, by shelling out to the same
+// domains-whoowns lookup the ssl.sh script itself uses internally.
+func domainOwnerContext(domainName string) (context string, err error) {
+	out, runErr := domainWhoOwnsContextRun(domainName)
+	if runErr != nil {
+		return "", runErr
+	}
+	fields := strings.Fields(strings.TrimSpace(out))
+	if len(fields) < 2 {
+		return "", fmt.Errorf("could not determine the owner of %q: %s", domainName, strings.TrimSpace(out))
+	}
+	return fields[1], nil
+}
+
+// sslCustomDataHomeRoot is the base directory under which every user's
+// docker-data volumes live ("/home" in production); overridden in tests so
+// they never touch a real /home directory.
+var sslCustomDataHomeRoot = "/home"
+
+// installCustomSSL writes the pasted certificate/key content to the
+// domain owner's html data volume (the same place opencli's `domains-ssl
+// <domain> custom <cert> <key>` expects them, mirroring how the OpenPanel
+// user panel stages a pasted cert before calling the same command) and
+// invokes it. The temp files are removed again once opencli has read them.
+func installCustomSSL(domainName, certificate, privateKey string) (stdout, stderr string, exitCode int, err error) {
+	context, ownerErr := domainOwnerContext(domainName)
+	if ownerErr != nil {
+		return "", "", 0, ownerErr
+	}
+
+	dataDir := filepath.Join(sslCustomDataHomeRoot, context, "docker-data/volumes", context+"_html_data", "_data")
+	if mkErr := os.MkdirAll(dataDir, 0o755); mkErr != nil {
+		return "", "", 0, mkErr
+	}
+
+	certFile := domainName + "_tmp.crt"
+	keyFile := domainName + "_tmp.key"
+	certPath := filepath.Join(dataDir, certFile)
+	keyPath := filepath.Join(dataDir, keyFile)
+
+	if writeErr := os.WriteFile(certPath, []byte(certificate), 0o644); writeErr != nil {
+		return "", "", 0, writeErr
+	}
+	defer os.Remove(certPath)
+	if writeErr := os.WriteFile(keyPath, []byte(privateKey), 0o644); writeErr != nil {
+		return "", "", 0, writeErr
+	}
+	defer os.Remove(keyPath)
+
+	return opencliSSLRun(domainName, "custom", sslCustomKeysHomeDir+certFile, sslCustomKeysHomeDir+keyFile)
 }
 
 // resolveSSLKeyPath makes the path absolute (relative to the process's
@@ -114,30 +179,48 @@ func (h *SSLPage) ServeSSL(w http.ResponseWriter, r *http.Request) {
 
 		switch action {
 		case "custom":
-			// Python's truthiness check here ("not public_path or not
-			// private_path") can never fire: Path(...).resolve() always
-			// returns a truthy Path, even for an empty input string
-			// (resolves to the cwd). That branch is dead code in the
-			// original and is not reproduced.
-			publicPath := resolveSSLKeyPath(r.PostFormValue("public_path"))
-			privatePath := resolveSSLKeyPath(r.PostFormValue("private_path"))
+			// Pasted directly by the user now (matching the OpenPanel user
+			// panel), rather than a path to a file already sitting on
+			// disk -- so this no longer goes through
+			// resolveSSLKeyPath/isRelativeToSSLHomeDir at all. Those stay
+			// in place below only because the JSON API
+			// (api_domain_stats.go) still accepts path-based custom SSL.
+			certificate := strings.TrimSpace(r.PostFormValue("certificate"))
+			privateKey := strings.TrimSpace(r.PostFormValue("private_key"))
 
-			if !isRelativeToSSLHomeDir(publicPath) {
-				auth.AddFlash(w, r, h.Sessions, "Public key path must be inside '/var/www/html/' directory.", "error")
-				panicDomainCustomSSLBuildError()
+			switch {
+			case certificate == "" || privateKey == "":
+				auth.AddFlash(w, r, h.Sessions, "Certificate and private key are required.", "error")
+			case !strings.Contains(certificate, "BEGIN CERTIFICATE"):
+				auth.AddFlash(w, r, h.Sessions, "Invalid certificate.", "error")
+			case !strings.Contains(privateKey, "BEGIN") || !strings.Contains(privateKey, "PRIVATE KEY"):
+				auth.AddFlash(w, r, h.Sessions, "Invalid private key.", "error")
+			default:
+				if domainConfMissingOrEmpty(domainName) {
+					// Not an opencli-managed (per-user) domain -- most
+					// notably the panel's own hostname, which lives
+					// directly in the main Caddyfile. Edit that file's
+					// `tls` directive instead of shelling out to opencli.
+					message, installErr := applyCaddyfileCustomSSL(domainName, certificate, privateKey)
+					if installErr != nil {
+						auth.AddFlash(w, r, h.Sessions, "An error occurred: "+installErr.Error(), "error")
+					} else {
+						auth.AddFlash(w, r, h.Sessions, message, "success")
+					}
+				} else {
+					stdout, stderr, exitCode, installErr := installCustomSSL(domainName, certificate, privateKey)
+					switch {
+					case installErr != nil:
+						auth.AddFlash(w, r, h.Sessions, "An error occurred: "+installErr.Error(), "error")
+					case exitCode == 0:
+						auth.AddFlash(w, r, h.Sessions, strings.TrimSpace(stdout), "success")
+					default:
+						auth.AddFlash(w, r, h.Sessions, strings.TrimSpace(stderr), "error")
+					}
+				}
 			}
-			if !isRelativeToSSLHomeDir(privatePath) {
-				auth.AddFlash(w, r, h.Sessions, "Private key path must be inside '/var/www/html/' directory.", "error")
-				panicDomainCustomSSLBuildError()
-			}
-
-			stdout, stderr, exitCode, err := opencliSSLRun(domainName, "custom", publicPath, privatePath)
-			if err == nil && exitCode == 0 {
-				auth.AddFlash(w, r, h.Sessions, strings.TrimSpace(stdout), "success")
-			} else if err == nil {
-				auth.AddFlash(w, r, h.Sessions, strings.TrimSpace(stderr), "error")
-			}
-			panicDomainCustomSSLBuildError()
+			http.Redirect(w, r, "/domains/ssl/"+domainName, http.StatusSeeOther)
+			return
 
 		case "autossl":
 			stdout, stderr, exitCode, err := opencliSSLRun(domainName, "auto")
@@ -166,6 +249,21 @@ func (h *SSLPage) ServeSSL(w http.ResponseWriter, r *http.Request) {
 
 	var currentSetting, keys string
 	var currentSettingSet, keysSet bool
+
+	if domainConfMissingOrEmpty(domainName) {
+		if setting, k, found := caddyfileDomainSSLInfo(domainName); found {
+			currentSetting, currentSettingSet = setting, true
+			keys, keysSet = k, true
+			webtemplates.Render(w, "domains_ssl.html", mergeChrome(map[string]interface{}{
+				"DomainName":     domainName,
+				"CurrentSetting": currentSetting,
+				"Keys":           keys,
+				"CSRFToken":      csrf.Token(r),
+				"Flashes":        auth.PopFlashes(w, r, h.Sessions),
+			}, r, "SSL for "+domainName))
+			return
+		}
+	}
 
 	statusStdout, statusStderr, statusExit, statusErr := opencliSSLRun(domainName, "status")
 	switch {
