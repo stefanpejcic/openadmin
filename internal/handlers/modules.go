@@ -123,11 +123,16 @@ func modulesEnabledList(configPath string) []string {
 
 // parsePluginReadme parses simple key=value lines from a plugin readme file.
 func parsePluginReadme(path string) map[string]string {
-	meta := map[string]string{}
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return meta
+		return map[string]string{}
 	}
+	return parsePluginReadmeBytes(raw)
+}
+
+// parsePluginReadmeBytes is parsePluginReadme's shared parsing core, also used to parse a readme.txt fetched over HTTP (see plugin_store.go) without writing it to disk first.
+func parsePluginReadmeBytes(raw []byte) map[string]string {
+	meta := map[string]string{}
 	for _, line := range strings.Split(string(raw), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
