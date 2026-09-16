@@ -26,7 +26,6 @@ type OpenpanelSettings struct {
 var (
 	OpenpanelSettingsConfigPath      = "/etc/openpanel/openpanel/conf/openpanel.config"
 	OpenpanelSettingsRestartFlagPath = "/root/openpanel_restart_needed"
-	CaptchaPluginPath                = "/etc/openpanel/modules/captcha/captcha.py"
 )
 
 // openpanelIntFields lists the ~20 keys that must parse as a non-negative
@@ -315,13 +314,9 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 	// was just computed above during POST.
 	configData := loadOpenpanelConfigStripped(OpenpanelSettingsConfigPath)
 
-	_, err := os.Stat(CaptchaPluginPath)
-	captchaPluginInstalled := err == nil
-
 	webtemplates.Render(w, "settings_openpanel.html", mergeChrome(map[string]interface{}{
-		"ConfigData":             configData,
-		"CSRFToken":              csrf.Token(r),
-		"Flashes":                auth.PopFlashes(w, r, o.Sessions),
-		"CaptchaPluginInstalled": captchaPluginInstalled,
+		"ConfigData": configData,
+		"CSRFToken":  csrf.Token(r),
+		"Flashes":    auth.PopFlashes(w, r, o.Sessions),
 	}, r, "OpenPanel Settings"))
 }

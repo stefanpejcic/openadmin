@@ -25,9 +25,9 @@
             el.__x.$data.enabled = state;
         });
     },
-    matchesFilter(type, category) {
+    matchesFilter(type) {
         if (!this.filterType) return true;
-        return this.filterType === type || (this.filterType === 'plugin' && category === 'plugin');
+        return this.filterType === type;
     }
 }">
 
@@ -42,7 +42,6 @@
                 </div>
 
                 <div class="flex flex-col items-center justify-center gap-2 rounded-sm px-2 sm:flex-row sm:justify-end sm:bg-transparent sm:px-0">
-                  <a href="/settings/modules/store" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60">Browse Plugin Store</a>
                   <button id="tour-save-modules-btn" type="submit"
                   class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Save Changes</button>
                 </div>
@@ -79,8 +78,6 @@
   <button type="button" @click="filterType = filterType === 'enterprise' ? '' : 'enterprise'" :class="filterType === 'enterprise' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'" class="rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium transition">Enterprise</button>
 
   <button type="button" @click="filterType = filterType === 'beta' ? '' : 'beta'" :class="filterType === 'beta' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'" class="rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium transition">BETA</button>
-
-  <button type="button" @click="filterType = filterType === 'plugin' ? '' : 'plugin'" :class="filterType === 'plugin' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'" class="rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium transition">Plugins</button>
 </div>
 
 
@@ -123,64 +120,6 @@
 
 <div id="tour-modules-grid" class="grid grid-cols-1 gap-4 md:grid-cols-3">
 
-  {{range .Plugins}}
-
-            <!-- .status reads a "status" key, but plugins (parsed from
-                 readme.txt) never have one, so it's always falsy -- rendering
-                 literally `enabled: false` always. This has no visible effect
-                 since the plugin card below renders no toggle button
-                 referencing `enabled` at all (only a static "Active" label),
-                 but that behavior is preserved here rather than defaulting
-                 to true. -->
-            <div x-data="{ enabled: false }"
-    x-effect="if (typeof toggleAll === 'boolean') enabled = toggleAll"
-    data-row
-    class="relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden p-0 flex flex-col h-full"
-    x-show="(searchQuery === '' || '{{index . "title"}}'.toLowerCase().includes(searchQuery.toLowerCase())) && matchesFilter('plugin', 'plugin')"
-    >
-      <div class="px-4 pb-6 pt-4">
-        <span class="text-sm text-gray-500">{{index . "link"}}</span>
-        <div class="flex items-center gap-2 mt-4">
-          <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-50">
-            {{index . "name"}}
-          </h4>
-            <span class="flex gap-2 rounded bg-orange-500 text-white dark:bg-orange-700 px-2 py-0.5 text-xs font-medium"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plugin" viewBox="0 0 16 16">
-  <path fill-rule="evenodd" d="M1 8a7 7 0 1 1 2.898 5.673c-.167-.121-.216-.406-.002-.62l1.8-1.8a3.5 3.5 0 0 0 4.572-.328l1.414-1.415a.5.5 0 0 0 0-.707l-.707-.707 1.559-1.563a.5.5 0 1 0-.708-.706l-1.559 1.562-1.414-1.414 1.56-1.562a.5.5 0 1 0-.707-.706l-1.56 1.56-.707-.706a.5.5 0 0 0-.707 0L5.318 5.975a3.5 3.5 0 0 0-.328 4.571l-1.8 1.8c-.58.58-.62 1.6.121 2.137A8 8 0 1 0 0 8a.5.5 0 0 0 1 0"/>
-</svg> Plugin</span>
-        </div>
-        <p class="mt-2 max-w-xl text-sm leading-6 text-gray-500">{{index . "description"}}</p>
-
-        {{if index . "version"}}
-        <p class="mt-1 max-w-xl text-sm leading-6 text-gray-500">Version: {{index . "version"}}</p>
-        {{end}}
-
-        {{if index . "author"}}
-        <p class="mt-1 max-w-xl text-sm leading-6 text-gray-500">Author: {{index . "author"}}</p>
-        {{end}}
-
-
-
-      </div>
-      <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-4 dark:border-gray-900 dark:bg-gray-900 mt-auto">
-        <div class="flex items-center gap-3">
-        <label class="text-sm leading-none text-gray-900 dark:text-gray-50" for="{{index . "name"}}" data-tooltip-target="tooltip-manage-{{index . "name"}}" data-tooltip-placement="right">Active</label>
-        </div>
-
-        <div id="tooltip-manage-{{index . "name"}}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-            Plugins can not be deactivated.
-            <div class="tooltip-arrow" data-popper-arrow></div>
-        </div>
-
-        {{if index . "help_link"}}
-        <a href="{{index . "help_link"}}" target="_blank" class="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Learn more
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
-            <path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path>
-          </svg>
-        </a>
-        {{end}}
-      </div>
-    </div>
-  {{end}}
 
 
 
@@ -196,7 +135,7 @@
     <div x-data="{ enabled: {{if .status}}true{{else}}false{{end}} }"
         x-effect="if (typeof toggleAll === 'boolean' && !$el.hasAttribute('data-locked')) enabled = toggleAll"
         data-row
-        x-show="(searchQuery === '' || '{{.title}}'.toLowerCase().includes(searchQuery.toLowerCase())) && matchesFilter('{{$type}}', 'feature')"
+        x-show="(searchQuery === '' || '{{.title}}'.toLowerCase().includes(searchQuery.toLowerCase())) && matchesFilter('{{$type}}')"
         {{if $disableToggle}} data-locked="true" {{end}}
         class="relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden p-0 flex flex-col h-full">
       <div class="px-4 pb-6 pt-4">

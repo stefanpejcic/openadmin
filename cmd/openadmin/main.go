@@ -248,7 +248,6 @@ func newHandler(d appDeps) (http.Handler, error) {
 	general := &handlers.General{Sessions: sessions, DevMode: d.DevMode}
 	locales := &handlers.Locales{Sessions: sessions}
 	modules := &handlers.Modules{Sessions: sessions}
-	pluginStore := &handlers.PluginStore{Sessions: sessions}
 	updates := &handlers.Updates{Sessions: sessions, PanelVersion: d.PanelVersion}
 	features := &handlers.Features{MySQL: d.MySQL, Sessions: sessions}
 	resellers := &handlers.Resellers{DB: d.AdminDB, MySQL: d.MySQL, Sessions: sessions}
@@ -770,9 +769,6 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /settings/locales", auth.RequireAdmin(sessions, authOpts, locales.ServeLocales))
 	mux.HandleFunc("GET /settings/modules", auth.RequireAdmin(sessions, authOpts, modules.ServeModules))
 	mux.HandleFunc("POST /settings/modules", auth.RequireAdmin(sessions, authOpts, modules.ServeModules))
-	mux.HandleFunc("GET /settings/modules/store", auth.RequireAdmin(sessions, authOpts, pluginStore.ServeStore))
-	mux.HandleFunc("POST /settings/modules/store/install", auth.RequireAdmin(sessions, authOpts, pluginStore.InstallFromGit))
-	mux.HandleFunc("POST /settings/modules/store/upload", auth.RequireAdmin(sessions, authOpts, pluginStore.InstallFromUpload))
 	mux.HandleFunc("GET /api/docker-tags", auth.RequireAdmin(sessions, authOpts, updates.ServeDockerTags))
 	mux.HandleFunc("POST /api/docker-tags", auth.RequireAdmin(sessions, authOpts, updates.ServeDockerTags))
 	mux.HandleFunc("POST /settings/updates/update_now", auth.RequireAdmin(sessions, authOpts, updates.ServeUpdateNow))

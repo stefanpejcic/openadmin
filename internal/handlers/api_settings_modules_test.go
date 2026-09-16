@@ -38,7 +38,6 @@ func TestAPISettingsModulesGetSuccess(t *testing.T) {
 	}
 	var out struct {
 		Features []map[string]interface{} `json:"features"`
-		Plugins  []map[string]string      `json:"plugins"`
 	}
 	if err := json.Unmarshal(body, &out); err != nil {
 		t.Fatalf("expected valid JSON: %v (%s)", err, body)
@@ -51,9 +50,6 @@ func TestAPISettingsModulesGetSuccess(t *testing.T) {
 	}
 	if out.Features[1]["status"] != false {
 		t.Fatalf("expected malware_scan feature marked disabled, got %+v", out.Features[1])
-	}
-	if out.Plugins == nil {
-		t.Fatal("expected plugins to be an empty list, not null")
 	}
 }
 

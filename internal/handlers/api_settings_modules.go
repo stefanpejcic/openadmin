@@ -1,8 +1,8 @@
 // This file implements the JSON REST API's /api/settings/modules route:
-// viewing the enabled-modules/plugins list, or replacing it. Reuses the same
-// config file, features.json, docker-compose toggling, and plugin scan as
-// the HTML /settings/modules page in modules.go -- only the response shape
-// differs, plus the POST body here is a JSON array (not sorted form keys).
+// viewing the enabled-modules list, or replacing it. Reuses the same config
+// file, features.json, and docker-compose toggling as the HTML
+// /settings/modules page in modules.go -- only the response shape differs,
+// plus the POST body here is a JSON array (not sorted form keys).
 package handlers
 
 import (
@@ -95,10 +95,5 @@ func (a *APISettingsModules) handleGet(w http.ResponseWriter, r *http.Request) {
 		feature["status"] = enabledSet[name]
 	}
 
-	plugins := getAllPlugins(ModulesPluginsBaseDir)
-	if plugins == nil {
-		plugins = []map[string]string{}
-	}
-
-	writeJSON(w, map[string]interface{}{"features": allFeatures, "plugins": plugins})
+	writeJSON(w, map[string]interface{}{"features": allFeatures})
 }

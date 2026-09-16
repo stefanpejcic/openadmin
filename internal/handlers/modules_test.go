@@ -18,22 +18,20 @@ import (
 func withScratchModulesPaths(t *testing.T) {
 	t.Helper()
 	dir := t.TempDir()
-	origConfig, origFeatures, origCompose, origPlugins, origRndc, origFlag :=
+	origConfig, origFeatures, origCompose, origRndc, origFlag :=
 		ModulesConfigFilePath, ModulesFeaturesJSONPath, ModulesDockerComposePath,
-		ModulesPluginsBaseDir, ModulesRndcKeyPath, ModulesOpenpanelRestartFlagPath
+		ModulesRndcKeyPath, ModulesOpenpanelRestartFlagPath
 
 	ModulesConfigFilePath = filepath.Join(dir, "openpanel.config")
 	ModulesFeaturesJSONPath = filepath.Join(dir, "features.json")
 	ModulesDockerComposePath = filepath.Join(dir, "docker-compose.yml")
-	ModulesPluginsBaseDir = filepath.Join(dir, "plugins")
 	ModulesRndcKeyPath = filepath.Join(dir, "rndc.key")
 	ModulesOpenpanelRestartFlagPath = filepath.Join(dir, "openpanel_restart_needed")
-	os.MkdirAll(ModulesPluginsBaseDir, 0755)
 
 	t.Cleanup(func() {
 		ModulesConfigFilePath, ModulesFeaturesJSONPath, ModulesDockerComposePath,
-			ModulesPluginsBaseDir, ModulesRndcKeyPath, ModulesOpenpanelRestartFlagPath =
-			origConfig, origFeatures, origCompose, origPlugins, origRndc, origFlag
+			ModulesRndcKeyPath, ModulesOpenpanelRestartFlagPath =
+			origConfig, origFeatures, origCompose, origRndc, origFlag
 	})
 }
 
@@ -116,33 +114,6 @@ func TestModulesEnabledList(t *testing.T) {
 	}
 }
 
-func TestParsePluginReadme(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "readme.txt")
-	os.WriteFile(path, []byte("# comment\nname=My Plugin\nversion=1.0\n\n"), 0644)
-
-	meta := parsePluginReadme(path)
-	if meta["name"] != "My Plugin" || meta["version"] != "1.0" {
-		t.Fatalf("unexpected metadata: %+v", meta)
-	}
-}
-
-func TestGetAllPluginsFindsOnlyDirsWithReadme(t *testing.T) {
-	withScratchModulesPaths(t)
-	os.MkdirAll(filepath.Join(ModulesPluginsBaseDir, "with-readme"), 0755)
-	os.WriteFile(filepath.Join(ModulesPluginsBaseDir, "with-readme", "readme.txt"), []byte("name=Foo\n"), 0644)
-	os.MkdirAll(filepath.Join(ModulesPluginsBaseDir, "without-readme"), 0755)
-	os.WriteFile(filepath.Join(ModulesPluginsBaseDir, "stray-file.txt"), []byte("x"), 0644)
-
-	plugins := getAllPlugins(ModulesPluginsBaseDir)
-	if len(plugins) != 1 {
-		t.Fatalf("expected exactly 1 plugin, got %+v", plugins)
-	}
-	if plugins[0]["folder"] != "with-readme" || plugins[0]["name"] != "Foo" {
-		t.Fatalf("unexpected plugin entry: %+v", plugins[0])
-	}
-}
-
 func TestServeModulesGetRendersFeaturesWithStatus(t *testing.T) {
 	withScratchModulesPaths(t)
 	os.WriteFile(ModulesConfigFilePath, []byte(`enabled_modules="dns"`+"\n"), 0644)
@@ -193,9 +164,6 @@ func TestServeModulesGetRendersHTML(t *testing.T) {
 		{"name":"docker","title":"Docker (Containers)","description":"desc2","link":"/containers","type":"enterprise","help_link":""},
 		{"name":"backups","title":"Backups","description":"desc3","link":"/backups","type":"beta","help_link":""}
 	]`), 0644)
-	os.MkdirAll(filepath.Join(ModulesPluginsBaseDir, "my-plugin"), 0755)
-	os.WriteFile(filepath.Join(ModulesPluginsBaseDir, "my-plugin", "readme.txt"), []byte("name=My Plugin\ndescription=does things\n"), 0644)
-
 	m := &Modules{}
 	srv, client := newModulesTestServer(t, m)
 
@@ -214,7 +182,6 @@ func TestServeModulesGetRendersHTML(t *testing.T) {
 		"DNS",
 		"Docker (Containers)",
 		"Backups",
-		"My Plugin",
 		"Save Changes",
 		"</html>",
 	} {

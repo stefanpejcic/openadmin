@@ -1,12 +1,11 @@
-// This file implements the enable/disable module checklist, docker-compose
-// service toggling side effects, and the third-party plugin listing.
+// This file implements the enable/disable module checklist and its
+// docker-compose service toggling side effects.
 package handlers
 
 import (
 	"encoding/json"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -25,14 +24,13 @@ type Modules struct {
 }
 
 // ModulesConfigFilePath / ModulesFeaturesJSONPath / ModulesDockerComposePath /
-// ModulesPluginsBaseDir / ModulesRndcKeyPath / ModulesOpenpanelRestartFlagPath
-// are kept as separate vars here rather than sharing one with
-// general.go/limits.go, since each is used independently.
+// ModulesRndcKeyPath / ModulesOpenpanelRestartFlagPath are kept as separate
+// vars here rather than sharing one with general.go/limits.go, since each is
+// used independently.
 var (
 	ModulesConfigFilePath           = "/etc/openpanel/openpanel/conf/openpanel.config"
 	ModulesFeaturesJSONPath         = "/etc/openpanel/openadmin/config/features.json"
 	ModulesDockerComposePath        = "/root/docker-compose.yml"
-	ModulesPluginsBaseDir           = "/etc/openpanel/modules/"
 	ModulesRndcKeyPath              = "/etc/bind/rndc.key"
 	ModulesOpenpanelRestartFlagPath = "/root/openpanel_restart_needed"
 )
@@ -119,56 +117,6 @@ func modulesEnabledList(configPath string) []string {
 		return strings.Split(value, ",")
 	}
 	return nil
-}
-
-// parsePluginReadme parses simple key=value lines from a plugin readme file.
-func parsePluginReadme(path string) map[string]string {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return map[string]string{}
-	}
-	return parsePluginReadmeBytes(raw)
-}
-
-// parsePluginReadmeBytes is parsePluginReadme's shared parsing core, also used to parse a readme.txt fetched over HTTP (see plugin_store.go) without writing it to disk first.
-func parsePluginReadmeBytes(raw []byte) map[string]string {
-	meta := map[string]string{}
-	for _, line := range strings.Split(string(raw), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		if idx := strings.Index(line, "="); idx != -1 {
-			meta[strings.TrimSpace(line[:idx])] = strings.TrimSpace(line[idx+1:])
-		}
-	}
-	return meta
-}
-
-// getAllPlugins enumerates plugin directories under baseDir. os.ReadDir
-// sorts entries by filename, giving deterministic output; order doesn't
-// affect which plugins are found, only the order they're listed in.
-func getAllPlugins(baseDir string) []map[string]string {
-	entries, err := os.ReadDir(baseDir)
-	if err != nil {
-		return nil
-	}
-	var plugins []map[string]string
-	for _, e := range entries {
-		folderPath := filepath.Join(baseDir, e.Name())
-		info, err := os.Stat(folderPath)
-		if err != nil || !info.IsDir() {
-			continue
-		}
-		readmePath := filepath.Join(folderPath, "readme.txt")
-		if _, err := os.Stat(readmePath); err != nil {
-			continue
-		}
-		meta := parsePluginReadme(readmePath)
-		meta["folder"] = e.Name()
-		plugins = append(plugins, meta)
-	}
-	return plugins
 }
 
 // ServeModules handles GET/POST /settings/modules.
@@ -259,16 +207,13 @@ func (m *Modules) ServeModules(w http.ResponseWriter, r *http.Request) {
 		feature["status"] = enabledSet[name]
 	}
 
-	plugins := getAllPlugins(ModulesPluginsBaseDir)
-
 	if r.Method == http.MethodGet && r.URL.Query().Get("output") == "json" {
-		writeJSON(w, map[string]interface{}{"features": allFeatures, "plugins": plugins})
+		writeJSON(w, map[string]interface{}{"features": allFeatures})
 		return
 	}
 
 	webtemplates.Render(w, "settings_modules.html", mergeChrome(map[string]interface{}{
 		"Features":  allFeatures,
-		"Plugins":   plugins,
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, m.Sessions),
 	}, r, "Manage Modules"))

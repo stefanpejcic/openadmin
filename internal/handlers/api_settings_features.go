@@ -205,8 +205,6 @@ func (f *APISettingsFeatures) servePlan(w http.ResponseWriter, r *http.Request, 
 		}
 	}
 
-	plugins := getAllPlugins(ModulesPluginsBaseDir)
-
 	rawFeatures, err := os.ReadFile(FeaturesJSONPath)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
@@ -234,22 +232,9 @@ func (f *APISettingsFeatures) servePlan(w http.ResponseWriter, r *http.Request, 
 		feat["module_enabled"] = moduleEnabledSet[name]
 	}
 
-	pluginsOut := make([]map[string]interface{}, 0, len(plugins))
-	for _, p := range plugins {
-		m := make(map[string]interface{}, len(p)+2)
-		for k, v := range p {
-			m[k] = v
-		}
-		name := p["name"]
-		m["status"] = enabledSet[name]
-		m["module_enabled"] = moduleEnabledSet[name]
-		pluginsOut = append(pluginsOut, m)
-	}
-
 	writeJSON(w, map[string]interface{}{
 		"enabled_modules": enabledModules,
 		"plan":            plan,
 		"features":        allFeatures,
-		"plugins":         pluginsOut,
 	})
 }

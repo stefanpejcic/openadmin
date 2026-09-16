@@ -128,7 +128,7 @@ func TestAPISettingsFeaturesPlanNotFoundReturns404(t *testing.T) {
 	}
 }
 
-func TestAPISettingsFeaturesGetPlanReturnsFeaturesAndPlugins(t *testing.T) {
+func TestAPISettingsFeaturesGetPlanReturnsFeatures(t *testing.T) {
 	withScratchFeaturesPaths(t)
 	os.WriteFile(filepath.Join(FeaturesDir, "default.txt"), []byte("dns\n"), 0644)
 	os.WriteFile(FeaturesJSONPath, []byte(`[{"name":"dns"},{"name":"mail"}]`), 0644)
