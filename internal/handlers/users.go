@@ -592,6 +592,8 @@ type userDetailPageData struct {
 	WebserverOptions  []string
 	DefaultPHPVersion string
 	InstalledLocales  []string
+	PlanID            int64
+	PlanName          string
 	PlanCPU           string
 	PlanRAM           string
 	Services          []composeServiceView
@@ -752,13 +754,14 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	featureSet := "default"
-	var planCPU, planRAM string
+	var planCPU, planRAM, planName string
 	if planRow, err := paneldb.GetPlanByID(u.MySQL, strconv.FormatInt(userData.PlanID, 10)); err == nil {
 		if fs, ok := planRow["feature_set"].(string); ok && fs != "" {
 			featureSet = fs
 		}
 		planCPU, _ = planRow["cpu"].(string)
 		planRAM, _ = planRow["ram"].(string)
+		planName, _ = planRow["name"].(string)
 	}
 	featuresPath := FeatureSetPathForPlan(featureSet, userData.Owner.String)
 	hasCustomFeatures := false
@@ -786,6 +789,8 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		WebserverOptions:  userWebserverOptions,
 		DefaultPHPVersion: defaultPHPVersionFor(username),
 		InstalledLocales:  installedLocaleCodes(),
+		PlanID:            userData.PlanID,
+		PlanName:          planName,
 		PlanCPU:           planCPU,
 		PlanRAM:           planRAM,
 		Services:          composeServicesForUser(u.MySQL, username),
