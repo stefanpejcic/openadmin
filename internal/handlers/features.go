@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"os"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -37,36 +37,59 @@ var (
 	FeaturesOpenpanelRestartFlagPath = "/root/openpanel_restart_needed"
 )
 
-const featuresRedisCacheKey = "openpanel_cache_app._load_user_features_cached_memver"
+// featuresCacheKeyPatterns are the openpanel redis cache keys derived from a feature-set .txt file's contents: LoadUserFeatures's per-user result and LoadFeaturesForPlanID's per-plan result (used by the plan-upsell grey-out feature). Both need dropping whenever a feature set's content changes, or callers see stale data for up to their TTL (24h).
+var featuresCacheKeyPatterns = []string{
+	"openpanel_cache_load_user_features:*",
+	"openpanel_cache_load_features_for_plan_id:*",
+}
 
 var featuresNameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-// invalidateOpenpanelUserFeaturesCacheRun is injectable so tests never
-// touch a real redis socket. It issues a best-effort DEL against
-// OpenPanel's redis cache key over a Unix socket, returning whether it
-// succeeded (used to decide whether a full restart flag is needed as a
-// fallback).
+// invalidateOpenpanelUserFeaturesCacheRun is injectable so tests never touch a real redis socket. It scans for and deletes every cache entry matching featuresCacheKeyPatterns, so a feature-set edit here takes effect immediately instead of waiting out the cache's TTL. This is broad (every user/plan, not just ones using the edited feature set) since matching which cached entries are actually affected isn't worth the complexity for an action admins take rarely - returns whether it succeeded, used to decide whether a full restart flag is needed as a fallback.
 var invalidateOpenpanelUserFeaturesCacheRun = func() bool {
 	conn, err := net.DialTimeout("unix", FeaturesRedisSocketPath, 2*time.Second)
 	if err != nil {
 		return false
 	}
 	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		return false
+	}
+	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
 
-	cmd := "*2\r\n$3\r\nDEL\r\n$" + strconv.Itoa(len(featuresRedisCacheKey)) + "\r\n" + featuresRedisCacheKey + "\r\n"
-	if _, err := conn.Write([]byte(cmd)); err != nil {
+	var keys []string
+	for _, pattern := range featuresCacheKeyPatterns {
+		cursor := "0"
+		for {
+			reply, err := respCommand(rw, "SCAN", cursor, "MATCH", pattern, "COUNT", "500")
+			if err != nil {
+				return false
+			}
+			pair, ok := reply.([]interface{})
+			if !ok || len(pair) != 2 {
+				return false
+			}
+			next, _ := pair[0].(string)
+			found, _ := pair[1].([]interface{})
+			for _, k := range found {
+				if key, ok := k.(string); ok && key != "" {
+					keys = append(keys, key)
+				}
+			}
+			if next == "" || next == "0" {
+				break
+			}
+			cursor = next
+		}
+	}
+
+	if len(keys) == 0 {
+		return true // nothing cached yet, nothing to invalidate
+	}
+	if _, err := respCommand(rw, append([]string{"DEL"}, keys...)...); err != nil {
 		return false
 	}
-	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-	reply := make([]byte, 64)
-	n, err := conn.Read(reply)
-	if err != nil || n == 0 {
-		return false
-	}
-	// A RESP error reply starts with '-'; anything else (":", "+") is
-	// treated as success -- only a connection failure is treated as an
-	// error, the DEL's actual return value isn't otherwise validated.
-	return reply[0] != '-'
+	return true
 }
 
 // ServeFeatures handles both GET/POST /features/ (plan == "") and
