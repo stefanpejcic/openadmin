@@ -522,6 +522,64 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
         </div>
 
+{{if not .IsReseller}}
+        <div id="tour-tasks" class="">
+<div>
+    <div id="tasks_widget" class="">
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                <div>
+                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Tasks</h3>
+                    <p class="text-sm/6 text-gray-500 dark:text-gray-500">Currently running background tasks.</p>
+                </div>
+                <a href="/tasks" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View all &rarr;</a>
+            </div>
+
+        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50 mt-2">
+            <ul id="dashboard-tasks-list" class="hidden divide-y divide-gray-200 dark:divide-gray-800 text-sm"></ul>
+            <p id="dashboard-tasks-empty" class="text-sm text-gray-500 dark:text-gray-500 text-center py-6">No background tasks are currently running.</p>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function esc(s) {
+        var div = document.createElement('div');
+        div.textContent = String(s);
+        return div.innerHTML;
+    }
+
+    function refreshTasks() {
+        fetch('/tasks?output=json')
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                var tasks = ((data || []).filter(function (t) { return t.status === 'running'; }));
+                var list = document.getElementById('dashboard-tasks-list');
+                var empty = document.getElementById('dashboard-tasks-empty');
+                if (!tasks.length) {
+                    list.classList.add('hidden');
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                empty.classList.add('hidden');
+                list.classList.remove('hidden');
+                list.innerHTML = tasks.slice(0, 6).map(function (t) {
+                    return '<li class="py-2"><a href="/server/processes/' + t.pid + '/strace" class="flex items-center justify-between gap-3 hover:text-indigo-600 dark:hover:text-indigo-400">' +
+                        '<span class="truncate font-mono text-xs">' + esc(t.command) + '</span>' +
+                        '<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">' + esc(t.time) + '</span>' +
+                    '</a></li>';
+                }).join('');
+            })
+            .catch(function (err) { console.error('Error loading tasks widget:', err); });
+    }
+
+    refreshTasks();
+    setInterval(refreshTasks, 5000);
+});
+</script>
+{{end}}
+
 
 </dl>
 

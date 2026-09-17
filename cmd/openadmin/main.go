@@ -260,6 +260,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	domainTemplates := &handlers.DomainTemplates{Sessions: sessions}
 	mailer := &handlers.Mailer{PublicIP: d.PublicIP, Logger: d.Logger}
 	processManager := &handlers.ProcessManager{Sessions: sessions}
+	tasks := &handlers.Tasks{Sessions: sessions}
 	slave := &handlers.Slave{Sessions: sessions}
 	imunify := &handlers.Imunify{Sessions: sessions}
 	waf := &handlers.WAF{Sessions: sessions}
@@ -821,6 +822,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /server/processes", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcesses))
 	mux.HandleFunc("GET /server/processes/{pid}/{action}", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcessAction))
 	mux.HandleFunc("POST /server/processes/{pid}/{action}", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcessAction))
+	mux.HandleFunc("GET /tasks", auth.RequireAdmin(sessions, authOpts, tasks.ServeTasks))
 	mux.HandleFunc("GET /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
 	mux.HandleFunc("POST /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
 	mux.HandleFunc("GET /security/imunify/", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyGUI))
