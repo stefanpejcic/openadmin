@@ -45,6 +45,7 @@ func newProcessManagerTestServer(t *testing.T, p *ProcessManager) (*httptest.Ser
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /server/processes", p.ServeProcesses)
 	mux.HandleFunc("GET /server/processes/{pid}/{action}", p.ServeProcessAction)
+	mux.HandleFunc("POST /server/processes/{pid}/{action}", p.ServeProcessAction)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
 		auth.LoginUser(w, r, sessions, caller, "203.0.113.1")
 	})
@@ -223,7 +224,7 @@ func TestServeProcessActionKillFailureForBogusPid(t *testing.T) {
 	srv, client := newProcessManagerTestServer(t, p)
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return nil }
 
-	resp, err := client.Get(srv.URL + "/server/processes/999999999/kill")
+	resp, err := client.Post(srv.URL+"/server/processes/999999999/kill", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,6 +232,20 @@ func TestServeProcessActionKillFailureForBogusPid(t *testing.T) {
 	resp.Body.Close()
 	if !strings.Contains(string(body), "Error killing process") {
 		t.Fatalf("expected kill-failure flash for a nonexistent pid, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeProcessActionKillRejectsGet(t *testing.T) {
+	p := &ProcessManager{}
+	srv, client := newProcessManagerTestServer(t, p)
+
+	resp, err := client.Get(srv.URL + "/server/processes/999999999/kill")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405 for GET kill, got %d", resp.StatusCode)
 	}
 }
 
@@ -245,7 +260,7 @@ func TestServeProcessActionKillSuccess(t *testing.T) {
 	srv, client := newProcessManagerTestServer(t, p)
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return nil }
 
-	resp, err := client.Get(srv.URL + "/server/processes/" + strconv.Itoa(cmd.Process.Pid) + "/kill")
+	resp, err := client.Post(srv.URL+"/server/processes/"+strconv.Itoa(cmd.Process.Pid)+"/kill", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

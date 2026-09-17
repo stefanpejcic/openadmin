@@ -59,7 +59,6 @@ func newServicesTestServer(t *testing.T, s *Services) (*httptest.Server, *http.C
 	mux.HandleFunc("GET /services/monitored", s.ServeMonitored)
 	mux.HandleFunc("GET /services/edit", s.ServeEdit)
 	mux.HandleFunc("POST /services/edit", s.ServeEdit)
-	mux.HandleFunc("GET /service/{action}/{service_name}", s.HandleManageService)
 	mux.HandleFunc("POST /service/{action}/{service_name}", s.HandleManageService)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
 		auth.LoginUser(w, r, sessions, caller, "203.0.113.1")

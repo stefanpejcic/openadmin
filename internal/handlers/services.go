@@ -625,7 +625,7 @@ func realManageService(serviceName, action string) (bool, string) {
 	}
 }
 
-// HandleManageService handles GET/POST /service/{action}/{service_name}.
+// HandleManageService handles POST /service/{action}/{service_name}.
 func (s *Services) HandleManageService(w http.ResponseWriter, r *http.Request) {
 	action := r.PathValue("action")
 	serviceName := r.PathValue("service_name")

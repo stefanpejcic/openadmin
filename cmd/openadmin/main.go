@@ -697,7 +697,6 @@ func newHandler(d appDeps) (http.Handler, error) {
 	// SECURITY: /services/edit needs the same guard as its siblings, don't leave a config-write endpoint unauthenticated
 	mux.HandleFunc("GET /services/edit", auth.RequireAdmin(sessions, authOpts, services.ServeEdit))
 	mux.HandleFunc("POST /services/edit", auth.RequireAdmin(sessions, authOpts, services.ServeEdit))
-	mux.HandleFunc("GET /service/{action}/{service_name}", auth.RequireAdmin(sessions, authOpts, services.HandleManageService))
 	mux.HandleFunc("POST /service/{action}/{service_name}", auth.RequireAdmin(sessions, authOpts, services.HandleManageService))
 	mux.HandleFunc("GET /services/ftp/refresh", auth.RequireAdmin(sessions, authOpts, ftp.ServeRefresh))
 	mux.HandleFunc("POST /services/ftp/refresh", auth.RequireAdmin(sessions, authOpts, ftp.ServeRefresh))
@@ -821,6 +820,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /send_email", mailer.ServeSendEmail)
 	mux.HandleFunc("GET /server/processes", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcesses))
 	mux.HandleFunc("GET /server/processes/{pid}/{action}", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcessAction))
+	mux.HandleFunc("POST /server/processes/{pid}/{action}", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcessAction))
 	mux.HandleFunc("GET /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
 	mux.HandleFunc("POST /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
 	mux.HandleFunc("GET /security/imunify/", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyGUI))

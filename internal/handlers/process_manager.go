@@ -275,7 +275,9 @@ var straceRun = func(pid int) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
-// ServeProcessAction handles GET /server/processes/{pid}/{action}.
+// ServeProcessAction handles GET/POST /server/processes/{pid}/{action}. Only
+// "strace" (read-only) is allowed on GET; "kill" requires POST so demo mode
+// can block it.
 func (p *ProcessManager) ServeProcessAction(w http.ResponseWriter, r *http.Request) {
 	pid, err := strconv.Atoi(r.PathValue("pid"))
 	if err != nil {
@@ -297,6 +299,10 @@ func (p *ProcessManager) ServeProcessAction(w http.ResponseWriter, r *http.Reque
 		}, r, "Process Manager"))
 
 	case "kill":
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		if err := killProcess(pid); err != nil {
 			auth.AddFlash(w, r, p.Sessions, "Error killing process: "+err.Error(), "error")
 		} else {
