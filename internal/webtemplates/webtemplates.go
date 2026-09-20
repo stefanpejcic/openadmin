@@ -8,8 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"math"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -401,4 +404,35 @@ func RenderToString(name string, data interface{}) (string, error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+// EmailOverrideDir is where an admin can drop replacement email templates.
+var EmailOverrideDir = "/etc/openpanel/openadmin/email_templates"
+
+// overridableEmailTemplates are the outbound emails admins can replace.
+var overridableEmailTemplates = []string{
+	"email_new_user.html",
+	"email_user_notifications.html",
+	"email_admin_notifications.html",
+	"email_daily_system_report.html",
+}
+
+// LoadEmailOverrides swaps in any admin-supplied templates found in EmailOverrideDir, keeping the embedded default for anything missing or invalid.
+func LoadEmailOverrides(logger *log.Logger) {
+	for _, name := range overridableEmailTemplates {
+		path := filepath.Join(EmailOverrideDir, name)
+		content, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		if _, err := templates.New(name).Funcs(funcMap).Parse(string(content)); err != nil {
+			if logger != nil {
+				logger.Printf("webtemplates: ignoring invalid email template override %s: %v", path, err)
+			}
+			continue
+		}
+		if logger != nil {
+			logger.Printf("webtemplates: using custom email template %s", path)
+		}
+	}
 }

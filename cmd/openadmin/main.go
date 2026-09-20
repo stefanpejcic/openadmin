@@ -23,6 +23,7 @@ import (
 	"openadmin/internal/mysqldb"
 	"openadmin/internal/paneldb"
 	"openadmin/internal/server"
+	"openadmin/internal/webtemplates"
 	"openadmin/static"
 )
 
@@ -40,6 +41,7 @@ func main() {
 	bootstrap.RemoveRestartFlag(appLog)
 	bootstrap.ExitIfDisabled(appLog)
 	bootstrap.RunStartupHousekeeping(appLog)
+	webtemplates.LoadEmailOverrides(appLog)
 
 	hostname := bootstrap.ReadHostnameBlock(appLog)
 	host := hostname.Domain
