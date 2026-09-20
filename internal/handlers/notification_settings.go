@@ -313,7 +313,7 @@ func (n *NotificationSettings) HandleUpdate(w http.ResponseWriter, r *http.Reque
 	updateSMTPFieldIfChanged(r, mainConfig, "mail_use_tls", isValidBool)
 	updateSMTPFieldIfChanged(r, mainConfig, "mail_use_ssl", isValidBool)
 	updateSMTPFieldIfChanged(r, mainConfig, "mail_debug", isValidBool)
-	updateSMTPFieldIfChanged(r, mainConfig, "mail_username", isValidEmail)
+	updateSMTPFieldIfChanged(r, mainConfig, "mail_username", isValidSMTPUsername)
 	updateSMTPFieldIfChanged(r, mainConfig, "mail_password", nil)
 	updateSMTPFieldIfChanged(r, mainConfig, "mail_default_sender", isValidEmail)
 
@@ -461,3 +461,6 @@ func isValidPort(v string) bool {
 func isValidBool(v string) bool { return v == "True" || v == "False" }
 
 func isValidEmail(v string) bool { return emailRe.MatchString(v) }
+
+// SMTP usernames aren't always email addresses, e.g. SES access key IDs like AKIA..., so just reject blank/whitespace.
+func isValidSMTPUsername(v string) bool { return v != "" && !strings.ContainsAny(v, " \t\n") }

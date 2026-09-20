@@ -63,7 +63,7 @@ var apiNotifSMTPFields = []struct {
 	{"mail_use_tls", isValidBool},
 	{"mail_use_ssl", isValidBool},
 	{"mail_debug", isValidBool},
-	{"mail_username", isValidEmail},
+	{"mail_username", isValidSMTPUsername},
 	{"mail_password", nil},
 	{"mail_default_sender", isValidEmail},
 }
