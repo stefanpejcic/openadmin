@@ -253,7 +253,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	updates := &handlers.Updates{Sessions: sessions, PanelVersion: d.PanelVersion}
 	features := &handlers.Features{MySQL: d.MySQL, Sessions: sessions}
 	resellers := &handlers.Resellers{DB: d.AdminDB, MySQL: d.MySQL, Sessions: sessions}
-	openpanelSettings := &handlers.OpenpanelSettings{Sessions: sessions}
+	openpanelSettings := &handlers.OpenpanelSettings{Sessions: sessions, LicenseChecker: d.LicenseChecker}
 	defaultsSettings := &handlers.Defaults{MySQL: d.MySQL, Sessions: sessions}
 	generalStatic := &handlers.GeneralStatic{Static: static.Files}
 	licensePage := &handlers.LicensePage{Sessions: sessions}

@@ -15,13 +15,23 @@ import (
 
 	"openadmin/internal/auth"
 	"openadmin/internal/config"
+	"openadmin/internal/license"
 	"openadmin/internal/webtemplates"
 )
 
 // OpenpanelSettings bundles the /settings/open-panel handler.
 type OpenpanelSettings struct {
-	Sessions *auth.Manager
+	Sessions       *auth.Manager
+	LicenseChecker *license.Checker // nil on Community
 }
+
+// openpanelFileFields lists the custom-code-backed fields (raw files, not
+// openpanel.config ini keys) that also render on this page: How-to
+// Articles, Forbidden Usernames, Restricted Domains, and the PageSpeed API
+// key. They share their file paths and Enterprise gating (howto_guides
+// only) with the /settings/custom-code page -- see customCodeFilePaths in
+// custom_code.go.
+var openpanelFileFields = []string{"howto_guides", "forbidden_usernames", "restricted_domains", "pagespeed_api_key"}
 
 var (
 	OpenpanelSettingsConfigPath      = "/etc/openpanel/openpanel/conf/openpanel.config"
@@ -290,6 +300,25 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 			configData.Set(openpanelSectionForKey(key), key, value)
 		}
 
+		// Custom-code-backed fields shown on this page (see
+		// openpanelFileFields): written to their own files rather than
+		// openpanel.config. howto_guides additionally requires Enterprise
+		// access, matching /settings/custom-code's gating.
+		enterpriseOK := hasEnterpriseAccess(r, o.LicenseChecker)
+		for _, key := range openpanelFileFields {
+			if !formHasKey(r, key) {
+				continue
+			}
+			if key == "howto_guides" && !enterpriseOK {
+				continue
+			}
+			if err := os.WriteFile(customCodeFilePaths[key], []byte(r.PostFormValue(key)), 0644); err != nil {
+				errorMessages = append(errorMessages, "Error saving configuration file.")
+				continue
+			}
+			restartNeeded = true
+		}
+
 		// config.Save() fully regenerates the file from the parsed config
 		// data (unquoted `key=value` lines, comments lost) rather than
 		// patching individual lines in place. It adds a blank line between
@@ -318,9 +347,24 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 	// was just computed above during POST.
 	configData := loadOpenpanelConfigStripped(OpenpanelSettingsConfigPath)
 
+	fileContents := make(map[string]string, len(openpanelFileFields))
+	for _, key := range openpanelFileFields {
+		content, err := readFileOrEmpty(customCodeFilePaths[key])
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		fileContents[key] = content
+	}
+
 	webtemplates.Render(w, "settings_openpanel.html", mergeChrome(map[string]interface{}{
-		"ConfigData": configData,
-		"CSRFToken":  csrf.Token(r),
-		"Flashes":    auth.PopFlashes(w, r, o.Sessions),
+		"ConfigData":        configData,
+		"CSRFToken":         csrf.Token(r),
+		"Flashes":           auth.PopFlashes(w, r, o.Sessions),
+		"HasEnterprise":     hasEnterpriseAccess(r, o.LicenseChecker),
+		"HowtoGuides":       fileContents["howto_guides"],
+		"ForbiddenUsers":    fileContents["forbidden_usernames"],
+		"RestrictedDomains": fileContents["restricted_domains"],
+		"PagespeedAPIKey":   fileContents["pagespeed_api_key"],
 	}, r, "OpenPanel Settings"))
 }

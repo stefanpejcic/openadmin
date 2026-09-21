@@ -1,7 +1,5 @@
-// This file implements the custom CSS/JS/header/footer/dashboard-section/
-// how-to-guides editor (Enterprise only) plus the Community-tier
-// forbidden-usernames/domain-restriction/WordPress-sets/PageSpeed-key
-// files.
+// This file implements the custom CSS/JS/header/footer/dashboard-section editor (Enterprise only) plus the Community-tier WordPress-sets files.
+// How-to Articles, Forbidden Usernames, Restricted Domains, and PageSpeed API Key moved to /settings/open-panel but still live here since they share this file-backed storage and the JSON API.
 package handlers
 
 import (
@@ -64,9 +62,12 @@ var customCodeEnterpriseFields = map[string]bool{
 var CustomCodeRestartFlagPath = "/root/openpanel_restart_needed"
 
 // hasEnterpriseAccess reports whether the current request has an active
-// Enterprise license and the user is not a reseller.
-func (c *CustomCode) hasEnterpriseAccess(r *http.Request) bool {
-	if c.LicenseChecker == nil || !c.LicenseChecker.Valid() {
+// Enterprise license and the user is not a reseller. Shared by the
+// custom-code page and the openpanel-settings page, since a handful of
+// custom-code fields (currently just howto_guides) render as part of the
+// openpanel-settings form.
+func hasEnterpriseAccess(r *http.Request, checker *license.Checker) bool {
+	if checker == nil || !checker.Valid() {
 		return false
 	}
 	user := auth.CurrentUser(r)
@@ -85,7 +86,7 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		r.ParseForm()
 
-		enterpriseOK := c.hasEnterpriseAccess(r)
+		enterpriseOK := hasEnterpriseAccess(r, c.LicenseChecker)
 		for _, key := range customCodeFieldOrder {
 			if !formHasKey(r, key) {
 				continue
@@ -125,20 +126,16 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"CSRFToken":         csrf.Token(r),
 		"Flashes":           auth.PopFlashes(w, r, c.Sessions),
-		"HasEnterprise":     c.hasEnterpriseAccess(r),
+		"HasEnterprise":     hasEnterpriseAccess(r, c.LicenseChecker),
 		"CustomCSS":         fileContents["custom_css"],
 		"CustomJS":          fileContents["custom_js"],
 		"InHeader":          fileContents["in_header"],
 		"InFooter":          fileContents["in_footer"],
 		"CustomSection":     fileContents["custom_section"],
-		"HowtoGuides":       fileContents["howto_guides"],
 		"PostUpdate":        fileContents["post_update"],
 		"PreStartup":        fileContents["pre_startup"],
-		"ForbiddenUsers":    fileContents["forbidden_usernames"],
-		"RestrictedDomains": fileContents["restricted_domains"],
 		"WPThemes":          fileContents["wp_themes"],
 		"WPPlugins":         fileContents["wp_plugins"],
-		"PagespeedAPIKey":   fileContents["pagespeed_api_key"],
 	}
 	webtemplates.Render(w, "settings_custom_code.html", mergeChrome(data, r, "Custom Code"))
 }
