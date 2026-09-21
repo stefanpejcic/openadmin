@@ -608,6 +608,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /notifications", auth.RequireAdmin(sessions, authOpts, notifications.ServeView))
 	mux.HandleFunc("POST /notifications/delete/{line_number}", auth.RequireAdmin(sessions, authOpts, notifications.HandleDelete))
 	mux.HandleFunc("POST /notifications/mark_as_read/{line_number}", auth.RequireAdmin(sessions, authOpts, notifications.HandleMarkAsRead))
+	mux.HandleFunc("POST /notifications/pause", auth.RequireAdmin(sessions, authOpts, notifications.PauseNotifications))
+	mux.HandleFunc("POST /notifications/resume", auth.RequireAdmin(sessions, authOpts, notifications.ResumeNotifications))
 
 	mux.HandleFunc("GET /settings/notifications", auth.RequireAdmin(sessions, authOpts, notificationSettings.ServeSettings))
 	mux.HandleFunc("POST /settings/notifications", auth.RequireAdmin(sessions, authOpts, notificationSettings.HandleUpdate))

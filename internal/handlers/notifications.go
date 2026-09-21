@@ -7,12 +7,50 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"openadmin/internal/auth"
 	"openadmin/internal/webtemplates"
 )
 
-var NotificationsLogPath = "/var/log/openpanel/admin/notifications.log"
+var (
+	NotificationsLogPath = "/var/log/openpanel/admin/notifications.log"
+	// NotificationsPauseFlagPath holds the unix timestamp (as text) that
+	// sentinel.sh reads to decide whether to skip sending email/webhook
+	// alerts. It's just a flag file, not config -- sentinel.sh deletes it
+	// itself once the timestamp has passed.
+	NotificationsPauseFlagPath = "/tmp/openpanel_notifications_paused"
+)
+
+// notificationsPauseDurations maps the pause dropdown's option values to
+// how long that option pauses notifications for.
+var notificationsPauseDurations = map[string]time.Duration{
+	"10m": 10 * time.Minute,
+	"30m": 30 * time.Minute,
+	"1h":  time.Hour,
+	"6h":  6 * time.Hour,
+	"1d":  24 * time.Hour,
+}
+
+// currentNotificationsPause reports whether notifications are currently
+// paused and, if so, until when. An expired flag file is cleaned up here
+// too, same as sentinel.sh does on its own next run.
+func currentNotificationsPause() (time.Time, bool) {
+	raw, err := os.ReadFile(NotificationsPauseFlagPath)
+	if err != nil {
+		return time.Time{}, false
+	}
+	ts, err := strconv.ParseInt(strings.TrimSpace(string(raw)), 10, 64)
+	if err != nil {
+		return time.Time{}, false
+	}
+	until := time.Unix(ts, 0)
+	if !until.After(time.Now()) {
+		os.Remove(NotificationsPauseFlagPath)
+		return time.Time{}, false
+	}
+	return until, true
+}
 
 // Notifications bundles the /notifications handlers (the
 // /settings/notifications config-form handlers are in
@@ -23,8 +61,10 @@ type Notifications struct {
 
 type notificationsPageData struct {
 	webtemplates.Chrome
-	Notifications []notificationRow
-	Flashes       []auth.Flash
+	Notifications            []notificationRow
+	NotificationsPaused      bool
+	NotificationsPausedUntil string
+	Flashes                  []auth.Flash
 }
 
 // notificationRow is the parsed form of one raw log line ("<date> <time>
@@ -230,10 +270,18 @@ func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 		rows[i] = parseNotificationRow(l, i+1)
 	}
 
+	pausedUntil, isPaused := currentNotificationsPause()
+	pausedUntilLabel := ""
+	if isPaused {
+		pausedUntilLabel = pausedUntil.Format("Jan 2, 15:04")
+	}
+
 	webtemplates.Render(w, "notifications.html", notificationsPageData{
-		Chrome:        buildChrome(r, "Notifications"),
-		Notifications: rows,
-		Flashes:       auth.PopFlashes(w, r, n.Sessions),
+		Chrome:                   buildChrome(r, "Notifications"),
+		Notifications:            rows,
+		NotificationsPaused:      isPaused,
+		NotificationsPausedUntil: pausedUntilLabel,
+		Flashes:                  auth.PopFlashes(w, r, n.Sessions),
 	})
 }
 
@@ -317,5 +365,32 @@ func (n *Notifications) HandleMarkAsRead(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Error marking notification as read: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	http.Redirect(w, r, "/notifications", http.StatusSeeOther)
+}
+
+// PauseNotifications handles POST /notifications/pause: writes the flag
+// file sentinel.sh checks before sending email/webhook alerts.
+func (n *Notifications) PauseNotifications(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	duration, ok := notificationsPauseDurations[r.PostFormValue("duration")]
+	if !ok {
+		auth.AddFlash(w, r, n.Sessions, "Invalid pause duration.", "error")
+		http.Redirect(w, r, "/notifications", http.StatusSeeOther)
+		return
+	}
+	until := time.Now().Add(duration).Unix()
+	if err := os.WriteFile(NotificationsPauseFlagPath, []byte(strconv.FormatInt(until, 10)), 0644); err != nil {
+		auth.AddFlash(w, r, n.Sessions, "Error pausing notifications.", "error")
+	} else {
+		auth.AddFlash(w, r, n.Sessions, "Notifications paused.", "success")
+	}
+	http.Redirect(w, r, "/notifications", http.StatusSeeOther)
+}
+
+// ResumeNotifications handles POST /notifications/resume: removes the
+// pause flag file so sentinel.sh resumes sending alerts immediately.
+func (n *Notifications) ResumeNotifications(w http.ResponseWriter, r *http.Request) {
+	os.Remove(NotificationsPauseFlagPath)
+	auth.AddFlash(w, r, n.Sessions, "Notifications resumed.", "success")
 	http.Redirect(w, r, "/notifications", http.StatusSeeOther)
 }
