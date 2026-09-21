@@ -54,6 +54,7 @@ var openpanelStringFields = []string{
 	"avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
 	"permit_username_change_by_user", "permit_subdomain_sharing",
 	"twofa_nag", "twofa_enforce", "how_to_guides", "onboarding", "found_a_bug_link", "ip_county_flag",
+	"validate_ip_address_cookie",
 	"mysql_restricted_usernames", "mysql_restricted_databases",
 	"filemanager_buttons_style", "filemanager_edit_extensions",
 	"filemanager_image_extensions", "filemanager_archives_extensions",
@@ -113,6 +114,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"twofa_enforce":                   {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"found_a_bug_link":                {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"ip_county_flag":                  {kind: openpanelEnum, options: []string{"yes", "no"}},
+	"validate_ip_address_cookie":      {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"password_reset":                  {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"password_strength":               {kind: openpanelOneToHundred},
 	"permit_subdomain_sharing":        {kind: openpanelEnum, options: []string{"yes", "no"}},
@@ -195,6 +197,8 @@ func openpanelSectionForKey(key string) string {
 	case "captcha_provider", "recaptcha_site_key", "recaptcha_secret_key",
 		"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key":
 		return "CAPTCHA"
+	case "validate_ip_address_cookie":
+		return "SECURITY"
 	}
 	return "USERS"
 }
