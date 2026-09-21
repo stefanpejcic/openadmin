@@ -466,6 +466,9 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/notifications", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.ServeNotifications)))
 	mux.HandleFunc("POST /api/notifications/{line_number}/read", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.HandleMarkRead)))
 	mux.HandleFunc("DELETE /api/notifications/{line_number}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.HandleDelete)))
+	mux.HandleFunc("GET /api/notifications/pause", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.ServePauseStatus)))
+	mux.HandleFunc("POST /api/notifications/pause", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.HandlePause)))
+	mux.HandleFunc("POST /api/notifications/resume", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.HandleResume)))
 	mux.HandleFunc("GET /api/usage/disk", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.ServeDiskUsage)))
 
 	mux.HandleFunc("GET /api/server/crons", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerCrons.ServeCrons)))

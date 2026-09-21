@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // APINotifications bundles the /api/notifications* and /api/usage/disk
@@ -170,6 +171,48 @@ func (n *APINotifications) HandleDelete(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusInternalServerError, "Error deleting notification: "+err.Error())
 		return
 	}
+	writeJSON(w, map[string]bool{"success": true})
+}
+
+// ServePauseStatus handles GET /api/notifications/pause: whether
+// notifications are currently paused and, if so, until when.
+func (n *APINotifications) ServePauseStatus(w http.ResponseWriter, r *http.Request) {
+	until, paused := currentNotificationsPause()
+	resp := map[string]interface{}{"paused": paused}
+	if paused {
+		resp["until"] = until.Unix()
+	}
+	writeJSON(w, resp)
+}
+
+// HandlePause handles POST /api/notifications/pause: writes the flag file
+// sentinel.sh checks before sending email/webhook alerts. Body:
+// {"duration": "10m"|"30m"|"1h"|"6h"|"1d"}.
+func (n *APINotifications) HandlePause(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Duration string `json:"duration"`
+	}
+	if !apiDecodeJSONBody(r, &body) {
+		writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
+		return
+	}
+	duration, ok := notificationsPauseDurations[body.Duration]
+	if !ok {
+		writeJSONError(w, http.StatusBadRequest, "Invalid pause duration")
+		return
+	}
+	until := time.Now().Add(duration)
+	if err := os.WriteFile(NotificationsPauseFlagPath, []byte(strconv.FormatInt(until.Unix(), 10)), 0644); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Error pausing notifications")
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "paused": true, "until": until.Unix()})
+}
+
+// HandleResume handles POST /api/notifications/resume: removes the pause
+// flag file so sentinel.sh resumes sending alerts immediately.
+func (n *APINotifications) HandleResume(w http.ResponseWriter, r *http.Request) {
+	os.Remove(NotificationsPauseFlagPath)
 	writeJSON(w, map[string]bool{"success": true})
 }
 
