@@ -140,6 +140,26 @@ var (
 	DockerBackupLogPath = "/var/log/openpanel/admin/docker-backup.log"
 )
 
+// adminBackupsSkeletonMarker is the flip side of openpanel's own adminManagedMarkerPath (internal/modules/backups/admin.go): dropping an empty file here means opencli user-add's copy_skeleton_files step (see opencli/user/add.sh) carries it into every new account's core/users/<username>/ dir, so new accounts start out admin-managed whenever the schedule is Admin Configured. Existing accounts aren't touched -- they keep whatever admin.backups state they already have.
+const adminBackupsSkeletonMarker = "/etc/openpanel/skeleton/admin.backups"
+
+// setAdminBackupsSkeletonMarker creates or removes adminBackupsSkeletonMarker to match adminConfigured, so accounts created after this settings save inherit the right mode
+func setAdminBackupsSkeletonMarker(adminConfigured bool) error {
+	if adminConfigured {
+		if _, err := os.Stat(adminBackupsSkeletonMarker); err == nil {
+			return nil
+		}
+		if err := os.MkdirAll(filepath.Dir(adminBackupsSkeletonMarker), 0755); err != nil {
+			return err
+		}
+		return os.WriteFile(adminBackupsSkeletonMarker, nil, 0644)
+	}
+	if err := os.Remove(adminBackupsSkeletonMarker); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
 // backupScheduleChoices maps the only four options the Settings tab's
 // dropdown offers to the actual 5-field cron schedule each one writes to
 // the `opencli docker-backup` crontab entry. "disabled" is the "never
@@ -271,6 +291,12 @@ func (b *Backups) ServeUserBackupsSettings(w http.ResponseWriter, r *http.Reques
 	}
 	if err := addOrUpdateCron(job.LineNumber, schedule, true); err != nil {
 		auth.AddFlash(w, r, b.Sessions, "Failed to update the cron schedule: "+err.Error(), "error")
+		http.Redirect(w, r, "/backups/user#settings", http.StatusSeeOther)
+		return
+	}
+
+	if err := setAdminBackupsSkeletonMarker(choice != "disabled"); err != nil {
+		auth.AddFlash(w, r, b.Sessions, "Schedule saved, but failed to update the new-account template: "+err.Error(), "error")
 		http.Redirect(w, r, "/backups/user#settings", http.StatusSeeOther)
 		return
 	}
