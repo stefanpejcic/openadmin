@@ -84,7 +84,7 @@ func (a *APISettings) ServeAPISettings(w http.ResponseWriter, r *http.Request) {
 			cmdRepr := "['opencli', 'config', 'update', 'api', '" + action + "']"
 			auth.AddFlash(w, r, a.Sessions, "Error executing opencli: '"+cmdRepr+"': "+string(out), "error")
 		} else if strings.Contains(string(out), "Updated api to") {
-			notifySentinel("admin_api", "OpenAdmin API is $action", "API access for the administrator-level panel is now: $action.")
+			notifySentinel("admin_api", "OpenAdmin API is "+action, "API access for the administrator-level panel is now: "+action+".")
 
 			// No service restart/reload needed: apiFeatureEnabled() (and
 			// every other openpanel.config read in this codebase) loads
