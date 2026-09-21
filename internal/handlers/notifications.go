@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/md5"
+	"fmt"
 	"html/template"
 	"net/http"
 	"os"
@@ -52,6 +54,36 @@ func currentNotificationsPause() (time.Time, bool) {
 	return until, true
 }
 
+// notificationSnoozeFlagPath returns the per-title snooze flag file for a
+// notification: sentinel.sh writes every alert with the same title to the
+// same flag, so hashing the title (the same convention sentinel.sh's own
+// dedup already keys on -- see is_unread_message_present) gives every
+// occurrence of "this specific alert" a stable, filesystem-safe name.
+func notificationSnoozeFlagPath(title string) string {
+	return fmt.Sprintf("/tmp/openpanel_notification_snooze_%x", md5.Sum([]byte(title)))
+}
+
+// currentNotificationSnooze reports whether alerts with this title are
+// currently snoozed and, if so, until when. Same expire-and-clean-up-here
+// behavior as currentNotificationsPause.
+func currentNotificationSnooze(title string) (time.Time, bool) {
+	path := notificationSnoozeFlagPath(title)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return time.Time{}, false
+	}
+	ts, err := strconv.ParseInt(strings.TrimSpace(string(raw)), 10, 64)
+	if err != nil {
+		return time.Time{}, false
+	}
+	until := time.Unix(ts, 0)
+	if !until.After(time.Now()) {
+		os.Remove(path)
+		return time.Time{}, false
+	}
+	return until, true
+}
+
 // Notifications bundles the /notifications handlers (the
 // /settings/notifications config-form handlers are in
 // notification_settings.go).
@@ -74,10 +106,12 @@ type notificationsPageData struct {
 // applies. Kind "logfile"/"report"/"crashlog" cover a plain message that
 // contains a "Log file:"/"detailed report:"/"Crashlog:" link respectively.
 type notificationRow struct {
-	Index  int
-	Time   string
-	Status string
-	Title  string
+	Index        int
+	Time         string
+	Status       string
+	Title        string
+	Snoozed      bool
+	SnoozedUntil string
 
 	Kind         string
 	Plain        string
@@ -267,7 +301,12 @@ func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 		// Index is 1-based from the top of this already-newest-first list,
 		// matching HandleDelete/HandleMarkAsRead's own "1-indexed from the
 		// newest entry" line-number convention.
-		rows[i] = parseNotificationRow(l, i+1)
+		row := parseNotificationRow(l, i+1)
+		if until, snoozed := currentNotificationSnooze(row.Title); snoozed {
+			row.Snoozed = true
+			row.SnoozedUntil = until.Format("Jan 2, 15:04")
+		}
+		rows[i] = row
 	}
 
 	pausedUntil, isPaused := currentNotificationsPause()
@@ -392,5 +431,61 @@ func (n *Notifications) PauseNotifications(w http.ResponseWriter, r *http.Reques
 func (n *Notifications) ResumeNotifications(w http.ResponseWriter, r *http.Request) {
 	os.Remove(NotificationsPauseFlagPath)
 	auth.AddFlash(w, r, n.Sessions, "Notifications resumed.", "success")
+	http.Redirect(w, r, "/notifications", http.StatusSeeOther)
+}
+
+// notificationTitleForLine looks up the title of the notification at
+// line_number (1-indexed from the newest entry, same convention as
+// HandleDelete/HandleMarkAsRead), so a snooze/unsnooze request can be
+// keyed off it without the browser having to round-trip the raw title.
+func notificationTitleForLine(lineNumber int) (string, bool) {
+	lines, err := readNotificationLines()
+	if err != nil || lineNumber < 1 || lineNumber > len(lines) {
+		return "", false
+	}
+	idx := len(lines) - lineNumber
+	return parseNotificationRow(lines[idx], lineNumber).Title, true
+}
+
+// HandleSnooze handles POST /notifications/snooze/{line_number}: snoozes
+// future alerts sharing this notification's title (sentinel.sh's own
+// dedup already treats identical titles as "the same alert", so this is
+// the natural granularity -- see notificationSnoozeFlagPath).
+func (n *Notifications) HandleSnooze(w http.ResponseWriter, r *http.Request) {
+	lineNumber, _ := strconv.Atoi(r.PathValue("line_number"))
+	title, ok := notificationTitleForLine(lineNumber)
+	if !ok {
+		http.Error(w, "Invalid line number", http.StatusBadRequest)
+		return
+	}
+
+	r.ParseForm()
+	duration, ok := notificationsPauseDurations[r.PostFormValue("duration")]
+	if !ok {
+		auth.AddFlash(w, r, n.Sessions, "Invalid snooze duration.", "error")
+		http.Redirect(w, r, "/notifications", http.StatusSeeOther)
+		return
+	}
+	until := time.Now().Add(duration).Unix()
+	if err := os.WriteFile(notificationSnoozeFlagPath(title), []byte(strconv.FormatInt(until, 10)), 0644); err != nil {
+		auth.AddFlash(w, r, n.Sessions, "Error snoozing this alert.", "error")
+	} else {
+		auth.AddFlash(w, r, n.Sessions, "This alert type is snoozed.", "success")
+	}
+	http.Redirect(w, r, "/notifications", http.StatusSeeOther)
+}
+
+// HandleUnsnooze handles POST /notifications/unsnooze/{line_number}:
+// removes the per-title snooze flag so this alert can fire again
+// immediately.
+func (n *Notifications) HandleUnsnooze(w http.ResponseWriter, r *http.Request) {
+	lineNumber, _ := strconv.Atoi(r.PathValue("line_number"))
+	title, ok := notificationTitleForLine(lineNumber)
+	if !ok {
+		http.Error(w, "Invalid line number", http.StatusBadRequest)
+		return
+	}
+	os.Remove(notificationSnoozeFlagPath(title))
+	auth.AddFlash(w, r, n.Sessions, "Alert unsnoozed.", "success")
 	http.Redirect(w, r, "/notifications", http.StatusSeeOther)
 }
