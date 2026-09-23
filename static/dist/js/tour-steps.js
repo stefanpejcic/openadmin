@@ -82,7 +82,7 @@ window.TOUR_STEPS = [
         path: '/dashboard',
         element: '#tour-main-menu',
         title: 'Main Menu',
-        description: 'Accounts, Hosting Plans, Domains, Settings and the rest of OpenPanel’s features live here.',
+        description: 'Accounts, Hosting Plans, Domains, Settings and the rest of OpenPanel’s features live here. With the Modern menu style, each area’s pages are tabs at the top of the page.',
         side: 'right',
         align: 'start'
     },
@@ -130,6 +130,14 @@ window.TOUR_STEPS = [
     },
     {
         path: '/settings/general',
+        element: '#page-tabs',
+        title: 'Page Tabs',
+        description: 'With the Modern menu style, related pages are tabs up here - General, OpenPanel, User Defaults, Modules and more. Every area of the menu works the same way.',
+        side: 'bottom',
+        align: 'start'
+    },
+    {
+        path: '/settings/general',
         element: '#domain',
         title: 'Domain',
         description: 'Set the domain or IP address used for accessing both the user panel and the admin panel.',
@@ -158,6 +166,14 @@ window.TOUR_STEPS = [
         title: 'Brand / Logo',
         description: 'Configure branding by setting a custom logo - link to an image from your website.',
         side: 'right',
+        align: 'start'
+    },
+    {
+        path: '/settings/open-panel',
+        element: '#tour-menu-style',
+        title: 'Menu Style',
+        description: 'Choose the default menu for OpenPanel users - Classic, with expandable groups, or Modern, with one link per area and its pages as tabs. It also switches the OpenAdmin menu right after saving.',
+        side: 'bottom',
         align: 'start'
     },
     {
