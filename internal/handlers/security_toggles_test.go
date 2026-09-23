@@ -157,7 +157,26 @@ func TestBasicAuthUpdatePreservesOtherSectionsAndSetsRestartFlag(t *testing.T) {
 	}
 }
 
-func TestBlacklistUseragentsRequiresAdminRole(t *testing.T) {
+func TestBlacklistUseragentsForbiddenForResellers(t *testing.T) {
+	st := &SecurityToggles{}
+	srv, client := newSecurityTogglesTestServer(t, st, "reseller")
+
+	resp, err := client.Get(srv.URL + "/security/blacklist-useragents")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 for a reseller, got %d", resp.StatusCode)
+	}
+}
+
+func TestBlacklistUseragentsAllowedForUserRole(t *testing.T) {
+	dir := t.TempDir()
+	origFile := BlacklistUseragentsFilePath
+	BlacklistUseragentsFilePath = filepath.Join(dir, "blacklist_useragents.txt")
+	t.Cleanup(func() { BlacklistUseragentsFilePath = origFile })
+
 	st := &SecurityToggles{}
 	srv, client := newSecurityTogglesTestServer(t, st, "user")
 
@@ -166,8 +185,8 @@ func TestBlacklistUseragentsRequiresAdminRole(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("expected 403 for a non-admin role, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for the user role, got %d", resp.StatusCode)
 	}
 }
 

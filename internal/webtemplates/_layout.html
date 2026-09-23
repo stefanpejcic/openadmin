@@ -90,6 +90,7 @@
 
                     <div id="tour-main-menu" data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2">
                         <div data-sidebar="group-content" class="w-full text-sm">
+                            {{if eq .MenuStyle "modern"}}{{template "chrome_modern_menu" .}}{{else}}
                             <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-3">
 
 <li x-data="{ open: false, active: {{if and (hasPrefix .CurrentPath "/user") (not (hasPrefix .CurrentPath "/user/import"))}}true{{else}}false{{end}} || {{if hasPrefix .CurrentPath "/resellers"}}true{{else}}false{{end}} || {{if hasPrefix .CurrentPath "/administrators"}}true{{else}}false{{end}} || {{if hasPrefix .CurrentPath "/account"}}true{{else}}false{{end}} || {{if and .IsReseller (hasPrefix .CurrentPath "/security/2fa")}}true{{else}}false{{end}} || {{if and .IsReseller (hasPrefix .CurrentPath "/security/passkeys")}}true{{else}}false{{end}} }" class="relative">
@@ -707,6 +708,7 @@
 {{end}}
 
                             </ul>
+                            {{end}}
                         </div>
                     </div>
                 </div>
@@ -859,6 +861,32 @@
             </div>
         </div>
     </div>
+{{end}}
+
+{{define "chrome_modern_menu"}}
+<ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
+    {{range .NavItems}}
+    {{if .Section}}
+    <li class="px-2 pt-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-500">{{.Section}}</li>
+    {{end}}
+    <li><a id="{{.MenuID}}" data-active="{{if .Active}}true{{else}}false{{end}}" class="flex items-center justify-between rounded p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="{{.Href}}"><span class="flex items-center gap-x-2.5">{{.Icon}}{{.Label}}</span></a></li>
+    {{end}}
+</ul>
+{{end}}
+
+{{define "chrome_page_tabs"}}
+{{if .PageTabs}}
+<nav id="page-tabs" aria-label="Page sections" class="border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-950 sm:px-6 lg:px-8">
+    <ul class="-mb-px flex gap-x-6 overflow-x-auto text-sm">
+        {{range .PageTabs}}
+        <li class="shrink-0">
+            <a href="{{.Href}}" {{if .Active}}aria-current="page"{{end}}
+               class="inline-flex border-b-2 py-3 font-medium transition {{if .Active}}border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500{{else}}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300{{end}}">{{.Label}}</a>
+        </li>
+        {{end}}
+    </ul>
+</nav>
+{{end}}
 {{end}}
 
 {{define "chrome_topbar"}}
@@ -1123,6 +1151,7 @@ window.addEventListener("load", () => {
 {{end}}
 
 {{define "chrome_flashes"}}
+{{template "chrome_page_tabs" .}}
 <span id="placeholder-for-backend-notifications">
 
 {{if .Flashes}}

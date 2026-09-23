@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -92,5 +93,30 @@ func TestQuickStartDismissedTracksSkipFile(t *testing.T) {
 	os.WriteFile(ChromeQuickStartSkipFilePath, nil, 0644)
 	if !quickStartDismissed() {
 		t.Fatalf("expected quickStartDismissed true once the skip file exists")
+	}
+}
+
+func TestReadMenuStyle(t *testing.T) {
+	dir := t.TempDir()
+	cases := map[string]string{
+		"menu_style=modern\n":           "modern",
+		"foo=bar\nmenu_style=classic\n": "classic",
+		"menu_style=\"modern\"\n":       "modern",
+		"menu_style=weird\n":            "classic",
+		"enabled_modules=dns\n":         "classic",
+	}
+	i := 0
+	for content, want := range cases {
+		i++
+		p := filepath.Join(dir, fmt.Sprintf("openpanel%d.config", i))
+		if err := os.WriteFile(p, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if got := readMenuStyle(p); got != want {
+			t.Errorf("readMenuStyle(%q) = %q, want %q", content, got, want)
+		}
+	}
+	if got := readMenuStyle(filepath.Join(dir, "missing.config")); got != "classic" {
+		t.Errorf("expected classic for a missing config, got %q", got)
 	}
 }

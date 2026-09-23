@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gorilla/csrf"
 
@@ -26,6 +27,40 @@ var chromeSite struct {
 	DevMode          bool
 	ModulesConfig    string
 	CustomCSSEnabled bool
+}
+
+// menuStyle is openpanel.config's menu_style, read at startup and refreshed when the OpenPanel settings page saves it
+var menuStyle atomic.Value
+
+// readMenuStyle reads menu_style from openpanel.config, anything but "modern" (including a missing file or key) is classic
+func readMenuStyle(configPath string) string {
+	raw, err := os.ReadFile(configPath)
+	if err != nil {
+		return "classic"
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "menu_style=") {
+			continue
+		}
+		if strings.Trim(strings.TrimPrefix(trimmed, "menu_style="), `"' `) == "modern" {
+			return "modern"
+		}
+		return "classic"
+	}
+	return "classic"
+}
+
+// SetMenuStyleFromConfig re-reads menu_style, so a saved change applies without restarting the admin service
+func SetMenuStyleFromConfig(configPath string) {
+	menuStyle.Store(readMenuStyle(configPath))
+}
+
+func currentMenuStyle() string {
+	if v, ok := menuStyle.Load().(string); ok && v != "" {
+		return v
+	}
+	return "classic"
 }
 
 // ChromeCustomCSSPath is checked once at startup (see InitChromeSiteInfo):
@@ -69,6 +104,7 @@ func InitChromeSiteInfo(publicIP, serverHostname, forceDomainValue, panelVersion
 	chromeSite.DevMode = devMode
 	chromeSite.ModulesConfig = modulesConfigPath
 	chromeSite.CustomCSSEnabled = isRegularFile(ChromeCustomCSSPath)
+	SetMenuStyleFromConfig(modulesConfigPath)
 }
 
 // buildChrome computes the per-request chrome fields from the current
@@ -125,7 +161,7 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 	_, tourSkipErr := os.Stat(ChromeTourSkipFilePath)
 	tourShow := user != nil && !isReseller && os.IsNotExist(tourSkipErr)
 
-	return webtemplates.Chrome{
+	c := webtemplates.Chrome{
 		Title:               title,
 		CurrentPath:         r.URL.Path,
 		CurrentUser:         username,
@@ -144,7 +180,12 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 		RestartMessages:     restartMessages,
 		TourShow:            tourShow,
 		CustomCSSEnabled:    chromeSite.CustomCSSEnabled,
+		MenuStyle:           currentMenuStyle(),
 	}
+	if c.MenuStyle == "modern" {
+		c.NavItems, c.PageTabs = webtemplates.BuildModernNav(&c)
+	}
+	return c
 }
 
 // mergeChrome flattens buildChrome's fields directly into a map-based
@@ -171,5 +212,8 @@ func mergeChrome(data map[string]interface{}, r *http.Request, title string) map
 	data["RestartMessages"] = c.RestartMessages
 	data["TourShow"] = c.TourShow
 	data["CustomCSSEnabled"] = c.CustomCSSEnabled
+	data["MenuStyle"] = c.MenuStyle
+	data["NavItems"] = c.NavItems
+	data["PageTabs"] = c.PageTabs
 	return data
 }

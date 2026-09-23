@@ -122,10 +122,10 @@ type blacklistUseragentsPageData struct {
 }
 
 // ServeBlacklistUseragents handles GET/POST /security/blacklist-useragents.
-// Only the "admin" role may use this.
+// Admin and user roles may use this, resellers can't.
 func (s *SecurityToggles) ServeBlacklistUseragents(w http.ResponseWriter, r *http.Request) {
 	currentUser := auth.CurrentUser(r)
-	if currentUser.Role != "admin" {
+	if currentUser.Role == "reseller" {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}

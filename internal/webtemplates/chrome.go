@@ -25,4 +25,9 @@ type Chrome struct {
 	RestartMessages     []string
 	TourShow            bool
 	CustomCSSEnabled    bool
+
+	// MenuStyle is "classic" (collapsible groups) or "modern" (one link per area, pages as tabs), from openpanel.config's menu_style
+	MenuStyle string
+	NavItems  []NavItem // modern sidebar
+	PageTabs  []NavLink // modern tab bar above the page content
 }
