@@ -61,7 +61,7 @@ var openpanelIntFields = []string{
 // openpanelIntFields above, and not the "weakpass" checkbox).
 var openpanelStringFields = []string{
 	"brand_name", "logo", "favicon", "ns1", "ns2", "ns3", "ns4",
-	"avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
+	"menu_style", "avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
 	"permit_username_change_by_user", "permit_subdomain_sharing",
 	"twofa_nag", "twofa_enforce", "how_to_guides", "onboarding", "found_a_bug_link", "ip_county_flag",
 	"validate_ip_address_cookie",
@@ -89,6 +89,7 @@ type openpanelRule struct {
 }
 
 var openpanelValidValues = map[string]openpanelRule{
+	"menu_style":                      {kind: openpanelEnum, options: []string{"classic", "modern"}},
 	"avatar_type":                     {kind: openpanelEnum, options: []string{"gravatar", "icon", "letter"}},
 	"resource_usage_charts_mode":      {kind: openpanelEnum, options: []string{"one", "two", "none"}},
 	"activity_items_per_page":         {kind: openpanelNonNegativeInt},
@@ -200,7 +201,7 @@ func openpanelSectionForKey(key string) string {
 	if strings.HasPrefix(key, "filemanager_") || key == "autopurge_trash" {
 		return "FILES"
 	}
-	if key == "terminal_timeout" {
+	if key == "terminal_timeout" || key == "menu_style" {
 		return "PANEL"
 	}
 	switch key {

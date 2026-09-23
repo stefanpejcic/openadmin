@@ -164,6 +164,7 @@ func TestOpenpanelSectionForKey(t *testing.T) {
 		"filemanager_upload_size": "FILES",
 		"autopurge_trash":         "FILES",
 		"terminal_timeout":        "PANEL",
+		"menu_style":              "PANEL",
 		"login_ratelimit":         "USERS",
 	}
 	for key, want := range cases {
