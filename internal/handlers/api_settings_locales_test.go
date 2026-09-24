@@ -169,7 +169,59 @@ func TestAPISettingsLocalesPostMissingParams(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", resp.StatusCode, body)
 	}
-	if !strings.Contains(string(body), "Missing 'locale' or 'default' parameter.") {
+	if !strings.Contains(string(body), "Missing 'locale', 'update', 'delete' or 'default' parameter.") {
 		t.Fatalf("expected missing-params message, got %s", body)
+	}
+}
+
+func TestAPISettingsLocalesPostInstallAll(t *testing.T) {
+	withScratchLocalesPaths(t)
+	withScratchLocalesFetch(t, installAllItems, 200, nil)
+	withScratchLocalesInstallAll(t, "sr-rs")
+
+	srv, client := newAPISettingsLocalesTestServer(t)
+	resp := postJSON(t, client, srv.URL+"/api/settings/locales", `{"locale": "all"}`)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var out struct {
+		Success   bool     `json:"success"`
+		Installed []string `json:"installed"`
+		Failed    []string `json:"failed"`
+	}
+	json.NewDecoder(resp.Body).Decode(&out)
+	if out.Success || strings.Join(out.Installed, ",") != "de-de" || strings.Join(out.Failed, ",") != "sr-rs" {
+		t.Fatalf("unexpected install-all result: %+v", out)
+	}
+}
+
+func TestAPISettingsLocalesGetUpdateAvailable(t *testing.T) {
+	withScratchLocalesPaths(t)
+	writeLocalePo(t, "sr-rs", "old")
+	withScratchLocalesFetch(t, []githubContentItem{{Name: "sr-rs", Type: "dir", Sha: blobShaOf(t, "new")}}, 200, nil)
+
+	srv, client := newAPISettingsLocalesTestServer(t)
+	resp, err := client.Get(srv.URL + "/api/settings/locales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var out struct {
+		Translations []localeRow `json:"translations"`
+	}
+	json.NewDecoder(resp.Body).Decode(&out)
+	if len(out.Translations) != 1 || !out.Translations[0].UpdateAvailable {
+		t.Fatalf("expected sr-rs flagged for update, got %+v", out.Translations)
+	}
+}
+
+func TestAPISettingsLocalesPostDeleteNotInstalled(t *testing.T) {
+	withScratchLocalesPaths(t)
+	srv, client := newAPISettingsLocalesTestServer(t)
+	resp := postJSON(t, client, srv.URL+"/api/settings/locales", `{"delete": "sr-rs"}`)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
 	}
 }

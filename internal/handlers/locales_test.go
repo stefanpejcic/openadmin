@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -22,9 +23,12 @@ func withScratchLocalesPaths(t *testing.T) {
 	TranslationsDir = filepath.Join(dir, "translations")
 	DefaultLocaleFilePath = filepath.Join(dir, "conf", "default_locale")
 	os.MkdirAll(TranslationsDir, 0755)
+	origFlush := localesFlushCacheRun
+	localesFlushCacheRun = func() {}
 	t.Cleanup(func() {
 		TranslationsDir = origDir
 		DefaultLocaleFilePath = origFile
+		localesFlushCacheRun = origFlush
 	})
 }
 
@@ -342,7 +346,207 @@ func TestServeLocalesPostMissingParamsReturns400JSON(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 for a POST with neither locale nor default, got %d: %s", resp.StatusCode, body)
 	}
-	if !strings.Contains(string(body), "Missing 'locale' or 'default' parameter.") {
+	if !strings.Contains(string(body), "Missing 'locale', 'update', 'delete' or 'default' parameter.") {
 		t.Fatalf("expected the missing-params JSON error even for a non-JSON request, got %s", body)
+	}
+}
+
+// fakes opencli by writing messages.po for every locale except the ones in skip
+func withScratchLocalesInstallAll(t *testing.T, skip ...string) *[]string {
+	t.Helper()
+	var got []string
+	orig := localesInstallAllRun
+	localesInstallAllRun = func(locales []string) error {
+		got = locales
+		for _, l := range locales {
+			if slices.Contains(skip, l) {
+				continue
+			}
+			dir := filepath.Join(TranslationsDir, strings.SplitN(l, "-", 2)[0], "LC_MESSAGES")
+			os.MkdirAll(dir, 0755)
+			os.WriteFile(filepath.Join(dir, "messages.po"), []byte("x"), 0644)
+		}
+		return nil
+	}
+	t.Cleanup(func() { localesInstallAllRun = orig })
+	return &got
+}
+
+var installAllItems = []githubContentItem{
+	{Name: ".github", Type: "dir"},
+	{Name: "scripts", Type: "dir"},
+	{Name: "install.sh", Type: "file"},
+	{Name: "de-de", Type: "dir"},
+	{Name: "sr-rs", Type: "dir"},
+}
+
+func TestServeLocalesPostInstallAllFormSuccess(t *testing.T) {
+	withScratchLocalesPaths(t)
+	withScratchLocalesFetch(t, installAllItems, 200, nil)
+	got := withScratchLocalesInstallAll(t)
+
+	l := &Locales{}
+	srv, client := newLocalesTestServer(t, l)
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return nil }
+
+	resp, err := client.PostForm(srv.URL+"/settings/locales", url.Values{"locale": {"all"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if strings.Join(*got, ",") != "de-de,sr-rs" {
+		t.Fatalf("expected only cc-cc dirs passed to opencli, got %v", *got)
+	}
+	if !strings.Contains(string(body), "Installed 2 locales: de-de, sr-rs.") {
+		t.Fatalf("expected install-all flash, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeLocalesPostInstallAllPartialFailureJSON(t *testing.T) {
+	withScratchLocalesPaths(t)
+	withScratchLocalesFetch(t, installAllItems, 200, nil)
+	withScratchLocalesInstallAll(t, "sr-rs")
+
+	l := &Locales{}
+	srv, client := newLocalesTestServer(t, l)
+
+	resp := postJSON(t, client, srv.URL+"/settings/locales", `{"locale": "all"}`)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500 on partial failure, got %d: %s", resp.StatusCode, body)
+	}
+	if !strings.Contains(string(body), "Failed: sr-rs.") {
+		t.Fatalf("expected failed locale in message, got %s", body)
+	}
+}
+
+func writeLocalePo(t *testing.T, locale, content string) {
+	t.Helper()
+	dir := filepath.Join(TranslationsDir, strings.SplitN(locale, "-", 2)[0], "LC_MESSAGES")
+	os.MkdirAll(dir, 0755)
+	if err := os.WriteFile(filepath.Join(dir, "messages.po"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func blobShaOf(t *testing.T, content string) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "po")
+	os.WriteFile(p, []byte(content), 0644)
+	return gitBlobSha(p)
+}
+
+func TestServeLocalesGetFlagsUpdates(t *testing.T) {
+	withScratchLocalesPaths(t)
+	writeLocalePo(t, "de-de", "same")
+	writeLocalePo(t, "sr-rs", "old")
+	withScratchLocalesFetch(t, []githubContentItem{
+		{Name: "de-de", Type: "dir", Sha: blobShaOf(t, "same")},
+		{Name: "sr-rs", Type: "dir", Sha: blobShaOf(t, "new")},
+		{Name: "fr-fr", Type: "dir", Sha: blobShaOf(t, "new")},
+	}, 200, nil)
+
+	l := &Locales{}
+	srv, client := newLocalesTestServer(t, l)
+
+	resp, err := client.Get(srv.URL + "/settings/locales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "Update available for sr-rs.") {
+		t.Fatalf("expected update notice for sr-rs only, got %s", truncate(string(body)))
+	}
+	if !strings.Contains(string(body), "Update All (1)") {
+		t.Fatalf("expected Update All button, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeLocalesPostUpdateAllOnlyOutdated(t *testing.T) {
+	withScratchLocalesPaths(t)
+	writeLocalePo(t, "de-de", "same")
+	writeLocalePo(t, "sr-rs", "old")
+	withScratchLocalesFetch(t, []githubContentItem{
+		{Name: "de-de", Type: "dir", Sha: blobShaOf(t, "same")},
+		{Name: "sr-rs", Type: "dir", Sha: blobShaOf(t, "new")},
+	}, 200, nil)
+	var got []string
+	orig := localesInstallAllRun
+	localesInstallAllRun = func(locales []string) error {
+		got = locales
+		writeLocalePo(t, "sr-rs", "new")
+		return nil
+	}
+	t.Cleanup(func() { localesInstallAllRun = orig })
+
+	l := &Locales{}
+	srv, client := newLocalesTestServer(t, l)
+
+	resp := postJSON(t, client, srv.URL+"/settings/locales", `{"update": "all"}`)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), "Updated 1 locale: sr-rs.") {
+		t.Fatalf("expected sr-rs updated, got %d: %s", resp.StatusCode, body)
+	}
+	if strings.Join(got, ",") != "sr-rs" {
+		t.Fatalf("expected only outdated locales passed to opencli, got %v", got)
+	}
+}
+
+func TestServeLocalesPostUpdateStillOutdatedFails(t *testing.T) {
+	withScratchLocalesPaths(t)
+	writeLocalePo(t, "sr-rs", "old")
+	withScratchLocalesFetch(t, []githubContentItem{{Name: "sr-rs", Type: "dir", Sha: blobShaOf(t, "new")}}, 200, nil)
+	withScratchLocalesInstallAll(t, "sr-rs")
+
+	l := &Locales{}
+	srv, client := newLocalesTestServer(t, l)
+
+	resp := postJSON(t, client, srv.URL+"/settings/locales", `{"update": "sr-rs"}`)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError || !strings.Contains(string(body), "Failed: sr-rs.") {
+		t.Fatalf("expected failure when file still differs, got %d: %s", resp.StatusCode, body)
+	}
+}
+
+func TestServeLocalesPostDelete(t *testing.T) {
+	withScratchLocalesPaths(t)
+	writeLocalePo(t, "sr-rs", "x")
+
+	l := &Locales{}
+	srv, client := newLocalesTestServer(t, l)
+
+	resp := postJSON(t, client, srv.URL+"/settings/locales", `{"delete": "sr-rs"}`)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
+	}
+	if _, err := os.Stat(filepath.Join(TranslationsDir, "sr")); !os.IsNotExist(err) {
+		t.Fatalf("expected sr dir removed, stat err: %v", err)
+	}
+}
+
+func TestServeLocalesPostDeleteDefaultRefused(t *testing.T) {
+	withScratchLocalesPaths(t)
+	writeLocalePo(t, "sr-rs", "x")
+	os.MkdirAll(filepath.Dir(DefaultLocaleFilePath), 0755)
+	os.WriteFile(DefaultLocaleFilePath, []byte("sr"), 0644)
+
+	l := &Locales{}
+	srv, client := newLocalesTestServer(t, l)
+
+	resp := postJSON(t, client, srv.URL+"/settings/locales", `{"delete": "sr-rs"}`)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 deleting the default, got %d: %s", resp.StatusCode, body)
+	}
+	if _, err := os.Stat(filepath.Join(TranslationsDir, "sr")); err != nil {
+		t.Fatalf("default locale dir should still exist: %v", err)
 	}
 }

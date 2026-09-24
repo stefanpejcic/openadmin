@@ -21,6 +21,36 @@
                     <h2 class="text-sm font-medium text-slate-500">Install and configure Locales that OpenPanel users can choose.</h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    {{if .UpdateCount}}
+                    <form method="POST" x-data="{ isUpdating: false }">
+                        <input type="hidden" name="update" value="all">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        <button
+                            class="relative inline-flex items-center justify-center rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+                            type="submit"
+                            :disabled="isUpdating"
+                            @click="isUpdating = true; $nextTick(() => $el.closest('form').submit())"
+                        >
+                            <span x-show="isUpdating" class="mr-2 spinner border-t-transparent border-indigo-500"></span>
+                            <span x-text="isUpdating ? 'Updating all...' : 'Update All ({{.UpdateCount}})'">Update All ({{.UpdateCount}})</span>
+                        </button>
+                    </form>
+                    {{end}}
+                    {{if .Translations}}
+                    <form method="POST" x-data="{ isInstalling: false }">
+                        <input type="hidden" name="locale" value="all">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        <button
+                            class="relative inline-flex items-center justify-center rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+                            type="submit"
+                            :disabled="isInstalling"
+                            @click="isInstalling = true; $nextTick(() => $el.closest('form').submit())"
+                        >
+                            <span x-show="isInstalling" class="mr-2 spinner border-t-transparent border-indigo-500"></span>
+                            <span x-text="isInstalling ? 'Installing all...' : 'Install All'">Install All</span>
+                        </button>
+                    </form>
+                    {{end}}
                 </div>
             </div>
         </header>
@@ -104,6 +134,9 @@
 <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
     {{if .Installed}}
 <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 rounded-full"><span class="size-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>Installed</span>
+        {{if .UpdateAvailable}}
+<span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-amber-50 text-amber-900 ring-amber-600/30 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20 rounded-full"><span class="size-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400" aria-hidden="true"></span>Update available</span>
+        {{end}}
     {{else}}
 <span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 rounded-full" tremor-id="tremor-raw"><span class="size-1.5 shrink-0 rounded-full bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>Not Installed</span>
     {{end}}
@@ -152,7 +185,36 @@
         <span x-text="isInstalling ? 'Installing...' : 'Install'"></span>
     </button>
 </form>
-
+    {{else}}
+<div class="inline-flex items-center gap-1">
+    {{if .UpdateAvailable}}
+<form method="POST" x-data="{ isUpdating: false }">
+    <input type="hidden" name="update" value="{{.Locale}}">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+    <button
+        class="relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+        type="submit"
+        :disabled="isUpdating"
+        @click="isUpdating = true; $nextTick(() => $el.closest('form').submit())"
+    >
+        <span x-show="isUpdating" class="mr-2 spinner border-t-transparent border-indigo-500"></span>
+        <span x-text="isUpdating ? 'Updating...' : 'Update'">Update</span>
+    </button>
+</form>
+    {{end}}
+    {{if not .IsDefault}}
+<form method="POST" onsubmit="return confirm('Delete locale {{.Locale}}?');">
+    <input type="hidden" name="delete" value="{{.Locale}}">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+    <button
+        class="relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-red-500 border-red-600 bg-white text-red-600 hover:bg-red-50 dark:border-red-500/50 dark:bg-gray-950 dark:text-red-400 dark:hover:bg-red-500/10 sm:w-fit sm:mt-0"
+        type="submit"
+    >
+        Delete
+    </button>
+</form>
+    {{end}}
+</div>
     {{end}}
 </td>
 
