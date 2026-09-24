@@ -20,6 +20,32 @@
 
     <!-- SIDEBAR CLOSE / OPEN -->
     <style>[x-cloak] { display: none !important;}</style>
+    <style>
+      .op-help{max-height:65vh;line-height:1.6}
+      .op-help h1{font-size:1.25rem;font-weight:600;margin:0 0 .75rem}
+      .op-help h2{font-size:1.05rem;font-weight:600;margin:1.5rem 0 .5rem}
+      .op-help h3,.op-help h4{font-weight:600;margin:1.25rem 0 .5rem}
+      .op-help h1,.op-help h2,.op-help h3,.op-help h4{color:#111827}
+      .dark .op-help h1,.dark .op-help h2,.dark .op-help h3,.dark .op-help h4{color:#f9fafb}
+      .op-help p,.op-help ul,.op-help ol,.op-help pre,.op-help table,.op-help blockquote{margin:0 0 .75rem}
+      .op-help ul{list-style:disc;padding-left:1.25rem}
+      .op-help ol{list-style:decimal;padding-left:1.25rem}
+      .op-help li{margin:.2rem 0}
+      .op-help a{color:#2563eb;text-decoration:underline}
+      .op-help img{max-width:100%;height:auto;margin:.75rem 0;border:1px solid #e5e7eb;border-radius:.25rem}
+      .dark .op-help img{border-color:#1f2937}
+      .op-help code{font-size:.85em;background:#f3f4f6;padding:.1rem .3rem;border-radius:.25rem}
+      .dark .op-help code{background:#111827}
+      .op-help pre{background:#f3f4f6;padding:.75rem;border-radius:.25rem;overflow-x:auto}
+      .dark .op-help pre{background:#111827}
+      .op-help pre code{background:none;padding:0}
+      .op-help blockquote{border-left:4px solid #3b82f6;background:#eff6ff;padding:.5rem .75rem;border-radius:.25rem}
+      .dark .op-help blockquote{background:#172554}
+      .op-help blockquote p:last-child{margin:0}
+      .op-help table{border-collapse:collapse;width:100%}
+      .op-help th,.op-help td{border:1px solid #e5e7eb;padding:.35rem .5rem;text-align:left}
+      .dark .op-help th,.dark .op-help td{border-color:#1f2937}
+    </style>
     <script>(function(){const sidebarState=sessionStorage.getItem('sidebarOpen');const isMobile=window.innerWidth<768;let isOpen=sidebarState===null?!isMobile:sidebarState==='true';if(isOpen){document.documentElement.classList.add('sidebar-open');}else{document.documentElement.classList.remove('sidebar-open');}})();</script>
     <style>#sidebar{display:none;width:16rem}#header,#no_margin_for_iframe{margin-left:0;transition:margin .2s ease-in-out}.sidebar-open #sidebar{display:block}.sidebar-open #header,.sidebar-open #no_margin_for_iframe{margin-left:16rem}@media (max-width:767px){.sidebar-open #header,.sidebar-open #no_margin_for_iframe{margin-left:0}} html.sidebar-open button[onclick="toggleSidebar()"] {cursor: w-resize;} html:not(.sidebar-open) button[onclick="toggleSidebar()"] {cursor: e-resize;}</style>
 
@@ -68,7 +94,7 @@
                                     </ul>
                                   </div>
                                 </form>
-                                <script>function searchDropdown(){return{query:'',dropdownOpen:false,filteredItems:[],isReseller:false,PERSON_FILL:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>',PERSON_FILL_X:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/><path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/></svg>',async fetchJSON(url){try{const r=await fetch(url),d=await r.json();return Array.isArray(d)?d:[]}catch{return[]}},async handleInput(){const s=this.query.toLowerCase(),items=[],pagesReq=this.isReseller?[]:await this.fetchJSON('/search/pages'),usersReq=await this.fetchJSON('/search/users'),websitesReq=this.isReseller?[]:await this.fetchJSON('/search/websites');pagesReq.forEach(item=>{const n=item?.name??'',l=item?.link??'#',d=item?.description??'';if(n.toLowerCase().includes(s))items.push({id:`page-${n}`,html:`<a class="dropdown-item flex w-full" href="${l}">${n}<br><p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${d}</p></a>`})});usersReq.forEach(n=>{if(!n)return;const sus=n.toLowerCase().includes('suspended'),icon=sus?this.PERSON_FILL_X:this.PERSON_FILL;if(n.toLowerCase().startsWith('suspended_')){const dn=n.split('_').pop();items.push({id:`user-${n}`,html:`<a class="flex text-red" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${dn}</span></a>`})}else if(n.toLowerCase().includes(s)){items.push({id:`user-${n}`,html:`<div class="flex justify-between items-center w-full"><a class="flex" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${n}</span></a><a href="/login/token/${n}" title="Login as ${n} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/></g></svg></a></div>`})}});websitesReq.forEach(row=>{const n=Array.isArray(row)?row[0]:'';if(n&&n.toLowerCase().includes(s))items.push({id:`website-${n}`,html:`<a class="flex dropdown-item" href="/domains/${n}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/></svg> &nbsp;${n}</a>`})});this.filteredItems=items;this.dropdownOpen=items.length>0},closeDropdown(){this.dropdownOpen=false},init(){this.isReseller={{if .IsReseller}}true{{else}}false{{end}}}}}</script>
+                                <script>function searchDropdown(){return{query:'',dropdownOpen:false,filteredItems:[],isReseller:false,PERSON_FILL:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>',PERSON_FILL_X:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/><path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/></svg>',async fetchJSON(url){try{const r=await fetch(url),d=await r.json();return Array.isArray(d)?d:[]}catch{return[]}},async handleInput(){const s=this.query.toLowerCase(),items=[],pagesReq=this.isReseller?[]:await this.fetchJSON('/search/pages'),usersReq=await this.fetchJSON('/search/users'),websitesReq=this.isReseller?[]:await this.fetchJSON('/search/websites');pagesReq.forEach(item=>{const n=item?.name??'',l=item?.link??'#',d=item?.description??'',a=item?.area??'',k=(item?.keywords??[]).join(' ');if([n,a,k].join(' ').toLowerCase().includes(s))items.push({id:`page-${l}`,html:`<a class="dropdown-item flex w-full" href="${l}">${a?a+' › ':''}${n}<br><p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${d}</p></a>`})});usersReq.forEach(n=>{if(!n)return;const sus=n.toLowerCase().includes('suspended'),icon=sus?this.PERSON_FILL_X:this.PERSON_FILL;if(n.toLowerCase().startsWith('suspended_')){const dn=n.split('_').pop();items.push({id:`user-${n}`,html:`<a class="flex text-red" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${dn}</span></a>`})}else if(n.toLowerCase().includes(s)){items.push({id:`user-${n}`,html:`<div class="flex justify-between items-center w-full"><a class="flex" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${n}</span></a><a href="/login/token/${n}" title="Login as ${n} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center rounded border p-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/></g></svg></a></div>`})}});websitesReq.forEach(row=>{const n=Array.isArray(row)?row[0]:'';if(n&&n.toLowerCase().includes(s))items.push({id:`website-${n}`,html:`<a class="flex dropdown-item" href="/domains/${n}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/></svg> &nbsp;${n}</a>`})});this.filteredItems=items;this.dropdownOpen=items.length>0},closeDropdown(){this.dropdownOpen=false},init(){this.isReseller={{if .IsReseller}}true{{else}}false{{end}}}}}</script>
                         </div>
                     </div>
 
@@ -869,15 +895,16 @@
     {{if .Section}}
     <li class="px-2 pt-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-500">{{.Section}}</li>
     {{end}}
-    <li><a id="{{.MenuID}}" data-active="{{if .Active}}true{{else}}false{{end}}" class="flex items-center justify-between rounded p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="{{.Href}}"><span class="flex items-center gap-x-2.5">{{.Icon}}{{.Label}}</span></a></li>
+    <li><a id="{{.MenuID}}" data-active="{{if .Active}}true{{else}}false{{end}}" class="flex items-center justify-between rounded p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="{{.Href}}"><span class="flex items-center gap-x-2.5">{{.Icon}}{{.Label}}</span>{{if .Alert}}<span title="{{.AlertTitle}}" class="ml-auto size-2 shrink-0 rounded-full {{if eq .Alert "error"}}bg-red-500{{else}}bg-orange-500{{end}}"></span>{{end}}</a></li>
     {{end}}
 </ul>
 {{end}}
 
 {{define "chrome_page_tabs"}}
 {{if .PageTabs}}
-<nav id="page-tabs" aria-label="Page sections" class="border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-950 sm:px-6 lg:px-8">
-    <ul class="-mb-px flex gap-x-6 overflow-x-auto text-sm">
+<div x-data="{ helpOpen: false }">
+<nav id="page-tabs" aria-label="Page sections" class="flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-950 sm:px-6 lg:px-8">
+    <ul class="-mb-px flex min-w-0 gap-x-6 overflow-x-auto text-sm">
         {{range .PageTabs}}
         <li class="shrink-0">
             <a href="{{.Href}}" {{if .Active}}aria-current="page"{{end}}
@@ -885,7 +912,22 @@
         </li>
         {{end}}
     </ul>
+    {{if .HelpDoc}}
+    <button type="button" id="page-help-button" data-doc="{{.HelpDoc}}" data-part="{{.HelpPart}}" @click="helpOpen = !helpOpen; if (helpOpen) OPPageHelp.load($refs.helpBody, $el.dataset.doc, $el.dataset.part)" :aria-expanded="helpOpen" class="flex shrink-0 items-center gap-x-1.5 whitespace-nowrap rounded border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 cursor-pointer"><span class="w-full text-left sm:w-fit">Documentation</span></button>
+    {{end}}
 </nav>
+{{if .HelpDoc}}
+<section id="page-help" x-show="helpOpen" x-cloak class="border-b border-gray-200 bg-gray-50 px-4 py-6 dark:border-gray-800 dark:bg-gray-950 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-4xl rounded border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-[#090E1A]">
+        <div class="mb-4 flex items-center justify-between gap-4 border-b border-gray-200 pb-3 dark:border-gray-800">
+            <span class="inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 dark:text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 shrink-0" aria-hidden="true"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>Documentation</span>
+            <a href="https://openpanel.com/docs/{{.HelpDoc}}/" target="_blank" rel="noopener" class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-500">Open on openpanel.com ↗</a>
+        </div>
+        <div x-ref="helpBody" class="op-help overflow-y-auto text-sm text-gray-700 dark:text-gray-300">Loading documentation...</div>
+    </div>
+</section>
+{{end}}
+</div>
 {{end}}
 {{end}}
 
@@ -906,7 +948,10 @@
 
                     {{if .Title}}
 
-                    {{if or (or (or (eq .Title "Users") (eq .Title "Resellers")) (eq .Title "Administrators")) (or (contains .Title "SUSPENDED_") (contains .Title "User:"))}}
+                    {{if and (eq .MenuStyle "modern") .AreaLabel}}
+                    <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="{{.AreaHref}}">{{.AreaLabel}}</a></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    {{else}}{{if or (or (or (eq .Title "Users") (eq .Title "Resellers")) (eq .Title "Administrators")) (or (contains .Title "SUSPENDED_") (contains .Title "User:"))}}
 
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Users</span></div></li>
 
@@ -969,6 +1014,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
 
 
+                    {{end}}
                     {{end}}
 
                     <li class="flex">
@@ -1424,6 +1470,8 @@ document.addEventListener('alpine:init', () => {
 {{end}}
 
 {{define "chrome_scripts_bottom"}}
+    <!-- ask before leaving a settings form with changes that weren't saved -->
+    <script>(function(){let dirty=false;const mark=e=>{if(e.target.closest&&e.target.closest('form[data-warn-unsaved]'))dirty=true;};document.addEventListener('input',mark);document.addEventListener('change',mark);document.addEventListener('submit',()=>{dirty=false;},true);window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});})();</script>
     <!-- Dark Mode toggle -->
     <script>const D=document.getElementById('theme-toggle-dark-icon'),L=document.getElementById('theme-toggle-light-icon');(localStorage.getItem('color-theme')==='dark'||(!('color-theme' in localStorage)&&window.matchMedia('(prefers-color-scheme: dark)').matches))?L.classList.remove('hidden'):D.classList.remove('hidden');document.getElementById('theme-toggle').addEventListener('click',function(){D.classList.toggle('hidden');L.classList.toggle('hidden');const t=localStorage.getItem('color-theme'),d=document.documentElement.classList;t?(t==='light'?(d.add('dark'),localStorage.setItem('color-theme','dark')):(d.remove('dark'),localStorage.setItem('color-theme','light'))):(d.contains('dark')?(d.remove('dark'),localStorage.setItem('color-theme','light')):(d.add('dark'),localStorage.setItem('color-theme','dark')))});</script>
 
@@ -1444,6 +1492,7 @@ document.addEventListener('alpine:init', () => {
          `module` to write to, then promotes the export to a real global. -->
     <script>window.module = { exports: {} };</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/punycode/2.1.1/punycode.min.js"></script>
+    <script src="/static/dist/js/page-help.js"></script>
     <script>window.punycode = window.module.exports; delete window.module;</script>
     <script defer src="/static/dist/js/idn_domains.js"></script>
 {{end}}

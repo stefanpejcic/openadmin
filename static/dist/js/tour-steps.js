@@ -811,7 +811,7 @@ window.TOUR_STEPS = [
     {
         path: '/security/waf',
         element: '#enable',
-        title: 'WAF',
+        title: 'Web Firewall (Coraza)',
         description: 'Enable/disable Coraza WAF on the server and for all existing domains.',
         side: 'right',
         align: 'start'
@@ -827,7 +827,7 @@ window.TOUR_STEPS = [
     {
         path: '/security/waf/rules',
         element: '#waf_sets',
-        title: 'WAF Rules',
+        title: 'Web Firewall Rules',
         description: 'Lists rule sets and the rules within them, shows their status, and lets you view a set’s rules or disable it.',
         side: 'top',
         align: 'start'
@@ -899,7 +899,7 @@ window.TOUR_STEPS = [
     {
         path: '/security/blacklist-useragents',
         element: '#enable',
-        title: 'Blacklist User Agents',
+        title: 'Blocked User Agents',
         description: 'Blacklist known malicious bots from accessing the user panel. Enable it here.',
         side: 'right',
         align: 'start'

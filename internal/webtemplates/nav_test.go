@@ -94,9 +94,10 @@ func TestBuildModernNavServerAndSystem(t *testing.T) {
 	}
 }
 
-func TestBuildModernNavSingleTabHasNoBar(t *testing.T) {
-	if _, tabs := BuildModernNav(&Chrome{CurrentPath: "/license", IsAdmin: true}); tabs != nil {
-		t.Errorf("expected no tab bar on License & Support, got %+v", tabs)
+func TestBuildModernNavSingleTabKeepsBarForDocs(t *testing.T) {
+	_, tabs := BuildModernNav(&Chrome{CurrentPath: "/license", IsAdmin: true})
+	if len(tabs) != 1 || func() bool { d, _ := HelpDocFor(tabs, "/license"); return d != "admin/license" }() {
+		t.Errorf("expected License & Support to keep its tab bar for the docs button, got %+v", tabs)
 	}
 }
 
@@ -109,6 +110,20 @@ func TestBuildModernNavSystemStartsWithServerTime(t *testing.T) {
 	for _, i := range items {
 		if i.Label == "System" && i.Href != "/server/timezone" {
 			t.Errorf("expected the System link to open Server Time, got %s", i.Href)
+		}
+	}
+}
+
+func TestHelpDocForUsersSplitsTheDoc(t *testing.T) {
+	for path, want := range map[string]string{
+		"/users":        "until:Single User",
+		"/users/":       "until:Single User",
+		"/user/new":     "until:Single User",
+		"/users/stefan": "from:Single User",
+	} {
+		_, tabs := BuildModernNav(&Chrome{CurrentPath: path, IsAdmin: true})
+		if doc, part := HelpDocFor(tabs, path); doc != "admin/accounts/users" || part != want {
+			t.Errorf("%s: got %q %q, want admin/accounts/users %q", path, doc, part, want)
 		}
 	}
 }

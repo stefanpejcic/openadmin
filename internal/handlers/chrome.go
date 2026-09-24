@@ -122,6 +122,7 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 	isUser := role == "user"
 
 	unread := 0
+	serviceDown := ""
 	var restartMessages []string
 	if !isReseller {
 		// Counts every unread notification in the log, not just the last 5
@@ -135,6 +136,9 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 		for _, l := range lines {
 			if strings.Contains(l, "UNREAD") {
 				unread++
+				if title := notificationTitle(l); isServiceDownTitle(title) {
+					serviceDown = title
+				}
 			}
 		}
 
@@ -184,8 +188,36 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 	}
 	if c.MenuStyle == "modern" {
 		c.NavItems, c.PageTabs = webtemplates.BuildModernNav(&c)
+		c.HelpDoc, c.HelpPart = webtemplates.HelpDocFor(c.PageTabs, c.CurrentPath)
+		for i, item := range c.NavItems {
+			if item.Active && c.AreaLabel == "" {
+				c.AreaLabel, c.AreaHref = item.Label, item.Href
+			}
+			switch {
+			case item.MenuID == "services-menu" && serviceDown != "":
+				c.NavItems[i].Alert, c.NavItems[i].AlertTitle = "error", serviceDown
+			case item.MenuID == "settings-menu" && len(restartMessages) > 0:
+				c.NavItems[i].Alert, c.NavItems[i].AlertTitle = "warning", restartMessages[0]
+			}
+		}
 	}
 	return c
+}
+
+// notificationTitle pulls the title out of a notifications.log line: "<date> <time> <READ|UNREAD> <title> MESSAGE: <message>"
+func notificationTitle(line string) string {
+	fields := strings.SplitN(line, " ", 4)
+	if len(fields) < 4 {
+		return ""
+	}
+	title, _, _ := strings.Cut(fields[3], " MESSAGE:")
+	return strings.TrimSpace(title)
+}
+
+// isServiceDownTitle matches sentinel's service alerts, e.g. "Caddy not active - websites down!" or "OpenPanel container not running!"
+func isServiceDownTitle(title string) bool {
+	t := strings.ToLower(title)
+	return strings.Contains(t, "not active") || strings.Contains(t, "not running") || strings.Contains(t, "not accessible")
 }
 
 // mergeChrome flattens buildChrome's fields directly into a map-based
@@ -215,5 +247,9 @@ func mergeChrome(data map[string]interface{}, r *http.Request, title string) map
 	data["MenuStyle"] = c.MenuStyle
 	data["NavItems"] = c.NavItems
 	data["PageTabs"] = c.PageTabs
+	data["AreaLabel"] = c.AreaLabel
+	data["AreaHref"] = c.AreaHref
+	data["HelpDoc"] = c.HelpDoc
+	data["HelpPart"] = c.HelpPart
 	return data
 }

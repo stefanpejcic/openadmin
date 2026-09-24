@@ -206,7 +206,7 @@ func (wf *WAF) ServeWAFRules(w http.ResponseWriter, r *http.Request) {
 		"RulesDetails": rulesDetails,
 		"CSRFToken":    csrf.Token(r),
 		"Flashes":      auth.PopFlashes(w, r, wf.Sessions),
-	}, r, "Edit CorazaWAF Rules"))
+	}, r, "Web Firewall Rules"))
 }
 
 // wafModuleEnabled does a plain, unstructured substring search for "waf"
@@ -288,5 +288,5 @@ func (wf *WAF) ServeWAFStatus(w http.ResponseWriter, r *http.Request) {
 		"TotalSets":    totalCount,
 		"CSRFToken":    csrf.Token(r),
 		"Flashes":      auth.PopFlashes(w, r, wf.Sessions),
-	}, r, "CorazaWAF"))
+	}, r, "Web Firewall (Coraza)"))
 }

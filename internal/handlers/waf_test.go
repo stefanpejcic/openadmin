@@ -146,7 +146,7 @@ func TestServeWAFRulesRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"sqli", "xss", "Waf Rules", "</html>"} {
+	for _, want := range []string{"sqli", "xss", "Web Firewall Rules", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}

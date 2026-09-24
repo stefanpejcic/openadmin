@@ -13,6 +13,9 @@ type NavItem struct {
 	Href    string
 	Active  bool
 	Section string // heading rendered above this item, set only on the first item of a section
+
+	Alert      string // "error" or "warning" shows a colored dot next to the label
+	AlertTitle string // tooltip for that dot
 }
 
 // NavLink is one tab in the modern menu's page tab bar
@@ -165,12 +168,12 @@ var modernAreas = []navArea{
 		tabs: func(c *Chrome, path string) []NavLink {
 			return buildTabs(
 				tabSpec{true, "/security/firewall", "Firewall", strings.HasPrefix(path, "/security/firewall")},
-				tabSpec{true, "/security/waf", "CorazaWAF", strings.HasPrefix(path, "/security/waf")},
+				tabSpec{true, "/security/waf", "Web Firewall (Coraza)", strings.HasPrefix(path, "/security/waf")},
 				tabSpec{true, "/security/imunify", "ImunifyAV", strings.HasPrefix(path, "/security/imunify")},
 				tabSpec{true, "/security/basic_auth", "Basic Auth", strings.HasPrefix(path, "/security/basic_auth")},
 				tabSpec{true, "/security/2fa", "Two-Factor Authentication", strings.HasPrefix(path, "/security/2fa")},
 				tabSpec{true, "/security/passkeys", "Passkeys", strings.HasPrefix(path, "/security/passkeys")},
-				tabSpec{true, "/security/blacklist-useragents", "Blacklist UA", strings.HasPrefix(path, "/security/blacklist-useragents")},
+				tabSpec{true, "/security/blacklist-useragents", "Blocked User Agents", strings.HasPrefix(path, "/security/blacklist-useragents")},
 				tabSpec{true, "/security/disable-admin", "Disable OpenAdmin", strings.HasPrefix(path, "/security/disable-admin")},
 			)
 		}},
@@ -221,7 +224,7 @@ var modernAreas = []navArea{
 		}},
 }
 
-// BuildModernNav returns the modern sidebar items and the tab bar for the current page, tabs are nil when the page's area has fewer than two
+// BuildModernNav returns the modern sidebar items and the tab bar for the current page, tabs are nil when the page's area has fewer than two unless that one tab has docs
 func BuildModernNav(c *Chrome) ([]NavItem, []NavLink) {
 	path := c.CurrentPath
 	var items []NavItem
@@ -241,9 +244,87 @@ func BuildModernNav(c *Chrome) ([]NavItem, []NavLink) {
 		active := a.match(c, path)
 		items = append(items, NavItem{Label: a.label, Icon: a.icon, MenuID: a.menuID, Href: areaTabs[0].Href, Active: active, Section: pendingSection})
 		pendingSection = ""
-		if active && tabs == nil && len(areaTabs) > 1 {
+		if active && tabs == nil && (len(areaTabs) > 1 || helpDocs[areaTabs[0].Href] != "") {
 			tabs = areaTabs
 		}
 	}
 	return items, tabs
+}
+
+// helpDocs maps a tab's href to its docs page (website/docs/<doc>.md), so every page under that tab gets the tab bar's Documentation button
+var helpDocs = map[string]string{
+	"/users":                         "admin/accounts/users",
+	"/resellers":                     "admin/accounts/resellers",
+	"/administrators":                "admin/accounts/administrators",
+	"/plans":                         "admin/plans/hosting_plans",
+	"/features":                      "admin/plans/feature-manager",
+	"/domains":                       "admin/domains/domains",
+	"/domains/dns":                   "admin/domains/dns",
+	"/domains/dns-cluster":           "admin/domains/dns-cluster",
+	"/domains/zone-templates":        "admin/domains/dns_templates",
+	"/domains/file-templates":        "admin/domains/file_templates",
+	"/emails/accounts":               "admin/emails/emails",
+	"/emails/queue":                  "admin/emails/queue",
+	"/emails/reports":                "admin/emails/summary",
+	"/emails/settings":               "admin/emails/settings",
+	"/backups/user":                  "admin/backups/user",
+	"/backups/system":                "admin/backups/system",
+	"/user/import":                   "admin/backups/cpanel",
+	"/services":                      "admin/services/status",
+	"/services/limits":               "admin/services/limits",
+	"/services/logs":                 "admin/services/logs",
+	"/services/podman":               "admin/services/podman",
+	"/services/ftp":                  "admin/services/ftp",
+	"/security/firewall":             "admin/security/firewall",
+	"/security/waf":                  "admin/security/waf",
+	"/security/imunify":              "admin/security/imunify",
+	"/security/basic_auth":           "admin/security/basic_auth",
+	"/security/2fa":                  "admin/security/2fa",
+	"/security/passkeys":             "admin/security/passkeys",
+	"/security/blacklist-useragents": "admin/security/blacklist-useragents",
+	"/security/disable-admin":        "admin/security/disable-admin",
+	"/server/resource-usage":         "admin/advanced/resource-usage",
+	"/server/crons":                  "admin/advanced/crons",
+	"/terminal":                      "admin/advanced/terminal",
+	"/server/processes":              "admin/advanced/processes",
+	"/server/timezone":               "admin/system/timezone",
+	"/server/root-password":          "admin/system/root-password",
+	"/server/ssh":                    "admin/system/ssh",
+	"/server/reboot":                 "admin/system/reboot",
+	"/server/swap":                   "admin/system/swap",
+	"/server/migrate":                "admin/system/migrate",
+	"/server/demo-mode":              "admin/system/demo-mode",
+	"/settings/general":              "admin/settings/general",
+	"/settings/open-panel":           "admin/settings/openpanel",
+	"/settings/defaults":             "admin/settings/defaults",
+	"/settings/modules":              "admin/settings/modules",
+	"/settings/api":                  "admin/settings/api",
+	"/settings/php":                  "admin/settings/php",
+	"/settings/notifications":        "admin/settings/notifications",
+	"/settings/updates":              "admin/settings/updates",
+	"/settings/locales":              "admin/settings/locales",
+	"/settings/custom-code":          "admin/settings/custom_code",
+	"/license":                       "admin/license",
+}
+
+// helpSection picks the part of doc a page shows, "until:X" keeps what's before the X heading and "from:X" keeps that section
+func helpSection(doc, path string) string {
+	switch doc {
+	case "admin/accounts/users":
+		if strings.HasPrefix(path, "/users/") && strings.Trim(path, "/") != "users" {
+			return "from:Single User"
+		}
+		return "until:Single User"
+	}
+	return ""
+}
+
+// HelpDocFor returns the docs page for the active tab plus the part of it to show, "" when there's none
+func HelpDocFor(tabs []NavLink, path string) (doc, section string) {
+	for _, t := range tabs {
+		if t.Active && helpDocs[t.Href] != "" {
+			return helpDocs[t.Href], helpSection(helpDocs[t.Href], path)
+		}
+	}
+	return "", ""
 }

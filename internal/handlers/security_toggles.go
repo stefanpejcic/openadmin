@@ -167,7 +167,7 @@ func (s *SecurityToggles) ServeBlacklistUseragents(w http.ResponseWriter, r *htt
 	}
 
 	webtemplates.Render(w, "blacklist_useragents.html", blacklistUseragentsPageData{
-		Chrome:                     buildChrome(r, "Blacklist Useragents"),
+		Chrome:                     buildChrome(r, "Blocked User Agents"),
 		BlacklistUseragentsEnabled: enabled,
 		BlacklistUseragents:        list,
 		CSRFToken:                  csrf.Token(r),

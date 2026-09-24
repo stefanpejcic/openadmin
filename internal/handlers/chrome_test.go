@@ -120,3 +120,21 @@ func TestReadMenuStyle(t *testing.T) {
 		t.Errorf("expected classic for a missing config, got %q", got)
 	}
 }
+
+func TestServiceDownDetection(t *testing.T) {
+	cases := map[string]bool{
+		"2026-09-23 18:02:51 UNREAD Caddy not active — websites down! MESSAGE: logs":                 true,
+		"2026-09-23 18:02:51 UNREAD OpenPanel container not running! MESSAGE: x":                     true,
+		"2026-09-23 18:02:51 UNREAD OpenAdmin service not accessible! MESSAGE: x":                    true,
+		"2026-09-23 18:02:51 UNREAD High SWAP usage! MESSAGE: SWAP: 100%":                            false,
+		"2026-09-23 18:02:51 UNREAD Admin stefan accessed from new IP: 1.2.3.4 MESSAGE: not running": false,
+	}
+	for line, want := range cases {
+		if got := isServiceDownTitle(notificationTitle(line)); got != want {
+			t.Errorf("isServiceDownTitle(%q) = %v, want %v", notificationTitle(line), got, want)
+		}
+	}
+	if got := notificationTitle("2026-09-23 18:02:51 UNREAD Caddy not active — websites down! MESSAGE: logs"); got != "Caddy not active — websites down!" {
+		t.Errorf("unexpected title %q", got)
+	}
+}
