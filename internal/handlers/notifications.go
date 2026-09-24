@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -22,7 +23,82 @@ var (
 	// alerts. It's just a flag file, not config -- sentinel.sh deletes it
 	// itself once the timestamp has passed.
 	NotificationsPauseFlagPath = "/tmp/openpanel_notifications_paused"
+	// sentinel appends one line here at the end of every full cron run
+	SentinelSnapshotsPath = "/var/log/openpanel/admin/sentinel_snapshots.jsonl"
 )
+
+// sentinel runs every 5 min, so 3 missed runs means the cron is likely broken
+const sentinelStaleAfter = 15 * time.Minute
+
+type sentinelLastCheck struct {
+	Ran   bool
+	At    string
+	Ago   string
+	Stale bool
+	Pass  int
+	Warn  int
+	Fail  int
+}
+
+// lastSentinelCheck uses the snapshot file's mtime as the last run time and its last line for the pass/warn/fail counts
+func lastSentinelCheck(now time.Time) sentinelLastCheck {
+	f, err := os.Open(SentinelSnapshotsPath)
+	if err != nil {
+		return sentinelLastCheck{}
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil || info.Size() == 0 {
+		return sentinelLastCheck{}
+	}
+
+	mod := info.ModTime()
+	check := sentinelLastCheck{
+		Ran:   true,
+		At:    mod.Format("Jan 2, 15:04"),
+		Ago:   humanizeAgo(mod, now),
+		Stale: now.Sub(mod) > sentinelStaleAfter,
+	}
+
+	// only the tail is needed, the file holds up to 30 days of snapshots
+	off := info.Size() - 4096
+	if off < 0 {
+		off = 0
+	}
+	buf := make([]byte, info.Size()-off)
+	if _, err := f.ReadAt(buf, off); err != nil {
+		return check
+	}
+	lines := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	var snap struct {
+		Pass int `json:"pass"`
+		Warn int `json:"warn"`
+		Fail int `json:"fail"`
+	}
+	if json.Unmarshal([]byte(lines[len(lines)-1]), &snap) == nil {
+		check.Pass, check.Warn, check.Fail = snap.Pass, snap.Warn, snap.Fail
+	}
+	return check
+}
+
+// humanizeAgo formats the time since t as "just now", "Xm ago", "Xh Ym ago" or "Xd Yh ago"
+func humanizeAgo(t, now time.Time) string {
+	d := now.Sub(t)
+	if d < time.Minute {
+		return "just now"
+	}
+	days := int(d.Hours()) / 24
+	hours := int(d.Hours()) % 24
+	minutes := int(d.Minutes()) % 60
+	switch {
+	case days > 0:
+		return fmt.Sprintf("%dd %dh ago", days, hours)
+	case hours > 0:
+		return fmt.Sprintf("%dh %dm ago", hours, minutes)
+	default:
+		return fmt.Sprintf("%dm ago", minutes)
+	}
+}
 
 // notificationsPauseDurations maps the pause dropdown's option values to
 // how long that option pauses notifications for.
@@ -96,6 +172,7 @@ type notificationsPageData struct {
 	Notifications            []notificationRow
 	NotificationsPaused      bool
 	NotificationsPausedUntil string
+	LastCheck                sentinelLastCheck
 	Flashes                  []auth.Flash
 }
 
@@ -320,6 +397,7 @@ func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 		Notifications:            rows,
 		NotificationsPaused:      isPaused,
 		NotificationsPausedUntil: pausedUntilLabel,
+		LastCheck:                lastSentinelCheck(time.Now()),
 		Flashes:                  auth.PopFlashes(w, r, n.Sessions),
 	})
 }

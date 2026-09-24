@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"openadmin/internal/auth"
 )
@@ -248,5 +249,60 @@ func TestNotificationsMarkAllAsRead(t *testing.T) {
 	remaining, _ := os.ReadFile(path)
 	if strings.Contains(string(remaining), "UNREAD") {
 		t.Fatalf("expected no UNREAD entries left, got %q", remaining)
+	}
+}
+
+func withScratchSentinelSnapshots(t *testing.T) string {
+	t.Helper()
+	orig := SentinelSnapshotsPath
+	SentinelSnapshotsPath = filepath.Join(t.TempDir(), "sentinel_snapshots.jsonl")
+	t.Cleanup(func() { SentinelSnapshotsPath = orig })
+	return SentinelSnapshotsPath
+}
+
+func TestLastSentinelCheckMissingFile(t *testing.T) {
+	withScratchSentinelSnapshots(t)
+	if got := lastSentinelCheck(time.Now()); got.Ran {
+		t.Fatalf("expected no check without a snapshots file, got %+v", got)
+	}
+}
+
+func TestLastSentinelCheckReadsLastSnapshot(t *testing.T) {
+	path := withScratchSentinelSnapshots(t)
+	os.WriteFile(path, []byte(`{"ts":"2026-09-24 10:00:00","status":0,"pass":18,"warn":0,"fail":0}`+"\n"+`{"ts":"2026-09-24 10:05:00","status":2,"pass":16,"warn":1,"fail":2}`+"\n"), 0644)
+	now := time.Now()
+	os.Chtimes(path, now.Add(-3*time.Minute), now.Add(-3*time.Minute))
+
+	got := lastSentinelCheck(now)
+	if !got.Ran || got.Stale || got.Ago != "3m ago" {
+		t.Fatalf("unexpected check info: %+v", got)
+	}
+	if got.Pass != 16 || got.Warn != 1 || got.Fail != 2 {
+		t.Fatalf("expected counters from the last line, got %+v", got)
+	}
+}
+
+func TestLastSentinelCheckStale(t *testing.T) {
+	path := withScratchSentinelSnapshots(t)
+	os.WriteFile(path, []byte(`{"pass":1,"warn":0,"fail":0}`+"\n"), 0644)
+	now := time.Now()
+	os.Chtimes(path, now.Add(-2*time.Hour), now.Add(-2*time.Hour))
+
+	got := lastSentinelCheck(now)
+	if !got.Stale || got.Ago != "2h 0m ago" {
+		t.Fatalf("expected a stale check 2h ago, got %+v", got)
+	}
+}
+
+func TestNotificationsViewShowsLastCheck(t *testing.T) {
+	withScratchNotificationsLog(t)
+	path := withScratchSentinelSnapshots(t)
+	os.WriteFile(path, []byte(`{"pass":18,"warn":1,"fail":0}`+"\n"), 0644)
+
+	rec := httptest.NewRecorder()
+	(&Notifications{Sessions: auth.NewManager("test-secret", false)}).ServeView(rec, httptest.NewRequest("GET", "/notifications", nil))
+	body := rec.Body.String()
+	if !strings.Contains(body, "Last check: just now") || !strings.Contains(body, `href="/server/resource-usage/history" class="underline decoration-dotted underline-offset-2 hover:decoration-solid">18 pass, 1 warn, 0 fail</a>`) {
+		t.Fatalf("expected the last check line in the page, got:\n%s", body)
 	}
 }
