@@ -324,3 +324,32 @@ func TestServeSendEmailFailureDevModeIncludesDebugFields(t *testing.T) {
 		t.Fatalf("expected mail_password to never be included, even in dev mode, got %s", body)
 	}
 }
+
+func TestServeSendEmailRendersNotificationItems(t *testing.T) {
+	withScratchMailerConfig(t, "mail_security_token=right")
+
+	var gotBody string
+	origSend := mailerSendRun
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error {
+		gotBody = htmlBody
+		return nil
+	}
+	t.Cleanup(func() { mailerSendRun = origSend })
+
+	m := &Mailer{}
+	srv, client := newMailerTestServer(t, m)
+	items := `[{"severity":"critical","title":"OpenPanel container not running!","message":"Container openpanel was not running."},` +
+		`{"severity":"resolved","title":"Resolved: High CPU Usage!","message":"Sentinel no longer detects this issue."}]`
+	resp, err := client.PostForm(srv.URL+"/send_email", url.Values{
+		"recipient": {"a@b.com"}, "subject": {"2 notifications from Sentinel"}, "body": {"text"}, "transient": {"right"}, "notifications": {items},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	for _, want := range []string{"OpenPanel container not running!", "Critical", "#dc2626", "Resolved: High CPU Usage!", "#059669", "2 notifications from Sentinel"} {
+		if !strings.Contains(gotBody, want) {
+			t.Fatalf("expected email to contain %q, got %s", want, gotBody)
+		}
+	}
+}

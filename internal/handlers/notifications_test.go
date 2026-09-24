@@ -51,7 +51,9 @@ func TestNotificationsViewCreatesLogIfMissing(t *testing.T) {
 
 func TestNotificationsViewSortsNewestFirst(t *testing.T) {
 	path := withScratchNotificationsLog(t)
-	os.WriteFile(path, []byte("2026-01-01 10:00:00 UNREAD first\n2026-01-03 10:00:00 UNREAD third\n2026-01-02 10:00:00 UNREAD second\n"), 0644)
+	os.WriteFile(path, []byte(`{"time":"2026-01-01 10:00:00","status":"unread","title":"first"}`+"\n"+
+		`{"time":"2026-01-02 10:00:00","status":"unread","title":"second"}`+"\n"+
+		`{"time":"2026-01-03 10:00:00","status":"unread","title":"third"}`+"\n"), 0644)
 
 	n := &Notifications{}
 	srv := httptest.NewServer(newNotificationsMux(n))
@@ -63,7 +65,7 @@ func TestNotificationsViewSortsNewestFirst(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.HasPrefix(string(body), `["2026-01-03`) {
+	if !strings.HasPrefix(string(body), `[{"id":"","time":"2026-01-03`) {
 		t.Fatalf("expected newest-first order, got %s", truncate(string(body)))
 	}
 }
@@ -71,14 +73,14 @@ func TestNotificationsViewSortsNewestFirst(t *testing.T) {
 func TestNotificationsViewRendersHTMLForEachMessageKind(t *testing.T) {
 	path := withScratchNotificationsLog(t)
 	os.WriteFile(path, []byte(strings.Join([]string{
-		"2026-01-01 10:00:00 UNREAD High memory usage MESSAGE: Used RAM: 4GB/8GB (50%) | proc1\nproc2",
-		"2026-01-01 11:00:00 UNREAD High CPU usage MESSAGE: CPU: 80% | proc1\nproc2",
-		"2026-01-01 12:00:00 READ OOM event MESSAGE: 2026-01-01 12:00:00 killed by OOM | alice: proc1 | 20 more info",
-		"2026-01-01 13:00:00 UNREAD Disk usage MESSAGE: Disk usage: 90% | Partitions: /dev/sda1 90%",
-		"2026-01-01 14:00:00 UNREAD Update finished MESSAGE: Update completed. Log file: /var/log/openpanel/admin/updates/2026-01-01.log",
-		"2026-01-01 15:00:00 UNREAD Crash detected MESSAGE: Service crashed, see detailed report: /var/log/openpanel/admin/crashes/2026-01-01.log",
-		"2026-01-01 15:30:00 UNREAD High load MESSAGE: Load: 272 | Crashlog: /var/log/openpanel/admin/crashlog/1788526911.txt",
-		"2026-01-01 16:00:00 READ Plain notice MESSAGE: Just a plain message",
+		`{"time":"2026-01-01 10:00:00","status":"unread","severity":"warning","category":"resources","title":"High Memory Usage!","message":"RAM usage is 50%.","details":{"kind":"ram","percent":50,"used_mb":4096,"total_mb":8192,"processes":"pid1 proc1\npid2 proc2"}}`,
+		`{"time":"2026-01-01 11:00:00","status":"unread","severity":"warning","category":"resources","title":"High CPU Usage!","message":"CPU usage is 80%.","details":{"kind":"cpu","percent":80,"processes":"pid3 proc3"}}`,
+		`{"time":"2026-01-01 12:00:00","status":"read","severity":"warning","category":"resources","title":"OOM Alert","message":"1 user process(es) killed by OOM today.","details":{"kind":"oom","system":["sys line"],"users":[{"username":"alice","entries":["alice line"]}]}}`,
+		`{"time":"2026-01-01 13:00:00","status":"unread","severity":"warning","category":"resources","title":"Running out of Disk Space!","message":"Disk usage is 90%.","details":{"kind":"disk","percent":90,"partitions":"/dev/sda1 90%\n/dev/sdb1 10%"}}`,
+		`{"time":"2026-01-01 14:00:00","status":"unread","severity":"info","category":"update","title":"OpenPanel updated successfully!","message":"OpenPanel updated to version 2.0.12.","details":{"log_file":"/var/log/openpanel/updates/2.0.12.log"}}`,
+		`{"time":"2026-01-01 15:30:00","status":"unread","severity":"warning","category":"resources","title":"High System Load!","message":"Load average is 27.2.","details":{"kind":"load","load":"27.2","crashlog":"/var/log/openpanel/admin/crashlog/1788526911.txt"}}`,
+		`{"time":"2026-01-01 16:00:00","last_seen":"2026-01-01 16:20:00","count":5,"status":"read","severity":"critical","category":"service","title":"OpenPanel container not running!","message":"Container openpanel was not running.\n\nLast log lines:\nboom","resolved_at":"2026-01-01 16:25:00"}`,
+		"2026-01-01 17:00:00 UNREAD Old format MESSAGE: Just a plain message",
 	}, "\n")+"\n"), 0644)
 
 	n := &Notifications{Sessions: auth.NewManager("test-secret", false)}
@@ -96,48 +98,19 @@ func TestNotificationsViewRendersHTMLForEachMessageKind(t *testing.T) {
 	}
 	got := string(body)
 	for _, want := range []string{
-		"High memory usage", "50%", "80%", "OOM kills detected", "alice",
-		"Disk usage", "90%", "Log file:", "detailed report:", "Just a plain message",
-		"Load: 272", "Crashlog:", `/services/crashlogs/log/?log_name=1788526911.txt`,
+		"4096MB of 8192MB", "width: 50%;", "pid1 proc1\npid2 proc2",
+		"CPU Usage", "width: 80%;",
+		"User processes: alice", "alice line", "sys line",
+		"width: 90%;", "/dev/sda1 90%\n/dev/sdb1 10%",
+		"View update log", `/settings/updates/log/?log_name=2.0.12.log`,
+		"View crashlog", `/services/crashlogs/log/?log_name=1788526911.txt`,
+		"Resolved after 25m", "5× · last 2026-01-01 16:20:00", "Container openpanel was not running.", "Last log lines:\nboom",
+		"Critical", "Warning", "Info", "Just a plain message",
+		`<option value="resources">Resources</option>`, "Unread (6)", "Resolved (1)", "Critical (1)",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}
-	}
-}
-
-// TestNotificationsProcessListsRenderAsLineBreaks guards against a
-// regression where sentinel.sh's escaped process/partition listings
-// (real newlines flattened to literal "\n" so each notification stays on
-// one log line) were shown to the user as literal backslash-n text
-// instead of being unescaped back into line breaks inside the <pre> tag.
-func TestNotificationsProcessListsRenderAsLineBreaks(t *testing.T) {
-	path := withScratchNotificationsLog(t)
-	os.WriteFile(path, []byte(strings.Join([]string{
-		`2026-01-01 10:00:00 UNREAD High CPU Usage! MESSAGE: CPU: 95% | pid1  cpu1  proc1\npid2  cpu2  proc2`,
-		`2026-01-01 11:00:00 UNREAD Disk usage MESSAGE: Disk usage: 90% | Partitions: /dev/sda1 90%\n/dev/sdb1 10%`,
-	}, "\n")+"\n"), 0644)
-
-	n := &Notifications{Sessions: auth.NewManager("test-secret", false)}
-	srv := httptest.NewServer(newNotificationsMux(n))
-	defer srv.Close()
-
-	resp, err := http.Get(srv.URL + "/notifications")
-	if err != nil {
-		t.Fatal(err)
-	}
-	body, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	got := string(body)
-
-	if strings.Contains(got, `proc1\npid2`) {
-		t.Fatalf("expected literal \\n to be unescaped into a line break, got %s", truncate(got))
-	}
-	if !strings.Contains(got, "proc1\npid2") {
-		t.Fatalf("expected process list to contain a real line break between entries, got %s", truncate(got))
-	}
-	if !strings.Contains(got, "/dev/sda1 90%<br>/dev/sdb1 10%") {
-		t.Fatalf("expected disk partitions to be joined with <br>, got %s", truncate(got))
 	}
 }
 
@@ -234,7 +207,7 @@ func TestNotificationsMarkAsReadSpecificLine(t *testing.T) {
 
 func TestNotificationsMarkAllAsRead(t *testing.T) {
 	path := withScratchNotificationsLog(t)
-	os.WriteFile(path, []byte("UNREAD a\nUNREAD b\n"), 0644)
+	os.WriteFile(path, []byte(`{"status":"unread","title":"a","extra":"kept"}`+"\n2026-01-01 10:00:00 UNREAD b MESSAGE: x\n"), 0644)
 
 	n := &Notifications{Sessions: auth.NewManager("test-secret", false)}
 	srv := httptest.NewServer(newNotificationsMux(n))
@@ -247,8 +220,11 @@ func TestNotificationsMarkAllAsRead(t *testing.T) {
 	resp.Body.Close()
 
 	remaining, _ := os.ReadFile(path)
-	if strings.Contains(string(remaining), "UNREAD") {
-		t.Fatalf("expected no UNREAD entries left, got %q", remaining)
+	if strings.Contains(string(remaining), "unread") || strings.Contains(string(remaining), "UNREAD") {
+		t.Fatalf("expected no unread entries left, got %q", remaining)
+	}
+	if !strings.Contains(string(remaining), `"extra":"kept"`) {
+		t.Fatalf("expected fields the page doesn't know about to be kept, got %q", remaining)
 	}
 }
 

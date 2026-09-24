@@ -3,9 +3,9 @@ package handlers
 import (
 	"crypto/md5"
 	"fmt"
-	"html/template"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -140,221 +140,122 @@ type Notifications struct {
 type notificationsPageData struct {
 	webtemplates.Chrome
 	Notifications            []notificationRow
+	Counts                   notificationCounts
+	Categories               []string
 	NotificationsPaused      bool
 	NotificationsPausedUntil string
 	LastCheck                sentinelLastCheck
 	Flashes                  []auth.Flash
 }
 
-// notificationRow is the parsed form of one raw log line ("<date> <time>
-// <STATUS> <title...> MESSAGE: <message>"). Kind selects which of the
-// message body's special renderings (RAM/CPU/OOM/disk usage, or a plain
-// message possibly containing a "Log file:"/"detailed report:" link)
-// applies. Kind "logfile"/"report"/"crashlog" cover a plain message that
-// contains a "Log file:"/"detailed report:"/"Crashlog:" link respectively.
+// notificationCounts feeds the numbers next to the page's filter options
+type notificationCounts struct {
+	All, Unread, Resolved, Critical, Warning, Info int
+}
+
 type notificationRow struct {
-	Index        int
-	Time         string
-	Status       string
-	Title        string
-	Snoozed      bool
-	SnoozedUntil string
-
-	Kind         string
-	Plain        string
-	Percent      string
-	UsedOf       string
-	ProcessLines string
-	OOMSystem    []string
-	OOMUsers     []oomUserGroup
-	DiskValue    string
-	DiskDetail   template.HTML
-	Before       string
-	LinkHref     string
-	LinkText     string
+	Notification
+	Index         int
+	Kind          string
+	Snoozed       bool
+	SnoozedUntil  string
+	ResolvedAfter string
+	Summary       string
+	More          string
+	LinkHref      string
+	LinkText      string
 }
 
-type oomUserGroup struct {
-	Username string
-	Entries  []string
-}
-
-// unescapeNewlines undoes sentinel.sh's `sed 's/\n/\\n/g'`, which flattens
-// multi-line process/partition listings to literal "\n" so each
-// notification stays on one line in the log file.
-func unescapeNewlines(s string) string {
-	return strings.ReplaceAll(s, `\n`, "\n")
-}
-
-// parseNotificationRow parses one raw log line plus its message-body
-// special-casing.
-func parseNotificationRow(raw string, index int) notificationRow {
-	row := notificationRow{Index: index}
-
-	parts := strings.SplitN(raw, " MESSAGE: ", 2)
-	head := strings.SplitN(parts[0], " ", 5)
-	if len(head) > 1 {
-		row.Time = head[0] + " " + head[1]
-	}
-	if len(head) > 2 {
-		row.Status = head[2]
-	}
-	if len(head) > 3 {
-		row.Title = strings.ReplaceAll(strings.Join(head[3:], " "), "MESSAGE:", "")
-	}
-	message := ""
-	if len(parts) > 1 {
-		message = parts[1]
-	}
-
-	switch {
-	case strings.HasPrefix(message, "Used RAM:"):
-		row.Kind = "ram"
-		msgParts := strings.SplitN(message, "|", 2)
-		ratio := strings.TrimSpace(msgParts[0])
-		if len(msgParts) > 1 {
-			row.ProcessLines = unescapeNewlines(strings.TrimSpace(msgParts[1]))
-		}
-		ramPart := ""
-		if idx := strings.Index(ratio, ":"); idx != -1 {
-			ramPart = strings.TrimSpace(ratio[idx+1:])
-		}
-		ramSplit := strings.SplitN(ramPart, "/", 2)
-		usedRAM, totalRAM := "N/A", "N/A"
-		if len(ramSplit) > 0 {
-			usedRAM = strings.TrimSpace(ramSplit[0])
-		}
-		if len(ramSplit) > 1 {
-			totalRAM = strings.TrimSpace(strings.SplitN(ramSplit[1], "(", 2)[0])
-		}
-		row.Percent = "0"
-		if idx := strings.Index(ramPart, "("); idx != -1 {
-			row.Percent = strings.TrimSpace(strings.ReplaceAll(ramPart[idx+1:], "%)", ""))
-		}
-		row.UsedOf = usedRAM + " of " + totalRAM
-
-	case strings.HasPrefix(message, "CPU:"):
-		row.Kind = "cpu"
-		usageLine := strings.SplitN(message, "|", 2)[0]
-		row.Percent = "0"
-		if idx := strings.Index(usageLine, ":"); idx != -1 {
-			row.Percent = strings.ReplaceAll(strings.TrimSpace(usageLine[idx+1:]), "%", "")
-		}
-		if idx := strings.Index(message, "|"); idx != -1 {
-			row.ProcessLines = unescapeNewlines(strings.TrimSpace(message[idx+1:]))
-		}
-
-	case strings.Contains(message, "killed by OOM"):
-		row.Kind = "oom"
-		segments := strings.Split(message, " | ")
-		seenUser := map[string]bool{}
-		for _, seg := range segments {
-			s := strings.TrimSpace(seg)
-			if s == "" {
-				continue
-			}
-			if (s[0] >= '0' && s[0] <= '9') || strings.HasPrefix(s, "20") {
-				row.OOMSystem = append(row.OOMSystem, s)
+// newNotificationRow adds what the template needs on top of the stored entry
+func newNotificationRow(n Notification, index int) notificationRow {
+	row := notificationRow{Notification: n, Index: index}
+	row.Summary, row.More, _ = strings.Cut(strings.TrimSpace(n.Message), "\n")
+	row.More = strings.TrimSpace(row.More)
+	if n.ResolvedAt != "" {
+		start, err1 := time.ParseInLocation("2006-01-02 15:04:05", n.Time, time.Local)
+		end, err2 := time.ParseInLocation("2006-01-02 15:04:05", n.ResolvedAt, time.Local)
+		if err1 == nil && err2 == nil {
+			if end.Sub(start) < time.Minute {
+				row.ResolvedAfter = "under a minute"
+			} else {
+				row.ResolvedAfter = strings.TrimSuffix(humanizeAgo(start, end), " ago")
 			}
 		}
-		var usernames []string
-		for _, seg := range segments {
-			s := strings.TrimSpace(seg)
-			if s == "" || (s[0] >= '0' && s[0] <= '9') || !strings.Contains(s, ":") {
-				continue
-			}
-			uname := strings.TrimSpace(strings.SplitN(s, ":", 2)[0])
-			if !seenUser[uname] {
-				seenUser[uname] = true
-				usernames = append(usernames, uname)
-			}
+	}
+	if d := n.Details; d != nil {
+		switch d.Kind {
+		case "ram", "cpu", "disk", "oom":
+			row.Kind = d.Kind
 		}
-		for _, uname := range usernames {
-			group := oomUserGroup{Username: uname}
-			for _, seg := range segments {
-				s := strings.TrimSpace(seg)
-				if strings.HasPrefix(s, uname+":") {
-					group.Entries = append(group.Entries, strings.TrimSpace(s[len(uname)+1:]))
-				}
-			}
-			row.OOMUsers = append(row.OOMUsers, group)
-		}
-
-	case strings.Contains(strings.ToLower(message), "disk usage:"):
-		row.Kind = "disk"
-		msgParts := strings.SplitN(message, "| Partitions:", 2)
-		beforeDisk := strings.TrimSpace(msgParts[0])
-		if len(msgParts) > 1 {
-			escaped := template.HTMLEscapeString(strings.TrimSpace(msgParts[1]))
-			row.DiskDetail = template.HTML(strings.ReplaceAll(escaped, `\n`, "<br>"))
-		}
-		row.DiskValue = "0"
-		if idx := strings.Index(beforeDisk, ":"); idx != -1 {
-			row.DiskValue = strings.TrimSpace(beforeDisk[idx+1:])
-		}
-
-	default:
-		if idx := strings.Index(message, "Log file:"); idx != -1 {
-			row.Kind = "logfile"
-			row.Before = message[:idx]
-			rest := strings.TrimSpace(message[idx+len("Log file:"):])
-			row.LinkText = rest
-			segs := strings.Split(rest, "/")
-			row.LinkHref = "/settings/updates/log/?log_name=" + segs[len(segs)-1]
-		} else if idx := strings.Index(message, "detailed report:"); idx != -1 {
-			row.Kind = "report"
-			row.Before = message[:idx]
-			rest := strings.TrimSpace(message[idx+len("detailed report:"):])
-			row.LinkText = rest
-			segs := strings.Split(rest, "/")
-			row.LinkHref = "/services/crashlogs/log/?log_name=" + segs[len(segs)-1]
-		} else if idx := strings.Index(message, "Crashlog:"); idx != -1 {
-			row.Kind = "crashlog"
-			row.Before = message[:idx]
-			rest := strings.TrimSpace(message[idx+len("Crashlog:"):])
-			row.LinkText = rest
-			segs := strings.Split(rest, "/")
-			row.LinkHref = "/services/crashlogs/log/?log_name=" + segs[len(segs)-1]
-		} else {
-			row.Kind = "plain"
-			row.Plain = message
+		switch {
+		case d.Crashlog != "":
+			row.LinkText = "View crashlog"
+			row.LinkHref = "/services/crashlogs/log/?log_name=" + filepath.Base(d.Crashlog)
+		case d.LogFile != "":
+			row.LinkText = "View update log"
+			row.LinkHref = "/settings/updates/log/?log_name=" + filepath.Base(d.LogFile)
 		}
 	}
-
+	if until, snoozed := currentNotificationSnooze(n.Title); snoozed {
+		row.Snoozed = true
+		row.SnoozedUntil = until.Format("Jan 2, 15:04")
+	}
 	return row
+}
+
+// readNotifications returns the parsed entries newest first, the same order the 1-indexed line numbers count in
+func readNotifications() ([]Notification, error) {
+	lines, err := readNotificationLines()
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Notification, 0, len(lines))
+	for i := len(lines) - 1; i >= 0; i-- {
+		out = append(out, parseNotification(lines[i]))
+	}
+	return out, nil
 }
 
 // ServeView handles GET /notifications.
 func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
-	lines, err := readNotificationLines()
+	entries, err := readNotifications()
 	if err != nil {
 		http.Error(w, "NOTIFICATIONS - Error loading notifications: "+err.Error(), http.StatusOK)
 		return
 	}
 
-	// newest-first: lines are appended chronologically, so a plain
-	// reverse-string-sort of already-timestamp-prefixed lines yields
-	// newest-first order
-	sorted := append([]string(nil), lines...)
-	sort.Sort(sort.Reverse(sort.StringSlice(sorted)))
-
 	if r.URL.Query().Get("output") == "json" {
-		writeJSON(w, sorted)
+		writeJSON(w, entries)
 		return
 	}
 
-	rows := make([]notificationRow, len(sorted))
-	for i, l := range sorted {
-		// Index is 1-based from the top of this already-newest-first list,
-		// matching HandleDelete/HandleMarkAsRead's own "1-indexed from the
-		// newest entry" line-number convention.
-		row := parseNotificationRow(l, i+1)
-		if until, snoozed := currentNotificationSnooze(row.Title); snoozed {
-			row.Snoozed = true
-			row.SnoozedUntil = until.Format("Jan 2, 15:04")
+	rows := make([]notificationRow, len(entries))
+	var counts notificationCounts
+	seenCategory := map[string]bool{}
+	var categories []string
+	for i, e := range entries {
+		rows[i] = newNotificationRow(e, i+1)
+		counts.All++
+		if e.Unread() {
+			counts.Unread++
 		}
-		rows[i] = row
+		if e.ResolvedAt != "" {
+			counts.Resolved++
+		}
+		switch e.Severity {
+		case "critical":
+			counts.Critical++
+		case "warning":
+			counts.Warning++
+		default:
+			counts.Info++
+		}
+		if e.Category != "" && !seenCategory[e.Category] {
+			seenCategory[e.Category] = true
+			categories = append(categories, e.Category)
+		}
 	}
+	sort.Strings(categories)
 
 	pausedUntil, isPaused := currentNotificationsPause()
 	pausedUntilLabel := ""
@@ -365,6 +266,8 @@ func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "notifications.html", notificationsPageData{
 		Chrome:                   buildChrome(r, "Notifications"),
 		Notifications:            rows,
+		Counts:                   counts,
+		Categories:               categories,
 		NotificationsPaused:      isPaused,
 		NotificationsPausedUntil: pausedUntilLabel,
 		LastCheck:                lastSentinelCheck(time.Now()),
@@ -404,6 +307,8 @@ func writeNotificationLines(lines []string) error {
 // indexing into the file's raw (chronological) line order from the end.
 func (n *Notifications) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	lineNumber, _ := strconv.Atoi(r.PathValue("line_number"))
+	unlock := lockNotifications()
+	defer unlock()
 	lines, err := readNotificationLines()
 	if err != nil {
 		http.Error(w, "Log file not found", http.StatusBadRequest)
@@ -430,6 +335,8 @@ func (n *Notifications) HandleDelete(w http.ResponseWriter, r *http.Request) {
 // HandleMarkAsRead handles POST /notifications/mark_as_read/{line_number}.
 func (n *Notifications) HandleMarkAsRead(w http.ResponseWriter, r *http.Request) {
 	lineNumber, _ := strconv.Atoi(r.PathValue("line_number"))
+	unlock := lockNotifications()
+	defer unlock()
 	lines, err := readNotificationLines()
 	if err != nil {
 		http.Error(w, "Log file not found", http.StatusBadRequest)
@@ -438,11 +345,11 @@ func (n *Notifications) HandleMarkAsRead(w http.ResponseWriter, r *http.Request)
 
 	if r.FormValue("command") == "mark_all_as_read" {
 		for i, l := range lines {
-			lines[i] = strings.ReplaceAll(l, "UNREAD", "READ")
+			lines[i] = markNotificationLineRead(l)
 		}
 	} else if lineNumber >= 1 && lineNumber <= len(lines) {
 		idx := len(lines) - lineNumber
-		lines[idx] = strings.ReplaceAll(lines[idx], "UNREAD", "READ")
+		lines[idx] = markNotificationLineRead(lines[idx])
 	} else {
 		http.Error(w, "Invalid line number", http.StatusBadRequest)
 		return
@@ -492,7 +399,7 @@ func notificationTitleForLine(lineNumber int) (string, bool) {
 		return "", false
 	}
 	idx := len(lines) - lineNumber
-	return parseNotificationRow(lines[idx], lineNumber).Title, true
+	return parseNotification(lines[idx]).Title, true
 }
 
 // HandleSnooze handles POST /notifications/snooze/{line_number}: snoozes

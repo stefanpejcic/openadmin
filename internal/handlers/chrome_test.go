@@ -29,7 +29,7 @@ func withScratchNotificationsLogForChrome(t *testing.T, lines ...string) {
 func TestBuildChromeUnreadNotificationsCountsAllNotJustLast5(t *testing.T) {
 	lines := make([]string, 12)
 	for i := range lines {
-		lines[i] = "2026-01-01 UNREAD notification " + string(rune('A'+i))
+		lines[i] = `{"status":"unread","severity":"info","title":"notification ` + string(rune('A'+i)) + `"}`
 	}
 	withScratchNotificationsLogForChrome(t, lines...)
 
@@ -43,9 +43,9 @@ func TestBuildChromeUnreadNotificationsCountsAllNotJustLast5(t *testing.T) {
 
 func TestBuildChromeUnreadNotificationsMixedReadAndUnread(t *testing.T) {
 	withScratchNotificationsLogForChrome(t,
-		"2026-01-01 UNREAD one",
-		"2026-01-01 READ two",
-		"2026-01-01 UNREAD three",
+		`{"status":"unread","title":"one"}`,
+		`{"status":"read","title":"two"}`,
+		"2026-01-01 10:00:00 UNREAD three MESSAGE: old format",
 	)
 
 	r := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
@@ -121,20 +121,19 @@ func TestReadMenuStyle(t *testing.T) {
 	}
 }
 
-func TestServiceDownDetection(t *testing.T) {
-	cases := map[string]bool{
-		"2026-09-23 18:02:51 UNREAD Caddy not active — websites down! MESSAGE: logs":                 true,
-		"2026-09-23 18:02:51 UNREAD OpenPanel container not running! MESSAGE: x":                     true,
-		"2026-09-23 18:02:51 UNREAD OpenAdmin service not accessible! MESSAGE: x":                    true,
-		"2026-09-23 18:02:51 UNREAD High SWAP usage! MESSAGE: SWAP: 100%":                            false,
-		"2026-09-23 18:02:51 UNREAD Admin stefan accessed from new IP: 1.2.3.4 MESSAGE: not running": false,
+func TestUnreadNotificationSummary(t *testing.T) {
+	entries := []Notification{
+		parseNotification(`{"status":"unread","severity":"warning","category":"resources","title":"High SWAP usage!"}`),
+		parseNotification(`{"status":"unread","severity":"critical","category":"service","title":"OpenPanel container not running!"}`),
+		parseNotification(`{"status":"unread","severity":"critical","category":"service","title":"Caddy not active - websites down!"}`),
+		parseNotification(`{"status":"read","severity":"critical","category":"service","title":"MariaDB service not active!"}`),
+		parseNotification(`2026-09-23 18:02:51 UNREAD Old format entry MESSAGE: x`),
 	}
-	for line, want := range cases {
-		if got := isServiceDownTitle(notificationTitle(line)); got != want {
-			t.Errorf("isServiceDownTitle(%q) = %v, want %v", notificationTitle(line), got, want)
-		}
+	unread, down := unreadNotificationSummary(entries)
+	if unread != 4 {
+		t.Errorf("expected 4 unread, got %d", unread)
 	}
-	if got := notificationTitle("2026-09-23 18:02:51 UNREAD Caddy not active — websites down! MESSAGE: logs"); got != "Caddy not active — websites down!" {
-		t.Errorf("unexpected title %q", got)
+	if down != "OpenPanel container not running!" {
+		t.Errorf("expected the newest unread critical service alert, got %q", down)
 	}
 }

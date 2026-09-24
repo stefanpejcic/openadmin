@@ -132,15 +132,8 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 		// intentional per an explicit product request; the display itself
 		// still caps at "20+" for anything above 30 (see chrome_sidebar's
 		// badge in _layout.html).
-		lines, _ := readNotificationLines()
-		for _, l := range lines {
-			if strings.Contains(l, "UNREAD") {
-				unread++
-				if title := notificationTitle(l); isServiceDownTitle(title) {
-					serviceDown = title
-				}
-			}
-		}
+		entries, _ := readNotifications()
+		unread, serviceDown = unreadNotificationSummary(entries)
 
 		openpanelRestart := false
 		if raw, err := os.ReadFile(ChromeOpenpanelRestartFlagPath); err == nil {
@@ -204,20 +197,18 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 	return c
 }
 
-// notificationTitle pulls the title out of a notifications.log line: "<date> <time> <READ|UNREAD> <title> MESSAGE: <message>"
-func notificationTitle(line string) string {
-	fields := strings.SplitN(line, " ", 4)
-	if len(fields) < 4 {
-		return ""
+// unreadNotificationSummary counts unread entries and returns the newest unread critical service alert for the banner
+func unreadNotificationSummary(newestFirst []Notification) (unread int, serviceDown string) {
+	for _, e := range newestFirst {
+		if !e.Unread() {
+			continue
+		}
+		unread++
+		if serviceDown == "" && e.Category == "service" && e.Severity == "critical" {
+			serviceDown = e.Title
+		}
 	}
-	title, _, _ := strings.Cut(fields[3], " MESSAGE:")
-	return strings.TrimSpace(title)
-}
-
-// isServiceDownTitle matches sentinel's service alerts, e.g. "Caddy not active - websites down!" or "OpenPanel container not running!"
-func isServiceDownTitle(title string) bool {
-	t := strings.ToLower(title)
-	return strings.Contains(t, "not active") || strings.Contains(t, "not running") || strings.Contains(t, "not accessible")
+	return unread, serviceDown
 }
 
 // mergeChrome flattens buildChrome's fields directly into a map-based

@@ -280,6 +280,37 @@ func buildMIMEMessage(from, to, subject, htmlBody string) string {
 // delivery) using root@<hostname> as the sender. This lets notification
 // emails go out even on installs that never configured an external SMTP
 // relay, instead of every send failing with 503.
+// emailNotificationItem is one entry of the "notifications" field sentinel sends, one per alert in the email
+type emailNotificationItem struct {
+	Severity string `json:"severity"`
+	Title    string `json:"title"`
+	Message  string `json:"message"`
+	Label    string `json:"-"`
+	Color    string `json:"-"`
+}
+
+var emailSeverityStyle = map[string][2]string{
+	"critical": {"Critical", "#dc2626"},
+	"warning":  {"Warning", "#d97706"},
+	"resolved": {"Resolved", "#059669"},
+	"info":     {"Info", "#2563eb"},
+}
+
+func parseEmailNotificationItems(raw string) []emailNotificationItem {
+	var items []emailNotificationItem
+	if json.Unmarshal([]byte(raw), &items) != nil {
+		return nil
+	}
+	for i := range items {
+		style, ok := emailSeverityStyle[items[i].Severity]
+		if !ok {
+			style = emailSeverityStyle["info"]
+		}
+		items[i].Label, items[i].Color = style[0], style[1]
+	}
+	return items
+}
+
 func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	cfg := loadMailerSMTPConfig()
 	serverHostname := generalHostname()
@@ -293,7 +324,7 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ParseMultipartForm (not ParseForm) since callers send
-	// multipart/form-data (see sentinel.sh's curl -F calls). ParseForm
+	// multipart/form-data (see sentinel.sh's curl --form-string calls). ParseForm
 	// leaves r.PostForm as a non-nil empty map for multipart bodies, which
 	// then blocks PostFormValue's own lazy multipart fallback and makes
 	// every field silently read back "". ParseMultipartForm handles both
@@ -332,7 +363,12 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 
 	var emailTemplate string
 	var renderErr error
+	items := parseEmailNotificationItems(r.PostFormValue("notifications"))
 	switch {
+	case len(items) > 0:
+		emailTemplate, renderErr = webtemplates.RenderToString("email_admin_notifications.html", map[string]interface{}{
+			"Title": subject, "Message": messageContent, "Items": items, "Hostname": serverHostname, "AdminURL": adminURL,
+		})
 	case strings.Contains(messageContent, "Daily Usage Report"):
 		counts := getCountsFromDBForMailer()
 		cpuUsage, _ := mailerCPUUsageRun()

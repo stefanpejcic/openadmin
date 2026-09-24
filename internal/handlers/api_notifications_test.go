@@ -38,8 +38,8 @@ func TestAPIServeNotificationsCreatesLogIfMissing(t *testing.T) {
 		t.Fatalf("expected the log file to be created: %v", err)
 	}
 	var body struct {
-		Success       bool     `json:"success"`
-		Notifications []string `json:"notifications"`
+		Success       bool              `json:"success"`
+		Notifications []apiNotification `json:"notifications"`
 	}
 	json.NewDecoder(resp.Body).Decode(&body)
 	if !body.Success || len(body.Notifications) != 0 {
@@ -49,7 +49,9 @@ func TestAPIServeNotificationsCreatesLogIfMissing(t *testing.T) {
 
 func TestAPIServeNotificationsSortsNewestFirstAndSkipsBlank(t *testing.T) {
 	path := withScratchNotificationsLog(t)
-	os.WriteFile(path, []byte("2026-01-01 10:00:00 UNREAD first\n\n2026-01-03 10:00:00 UNREAD third\n2026-01-02 10:00:00 UNREAD second\n"), 0644)
+	os.WriteFile(path, []byte(`{"time":"2026-01-01 10:00:00","status":"unread","severity":"warning","category":"resources","title":"first","message":"m1"}`+"\n\n"+
+		`{"time":"2026-01-02 10:00:00","status":"read","severity":"info","title":"second","message":"m2"}`+"\n"+
+		"2026-01-03 10:00:00 UNREAD third MESSAGE: old format\n"), 0644)
 
 	n := &APINotifications{}
 	srv := httptest.NewServer(newAPINotificationsMux(n))
@@ -61,14 +63,19 @@ func TestAPIServeNotificationsSortsNewestFirstAndSkipsBlank(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	var body struct {
-		Notifications []string `json:"notifications"`
+		Notifications []apiNotification `json:"notifications"`
 	}
 	json.NewDecoder(resp.Body).Decode(&body)
 	if len(body.Notifications) != 3 {
 		t.Fatalf("expected 3 non-blank lines, got %+v", body.Notifications)
 	}
-	if !strings.HasPrefix(body.Notifications[0], "2026-01-03") {
-		t.Fatalf("expected newest-first order, got %+v", body.Notifications)
+	newest, oldest := body.Notifications[0], body.Notifications[2]
+	if newest.Title != "third" || newest.LineNumber != 1 || newest.Status != "unread" {
+		t.Fatalf("expected the old-format line last in the file to come first as line 1, got %+v", newest)
+	}
+	// the blank line still counts for line numbers, same as the read/delete endpoints
+	if oldest.Title != "first" || oldest.LineNumber != 4 || oldest.Severity != "warning" || oldest.Category != "resources" {
+		t.Fatalf("expected the oldest JSON entry with its fields as line 4, got %+v", oldest)
 	}
 }
 

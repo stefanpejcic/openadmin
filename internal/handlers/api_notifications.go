@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -21,15 +20,16 @@ import (
 // handlers.
 type APINotifications struct{}
 
-// ServeNotifications handles GET /api/notifications.
+// apiNotification is a stored entry plus the line_number to pass to the read/delete endpoints
+type apiNotification struct {
+	Notification
+	LineNumber int `json:"line_number"`
+}
+
+// ServeNotifications handles GET /api/notifications, newest first.
 func (n *APINotifications) ServeNotifications(w http.ResponseWriter, r *http.Request) {
-	raw, err := os.ReadFile(NotificationsLogPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			os.WriteFile(NotificationsLogPath, nil, 0644)
-			writeJSON(w, map[string]interface{}{"success": true, "notifications": []string{}})
-			return
-		}
+	lines, err := readRawNotificationLines()
+	if err != nil && !os.IsNotExist(err) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -39,16 +39,16 @@ func (n *APINotifications) ServeNotifications(w http.ResponseWriter, r *http.Req
 		})
 		return
 	}
-
-	var notifications []string
-	for _, l := range strings.Split(string(raw), "\n") {
-		if t := strings.TrimSpace(l); t != "" {
-			notifications = append(notifications, t)
-		}
+	if os.IsNotExist(err) {
+		os.WriteFile(NotificationsLogPath, nil, 0644)
 	}
-	sort.Sort(sort.Reverse(sort.StringSlice(notifications)))
-	if notifications == nil {
-		notifications = []string{}
+
+	notifications := []apiNotification{}
+	for i := len(lines) - 1; i >= 0; i-- {
+		if strings.TrimSpace(lines[i]) == "" {
+			continue
+		}
+		notifications = append(notifications, apiNotification{Notification: parseNotification(lines[i]), LineNumber: len(lines) - i})
 	}
 	writeJSON(w, map[string]interface{}{"success": true, "notifications": notifications})
 }
@@ -107,6 +107,8 @@ func (n *APINotifications) HandleMarkRead(w http.ResponseWriter, r *http.Request
 	}
 	command := notificationCommandParam(r)
 
+	unlock := lockNotifications()
+	defer unlock()
 	lines, err := readRawNotificationLines()
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -120,11 +122,11 @@ func (n *APINotifications) HandleMarkRead(w http.ResponseWriter, r *http.Request
 	switch {
 	case command == "mark_all_as_read":
 		for i, l := range lines {
-			lines[i] = strings.ReplaceAll(l, "UNREAD", "READ")
+			lines[i] = markNotificationLineRead(l)
 		}
 	case lineNumber >= 1 && lineNumber <= len(lines):
 		idx := len(lines) - lineNumber
-		lines[idx] = strings.ReplaceAll(lines[idx], "UNREAD", "READ")
+		lines[idx] = markNotificationLineRead(lines[idx])
 	default:
 		writeJSONError(w, http.StatusBadRequest, "Invalid line number")
 		return
@@ -146,6 +148,8 @@ func (n *APINotifications) HandleDelete(w http.ResponseWriter, r *http.Request) 
 	}
 	command := notificationCommandParam(r)
 
+	unlock := lockNotifications()
+	defer unlock()
 	lines, err := readRawNotificationLines()
 	if err != nil {
 		if os.IsNotExist(err) {
