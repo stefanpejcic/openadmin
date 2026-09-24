@@ -34,6 +34,9 @@ var (
 
 var localeFormatRe = regexp.MustCompile(`(?i)^[a-z]{2,3}-[a-z]{2,3}$`)
 
+// only cc-cc dirs are locales, skips .github, scripts etc
+var localeDirRe = regexp.MustCompile(`^[a-z]{2}-[a-z]{2}$`)
+
 type githubContentItem struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -182,7 +185,7 @@ func (l *Locales) handleGet(w http.ResponseWriter, r *http.Request) {
 
 	var results []localeRow
 	for _, item := range items {
-		if item.Type != "dir" {
+		if item.Type != "dir" || !localeDirRe.MatchString(item.Name) {
 			continue
 		}
 		baseName := strings.SplitN(item.Name, "-", 2)[0]

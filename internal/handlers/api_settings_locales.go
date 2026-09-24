@@ -91,7 +91,7 @@ func (a *APISettingsLocales) handleGet(w http.ResponseWriter, r *http.Request) {
 
 	results := []localeRow{}
 	for _, item := range items {
-		if item.Type != "dir" {
+		if item.Type != "dir" || !localeDirRe.MatchString(item.Name) {
 			continue
 		}
 		baseName := strings.SplitN(item.Name, "-", 2)[0]
