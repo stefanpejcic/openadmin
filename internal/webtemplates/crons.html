@@ -68,21 +68,20 @@
     <input type="text" class="relative appearance-none truncate border px-0 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 inline-block w-12 text-center" name="{{.LineNumber}}_schedule_3" value="{{index $parts 3}}">
     <input type="text" class="relative appearance-none truncate border px-0 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 inline-block w-12 text-center rounded-r" name="{{.LineNumber}}_schedule_4" value="{{index $parts 4}}">
 </td>
-<td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">
+{{/* lookup lives in x-data since html/template url-encodes anything inside :href */}}
+<td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text" x-data="{ info: getDescription('{{.Command}}') }">
     {{.Command}}
-    <template x-if="getDescription('{{.Command}}')">
+    <template x-if="info">
         <p class="text-xs text-gray-500 mt-1">
-            <span x-text="getDescription('{{.Command}}').description"></span>
-            <template x-if="getDescription('{{.Command}}').link">
-                <a class="ml-1 inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400"
-                :href="getDescription('{{.Command}}').link"
-                target="_blank">
-                    Learn more
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
-                        <path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path>
-                    </svg>
-                </a>
-            </template>
+            <span x-text="info.description"></span>
+            <a class="ml-1 inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400"
+            :href="info.link"
+            target="_blank" rel="noopener">
+                Learn more
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
+                    <path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path>
+                </svg>
+            </a>
         </p>
     </template>
 </td>
@@ -115,62 +114,88 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('cronJobs', () => ({
         searchQuery: '',
         commandDescriptions: {
-            'opencli docker-collect_stats --all': {
+            'opencli docker-collect_stats': {
                 description: 'Collect resource usage information (cpu, ram, disk, inodes) for all OpenPanel users accounts.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+                link: 'https://openpanel.com/docs/articles/opencli/docker/#collect-stats'
+            },
+            'opencli user-quota': {
+                description: 'Report disk and inodes quota usage for all users.',
+                link: 'https://openpanel.com/docs/articles/opencli/user/#quota'
             },
             'opencli domains-stats': {
                 description: 'Parse domain (Caddy) access logs and generate static reports for users domains accessible from their Domains > Access Log page.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+                link: 'https://openpanel.com/docs/articles/opencli/domains/#stats'
             },
-            'opencli websites-pagespeed --all': {
+            'opencli websites-pagespeed': {
                 description: 'Collect Google PageSpeed Insights data for all websites hosted on the server.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+                link: 'https://openpanel.com/docs/articles/opencli/websites/#pagespeed'
             },
-            'opencli docker-usage_stats_cleanup': {
-                description: 'Rotate resource usage logs for all users according to the resource_usage_retention setting.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+            'opencli websites-vulnerability': {
+                description: 'Scan WordPress websites for vulnerable plugins and themes.',
+                link: 'https://openpanel.com/docs/articles/opencli/websites/#vulnerability'
+            },
+            'opencli files-calculate_resellers_storage': {
+                description: 'Calculate total disk usage for all resellers.',
+                link: 'https://openpanel.com/docs/articles/opencli/files/#resellers-storage'
             },
             'opencli update': {
                 description: 'Check if new OpenPanel update is available, and update if auto-updates are enabled.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
-            },
-            'opencli docker-backups': {
-                description: 'Generates a backup for all users. (default: disabled)',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+                link: 'https://openpanel.com/docs/articles/opencli/update/'
             },
             'opencli ftp-users': {
-                description: 'Generates a list of all FTP sub-users.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+                description: 'Rebuild the list of all FTP sub-users.',
+                link: 'https://openpanel.com/docs/articles/opencli/ftp/#users'
             },
             'opencli email-server pflogsumm': {
-                description: 'Generates Summary Reports from Mailserver logs.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+                description: 'Generate summary reports from mailserver logs.',
+                link: 'https://openpanel.com/docs/articles/opencli/email/#pflogsumm'
             },
             'opencli files-purge_trash': {
-                description: 'Remoces files form users .Trash folder, according to the autopurge_trash retention.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+                description: 'Remove files from users .Trash folders, according to the autopurge_trash retention.',
+                link: 'https://openpanel.com/docs/articles/opencli/files/#purge-trash'
             },
-            'opencli sentinel': {
-                description: 'Checks running services, resource usage and sends alerts/emails.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
-            },
-            'opencli sentinel --report': {
-                description: 'Sends a Daily Usage report to Administrator email address.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+            'opencli files-malware_scan': {
+                description: 'Scan users website files for malware.',
+                link: 'https://openpanel.com/docs/articles/opencli/files/#malware-scan'
             },
             'opencli waf-update': {
-                description: 'Updates OWASP® ModSecurity rules.',
-                link: 'https://openpanel.com/docs/articles/server/openadmin-system-crons'
+                description: 'Update OWASP® CoreRuleSet rules for CorazaWAF.',
+                link: 'https://openpanel.com/docs/articles/opencli/waf/#update'
+            },
+            'opencli waf update': {
+                description: 'Update OWASP® CoreRuleSet rules for CorazaWAF.',
+                link: 'https://openpanel.com/docs/articles/opencli/waf/#update'
+            },
+            'opencli backup': {
+                description: 'Back up OpenPanel and OpenAdmin system and user configuration.',
+                link: 'https://openpanel.com/docs/articles/opencli/backup/'
+            },
+            'opencli docker-backup': {
+                description: 'Generate a backup for all users. (default: disabled)',
+                link: 'https://openpanel.com/docs/articles/opencli/docker/#backup'
+            },
+            'opencli sentinel --startup': {
+                description: 'Start stopped containers after a server reboot and send the reboot notification.',
+                link: 'https://openpanel.com/docs/articles/opencli/sentinel/'
+            },
+            'opencli sentinel --report': {
+                description: 'Send a Daily Usage report to the Administrator email address.',
+                link: 'https://openpanel.com/docs/articles/opencli/sentinel/'
+            },
+            'opencli sentinel': {
+                description: 'Check running services and resource usage, and send alerts/emails.',
+                link: 'https://openpanel.com/docs/articles/opencli/sentinel/'
             }
         },
+        // longest prefix wins so 'opencli sentinel --report' doesn't match 'opencli sentinel'
         getDescription(command) {
+            let best = null;
             for (const prefix in this.commandDescriptions) {
-                if (command.startsWith(prefix)) {
-                    return this.commandDescriptions[prefix];
+                if ((command === prefix || command.startsWith(prefix + ' ')) && (!best || prefix.length > best.length)) {
+                    best = prefix;
                 }
             }
-            return null;
+            return best ? this.commandDescriptions[best] : null;
         }
     }))
 })

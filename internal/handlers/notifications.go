@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -35,50 +34,21 @@ type sentinelLastCheck struct {
 	At    string
 	Ago   string
 	Stale bool
-	Pass  int
-	Warn  int
-	Fail  int
 }
 
-// lastSentinelCheck uses the snapshot file's mtime as the last run time and its last line for the pass/warn/fail counts
+// lastSentinelCheck uses the snapshot file's mtime as the last run time
 func lastSentinelCheck(now time.Time) sentinelLastCheck {
-	f, err := os.Open(SentinelSnapshotsPath)
-	if err != nil {
-		return sentinelLastCheck{}
-	}
-	defer f.Close()
-	info, err := f.Stat()
+	info, err := os.Stat(SentinelSnapshotsPath)
 	if err != nil || info.Size() == 0 {
 		return sentinelLastCheck{}
 	}
-
 	mod := info.ModTime()
-	check := sentinelLastCheck{
+	return sentinelLastCheck{
 		Ran:   true,
 		At:    mod.Format("Jan 2, 15:04"),
 		Ago:   humanizeAgo(mod, now),
 		Stale: now.Sub(mod) > sentinelStaleAfter,
 	}
-
-	// only the tail is needed, the file holds up to 30 days of snapshots
-	off := info.Size() - 4096
-	if off < 0 {
-		off = 0
-	}
-	buf := make([]byte, info.Size()-off)
-	if _, err := f.ReadAt(buf, off); err != nil {
-		return check
-	}
-	lines := strings.Split(strings.TrimSpace(string(buf)), "\n")
-	var snap struct {
-		Pass int `json:"pass"`
-		Warn int `json:"warn"`
-		Fail int `json:"fail"`
-	}
-	if json.Unmarshal([]byte(lines[len(lines)-1]), &snap) == nil {
-		check.Pass, check.Warn, check.Fail = snap.Pass, snap.Warn, snap.Fail
-	}
-	return check
 }
 
 // humanizeAgo formats the time since t as "just now", "Xm ago", "Xh Ym ago" or "Xd Yh ago"

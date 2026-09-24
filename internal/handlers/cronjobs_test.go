@@ -125,16 +125,28 @@ func TestAddOrUpdateCronRewritesScheduleAndRestoresPrefix(t *testing.T) {
 	if !strings.HasPrefix(got, "0 4 * * * root ") {
 		t.Fatalf("expected the schedule to be rewritten, got %q", got)
 	}
-	// this is the key regression check: a sentinel command must round-trip
-	// through the bash-wrapper path, not get mangled into
-	// "/usr/local/bin/opencli sentinel" by the startswith('opencli') branch
-	// firing before startswith('opencli sentinel') (see the doc comment in
-	// cronjobs.go)
-	if !strings.Contains(got, "/bin/bash /usr/local/admin/service/notifications.sh --check") {
-		t.Fatalf("expected the sentinel command to be restored to its bash-wrapper form, got %q", got)
+	// sentinel used to be rewritten to the removed notifications.sh script, which stopped it from running
+	if !strings.Contains(got, "root /usr/local/bin/opencli sentinel --check && echo cron executed") {
+		t.Fatalf("expected the sentinel command to be saved as an opencli invocation, got %q", got)
 	}
-	if strings.Contains(got, "/usr/local/bin/opencli sentinel") {
-		t.Fatalf("did not expect the sentinel command to be mangled into an opencli invocation, got %q", got)
+	if strings.Contains(got, "notifications.sh") {
+		t.Fatalf("did not expect the legacy notifications.sh path, got %q", got)
+	}
+}
+
+func TestAddOrUpdateCronMigratesLegacySentinelLine(t *testing.T) {
+	path := withScratchCronFile(t, "*/5 * * * * root /bin/bash /usr/local/admin/service/notifications.sh --report && echo cron executed >> /var/log/openpanel-cron.log\n")
+
+	jobs, _ := readCronJobs()
+	if len(jobs) != 1 || jobs[0].Command != "opencli sentinel --report" {
+		t.Fatalf("expected the legacy line to be shown as opencli sentinel --report, got %+v", jobs)
+	}
+	if err := addOrUpdateCron(1, "45 11 * * *", true); err != nil {
+		t.Fatal(err)
+	}
+	written, _ := os.ReadFile(path)
+	if got := string(written); got != "45 11 * * * root /usr/local/bin/opencli sentinel --report && echo cron executed >> /var/log/openpanel-cron.log\n" {
+		t.Fatalf("expected the legacy line to be rewritten to opencli sentinel, got %q", got)
 	}
 }
 

@@ -37,6 +37,8 @@ func isValidCronLine(line string) bool {
 
 var cronLoggingSplitRe = regexp.MustCompile(`\s*(?:#)?&&\s*`)
 
+const legacySentinelCommand = "/bin/bash /usr/local/admin/service/notifications.sh"
+
 // splitCronLine parses a single crontab line. A valid line is
 // "<5 schedule fields> root <command> [#]&& echo cron executed >> ...".
 func splitCronLine(line string) (CronJob, bool) {
@@ -59,13 +61,17 @@ func splitCronLine(line string) (CronJob, bool) {
 	if strings.HasPrefix(command, "/usr/local/bin/opencli") {
 		command = strings.Replace(command, "/usr/local/bin/opencli", "opencli", 1)
 	}
+	// older saves wrote sentinel as this removed script, showing it as opencli sentinel fixes the line on next save
+	if strings.HasPrefix(command, legacySentinelCommand) {
+		command = strings.Replace(command, legacySentinelCommand, "opencli sentinel", 1)
+	}
 
 	return CronJob{Schedule: schedule, Command: command, Log: loggingEnabled}, true
 }
 
 // addOrUpdateCron rewrites a single numbered line of CronFilePath in
-// place, restoring the opencli/sentinel command prefixes that
-// splitCronLine strips for display.
+// place, restoring the opencli command prefix that splitCronLine strips
+// for display.
 func addOrUpdateCron(lineNumber int, schedule string, loggingEnabled bool) error {
 	raw, err := os.ReadFile(CronFilePath)
 	if err != nil {
@@ -94,17 +100,8 @@ func addOrUpdateCron(lineNumber int, schedule string, loggingEnabled bool) error
 			continue
 		}
 
-		// Checking the more specific "opencli sentinel" prefix before the
-		// plain "opencli" prefix matters: since every "opencli sentinel"
-		// command also starts with "opencli", checking the generic prefix
-		// first would silently corrupt a sentinel cron entry's command to
-		// "/usr/local/bin/opencli sentinel" instead of the intended
-		// "/bin/bash .../notifications.sh" whenever its schedule is edited.
 		command := parsed.Command
-		switch {
-		case strings.HasPrefix(command, "opencli sentinel"):
-			command = strings.Replace(command, "opencli sentinel", "/bin/bash /usr/local/admin/service/notifications.sh", 1)
-		case strings.HasPrefix(command, "opencli"):
+		if strings.HasPrefix(command, "opencli") {
 			command = strings.Replace(command, "opencli", "/usr/local/bin/opencli", 1)
 		}
 
