@@ -15,6 +15,7 @@ import (
 	"net/smtp"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -311,6 +312,67 @@ func parseEmailNotificationItems(raw string) []emailNotificationItem {
 	return items
 }
 
+// emailDetail is one "label: value" row OpenPanel sends with security emails (time, IP address, ...), a URL turns the value into a link
+type emailDetail struct {
+	Label   string `json:"label"`
+	Value   string `json:"value"`
+	URL     string `json:"url"`
+	Flag    string `json:"flag"`
+	FlagURL string `json:"-"`
+}
+
+var emailFlagRE = regexp.MustCompile(`^[a-z]{2}$`)
+
+// parseEmailDetails drops links that aren't http(s) so a crafted value can't smuggle in another scheme, a 2 letter flag becomes the panel's own flag image
+func parseEmailDetails(raw, panelURL string) []emailDetail {
+	var details []emailDetail
+	if json.Unmarshal([]byte(raw), &details) != nil {
+		return nil
+	}
+	for i := range details {
+		if !strings.HasPrefix(details[i].URL, "https://") && !strings.HasPrefix(details[i].URL, "http://") {
+			details[i].URL = ""
+		}
+		if emailFlagRE.MatchString(details[i].Flag) {
+			details[i].FlagURL = panelURL + "static/flags/" + details[i].Flag + ".png"
+		}
+	}
+	return details
+}
+
+// emailUsageItem is one entry of the "usage" field opencli sends with disk and mailbox emails, drawn as a card with a usage bar
+type emailUsageItem struct {
+	Title   string `json:"title"`
+	Used    string `json:"used"`
+	Total   string `json:"total"`
+	Percent int    `json:"percent"`
+	Limit   int    `json:"limit"`
+	Label   string `json:"-"`
+	Color   string `json:"-"`
+	Width   int    `json:"-"`
+}
+
+// parseEmailUsageItems colors each item like the sentinel severities: full is critical, over the alert limit is a warning, the rest is fine
+func parseEmailUsageItems(raw string) []emailUsageItem {
+	var items []emailUsageItem
+	if json.Unmarshal([]byte(raw), &items) != nil {
+		return nil
+	}
+	for i := range items {
+		it := &items[i]
+		switch {
+		case it.Percent >= 100:
+			it.Label, it.Color = "Full", emailSeverityStyle["critical"][1]
+		case it.Limit > 0 && it.Percent >= it.Limit:
+			it.Label, it.Color = "Over "+strconv.Itoa(it.Limit)+"%", emailSeverityStyle["warning"][1]
+		default:
+			it.Label, it.Color = "OK", emailSeverityStyle["resolved"][1]
+		}
+		it.Width = min(max(it.Percent, 0), 100)
+	}
+	return items
+}
+
 func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	cfg := loadMailerSMTPConfig()
 	serverHostname := generalHostname()
@@ -360,6 +422,8 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	messageTitle := fmt.Sprintf("[%s] %s", domainForces, subject)
 	adminURL := fmt.Sprintf("%s%s:%s/", protocol, domainForces, adminPort)
 	panelNotificationsPage := fmt.Sprintf("%s%s:%s/account/notifications", protocol, domainForces, port)
+	panelUpgradePage := fmt.Sprintf("%s%s:%s/dashboard/upgrade", protocol, domainForces, port)
+	panelURL := fmt.Sprintf("%s%s:%s/", protocol, domainForces, port)
 
 	var emailTemplate string
 	var renderErr error
@@ -390,9 +454,14 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 		emailTemplate, renderErr = webtemplates.RenderToString("email_new_user.html", map[string]interface{}{
 			"Title": subject, "Message": messageContent, "Hostname": serverHostname,
 		})
-	case strings.Contains(messageContent, "changed for account") || strings.Contains(messageContent, "login from"):
+	// type=user comes from OpenPanel and opencli for emails meant for the panel user, the text match is for older senders
+	case r.PostFormValue("type") == "user" || strings.Contains(messageContent, "changed for account") || strings.Contains(messageContent, "login from"):
 		emailTemplate, renderErr = webtemplates.RenderToString("email_user_notifications.html", map[string]interface{}{
 			"Title": subject, "NotificationsURL": panelNotificationsPage, "Message": messageContent, "Hostname": serverHostname,
+			"Usage": parseEmailUsageItems(r.PostFormValue("usage")),
+			// opencli sets these only when the user's upsell plan raises the limit the email is about
+			"UpgradePlan": r.PostFormValue("upgrade_plan"), "UpgradeText": r.PostFormValue("upgrade_text"), "UpgradeURL": panelUpgradePage,
+			"Tips": r.PostFormValue("tips"), "Details": parseEmailDetails(r.PostFormValue("details"), panelURL),
 		})
 	default:
 		emailTemplate, renderErr = webtemplates.RenderToString("email_admin_notifications.html", map[string]interface{}{

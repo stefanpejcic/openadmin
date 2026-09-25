@@ -353,3 +353,125 @@ func TestServeSendEmailRendersNotificationItems(t *testing.T) {
 		}
 	}
 }
+
+func TestServeSendEmailUserTypeUsesUserTemplate(t *testing.T) {
+	withScratchMailerConfig(t, "mail_server=smtp.example.com", "mail_username=user", "mail_security_token=right")
+
+	var gotBody string
+	origSend := mailerSendRun
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error {
+		gotBody = htmlBody
+		return nil
+	}
+	t.Cleanup(func() { mailerSendRun = origSend })
+
+	m := &Mailer{PublicIP: "198.51.100.5"}
+	srv, client := newMailerTestServer(t, m)
+
+	resp, err := client.PostForm(srv.URL+"/send_email", url.Values{
+		"recipient": {"john@example.com"}, "subject": {"Account john is almost out of disk space"},
+		"body": {"Account john is close to its hosting plan limit"}, "transient": {"right"}, "type": {"user"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if !strings.Contains(gotBody, "Edit notification preferences") || strings.Contains(gotBody, "Sentinel") {
+		t.Fatalf("expected the user template for type=user, got %s", truncate(gotBody))
+	}
+}
+
+func TestParseEmailUsageItems(t *testing.T) {
+	items := parseEmailUsageItems(`[{"title":"Disk space","used":"8.70 GB","total":"10.00 GB","percent":87,"limit":85},{"title":"Inodes","percent":42,"limit":95},{"title":"info@example.com","percent":130,"limit":90}]`)
+	if len(items) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(items))
+	}
+	if items[0].Label != "Over 85%" || items[0].Color != "#d97706" || items[0].Width != 87 {
+		t.Errorf("over limit item wrong: %+v", items[0])
+	}
+	if items[1].Label != "OK" || items[1].Color != "#059669" {
+		t.Errorf("ok item wrong: %+v", items[1])
+	}
+	if items[2].Label != "Full" || items[2].Width != 100 {
+		t.Errorf("full item wrong: %+v", items[2])
+	}
+	if parseEmailUsageItems("not json") != nil {
+		t.Error("expected nil for invalid JSON")
+	}
+}
+
+func TestServeSendEmailUpgradeSection(t *testing.T) {
+	withScratchMailerConfig(t, "mail_server=smtp.example.com", "mail_username=user", "mail_security_token=right")
+
+	var gotBody string
+	origSend := mailerSendRun
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error {
+		gotBody = htmlBody
+		return nil
+	}
+	t.Cleanup(func() { mailerSendRun = origSend })
+
+	m := &Mailer{PublicIP: "198.51.100.5"}
+	srv, client := newMailerTestServer(t, m)
+	send := func(extra url.Values) {
+		form := url.Values{"recipient": {"john@example.com"}, "subject": {"Account john is almost out of disk space"},
+			"body": {"Account john is close to its hosting plan limit."}, "transient": {"right"}, "type": {"user"}}
+		for k, v := range extra {
+			form[k] = v
+		}
+		resp, err := client.PostForm(srv.URL+"/send_email", form)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+	}
+
+	send(url.Values{"upgrade_plan": {"Business"}, "upgrade_text": {"The Business plan gives you 50 GB of disk space instead of 10 GB."}, "tips": {"To free up space, delete old files."}})
+	if !strings.Contains(gotBody, "Upgrade to Business") || !strings.Contains(gotBody, "/dashboard/upgrade") || !strings.Contains(gotBody, "50 GB of disk space") {
+		t.Fatalf("expected the upgrade section, got %s", truncate(gotBody))
+	}
+	if strings.Index(gotBody, "To free up space") < strings.Index(gotBody, "Upgrade to Business") {
+		t.Fatalf("expected tips below the upgrade section, got %s", truncate(gotBody))
+	}
+
+	send(nil)
+	if strings.Contains(gotBody, "Need more room") {
+		t.Fatalf("expected no upgrade section without upgrade_plan, got %s", truncate(gotBody))
+	}
+}
+
+func TestServeSendEmailDetailsAndFooter(t *testing.T) {
+	withScratchMailerConfig(t, "mail_server=smtp.example.com", "mail_username=user", "mail_security_token=right")
+
+	var gotBody string
+	origSend := mailerSendRun
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error {
+		gotBody = htmlBody
+		return nil
+	}
+	t.Cleanup(func() { mailerSendRun = origSend })
+
+	m := &Mailer{PublicIP: "198.51.100.5"}
+	srv, client := newMailerTestServer(t, m)
+	resp, err := client.PostForm(srv.URL+"/send_email", url.Values{
+		"recipient": {"john@example.com"}, "subject": {"New login to OpenPanel"}, "body": {"New password login from IP 203.0.113.10."},
+		"transient": {"right"}, "type": {"user"}, "tips": {"If this wasn't you, change your password."},
+		"details": {`[{"label":"IP address","value":"203.0.113.10","url":"https://www.abuseipdb.com/check/203.0.113.10"},{"label":"Country","value":"DE","url":"javascript:alert(1)","flag":"de"},{"label":"Other","value":"x","flag":"../evil"}]`},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if !strings.Contains(gotBody, `href="https://www.abuseipdb.com/check/203.0.113.10"`) || !strings.Contains(gotBody, "font-weight:600;\">DE") && !strings.Contains(gotBody, ">DE<") {
+		t.Fatalf("expected details table with a link, got %s", truncate(gotBody))
+	}
+	if !strings.Contains(gotBody, `/static/flags/de.png"`) || strings.Contains(gotBody, "evil") {
+		t.Fatalf("expected only the valid flag image, got %s", truncate(gotBody))
+	}
+	if strings.Contains(gotBody, "javascript:") {
+		t.Fatalf("expected non-http links to be dropped, got %s", truncate(gotBody))
+	}
+	if !strings.Contains(gotBody, "Edit notification preferences") || strings.Contains(gotBody, "Edit Notification Preferences") {
+		t.Fatalf("expected the preferences link in the footer, got %s", truncate(gotBody))
+	}
+}
