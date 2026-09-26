@@ -94,8 +94,10 @@ func (a *Administrators) render(w http.ResponseWriter, r *http.Request, currentU
 		return
 	}
 
+	chrome := buildChrome(r, "Administrators")
+	chrome.BulkActions = AccountsBulkActions("administrators")
 	webtemplates.Render(w, "administrators.html", administratorsPageData{
-		Chrome:    buildChrome(r, "Administrators"),
+		Chrome:    chrome,
 		Users:     rows,
 		Admin:     currentUser.Role == "admin",
 		Self:      currentUser.Username,

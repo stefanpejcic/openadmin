@@ -320,9 +320,10 @@ func (s *Services) ServeStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "services_status.html", mergeChrome(map[string]interface{}{
-		"Statuses":  views,
-		"CSRFToken": csrf.Token(r),
-		"Flashes":   auth.PopFlashes(w, r, s.Sessions),
+		"Statuses":    views,
+		"CSRFToken":   csrf.Token(r),
+		"Flashes":     auth.PopFlashes(w, r, s.Sessions),
+		"BulkActions": ServicesBulkActions(),
 	}, r, "Services"))
 }
 

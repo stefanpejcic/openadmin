@@ -80,9 +80,11 @@
             </div>
             <div class="min-h-[90vh]">
                 <div class="relative overflow-y-auto min-h-[90vh]">
+                    {{template "bulk_open" (dict "Table" "#exiting_users" "Endpoint" "/plans/bulk")}}
                     <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
                         <thead class="">
                             <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+{{template "bulk_head_checkbox" .}}
 
 {{template "plan_sort_th" (dict "Show" "columns.id" "Col" "id" "Label" "ID" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
 {{template "plan_sort_th" (dict "Show" "columns.name" "Col" "name" "Label" "Name" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
@@ -111,7 +113,7 @@
 
 {{if .MySQLIsDown}}
     <tr>
-        <td colspan="17" class="p-6 text-center">
+        <td colspan="18" class="p-6 text-center">
             {{template "partial_mysql_error" .}}
         </td>
     </tr>
@@ -122,6 +124,8 @@
                     {{range .Plans}}
 
                             <tr x-show="searchQuery === '' || '{{index . "name"}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+{{$skip := "delete"}}{{if eq (toInt (index . "user_count")) 0}}{{$skip = ""}}{{end}}
+{{template "bulk_row_checkbox" (dict "Key" (index . "name") "Label" (index . "name") "Skip" $skip)}}
 
                                 <td x-show="columns.id" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">{{index . "id"}}</td>
 
@@ -219,7 +223,7 @@
 {{else}}
 
     <tr>
-        <td colspan="17" class="p-6 text-center">
+        <td colspan="18" class="p-6 text-center">
             No plans yet. <a href="/plans/new" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Create your first plan</a>
         </td>
     </tr>
@@ -230,6 +234,8 @@
 
                         </tbody>
                     </table>
+{{template "bulk_bar" .}}
+</div>
 
 
                     <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>

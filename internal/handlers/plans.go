@@ -99,8 +99,10 @@ func (p *Plans) renderList(w http.ResponseWriter, r *http.Request, plans []panel
 		writeJSON(w, map[string]interface{}{"plans": plans})
 		return
 	}
+	chrome := buildChrome(r, "Plans")
+	chrome.BulkActions = PlansBulkActions(fetchFeatureSets(auth.CurrentUser(r)))
 	webtemplates.Render(w, "plans.html", plansListPageData{
-		Chrome:        buildChrome(r, "Plans"),
+		Chrome:        chrome,
 		Plans:         plans,
 		MySQLIsDown:   mysqlIsDown,
 		SortCol:       r.URL.Query().Get("sort"),
@@ -413,11 +415,24 @@ func (p *Plans) ServeIPAddresses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeJSON(w, map[string]interface{}{"ip_addresses": publicIPsIn(out)})
+}
+
+func publicIPsIn(out string) []string {
 	publicIPs := []string{}
 	for _, ip := range strings.Fields(out) {
 		if parsed := net.ParseIP(ip); parsed != nil && isPublicIP(parsed) {
 			publicIPs = append(publicIPs, ip)
 		}
 	}
-	writeJSON(w, map[string]interface{}{"ip_addresses": publicIPs})
+	return publicIPs
+}
+
+// serverPublicIPs is nil when hostname -I fails
+func serverPublicIPs() []string {
+	out, err := planIPAddressesRun()
+	if err != nil {
+		return nil
+	}
+	return publicIPsIn(out)
 }

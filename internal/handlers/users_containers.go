@@ -408,19 +408,10 @@ func (u *Users) ServeManageContainer(w http.ResponseWriter, r *http.Request) {
 
 	case "restart":
 		if err := restartContainerCmd(context, containerName); err != nil {
-			// restartContainerCmd has no error recovery of its own, so a
-			// podman-compose failure here is treated as an unhandled
-			// exception: a generic 500, unlike every other action below
-			// which always ends in a flash+redirect.
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		// restartContainerCmd returns nil on success with no result value,
-		// so the post-action flash logic always falls through to its final
-		// `else` branch and shows "Error occurred!" as a warning -- even
-		// when the restart actually succeeded. There is no success-path
-		// message for restart in the real app.
-		auth.AddFlash(w, r, u.Sessions, "Error occurred!", "warning")
+		auth.AddFlash(w, r, u.Sessions, "Container '"+containerName+"' restarted successfully.", "success")
 
 	default: // start, stop
 		actionType := "deactivate"
@@ -430,15 +421,11 @@ func (u *Users) ServeManageContainer(w http.ResponseWriter, r *http.Request) {
 			pull = r.PostFormValue("pull") == "true"
 		}
 		result := startOrStopContainer(context, containerName, actionType, pull)
-		// startOrStopContainer always returns a result with a truthy
-		// Message (falling back to a canned success sentence when
-		// podman-compose produces no stdout), so the branch below that
-		// checks for a non-empty message is always taken -- for real
-		// failures AND for genuine successes alike -- and always shows a
-		// red 'error'-styled flash with the raw podman-compose
-		// output/message. The nicer green "Container X started
-		// successfully" message is unreachable dead code as a result.
-		auth.AddFlash(w, r, u.Sessions, result.Message, "error")
+		category := "error"
+		if result.Success {
+			category = "success"
+		}
+		auth.AddFlash(w, r, u.Sessions, result.Message, category)
 	}
 
 	http.Redirect(w, r, "/users/"+username+"#services", http.StatusSeeOther)

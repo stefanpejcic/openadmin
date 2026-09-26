@@ -110,6 +110,11 @@ func (rs *Resellers) ServeResellers(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		rs.handlePost(w, r, currentUser)
+		// a bulk replay reads the flash from the cookie, so it must not be popped by the render below
+		if r.Header.Get(bulkReplayHeader) != "" {
+			http.Redirect(w, r, "/resellers", http.StatusSeeOther)
+			return
+		}
 	}
 
 	// Unlike administrators.go (which always redirects after a POST),
@@ -332,6 +337,7 @@ func (rs *Resellers) render(w http.ResponseWriter, r *http.Request) {
 		"ResellersEnabled": resellersEnabled(),
 		"ResellerCount":    len(rows),
 		"Flashes":          auth.PopFlashes(w, r, rs.Sessions),
+		"BulkActions":      AccountsBulkActions("resellers"),
 	}, r, "Resellers"))
 }
 

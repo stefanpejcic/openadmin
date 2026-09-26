@@ -34,4 +34,5 @@ type Chrome struct {
 	AreaHref  string
 	HelpDoc   string // docs page behind the tab bar's Documentation button, e.g. "admin/settings/general"
 	HelpPart  string // optional part of HelpDoc to show, see helpSections
+	BulkActions []BulkAction // buttons for _bulk.html, set by pages that have bulk selection
 }

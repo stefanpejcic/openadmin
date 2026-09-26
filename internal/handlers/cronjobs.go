@@ -152,8 +152,10 @@ func (c *Cronjobs) ServeCrons(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chrome := buildChrome(r, "Cronjobs")
+	chrome.BulkActions = CronsBulkActions()
 	webtemplates.Render(w, "crons.html", cronsPageData{
-		Chrome:      buildChrome(r, "Cronjobs"),
+		Chrome:      chrome,
 		CronJobs:    jobs,
 		FileMissing: fileMissing,
 		CSRFToken:   csrf.Token(r),

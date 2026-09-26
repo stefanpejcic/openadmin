@@ -179,3 +179,20 @@ func PopFlashes(w http.ResponseWriter, r *http.Request, mgr *Manager) []Flash {
 	}
 	return flashes
 }
+
+// FlashesInCookie decodes the flashes stored in a session cookie, used to read what an in-process request flashed
+func (m *Manager) FlashesInCookie(c *http.Cookie) []Flash {
+	fake, _ := http.NewRequest(http.MethodGet, "/", nil)
+	fake.AddCookie(c)
+	sess, err := m.store.New(fake, SessionCookieName)
+	if err != nil {
+		return nil
+	}
+	var out []Flash
+	for _, v := range sess.Flashes() {
+		if f, ok := v.(Flash); ok {
+			out = append(out, f)
+		}
+	}
+	return out
+}

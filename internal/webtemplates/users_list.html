@@ -110,9 +110,11 @@
                 </div>
             </div>
             <div class="relative overflow-y-auto">
+                {{template "bulk_open" (dict "Table" "#exiting_users" "Endpoint" "/users/bulk")}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
                     <thead class="">
                         <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+{{template "bulk_head_checkbox" .}}
                             <th x-show="columns.username" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span>Username</span>
@@ -262,6 +264,8 @@
               ((filters.active && !'{{$username}}'.includes('SUSPENDED_')) ||
                (filters.suspended && '{{$username}}'.includes('SUSPENDED_')))"
                            class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if $suspended}}bg-red-50 dark:bg-red-400/10{{end}}">
+{{$skip := "unsuspend"}}{{if $suspended}}{{$skip = "suspend"}}{{end}}{{if not $twofa}}{{$skip = printf "%s,twofa" $skip}}{{end}}
+{{template "bulk_row_checkbox" (dict "Key" $plain "Label" $username "Skip" $skip)}}
                             <td x-show="columns.username" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
 
                                 <div id="tooltip-manage-{{$plain}}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
@@ -534,6 +538,8 @@
 
                     </tbody>
                 </table>
+{{template "bulk_bar" .}}
+</div>
 
 <script>
     fetch('/json/ips')

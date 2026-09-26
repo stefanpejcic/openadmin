@@ -206,6 +206,7 @@ func (wf *WAF) ServeWAFRules(w http.ResponseWriter, r *http.Request) {
 		"RulesDetails": rulesDetails,
 		"CSRFToken":    csrf.Token(r),
 		"Flashes":      auth.PopFlashes(w, r, wf.Sessions),
+		"BulkActions":  WAFRulesBulkActions(),
 	}, r, "Web Firewall Rules"))
 }
 

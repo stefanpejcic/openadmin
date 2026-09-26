@@ -169,9 +169,11 @@ function backupsDelete(url, confirmMessage) {
         <div class="overflow-x-auto">
             <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
                 {{if .Archives}}
-                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                {{template "bulk_open" (dict "Table" "#system_backups_table" "Endpoint" "/backups/system/bulk")}}
+                <table id="system_backups_table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead>
                         <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+{{template "bulk_head_checkbox" .}}
                             <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name</th>
                             <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
                             <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Created</th>
@@ -181,6 +183,7 @@ function backupsDelete(url, confirmMessage) {
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                         {{range .Archives}}
                         <tr x-show="searchBackups === '' || '{{.Name | jsStr}}'.toLowerCase().includes(searchBackups.toLowerCase()) || '{{.Size | jsStr}}'.toLowerCase().includes(searchBackups.toLowerCase()) || '{{.ModTime | jsStr}}'.toLowerCase().includes(searchBackups.toLowerCase())" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 hover:dark:bg-gray-900">
+{{template "bulk_row_checkbox" (dict "Key" .Name "Label" .Name)}}
                             <td class="p-4 text-sm py-2.5 font-mono text-gray-900 dark:text-gray-50">{{.Name}}</td>
                             <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Size}}</td>
                             <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.ModTime}}</td>
@@ -194,6 +197,8 @@ function backupsDelete(url, confirmMessage) {
                         {{end}}
                     </tbody>
                 </table>
+{{template "bulk_bar" .}}
+</div>
                 {{else}}
                 <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No backups found{{if .Destination}} in {{.Destination}}{{end}}.</p>
                 {{end}}

@@ -560,8 +560,10 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 		widgets[uname] = buildUsageWidget(strings.Contains(uname, "SUSPENDED_"), statsAll[plain], d, hasDisk)
 	}
 
+	chrome := buildChrome(r, "Users")
+	chrome.BulkActions = UsersBulkActions(plans, serverPublicIPs())
 	webtemplates.Render(w, "users_list.html", usersListPageData{
-		Chrome:        buildChrome(r, "Users"),
+		Chrome:        chrome,
 		Users:         users,
 		Plans:         plans,
 		MySQLIsDown:   mysqlIsDown,
@@ -771,8 +773,10 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	features, _ := FeaturesForSet(featuresPath)
 
+	chrome := buildChrome(r, "User: "+stripSuspendedPrefix(username))
+	chrome.BulkActions = UserContainersBulkActions()
 	webtemplates.Render(w, "user_detail.html", userDetailPageData{
-		Chrome:            buildChrome(r, "User: "+stripSuspendedPrefix(username)),
+		Chrome:            chrome,
 		Username:          username,
 		User:              userData,
 		Disk:              disk,
@@ -882,8 +886,9 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 
 	switch action {
 	case "suspend":
-		success, output := runOpenCLI("", "opencli", "user-suspend", username, "-y")
-		if success && strings.Contains(output, "successfully") {
+		// the whole output, a user without domains gets a "No domains found" line before the success one
+		output, _, err := runOpenCLICaptured("opencli", "user-suspend", username, "-y")
+		if err == nil && strings.Contains(output, "successfully") {
 			logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" suspended user "+username)
 			auth.AddFlash(w, r, u.Sessions, "User '"+username+"' suspended successfully", "info")
 		} else {
@@ -903,8 +908,8 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 		if idx := strings.LastIndex(username, "_"); idx != -1 {
 			plain = username[idx+1:]
 		}
-		success, output := runOpenCLI("", "opencli", "user-unsuspend", plain)
-		if success && strings.Contains(output, "success") {
+		output, _, err := runOpenCLICaptured("opencli", "user-unsuspend", plain)
+		if err == nil && strings.Contains(output, "success") {
 			logUserAction(plain, clientIP(r), "Administrator "+currentUser.Username+" unsuspended user "+plain)
 			auth.AddFlash(w, r, u.Sessions, "User '"+plain+"' unsuspended successfully", "info")
 		} else {

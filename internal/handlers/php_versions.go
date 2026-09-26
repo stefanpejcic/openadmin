@@ -125,6 +125,11 @@ func (p *PHP) servePHPVersionForDomain(w http.ResponseWriter, r *http.Request, d
 			writeJSONError(w, http.StatusBadRequest, "version is required")
 			return
 		}
+		// opencli takes any version string, so check it against what the owner actually has
+		if owner, ok := p.domainOwnerLacksPHP(domain, version); ok {
+			writeJSONError(w, http.StatusBadRequest, "PHP "+version+" is not available for user "+owner+".")
+			return
+		}
 		output, err := phpDomainVersionSetRun(domain, version)
 		if err != nil {
 			writeJSONStatus(w, http.StatusInternalServerError, map[string]interface{}{
@@ -228,6 +233,35 @@ func cachedAvailablePHPVersions(context string) ([]string, error) {
 	phpAvailableVersionsCacheMu.Unlock()
 
 	return versions, err
+}
+
+// domainOwnerLacksPHP reports true only when the owner's version list was read and version isn't in it
+func (p *PHP) domainOwnerLacksPHP(domain, version string) (string, bool) {
+	if p.MySQL == nil {
+		return "", false
+	}
+	out, err := phpDomainVersionGetRun(domain)
+	if err != nil {
+		return "", false
+	}
+	m := domainPHPVersionRE.FindStringSubmatch(strings.TrimSpace(out))
+	if m == nil {
+		return "", false
+	}
+	context, err := queryContextByUsername(p.MySQL, m[1])
+	if err != nil || context == "" {
+		return "", false
+	}
+	versions, err := cachedAvailablePHPVersions(context)
+	if err != nil || len(versions) == 0 {
+		return "", false
+	}
+	for _, v := range versions {
+		if v == version {
+			return "", false
+		}
+	}
+	return m[1], true
 }
 
 // ServePHPAvailableVersions handles GET /php/{username}/available.

@@ -157,8 +157,10 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chrome := buildChrome(r, "Domains")
+	chrome.BulkActions = DomainsBulkActions(d.ownerPHPVersions(domains))
 	webtemplates.Render(w, "domains_list.html", domainsListPageData{
-		Chrome:        buildChrome(r, "Domains"),
+		Chrome:        chrome,
 		Domains:       domains,
 		PHPVersions:   phpVersionsEOL(),
 		MySQLIsDown:   mysqlIsDown,

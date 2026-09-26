@@ -421,6 +421,7 @@ func (b *Backups) ServeSystemBackups(w http.ResponseWriter, r *http.Request) {
 		"Archives":      backupsListArchives(destination),
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, b.Sessions),
+		"BulkActions":   SystemBackupsBulkActions(),
 	}, r, "System Backups"))
 }
 

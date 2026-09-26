@@ -60,9 +60,11 @@
                 </div>
             </div>
             <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+                {{template "bulk_open" (dict "Table" "#processes_table" "Endpoint" "/server/processes/bulk")}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="processes_table">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+{{template "bulk_head_checkbox" .}}
                 <th class="hidden border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">
 
                             </th>
@@ -133,6 +135,7 @@
 {{if .Processes}}
 {{range .Processes}}
                         <tr data-pid="{{.PID}}" data-owner="{{.Owner}}" data-command="{{.Command}}" x-show="searchQuery === '' || $el.dataset.pid.includes(searchQuery) || $el.dataset.owner.toLowerCase().includes(searchQuery.toLowerCase()) || $el.dataset.command.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+{{template "bulk_row_checkbox" (dict "Key" (printf "%v" .PID) "Label" (printf "PID %v" .PID))}}
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
                             <span class="font-medium text-gray-900 dark:text-gray-50 ">{{.PID}}</span> (<a href="/server/processes/{{.PID}}/strace" class="text-blue-500 hover:underline">Trace</a>) (<form method="POST" action="/server/processes/{{.PID}}/kill" class="inline" onsubmit="return confirm('Kill process {{.PID}}?');"><input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><button type="submit" class="text-blue-500 hover:underline">Kill</button></form>)
@@ -164,13 +167,15 @@
 {{end}}
 {{else}}
 <tr>
-    <td colspan="6" class="p-6 text-center">
+    <td colspan="7" class="p-6 text-center">
         No processes - contact support!
     </td>
 </tr>
 {{end}}
                     </tbody>
                 </table>
+{{template "bulk_bar" .}}
+</div>
 
                 <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
             </div>

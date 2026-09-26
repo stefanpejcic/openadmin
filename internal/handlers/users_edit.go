@@ -87,7 +87,8 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 		changes = append(changes, "IP address changed to "+newIP)
 	}
 
-	if newReseller != oldReseller {
+	// a form without the reseller field, like a bulk password change, leaves it alone
+	if _, sent := r.PostForm["reseller"]; sent && newReseller != oldReseller {
 		if ok, errMsg := u.updateUserReseller(username, newReseller); !ok {
 			auth.AddFlash(w, r, u.Sessions, "Error: "+errMsg, "error")
 			http.Redirect(w, r, "/users/"+username+"#edit", http.StatusSeeOther)

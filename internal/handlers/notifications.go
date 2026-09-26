@@ -263,8 +263,10 @@ func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 		pausedUntilLabel = pausedUntil.Format("Jan 2, 15:04")
 	}
 
+	chrome := buildChrome(r, "Notifications")
+	chrome.BulkActions = NotificationsBulkActions()
 	webtemplates.Render(w, "notifications.html", notificationsPageData{
-		Chrome:                   buildChrome(r, "Notifications"),
+		Chrome:                   chrome,
 		Notifications:            rows,
 		Counts:                   counts,
 		Categories:               categories,

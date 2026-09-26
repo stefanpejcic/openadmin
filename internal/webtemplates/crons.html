@@ -12,6 +12,8 @@
     <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
+{{/* the bar has its own form, so it goes after the page form, not inside it */}}
+{{template "bulk_open" (dict "Table" "#crons_table" "Endpoint" "/server/crons/bulk")}}
 <form method="post">
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
@@ -47,9 +49,10 @@
                 </div>
             </div>
             <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
-                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="crons_table">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+{{template "bulk_head_checkbox" .}}
                             <th id="tour-crons-schedule" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Schedule</div></th>
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Command</div></th>
                             <th id="tour-crons-logging" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Logging</div></th>
@@ -61,6 +64,7 @@
 {{range .CronJobs}}
 {{$parts := splitSpace .Schedule}}
                         <tr id="{{.LineNumber}}" x-show="searchQuery === '' || '{{.Command}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+{{template "bulk_row_checkbox" (dict "Key" (printf "%d" .LineNumber) "Label" .Command)}}
 <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 text-left">
     <input type="text" class="relative appearance-none truncate border px-0 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 inline-block w-12 text-center rounded-l" name="{{.LineNumber}}_schedule_0" value="{{index $parts 0}}">
     <input type="text" class="relative appearance-none truncate border px-0 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 inline-block w-12 text-center" name="{{.LineNumber}}_schedule_1" value="{{index $parts 1}}">
@@ -94,7 +98,7 @@
 {{end}}
 {{else}}
 <tr>
-    <td colspan="4" class="p-6 text-center">
+    <td colspan="5" class="p-6 text-center">
         No crons or the <code>/etc/cron.d/openpanel</code> file is invalid.
     </td>
 </tr>
@@ -108,6 +112,8 @@
 </div>
 
 </form>
+{{template "bulk_bar" .}}
+</div>
 
 <script>
 document.addEventListener('alpine:init', () => {

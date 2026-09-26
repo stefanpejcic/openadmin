@@ -115,9 +115,11 @@
                 </div>
             </div>
             <div class="relative overflow-auto min-h-[90vh]">
+                {{template "bulk_open" (dict "Table" "#exiting_users" "Endpoint" "/administrators/bulk")}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
                     <thead class="">
                         <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+{{template "bulk_head_checkbox" .}}
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Username</th>
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Status</th>
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Role</div></th>
@@ -133,6 +135,8 @@
                         {{$root := .}}
                         {{range .Users}}
                         <tr x-show="searchQuery === '' || '{{.Username}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+{{if or (eq .Role "admin") (eq $root.Self .Username)}}{{template "bulk_row_empty"}}{{else}}{{$skip := "suspend"}}{{if .IsActive}}{{$skip = "unsuspend"}}{{end}}
+{{template "bulk_row_checkbox" (dict "Key" .Username "Label" .Username "Skip" $skip)}}{{end}}
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 select-text">
                             {{.Username}}
@@ -265,6 +269,8 @@
 
                     </tbody>
                 </table>
+{{template "bulk_bar" .}}
+</div>
 
                 <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
             </div>

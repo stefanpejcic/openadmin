@@ -246,8 +246,9 @@ func (t *Tasks) ServeTasks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "tasks.html", mergeChrome(map[string]interface{}{
-		"Tasks":     tasks,
-		"CSRFToken": csrf.Token(r),
-		"Flashes":   auth.PopFlashes(w, r, t.Sessions),
+		"Tasks":       tasks,
+		"CSRFToken":   csrf.Token(r),
+		"Flashes":     auth.PopFlashes(w, r, t.Sessions),
+		"BulkActions": ProcessesBulkActions(),
 	}, r, "Tasks"))
 }

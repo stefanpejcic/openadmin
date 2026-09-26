@@ -1035,9 +1035,11 @@
                      <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
                         <div x-show="!showEditor">
                         {{if .Services}}
-                        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                        {{template "bulk_open" (dict "Table" "#user_services_table" "Endpoint" (printf "/containers/%s/bulk" (lastSegment .Username "_")))}}
+                        <table id="user_services_table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                            <thead>
                               <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+{{template "bulk_head_checkbox" .}}
                                  <th x-show="columns.name" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name</th>
                                  <th x-show="columns.image" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Image</th>
                                  <th x-show="columns.ports" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Ports</th>
@@ -1051,6 +1053,7 @@
                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                               {{range .Services}}
                               <tr x-show="searchQuery === '' || '{{.ContainerName | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Name | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Image | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
+{{template "bulk_row_checkbox" (dict "Key" .Name "Label" .Name)}}
                                  <td x-show="columns.name">
                                     <div class="flex flex-col gap-1">
                                        <span class="font-medium text-gray-900 dark:text-gray-50">{{.ContainerName}}</span>
@@ -1211,6 +1214,8 @@
                               {{end}}
                            </tbody>
                         </table>
+{{template "bulk_bar" .}}
+</div>
                         {{else}}
                         <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">

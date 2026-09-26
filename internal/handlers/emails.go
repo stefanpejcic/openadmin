@@ -613,6 +613,7 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 		"Emails":           accounts,
 		"EmailPairs":       pairs,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
+		"BulkActions":      EmailAccountsBulkActions(),
 	}, r, "Accounts"))
 }
 

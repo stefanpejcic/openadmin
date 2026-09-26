@@ -901,6 +901,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	// no auth wrapper, these are public files
 	mux.HandleFunc("GET /{filename}", generalStatic.ServeFile)
 
+	handlers.BulkRoutes(mux, sessions, authOpts, users, domains)
+
 	csrfMiddleware := csrf.Protect(deriveCSRFKey(d.SecretKey),
 		csrf.FieldName("csrf_token"),
 		csrf.RequestHeader("X-CSRFToken"),

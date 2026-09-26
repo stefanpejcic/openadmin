@@ -168,9 +168,11 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                 </div>
             </div>
             <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+                {{template "bulk_open" (dict "Table" "#exiting_users" "Endpoint" "/services/bulk")}}
                 <table x-data class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+{{template "bulk_head_checkbox" .}}
                 <th class="hidden border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">
 
                             </th>
@@ -203,6 +205,8 @@ function submitServiceAction(form, loadingMessage, onSettled) {
 {{if .Statuses}}
 {{range $name, $svc := .Statuses}}
                         <tr x-show="searchQuery === '' || '{{$name}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+{{if and (eq $.LicenseType "Community") (or (hasPrefix $svc.RealName "openadmin_") (eq $svc.RealName "clamav"))}}{{template "bulk_row_empty"}}{{else}}{{$skip := ""}}{{if eq $svc.Label "up"}}{{$skip = "start"}}{{else if eq $svc.Label "down"}}{{$skip = "stop"}}{{end}}{{if eq $svc.RealName "admin"}}{{$skip = "stop,restart"}}{{end}}
+{{template "bulk_row_checkbox" (dict "Key" (printf "%s:%s" $svc.Type $svc.RealName) "Label" $name "Skip" $skip)}}{{end}}
 
                             <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
                             </td>
@@ -370,13 +374,15 @@ function submitServiceAction(form, loadingMessage, onSettled) {
 {{end}}
 {{else}}
 <tr>
-    <td colspan="7" class="p-6 text-center">
+    <td colspan="8" class="p-6 text-center">
         No services or the <code>/etc/openpanel/openadmin/config/services.json</code> file is invalid.
     </td>
 </tr>
 {{end}}
                     </tbody>
                 </table>
+{{template "bulk_bar" .}}
+</div>
 
                 <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
             </div>

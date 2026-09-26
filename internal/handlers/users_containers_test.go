@@ -286,7 +286,7 @@ func TestServeManageContainerRestartFailurePropagatesAsUnhandled500(t *testing.T
 	}
 }
 
-func TestServeManageContainerRestartSuccessAlwaysShowsErrorOccurredWarning(t *testing.T) {
+func TestServeManageContainerRestartSuccessFlashesSuccess(t *testing.T) {
 	orig := containerComposeCaptureRun
 	containerComposeCaptureRun = func(context, dir string, args ...string) (string, string, error) {
 		return "", "", nil
@@ -311,15 +311,12 @@ func TestServeManageContainerRestartSuccessAlwaysShowsErrorOccurredWarning(t *te
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 after following the redirect chain, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	// restartContainerCmd returns nil (not a result value) on success, so
-	// the flash logic always falls through to "Error occurred!" -- even on
-	// a genuine success.
-	if !strings.Contains(string(body), "Error occurred!") {
-		t.Fatalf("expected the 'Error occurred!' flash even on a successful restart, got %s", truncate(string(body)))
+	if !strings.Contains(string(body), "restarted successfully.") {
+		t.Fatalf("expected the restart success flash, got %s", truncate(string(body)))
 	}
 }
 
-func TestServeManageContainerStartAlwaysFlashesRawMessageAsError(t *testing.T) {
+func TestServeManageContainerStartFlashesMessage(t *testing.T) {
 	orig := containerComposeCaptureRun
 	var gotArgs []string
 	containerComposeCaptureRun = func(context, dir string, args ...string) (string, string, error) {

@@ -428,5 +428,6 @@ func (l *Locales) handleGet(w http.ResponseWriter, r *http.Request) {
 		"UpdateCount":   len(updates),
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       flashes,
+		"BulkActions":   LocalesBulkActions(),
 	}, r, "Locale Settings"))
 }
