@@ -25,7 +25,9 @@
                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                     {{if .ResellersEnabled}}
                     <input type="hidden" name="action" value="disable_resellers">
-                    <button type="submit" {{if gt .ResellerCount 0}}disabled title="Delete all {{.ResellerCount}} reseller account(s) first"{{end}} class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit cursor-pointer">Disable Resellers</button>
+                    <span class="inline-flex" {{if gt .ResellerCount 0}}title="Resellers can't be disabled while there {{if eq .ResellerCount 1}}is 1 reseller account{{else}}are {{.ResellerCount}} reseller accounts{{end}}. Delete them first."{{end}}>
+                    <button type="submit" {{if gt .ResellerCount 0}}disabled{{end}} class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit cursor-pointer">Disable Resellers</button>
+                    </span>
                     {{else}}
                     <input type="hidden" name="action" value="enable_resellers">
                     <button type="submit" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 sm:w-fit cursor-pointer">Enable Resellers</button>
@@ -135,16 +137,13 @@ document.getElementById("togglePassword").addEventListener("click", function() {
                     <thead class="">
                         <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
 {{template "bulk_head_checkbox" .}}
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Username</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Status</th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">2FA</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Passkeys</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Login IP</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Login Time</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Action</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Accounts</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Storage</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Hosting Plans</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Username" "Key" "username" "Base" "/resellers" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">{{template "sort_header" (dict "Label" "Status" "Key" "status" "Base" "/resellers" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Security" "Key" "security" "Base" "/resellers" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Activity" "Key" "activity" "Base" "/resellers" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Accounts" "Key" "accounts" "Base" "/resellers" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Storage" "Key" "storage" "Base" "/resellers" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Hosting Plans" "Key" "plans" "Base" "/resellers" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Edit</th>
                         </tr>
                     </thead>
@@ -171,28 +170,22 @@ document.getElementById("togglePassword").addEventListener("click", function() {
                             </td>
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
-    {{if .TOTPEnabled}}
-          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>
-    {{else}}
-<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Disabled</span>
+                                <div class="flex items-center gap-x-1">
+    {{if or .TOTPEnabled .PasskeysEnabled}}
+        {{if .TOTPEnabled}}<span title="2FA enabled" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">2FA</span>{{else}}<span title="2FA disabled" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">2FA</span>{{end}}
+        {{if .PasskeysEnabled}}<span title="Passkeys registered" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Passkeys</span>{{else}}<span title="No passkeys" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Passkeys</span>{{end}}
     {{end}}
+                                </div>
                             </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
-    {{if .PasskeysEnabled}}
-          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>
-    {{else}}
-<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Disabled</span>
-    {{end}}
+
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-2 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                {{if .LastAction}}<a href="/resellers/activity/{{.Username}}" title="{{.LastActionTime}}: {{.LastAction}}" class="block truncate text-gray-900 dark:text-gray-50 hover:underline" style="max-width: 11rem">{{.LastAction}}</a>{{else}}<span class="text-gray-900 dark:text-gray-50">No actions yet</span>{{end}}
+                                <div class="text-xs text-gray-500 dark:text-gray-500 select-text">Login IP: {{.LastIP}} &middot; Login time: {{.LastLogin}}</div>
                             </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{.LastIP}}</td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{.LastLogin}}</td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if .LastAction}}<a href="/resellers/activity/{{.Username}}" title="{{.LastActionTime}}: {{.LastAction}}" class="block max-w-xs truncate hover:underline">{{.LastAction}}</a>{{else}}N/A{{end}}</td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/users?reseller={{.Username}}">{{.CurrentAccounts}}</a>/<a href="/resellers/update/{{.Username}}">{{.MaxAccounts}}</a></td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><a href="/users?reseller={{.Username}}">{{.CurrentAccounts}}</a>/<a href="/resellers/update/{{.Username}}">{{if eq .MaxAccounts 0}}&infin;{{else}}{{.MaxAccounts}}{{end}}</a></td>
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"
                                 x-data="{

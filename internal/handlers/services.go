@@ -301,12 +301,7 @@ func (s *Services) ServeStatus(w http.ResponseWriter, r *http.Request) {
 	// `if` on a non-nil pointer is always "truthy" regardless of what it
 	// points to), so resolve the tri-state to a plain string label before
 	// handing data to the template.
-	type statusView struct {
-		RealName string
-		Type     string
-		Label    string
-	}
-	views := make(map[string]statusView, len(statuses))
+	views := make([]serviceStatusRow, 0, len(statuses))
 	for name, entry := range statuses {
 		label := "unknown"
 		if entry.Status != nil {
@@ -316,14 +311,20 @@ func (s *Services) ServeStatus(w http.ResponseWriter, r *http.Request) {
 				label = "down"
 			}
 		}
-		views[name] = statusView{RealName: entry.RealName, Type: entry.Type, Label: label}
+		views = append(views, serviceStatusRow{Name: name, RealName: entry.RealName, Type: entry.Type, Label: label})
 	}
+	// map order is random, name order is the default like before
+	sortServiceStatuses(views, "name", "asc")
+	sortCol, sortDirection := readSort(r, serviceSortKeys)
+	sortServiceStatuses(views, sortCol, sortDirection)
 
 	webtemplates.Render(w, "services_status.html", mergeChrome(map[string]interface{}{
-		"Statuses":    views,
-		"CSRFToken":   csrf.Token(r),
-		"Flashes":     auth.PopFlashes(w, r, s.Sessions),
-		"BulkActions": ServicesBulkActions(),
+		"Statuses":      views,
+		"SortCol":       sortCol,
+		"SortDirection": sortDirection,
+		"CSRFToken":     csrf.Token(r),
+		"Flashes":       auth.PopFlashes(w, r, s.Sessions),
+		"BulkActions":   ServicesBulkActions(),
 	}, r, "Services"))
 }
 

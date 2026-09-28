@@ -32,6 +32,10 @@ type accountActivityPageData struct {
 	NextURL    string
 	BackURL    string
 	Flashes    []auth.Flash
+
+	SortCol       string
+	SortDirection string
+	SortExtra     url.Values
 }
 
 // Serve handles GET /administrators/activity/{username} and /resellers/activity/{username}, a reseller can only open their own
@@ -55,6 +59,8 @@ func (a *AccountActivity) Serve(listURL string) http.HandlerFunc {
 
 		query := strings.TrimSpace(r.URL.Query().Get("q"))
 		entries := filterActivity(activity.Read(username), query)
+		sortCol, sortDirection := readSort(r, activitySortKeys)
+		sortActivity(entries, sortCol, sortDirection)
 
 		page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 		totalPages := (len(entries) + activityPerPage - 1) / activityPerPage
@@ -78,6 +84,10 @@ func (a *AccountActivity) Serve(listURL string) http.HandlerFunc {
 			if query != "" {
 				v.Set("q", query)
 			}
+			if sortCol != "" {
+				v.Set("sort", sortCol)
+				v.Set("direction", sortDirection)
+			}
 			return r.URL.Path + "?" + v.Encode()
 		}
 
@@ -93,6 +103,10 @@ func (a *AccountActivity) Serve(listURL string) http.HandlerFunc {
 			NextURL:    pageURL(page + 1),
 			BackURL:    backURL,
 			Flashes:    auth.PopFlashes(w, r, a.Sessions),
+
+			SortCol:       sortCol,
+			SortDirection: sortDirection,
+			SortExtra:     searchParams(query),
 		})
 	}
 }
@@ -109,4 +123,12 @@ func filterActivity(entries []activity.Entry, query string) []activity.Entry {
 		}
 	}
 	return out
+}
+
+// searchParams keeps the search when a column header re-sorts the page
+func searchParams(query string) url.Values {
+	if query == "" {
+		return nil
+	}
+	return url.Values{"q": {query}}
 }

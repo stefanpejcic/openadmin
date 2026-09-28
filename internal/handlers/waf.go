@@ -202,11 +202,16 @@ func (wf *WAF) ServeWAFRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sortCol, sortDirection := readSort(r, wafRuleSortKeys)
+	sortWAFRules(rulesDetails, sortCol, sortDirection)
+
 	webtemplates.Render(w, "security_coraza_rules.html", mergeChrome(map[string]interface{}{
-		"RulesDetails": rulesDetails,
-		"CSRFToken":    csrf.Token(r),
-		"Flashes":      auth.PopFlashes(w, r, wf.Sessions),
-		"BulkActions":  WAFRulesBulkActions(),
+		"SortCol":       sortCol,
+		"SortDirection": sortDirection,
+		"RulesDetails":  rulesDetails,
+		"CSRFToken":     csrf.Token(r),
+		"Flashes":       auth.PopFlashes(w, r, wf.Sessions),
+		"BulkActions":   WAFRulesBulkActions(),
 	}, r, "Web Firewall Rules"))
 }
 

@@ -51,6 +51,9 @@ type administratorsPageData struct {
 	Self      string
 	CSRFToken string
 	Flashes   []auth.Flash
+
+	SortCol       string
+	SortDirection string
 }
 
 // ServeAdministrators handles GET/POST /administrators.
@@ -95,6 +98,9 @@ func (a *Administrators) render(w http.ResponseWriter, r *http.Request, currentU
 		})
 	}
 
+	sortCol, sortDirection := readSort(r, administratorSortKeys)
+	sortAdministrators(rows, sortCol, sortDirection)
+
 	if r.URL.Query().Get("output") == "json" {
 		writeJSON(w, rows)
 		return
@@ -109,6 +115,9 @@ func (a *Administrators) render(w http.ResponseWriter, r *http.Request, currentU
 		Self:      currentUser.Username,
 		CSRFToken: csrf.Token(r),
 		Flashes:   auth.PopFlashes(w, r, a.Sessions),
+
+		SortCol:       sortCol,
+		SortDirection: sortDirection,
 	})
 }
 

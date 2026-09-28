@@ -177,19 +177,15 @@ function submitServiceAction(form, loadingMessage, onSettled) {
 
                             </th>
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
-                                    <span>Service</span>
-                                </div>
+                                {{template "sort_header" (dict "Label" "Service" "Key" "name" "Base" "/services" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}
                             </th>
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                                <div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
-                                    <span>Status</span>
-                                </div>
+                                {{template "sort_header" (dict "Label" "Status" "Key" "status" "Base" "/services" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}
                             </th>
 
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Real Name</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Real Name" "Key" "realname" "Base" "/services" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
 
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Type</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Type" "Key" "type" "Base" "/services" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
 
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Monitoring</div></th>
 
@@ -203,7 +199,7 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                     ">
 
 {{if .Statuses}}
-{{range $name, $svc := .Statuses}}
+{{range .Statuses}}{{$name := .Name}}{{$svc := .}}
                         <tr x-show="searchQuery === '' || '{{$name}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
 {{if and (eq $.LicenseType "Community") (or (hasPrefix $svc.RealName "openadmin_") (eq $svc.RealName "clamav"))}}{{template "bulk_row_empty"}}{{else}}{{$skip := ""}}{{if eq $svc.Label "up"}}{{$skip = "start"}}{{else if eq $svc.Label "down"}}{{$skip = "stop"}}{{end}}{{if eq $svc.RealName "admin"}}{{$skip = "stop,restart"}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" (printf "%s:%s" $svc.Type $svc.RealName) "Label" $name "Skip" $skip)}}{{end}}

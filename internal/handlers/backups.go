@@ -58,6 +58,8 @@ type backupArchiveRow struct {
 	Name    string
 	Size    string
 	ModTime string
+
+	sizeBytes int64
 }
 
 // backupsListRuns reads BackupsRunsPath (one JSON object per line, oldest
@@ -119,9 +121,10 @@ func backupsListArchives(destination string) []backupArchiveRow {
 		}
 		rows = append(rows, withTime{
 			row: backupArchiveRow{
-				Name:    e.Name(),
-				Size:    podmanFormatSize(float64(info.Size())),
-				ModTime: info.ModTime().Format("2006-01-02 15:04:05"),
+				Name:      e.Name(),
+				Size:      podmanFormatSize(float64(info.Size())),
+				ModTime:   info.ModTime().Format("2006-01-02 15:04:05"),
+				sizeBytes: info.Size(),
 			},
 			t: info.ModTime().Unix(),
 		})
@@ -414,14 +417,25 @@ func (b *Backups) ServeSystemBackups(w http.ResponseWriter, r *http.Request) {
 	destination := data.Get("BACKUP", "destination", defaultBackupDestination)
 	retentionDays := data.Get("BACKUP", "retention_days", "-1")
 
+	archives := backupsListArchives(destination)
+	sortCol, sortDirection := readSort(r, backupArchiveSortKeys)
+	sortBackupArchives(archives, sortCol, sortDirection)
+	runs := backupsListRuns()
+	runsSortCol, runsSortDirection := readSortParam(r, "runs_sort", "runs_direction", backupRunSortKeys)
+	sortBackupRuns(runs, runsSortCol, runsSortDirection)
+
 	webtemplates.Render(w, "backups_system.html", mergeChrome(map[string]interface{}{
-		"Destination":   destination,
-		"RetentionDays": retentionDays,
-		"Runs":          backupsListRuns(),
-		"Archives":      backupsListArchives(destination),
-		"CSRFToken":     csrf.Token(r),
-		"Flashes":       auth.PopFlashes(w, r, b.Sessions),
-		"BulkActions":   SystemBackupsBulkActions(),
+		"Destination":       destination,
+		"RetentionDays":     retentionDays,
+		"Runs":              runs,
+		"Archives":          archives,
+		"SortCol":           sortCol,
+		"SortDirection":     sortDirection,
+		"RunsSortCol":       runsSortCol,
+		"RunsSortDirection": runsSortDirection,
+		"CSRFToken":         csrf.Token(r),
+		"Flashes":           auth.PopFlashes(w, r, b.Sessions),
+		"BulkActions":       SystemBackupsBulkActions(),
 	}, r, "System Backups"))
 }
 

@@ -120,14 +120,11 @@
                     <thead class="">
                         <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
 {{template "bulk_head_checkbox" .}}
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Username</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Status</th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Role</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">2FA</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Passkeys</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Login IP</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Login Time</div></th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Last Action</div></th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Username" "Key" "username" "Base" "/administrators" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">{{template "sort_header" (dict "Label" "Status" "Key" "status" "Base" "/administrators" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Role" "Key" "role" "Base" "/administrators" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Security" "Key" "security" "Base" "/administrators" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Activity" "Key" "activity" "Base" "/administrators" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Edit</th>
                         </tr>
                     </thead>
@@ -163,26 +160,20 @@
                             </td>
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
-    {{if .TOTPEnabled}}
-          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>
-    {{else}}
-<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Disabled</span>
+                                <div class="flex items-center gap-x-1">
+    {{if or .TOTPEnabled .PasskeysEnabled}}
+        {{if .TOTPEnabled}}<span title="2FA enabled" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">2FA</span>{{else}}<span title="2FA disabled" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">2FA</span>{{end}}
+        {{if .PasskeysEnabled}}<span title="Passkeys registered" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Passkeys</span>{{else}}<span title="No passkeys" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Passkeys</span>{{end}}
     {{end}}
+                                </div>
                             </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
-    {{if .PasskeysEnabled}}
-          <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Enabled</span>
-    {{else}}
-<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Disabled</span>
-    {{end}}
+
+
+                            <td class="p-4 text-sm relative whitespace-nowrap py-2 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                {{if .LastAction}}<a href="/administrators/activity/{{.Username}}" title="{{.LastActionTime}}: {{.LastAction}}" class="block truncate text-gray-900 dark:text-gray-50 hover:underline" style="max-width: 14rem">{{.LastAction}}</a>{{else}}<span class="text-gray-900 dark:text-gray-50">No actions yet</span>{{end}}
+                                <div class="text-xs text-gray-500 dark:text-gray-500 select-text">Login IP: {{.LastIP}} &middot; Login time: {{.LastLogin}}</div>
                             </td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{.LastIP}}</td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{.LastLogin}}</td>
-
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if .LastAction}}<a href="/administrators/activity/{{.Username}}" title="{{.LastActionTime}}: {{.LastAction}}" class="block max-w-xs truncate hover:underline">{{.LastAction}}</a>{{else}}N/A{{end}}</td>
 
 
                               <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">

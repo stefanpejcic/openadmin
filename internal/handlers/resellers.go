@@ -339,12 +339,17 @@ func (rs *Resellers) render(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	sortCol, sortDirection := readSort(r, resellerSortKeys)
+	sortResellers(rows, sortCol, sortDirection)
+
 	if r.URL.Query().Get("output") == "json" {
 		writeJSON(w, rows)
 		return
 	}
 
 	webtemplates.Render(w, "users_resellers.html", mergeChrome(map[string]interface{}{
+		"SortCol":          sortCol,
+		"SortDirection":    sortDirection,
 		"Users":            rows,
 		"ResellersEnabled": resellersEnabled(),
 		"ResellerCount":    len(rows),

@@ -132,6 +132,9 @@ type cronsPageData struct {
 	FileMissing bool
 	CSRFToken   string
 	Flashes     []auth.Flash
+
+	SortCol       string
+	SortDirection string
 }
 
 // ServeCrons handles GET/POST /server/crons.
@@ -152,6 +155,10 @@ func (c *Cronjobs) ServeCrons(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// rows are keyed by LineNumber, so the display order can change freely
+	sortCol, sortDirection := readSort(r, cronSortKeys)
+	sortCronJobs(jobs, sortCol, sortDirection)
+
 	chrome := buildChrome(r, "Cronjobs")
 	chrome.BulkActions = CronsBulkActions()
 	webtemplates.Render(w, "crons.html", cronsPageData{
@@ -160,6 +167,9 @@ func (c *Cronjobs) ServeCrons(w http.ResponseWriter, r *http.Request) {
 		FileMissing: fileMissing,
 		CSRFToken:   csrf.Token(r),
 		Flashes:     auth.PopFlashes(w, r, c.Sessions),
+
+		SortCol:       sortCol,
+		SortDirection: sortDirection,
 	})
 }
 
