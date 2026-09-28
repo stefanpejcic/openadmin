@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"fmt"
+
 	"net/http"
+	"openadmin/internal/activity"
 	"regexp"
 	"strings"
 	"sync"
@@ -179,6 +181,12 @@ func (d *Domains) HandleBulkAdd(w http.ResponseWriter, r *http.Request) {
 		writeJSONStatus(w, http.StatusConflict, map[string]interface{}{"errors": []string{"Domains are already being added, wait for that to finish."}})
 		return
 	}
+	names := make([]string, len(lines))
+	for i, l := range lines {
+		names[i] = l.Domain
+	}
+	activity.Describe(r.Context(), fmt.Sprintf("Started bulk add of %d domains: %s", len(lines), strings.Join(names, ", ")))
+
 	result := &bulkDomainsResult{Total: len(lines), Added: []string{}, Failed: []bulkDomainFailure{}}
 	pendingBulkDomains = result
 	pendingBulkDomainsMu.Unlock()

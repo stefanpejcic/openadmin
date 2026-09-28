@@ -19,6 +19,7 @@ import (
 
 	"github.com/gorilla/csrf"
 
+	"openadmin/internal/activity"
 	"openadmin/internal/auth"
 	"openadmin/internal/paneldb"
 	"openadmin/internal/webtemplates"
@@ -187,6 +188,7 @@ func (d *Domains) HandleAdd(w http.ResponseWriter, r *http.Request) {
 	// custom docroot is an Enterprise feature, Community always gets /var/www/html/<domain>
 	if docroot := strings.TrimSpace(r.FormValue("docroot")); docroot != "" && chromeSite.LicenseType == "Enterprise" {
 		if errMsg := validateDocroot(docroot); errMsg != "" {
+			activity.Fail(r.Context())
 			auth.AddFlash(w, r, d.Sessions, errMsg, "error")
 			http.Redirect(w, r, "/domains#add", http.StatusSeeOther)
 			return
@@ -198,6 +200,7 @@ func (d *Domains) HandleAdd(w http.ResponseWriter, r *http.Request) {
 	if success {
 		auth.AddFlash(w, r, d.Sessions, "Domain \""+domain+"\" added for user \""+username+"\".", "info")
 	} else {
+		activity.Fail(r.Context())
 		auth.AddFlash(w, r, d.Sessions, "Failed to add domain: "+output, "error")
 	}
 	http.Redirect(w, r, "/domains", http.StatusSeeOther)

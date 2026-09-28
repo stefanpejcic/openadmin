@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"openadmin/internal/activity"
 	"openadmin/internal/auth"
 	"openadmin/internal/webtemplates"
 )
@@ -73,6 +74,8 @@ func serveBulkDispatchOrdered(sessions *auth.Manager, h http.Handler, w http.Res
 		bulkError(w, "Unknown bulk action.")
 		return
 	}
+	// one log line for the whole run, the replayed single-row requests don't go through the activity middleware
+	activity.Describe(r.Context(), fmt.Sprintf("Bulk %s on %s: %s", act.Label, strings.Trim(strings.TrimSuffix(r.URL.Path, "/bulk"), "/"), strings.Join(req.Items, ", ")))
 	in, prefix := act.Input, ""
 	if in != nil && len(in.Fields) > 0 {
 		f, ok := in.Field(req.Field)

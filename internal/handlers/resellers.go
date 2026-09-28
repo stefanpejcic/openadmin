@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"openadmin/internal/activity"
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
 	"openadmin/internal/config"
@@ -64,6 +65,8 @@ type resellerRow struct {
 	Role              string `json:"role"`
 	LastIP            string `json:"last_ip"`
 	LastLogin         string `json:"last_login"`
+	LastAction        string `json:"last_action"`
+	LastActionTime    string `json:"last_action_time"`
 	TOTPEnabled       bool   `json:"totp_enabled"`
 	PasskeysEnabled   bool   `json:"passkeys_enabled"`
 	MaxAccounts       int    `json:"max_accounts"`
@@ -165,6 +168,12 @@ func (rs *Resellers) handlePost(w http.ResponseWriter, r *http.Request, currentU
 	}
 
 	success, message := rs.runAction(action, username, password, r, currentUser)
+	if !success {
+		activity.Fail(r.Context())
+	} else if action == "rename_user" && username == currentUser.Username {
+		// opencli already moved the log to the new name
+		activity.SetActor(r.Context(), r.FormValue("new_username"))
+	}
 	if success {
 		// Note: unlike administrators.go (which prefixes both outcomes
 		// with "Success: "/"Error: "), only the failure case is prefixed
@@ -310,7 +319,10 @@ func (rs *Resellers) render(w http.ResponseWriter, r *http.Request) {
 		info := lastLogin[u.Username]
 		credCount, _ := rs.DB.CredentialCountByUserID(u.ID)
 		rd := readResellerData(u.Username)
+		last, _ := activity.Last(u.Username)
 		rows = append(rows, resellerRow{
+			LastAction:        last.Action,
+			LastActionTime:    last.Time,
 			Username:          u.Username,
 			IsActive:          u.IsActive,
 			Role:              u.Role,
@@ -404,6 +416,7 @@ func (rs *Resellers) ServeAccount(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "users_password_reseller.html", mergeChrome(map[string]interface{}{
 		"Username":     "",
 		"SelfService":  true,
+		"Self":         currentUser.Username,
 		"ResellerData": rd,
 		"Flashes":      auth.PopFlashes(w, r, rs.Sessions),
 	}, r, "Change Password"))

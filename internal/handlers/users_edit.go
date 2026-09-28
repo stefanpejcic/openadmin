@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"openadmin/internal/activity"
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
 	"openadmin/internal/paneldb"
@@ -71,6 +72,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 	}
 
 	fail := func(action, output string) {
+		activity.Fail(r.Context())
 		auth.AddFlash(w, r, u.Sessions, "Error "+action+" for user "+username+": "+output, "error")
 		http.Redirect(w, r, "/users/"+username+"#edit", http.StatusSeeOther)
 	}

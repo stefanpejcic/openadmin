@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/csrf"
 
+	"openadmin/internal/activity"
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
 	"openadmin/internal/license"
@@ -37,6 +38,8 @@ type administratorRow struct {
 	Role            string
 	LastIP          string
 	LastLogin       string
+	LastAction      string
+	LastActionTime  string
 	TOTPEnabled     bool
 	PasskeysEnabled bool
 }
@@ -78,7 +81,10 @@ func (a *Administrators) render(w http.ResponseWriter, r *http.Request, currentU
 		}
 		info := lastLogin[u.Username]
 		credCount, _ := a.DB.CredentialCountByUserID(u.ID)
+		last, _ := activity.Last(u.Username)
 		rows = append(rows, administratorRow{
+			LastAction:      last.Action,
+			LastActionTime:  last.Time,
 			Username:        u.Username,
 			IsActive:        u.IsActive,
 			Role:            u.Role,
@@ -129,6 +135,12 @@ func (a *Administrators) handlePost(w http.ResponseWriter, r *http.Request, curr
 	}
 
 	success, message := a.runAction(action, username, password, r, currentUser)
+	if !success {
+		activity.Fail(r.Context())
+	} else if action == "rename_user" && username == currentUser.Username {
+		// opencli already moved the log to the new name
+		activity.SetActor(r.Context(), r.FormValue("new_username"))
+	}
 
 	if success {
 		auth.AddFlash(w, r, a.Sessions, "Success: "+message, "success")

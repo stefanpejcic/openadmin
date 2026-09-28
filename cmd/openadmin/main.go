@@ -587,6 +587,9 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /administrators", auth.RequireAdmin(sessions, authOpts, admins.ServeAdministrators))
 	mux.HandleFunc("POST /administrators", auth.RequireAdmin(sessions, authOpts, admins.ServeAdministrators))
 	mux.HandleFunc("GET /administrators/{action}/{username}", auth.RequireAdmin(sessions, authOpts, admins.ServeEditForm))
+	accountActivity := &handlers.AccountActivity{DB: d.AdminDB, Sessions: sessions}
+	mux.HandleFunc("GET /administrators/activity/{username}", auth.RequireAdmin(sessions, authOpts, accountActivity.Serve("/administrators")))
+	mux.HandleFunc("GET /resellers/activity/{username}", auth.RequireLogin(sessions, authOpts, accountActivity.Serve("/resellers")))
 
 	mux.HandleFunc("GET /plans", auth.RequireLogin(sessions, authOpts, plans.ServeList))
 	mux.HandleFunc("POST /plans", auth.RequireLogin(sessions, authOpts, plans.ServeList))
@@ -914,6 +917,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	)
 
 	var handler http.Handler = handlers.NotFoundHandler(mux)
+	handler = handlers.ActivityMiddleware(handler)
 	handler = handlers.RecoverMiddleware(handler)
 	handler = auth.ValidateSessionIPMiddleware(sessions, authOpts)(handler)
 	handler = auth.WithUserLoader(sessions, d.AdminDB)(handler)

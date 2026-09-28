@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"openadmin/internal/activity"
 	"openadmin/internal/admindb"
 	"openadmin/internal/config"
 	"openadmin/internal/paneldb"
@@ -113,6 +114,7 @@ func withAPIUser(r *http.Request, user *admindb.User) *http.Request {
 // available even when the acting user's DB row is gone (see
 // RequireAPIToken below) or was never looked up at all.
 func withAPIUsername(r *http.Request, username string) *http.Request {
+	activity.SetActor(r.Context(), username)
 	return r.WithContext(context.WithValue(r.Context(), apiUsernameContextKey{}, username))
 }
 
