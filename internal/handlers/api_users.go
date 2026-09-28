@@ -400,6 +400,7 @@ func (a *APIUsers) handleChangePlan(w http.ResponseWriter, r *http.Request, user
 
 	output, runErr := apiCheckOutputRun("opencli", "user-change_plan", username, body.PlanName)
 	if runErr == nil {
+		dropOpenpanelFeaturesCache()
 		writeJSONStatus(w, http.StatusCreated, map[string]interface{}{
 			"success":  true,
 			"response": map[string]string{"message": strings.TrimSpace(output)},

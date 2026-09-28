@@ -129,6 +129,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 			fail("changing plan", output)
 			return
 		}
+		dropOpenpanelFeaturesCache()
 		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" changed plan from "+oldPlanName+" to "+newPlanName+" for user "+username)
 		changes = append(changes, "Plan changed from "+oldPlanName+" to "+newPlanName)
 	}

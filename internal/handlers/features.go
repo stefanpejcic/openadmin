@@ -37,8 +37,9 @@ var (
 	FeaturesOpenpanelRestartFlagPath = "/root/openpanel_restart_needed"
 )
 
-// featuresCacheKeyPatterns are the openpanel redis cache keys that decide which features a user gets: feature-set contents, a user's features.txt override, which set a plan points at, and the plan's upsell target. All need dropping when any of those change, or the user panel sees stale data for up to their TTL (24h).
+// featuresCacheKeyPatterns are the openpanel redis cache keys that decide which plan and features a user gets: the user's plan, feature-set contents, a user's features.txt override, which set a plan points at, and the plan's upsell target. All need dropping when any of those change, or the user panel sees stale data for up to their TTL (24h).
 var featuresCacheKeyPatterns = []string{
+	"openpanel_cache_get_user_details_with_plan:*",
 	"openpanel_cache_load_user_features:*",
 	"openpanel_cache_load_features_for_plan_id:*",
 	"openpanel_cache_get_feature_set_on_plan:*",
