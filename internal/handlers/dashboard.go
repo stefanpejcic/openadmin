@@ -40,7 +40,6 @@ type dashboardAdminData struct {
 	DomainCount       int
 	RunningContainers int
 	MailCount         int
-	ServerCount       int
 }
 
 type dashboardResellerData struct {
@@ -137,11 +136,6 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		d.serveAdminDashboardError(w, r, wantJSON)
 		return
 	}
-	dockerContexts, err := paneldb.DockerContexts(d.MySQL)
-	if err != nil {
-		dockerContexts = 1
-	}
-
 	data := dashboardAdminData{
 		ForceDomain:       forceDomain,
 		UserCount:         counts.UserCount,
@@ -150,7 +144,6 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		DomainCount:       counts.DomainCount,
 		RunningContainers: localContainerCount(),
 		MailCount:         emailCount(),
-		ServerCount:       dockerContexts,
 	}
 
 	if wantJSON {
@@ -165,7 +158,7 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 }
 
 func (d *Dashboard) serveAdminDashboardError(w http.ResponseWriter, r *http.Request, wantJSON bool) {
-	data := dashboardAdminData{ServerCount: 1}
+	data := dashboardAdminData{}
 	if wantJSON {
 		writeJSON(w, data)
 		return

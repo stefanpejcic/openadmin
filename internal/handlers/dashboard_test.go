@@ -84,7 +84,6 @@ func TestServeDashboardAdminJSON(t *testing.T) {
 
 	mock.ExpectQuery(`SELECT`).WillReturnRows(sqlmock.NewRows(
 		[]string{"user_count", "plan_count", "site_count", "domain_count"}).AddRow(5, 2, 9, 4))
-	mock.ExpectQuery(`SELECT DISTINCT server`).WillReturnRows(sqlmock.NewRows([]string{"server"}))
 
 	dash := &Dashboard{MySQL: db}
 	srv, client := dashboardTestServer(t, dash, "admin")
@@ -104,9 +103,6 @@ func TestServeDashboardAdminJSON(t *testing.T) {
 	}
 	if got.UserCount != 5 || got.PlanCount != 2 || got.SiteCount != 9 || got.DomainCount != 4 {
 		t.Fatalf("unexpected counts: %+v", got)
-	}
-	if got.ServerCount != 1 {
-		t.Fatalf("expected server_count 1 (just the default context), got %d", got.ServerCount)
 	}
 }
 
