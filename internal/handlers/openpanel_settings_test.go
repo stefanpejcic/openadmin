@@ -158,14 +158,15 @@ func TestValidateOpenpanelValueSpaceSeparatedExtensions(t *testing.T) {
 
 func TestOpenpanelSectionForKey(t *testing.T) {
 	cases := map[string]string{
-		"brand_name":              "DEFAULT",
-		"logout_url":              "DEFAULT",
-		"mysql_startup_time":      "DATABASES",
-		"filemanager_upload_size": "FILES",
-		"autopurge_trash":         "FILES",
-		"terminal_timeout":        "PANEL",
-		"menu_style":              "PANEL",
-		"login_ratelimit":         "USERS",
+		"brand_name":                   "DEFAULT",
+		"logout_url":                   "DEFAULT",
+		"mysql_startup_time":           "DATABASES",
+		"filemanager_upload_size":      "FILES",
+		"autopurge_trash":              "FILES",
+		"terminal_timeout":             "PANEL",
+		"menu_style":                   "PANEL",
+		"applications_dashboard_items": "PANEL",
+		"login_ratelimit":              "USERS",
 	}
 	for key, want := range cases {
 		if got := openpanelSectionForKey(key); got != want {

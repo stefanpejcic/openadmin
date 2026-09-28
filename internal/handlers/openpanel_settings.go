@@ -71,6 +71,7 @@ var openpanelStringFields = []string{
 	"logout_url",
 	"captcha_provider", "recaptcha_site_key", "recaptcha_secret_key",
 	"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key",
+	"applications_dashboard_items",
 }
 
 type openpanelValidationKind int
@@ -107,6 +108,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"mysql_import_max_size_gb":        {kind: openpanelNonNegativeInt},
 	"mysql_restricted_usernames":      {kind: openpanelSpaceSeparatedList},
 	"mysql_restricted_databases":      {kind: openpanelSpaceSeparatedList},
+	"applications_dashboard_items":    {kind: openpanelSpaceSeparatedList},
 	"filemanager_buttons_style":       {kind: openpanelEnum, options: []string{"classic", "modern"}},
 	"filemanager_files_per_page":      {kind: openpanelNonNegativeInt},
 	"filemanager_edit_size":           {kind: openpanelNonNegativeInt},
@@ -201,7 +203,7 @@ func openpanelSectionForKey(key string) string {
 	if strings.HasPrefix(key, "filemanager_") || key == "autopurge_trash" {
 		return "FILES"
 	}
-	if key == "terminal_timeout" || key == "menu_style" {
+	if key == "terminal_timeout" || key == "menu_style" || key == "applications_dashboard_items" {
 		return "PANEL"
 	}
 	switch key {
