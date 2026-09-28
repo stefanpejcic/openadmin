@@ -293,6 +293,7 @@ func (p *APIPlans) handleEdit(w http.ResponseWriter, r *http.Request, planIDStr 
 			upsellURL := jsonStringOr(data, "upsell_url", jsonStringOr(current, "upsell_url", ""))
 			_ = paneldb.SetPlanUpsell(p.MySQL, planIDStr, upsellID, upsellURL)
 		}
+		dropOpenpanelFeaturesCache()
 		writeJSON(w, map[string]interface{}{"success": true, "message": output})
 		return
 	}

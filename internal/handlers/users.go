@@ -961,6 +961,7 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		dropOpenpanelFeaturesCache()
 		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" updated permissions for user "+username)
 		auth.AddFlash(w, r, u.Sessions, "Permissions for '"+username+"' updated successfully", "success")
 		http.Redirect(w, r, "/users/"+username+"#permissions", http.StatusSeeOther)
@@ -977,6 +978,7 @@ func (u *Users) HandleManage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		dropOpenpanelFeaturesCache()
 		logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" reset permissions for user "+username+" to plan defaults")
 		auth.AddFlash(w, r, u.Sessions, "Permissions for '"+username+"' reset to plan defaults", "success")
 		http.Redirect(w, r, "/users/"+username+"#permissions", http.StatusSeeOther)

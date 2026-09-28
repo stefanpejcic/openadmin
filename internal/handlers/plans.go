@@ -360,6 +360,7 @@ func (p *Plans) handleEditPost(w http.ResponseWriter, r *http.Request, planID st
 		if p.hasEnterpriseAccess() {
 			_ = paneldb.SetPlanUpsell(p.MySQL, planID, r.FormValue("upsell_plan_id"), r.FormValue("upsell_url"))
 		}
+		dropOpenpanelFeaturesCache()
 		auth.AddFlash(w, r, p.Sessions, output, "success")
 	} else {
 		auth.AddFlash(w, r, p.Sessions, output, "error")

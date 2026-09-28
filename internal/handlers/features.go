@@ -37,10 +37,20 @@ var (
 	FeaturesOpenpanelRestartFlagPath = "/root/openpanel_restart_needed"
 )
 
-// featuresCacheKeyPatterns are the openpanel redis cache keys derived from a feature-set .txt file's contents: LoadUserFeatures's per-user result and LoadFeaturesForPlanID's per-plan result (used by the plan-upsell grey-out feature). Both need dropping whenever a feature set's content changes, or callers see stale data for up to their TTL (24h).
+// featuresCacheKeyPatterns are the openpanel redis cache keys that decide which features a user gets: feature-set contents, a user's features.txt override, which set a plan points at, and the plan's upsell target. All need dropping when any of those change, or the user panel sees stale data for up to their TTL (24h).
 var featuresCacheKeyPatterns = []string{
 	"openpanel_cache_load_user_features:*",
 	"openpanel_cache_load_features_for_plan_id:*",
+	"openpanel_cache_get_feature_set_on_plan:*",
+	"openpanel_cache_get_feature_set_name_by_plan_id:*",
+	"openpanel_cache_query_plan_details_by_id:*",
+}
+
+// dropOpenpanelFeaturesCache clears every user's cached features so the user panel picks up changes right away, falling back to the restart flag if redis can't be reached
+func dropOpenpanelFeaturesCache() {
+	if !invalidateOpenpanelUserFeaturesCacheRun() {
+		os.WriteFile(FeaturesOpenpanelRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)
+	}
 }
 
 var featuresNameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -288,9 +298,7 @@ func (f *Features) servePlan(w http.ResponseWriter, r *http.Request, plan string
 			return
 		}
 
-		if !invalidateOpenpanelUserFeaturesCacheRun() {
-			os.WriteFile(FeaturesOpenpanelRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)
-		}
+		dropOpenpanelFeaturesCache()
 	}
 
 	var enabledModules []string

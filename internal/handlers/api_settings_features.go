@@ -189,9 +189,7 @@ func (f *APISettingsFeatures) servePlan(w http.ResponseWriter, r *http.Request, 
 			return
 		}
 
-		if !invalidateOpenpanelUserFeaturesCacheRun() {
-			os.WriteFile(FeaturesOpenpanelRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)
-		}
+		dropOpenpanelFeaturesCache()
 		writeJSON(w, map[string]interface{}{"success": true, "message": fmt.Sprintf("Feature set %s updated (%s).", plan, action)})
 		return
 	}

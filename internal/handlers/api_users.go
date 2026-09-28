@@ -560,6 +560,7 @@ func (a *APIUsers) ServePermissionsReset(w http.ResponseWriter, r *http.Request)
 		writeJSONError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+	dropOpenpanelFeaturesCache()
 
 	logUserAction(username, clientIP(r), "Administrator "+currentUser.Username+" reset permissions for user "+username+" to plan defaults")
 	writeJSON(w, map[string]interface{}{"success": true, "message": "Permissions for '" + username + "' reset to plan defaults"})
