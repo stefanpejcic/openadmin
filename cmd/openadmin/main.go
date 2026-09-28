@@ -661,6 +661,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /domains", auth.RequireAdmin(sessions, authOpts, domains.ServeList))
 	mux.HandleFunc("GET /domains/", auth.RequireAdmin(sessions, authOpts, domains.ServeList))
 	mux.HandleFunc("POST /domains/add", auth.RequireAdmin(sessions, authOpts, domains.HandleAdd))
+	mux.HandleFunc("POST /domains/bulk-add", auth.RequireAdmin(sessions, authOpts, domains.HandleBulkAdd))
+	mux.HandleFunc("GET /domains/bulk-add-status", auth.RequireAdmin(sessions, authOpts, domains.ServeBulkAddStatus))
 	mux.HandleFunc("GET /domains/dns", auth.RequireAdmin(sessions, authOpts, dnsZoneEditor.ServeEditDNSZone))
 	mux.HandleFunc("GET /domains/dns/{domain_name}", auth.RequireAdmin(sessions, authOpts, dnsZoneEditor.ServeEditDNSZone))
 	mux.HandleFunc("GET /domains/caddy", auth.RequireAdmin(sessions, authOpts, caddyFileEditor.ServeEditCaddyFile))

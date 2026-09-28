@@ -40,7 +40,7 @@
 
                 <div id="create_user_form" class="sm:mx-auto" style="display:block;" x-data="userSearch()">
 
-                    <form method="POST" action="/domains/add" @submit.prevent="submitForm">
+                    <form method="POST" action="/domains/add" @submit.prevent="submitForm" x-show="!bulkMode">
                         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
@@ -85,8 +85,9 @@
                             </div>
                             {{end}}
 
-                            <div class="col-span-full {{if eq .LicenseType "Enterprise"}}flex justify-end{{else}}sm:col-span-2 flex flex-col justify-end h-full{{end}}">
-                                <div class="relative {{if eq .LicenseType "Enterprise"}}w-full sm:w-auto{{else}}w-full{{end}} mt-2">
+                            <div class="col-span-full {{if eq .LicenseType "Enterprise"}}{{else}}sm:col-span-2 h-full{{end}} flex items-end justify-end">
+                                <div class="relative mt-2 flex items-center gap-3">
+                                    <a href="#add" @click.prevent="bulkMode = true" class="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">Adding more than one domain?</a>
                                     <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">
                                         Add Domain
                                     </button>
@@ -94,10 +95,94 @@
                             </div>
                         </div>
                     </form>
+
+                    <form x-show="bulkMode" x-cloak @submit.prevent="submitBulk">
+                        <label for="bulk_domains" class="text-sm font-medium">Domains<span class="text-red-500">*</span></label>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">One per line: <code>domain|username</code>{{if eq .LicenseType "Enterprise"}}, optionally followed by <code>|docroot</code>{{end}} and <code>|php version</code>. Spaces work instead of <code>|</code>.</p>
+                        <textarea id="bulk_domains" x-model="bulkText" @blur="validateBulk()" rows="8" spellcheck="false" :disabled="bulkRunning"
+                            placeholder="domain1.com|milan{{if eq .LicenseType "Enterprise"}}&#10;domain2.rs|stefan|/var/www/html/somedir/here/&#10;domain3.rs|stefan|/var/www/html/somedir/here/|8.3{{else}}&#10;domain2.rs stefan 8.3{{end}}"
+                            class="mt-2 relative block w-full appearance-none rounded border px-2.5 py-2 font-mono shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700"></textarea>
+
+                        <ul x-show="bulkErrors.length" class="mt-2 list-disc pl-5 text-sm text-red-600 dark:text-red-400">
+                            <template x-for="err in bulkErrors" :key="err"><li x-text="err"></li></template>
+                        </ul>
+
+                        <div x-show="bulkStatus" class="mt-2 text-sm">
+                            <p x-text="bulkStatus"></p>
+                            <ul x-show="bulkFailed.length" class="mt-1 list-disc pl-5 text-red-600 dark:text-red-400">
+                                <template x-for="f in bulkFailed" :key="f.line"><li x-text="'Line ' + f.line + ' (' + f.domain + '): ' + f.error"></li></template>
+                            </ul>
+                        </div>
+
+                        <div class="mt-2 flex items-center justify-end gap-3">
+                            <a href="#add" @click.prevent="bulkMode = false" x-show="!bulkRunning" class="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">Adding just one domain?</a>
+                            <button type="submit" :disabled="bulkRunning" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">
+                                Add Domains
+                            </button>
+                        </div>
+                    </form>
+
                 </div>
 
 <script>
 const DOCROOT_PREFIX = '/var/www/html/';
+const DOCROOT_ALLOWED = {{if eq .LicenseType "Enterprise"}}true{{else}}false{{end}};
+
+// mirrors parseBulkDomains in internal/handlers/domains_bulk.go
+function parseBulkDomains(text) {
+    const errors = [];
+    const lines = [];
+    const seen = {};
+    const domainRe = /^[\p{L}\p{N}]([\p{L}\p{N}-]*[\p{L}\p{N}])?(\.[\p{L}\p{N}]([\p{L}\p{N}-]*[\p{L}\p{N}])?)+$/u;
+    const userRe = /^[a-zA-Z][a-zA-Z0-9]*$/;
+    const phpRe = /^[0-9]+\.[0-9]+$/;
+
+    text.replace(/\r\n/g, '\n').split('\n').forEach((raw, i) => {
+        const n = i + 1;
+        raw = raw.trim();
+        if (!raw || raw.startsWith('#')) return;
+
+        const fields = raw.includes('|')
+            ? raw.split('|').map(f => f.trim()).filter(Boolean)
+            : raw.split(/\s+/);
+
+        if (fields.length < 2) { errors.push(`Line ${n}: expected domain|username, got "${raw}".`); return; }
+        if (fields.length > 4) { errors.push(`Line ${n}: too many fields, expected domain|username|docroot|php version.`); return; }
+
+        const domain = fields[0].toLowerCase();
+        const lineErrors = [];
+        if (domain.length > 253 || !domainRe.test(domain)) lineErrors.push(`"${fields[0]}" is not a valid domain.`);
+        else if (seen[domain]) lineErrors.push(`${domain} is already on line ${seen[domain]}.`);
+        if (!userRe.test(fields[1])) lineErrors.push(`"${fields[1]}" is not a valid username.`);
+
+        let docroot = '', php = '';
+        fields.slice(2).forEach(f => {
+            if (f.startsWith('/')) {
+                if (docroot) lineErrors.push('more than one docroot.');
+                else if (!DOCROOT_ALLOWED) lineErrors.push('a custom docroot requires an Enterprise license.');
+                else if (!isValidDocroot(f)) lineErrors.push(`docroot must start with ${DOCROOT_PREFIX}, and can't contain '..' or special characters.`);
+                else docroot = f;
+            } else if (phpRe.test(f)) {
+                if (php) lineErrors.push('more than one PHP version.');
+                else php = f;
+            } else {
+                lineErrors.push(`"${f}" is neither a docroot (${DOCROOT_PREFIX}...) nor a PHP version (e.g. 8.3).`);
+            }
+        });
+
+        if (lineErrors.length) lineErrors.forEach(e => errors.push(`Line ${n}: ${e}`));
+        else { seen[domain] = n; lines.push({ domain, docroot, php }); }
+    });
+
+    if (!errors.length && !lines.length) errors.push('No domains to add.');
+    if (lines.length > 500) errors.push('At most 500 domains can be added at once.');
+    return { lines, errors };
+}
+
+function isValidDocroot(docroot) {
+    return docroot.startsWith(DOCROOT_PREFIX) && docroot.length > DOCROOT_PREFIX.length
+        && /^[A-Za-z0-9._\/-]+$/.test(docroot) && !docroot.split('/').includes('..');
+}
 
 function userSearch() {
     return {
@@ -108,6 +193,67 @@ function userSearch() {
         domain: '',
         docroot: DOCROOT_PREFIX,
         docrootEdited: false,
+        bulkMode: false,
+        bulkText: '',
+        bulkErrors: [],
+        bulkRunning: false,
+        bulkStatus: '',
+        bulkFailed: [],
+
+        validateBulk() {
+            this.bulkErrors = this.bulkText.trim() ? parseBulkDomains(this.bulkText).errors : [];
+            return this.bulkErrors.length === 0;
+        },
+
+        submitBulk() {
+            if (!this.bulkText.trim()) { this.bulkErrors = ['No domains to add.']; return; }
+            if (!this.validateBulk()) return;
+
+            const body = new FormData();
+            body.append('csrf_token', document.querySelector('#create_user_form input[name="csrf_token"]').value);
+            body.append('domains', this.bulkText);
+
+            this.bulkRunning = true;
+            this.bulkFailed = [];
+            this.bulkStatus = 'Starting…';
+            fetch('/domains/bulk-add', { method: 'POST', body, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(res => res.json().then(data => ({ ok: res.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) {
+                        this.bulkRunning = false;
+                        this.bulkStatus = '';
+                        this.bulkErrors = data.errors || ['Failed to add domains.'];
+                        return;
+                    }
+                    this.pollBulk();
+                })
+                .catch(() => {
+                    this.bulkRunning = false;
+                    this.bulkStatus = '';
+                    this.bulkErrors = ['Failed to reach the server.'];
+                });
+        },
+
+        pollBulk() {
+            fetch('/domains/bulk-add-status', { cache: 'no-store' })
+                .then(res => res.json())
+                .then(data => {
+                    this.bulkFailed = data.failed || [];
+                    if (!data.done) {
+                        this.bulkStatus = `Adding domains (${data.completed}/${data.total})${data.current ? ': ' + data.current : ''}…`;
+                        setTimeout(() => this.pollBulk(), 1500);
+                        return;
+                    }
+                    this.bulkRunning = false;
+                    this.bulkStatus = data.message;
+                    // keep the page up when something failed so the errors stay readable
+                    if (!this.bulkFailed.length) {
+                        showToast(data.message, 'success');
+                        setTimeout(() => window.location.reload(), 1500);
+                    }
+                })
+                .catch(() => setTimeout(() => this.pollBulk(), 3000));
+        },
 
         // follow the domain until the admin types their own docroot
         syncDocroot() {
@@ -124,8 +270,7 @@ function userSearch() {
         },
 
         validateDocroot(docroot) {
-            return docroot.startsWith(DOCROOT_PREFIX) && docroot.length > DOCROOT_PREFIX.length
-                && /^[A-Za-z0-9._\/-]+$/.test(docroot) && !docroot.split('/').includes('..');
+            return isValidDocroot(docroot);
         },
 
         searchUsers() {
