@@ -78,8 +78,8 @@ func (a *APIDomains) HandleAddDomain(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "username and domain are required")
 		return
 	}
-	if !strings.HasPrefix(body.Docroot, "/var/www/html/") {
-		writeJSONError(w, http.StatusBadRequest, "docroot must start with /var/www/html/")
+	if errMsg := validateDocroot(body.Docroot); errMsg != "" {
+		writeJSONError(w, http.StatusBadRequest, errMsg)
 		return
 	}
 

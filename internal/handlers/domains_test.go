@@ -328,3 +328,18 @@ func TestDomainsToggleFeatureSuspendGracefulWithoutOpenCLI(t *testing.T) {
 		t.Fatalf("expected the graceful-failure flash, got %s", truncate(string(body)))
 	}
 }
+
+func TestValidateDocroot(t *testing.T) {
+	ok := []string{"/var/www/html/example.com", "/var/www/html/sites/shop_1", "/var/www/html/a.b-c/public"}
+	bad := []string{"", "/var/www/html/", "/var/www/html", "/etc/passwd", "/var/www/htmlx/a", "/var/www/html/../../etc", "/var/www/html/a/../b", "/var/www/html/a b", "/var/www/html/a;rm"}
+	for _, d := range ok {
+		if msg := validateDocroot(d); msg != "" {
+			t.Errorf("expected %q to be valid, got %q", d, msg)
+		}
+	}
+	for _, d := range bad {
+		if validateDocroot(d) == "" {
+			t.Errorf("expected %q to be rejected", d)
+		}
+	}
+}

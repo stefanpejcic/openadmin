@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -182,13 +183,44 @@ func (d *Domains) HandleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	success, output := runOpenCLI("", "opencli", "domains-add", domain, username)
+	args := []string{"opencli", "domains-add", domain, username}
+	// custom docroot is an Enterprise feature, Community always gets /var/www/html/<domain>
+	if docroot := strings.TrimSpace(r.FormValue("docroot")); docroot != "" && chromeSite.LicenseType == "Enterprise" {
+		if errMsg := validateDocroot(docroot); errMsg != "" {
+			auth.AddFlash(w, r, d.Sessions, errMsg, "error")
+			http.Redirect(w, r, "/domains#add", http.StatusSeeOther)
+			return
+		}
+		args = append(args, "--docroot", docroot)
+	}
+
+	success, output := runOpenCLI("", args...)
 	if success {
 		auth.AddFlash(w, r, d.Sessions, "Domain \""+domain+"\" added for user \""+username+"\".", "info")
 	} else {
 		auth.AddFlash(w, r, d.Sessions, "Failed to add domain: "+output, "error")
 	}
 	http.Redirect(w, r, "/domains", http.StatusSeeOther)
+}
+
+const docrootPrefix = "/var/www/html/"
+
+var docrootRe = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
+
+// validateDocroot returns an error message, empty when the docroot is ok
+func validateDocroot(docroot string) string {
+	if !strings.HasPrefix(docroot, docrootPrefix) || len(docroot) == len(docrootPrefix) {
+		return "Docroot must start with " + docrootPrefix + " followed by a folder name."
+	}
+	if !docrootRe.MatchString(docroot) {
+		return "Docroot can only contain letters, numbers, dots, dashes, underscores and slashes."
+	}
+	for _, part := range strings.Split(docroot, "/") {
+		if part == ".." {
+			return "Docroot can't contain '..'."
+		}
+	}
+	return ""
 }
 
 var dnsAllowedActions = map[string]bool{
