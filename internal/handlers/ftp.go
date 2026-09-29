@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"net/http"
 	"os"
 	"os/exec"
@@ -13,12 +14,14 @@ import (
 	"github.com/gorilla/csrf"
 
 	"openadmin/internal/auth"
+	"openadmin/internal/paneldb"
 	"openadmin/internal/podman"
 	"openadmin/internal/webtemplates"
 )
 
 // FTP bundles the /services/ftp* handlers.
 type FTP struct {
+	MySQL    *sql.DB
 	Sessions *auth.Manager
 }
 
@@ -94,8 +97,11 @@ func parseFTPAccounts(raw string) []ftpAccount {
 		}
 		user, password, realPath, uid, gid := fields[0], fields[1], fields[2], fields[3], fields[4]
 
+		// legacy accounts are user.paneluser, new ones are user@domain and get resolved in setFTPOwnersFromDomains
 		owner := user
-		if idx := strings.Index(user, "."); idx != -1 {
+		if strings.Contains(user, "@") {
+			owner = ""
+		} else if idx := strings.Index(user, "."); idx != -1 {
 			owner = user[idx+1:]
 		}
 
@@ -107,6 +113,28 @@ func parseFTPAccounts(raw string) []ftpAccount {
 		})
 	}
 	return accounts
+}
+
+// setFTPOwnersFromDomains fills the owner of user@domain accounts with the panel user owning that domain
+func setFTPOwnersFromDomains(db *sql.DB, accounts []ftpAccount) {
+	if db == nil {
+		return
+	}
+	domains, err := paneldb.GetAllDomains(db)
+	if err != nil {
+		return
+	}
+	owners := map[string]string{}
+	for _, dom := range domains {
+		domainURL, _ := dom["domain_url"].(string)
+		username, _ := dom["username"].(string)
+		owners[strings.ToLower(domainURL)] = username
+	}
+	for i := range accounts {
+		if idx := strings.LastIndex(accounts[i].User, "@"); idx != -1 {
+			accounts[i].Owner = owners[strings.ToLower(accounts[i].User[idx+1:])]
+		}
+	}
 }
 
 // getAllFTPAccounts prefers the USERS environment variable, falling back
@@ -155,6 +183,7 @@ func (f *FTP) ServeAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	accounts := getAllFTPAccounts()
+	setFTPOwnersFromDomains(f.MySQL, accounts)
 	if jsonOut {
 		writeJSON(w, map[string]interface{}{"ftpserver_status": status, "ftp_accounts": accounts})
 		return

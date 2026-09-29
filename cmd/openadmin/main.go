@@ -238,7 +238,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	accessLogs := &handlers.AccessLogs{MySQL: d.MySQL, Sessions: sessions}
 	goAccessStats := &handlers.GoAccessStats{Sessions: sessions}
 	services := &handlers.Services{MySQL: d.MySQL, Sessions: sessions}
-	ftp := &handlers.FTP{Sessions: sessions}
+	ftp := &handlers.FTP{MySQL: d.MySQL, Sessions: sessions}
 	limits := &handlers.Limits{Sessions: sessions}
 	logs := &handlers.Logs{Sessions: sessions}
 	reboot := &handlers.Reboot{Sessions: sessions}

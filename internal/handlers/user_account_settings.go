@@ -135,6 +135,8 @@ func (u *Users) ServeUserAccountSetting(w http.ResponseWriter, r *http.Request) 
 		message, err = u.setUserVarnish(username, value)
 	case "twofa":
 		message, err = u.disableUserTwoFA(username)
+	case "passkeys":
+		message, err = u.deleteUserPasskeys(username)
 	default:
 		auth.AddFlash(w, r, u.Sessions, "Error: Unknown field: "+field, "error")
 		http.Redirect(w, r, "/users/"+username+"#overview", http.StatusSeeOther)
@@ -277,6 +279,14 @@ func (u *Users) setUserVarnish(username, value string) (string, error) {
 		return "", fmt.Errorf("%s", opencliResultMessage(ok, out))
 	}
 	return action + "d Varnish caching for user " + username, nil
+}
+
+func (u *Users) deleteUserPasskeys(username string) (string, error) {
+	n, err := paneldb.DeleteUserPasskeys(u.MySQL, username)
+	if err != nil {
+		return "", fmt.Errorf("could not delete passkeys for user %s", username)
+	}
+	return fmt.Sprintf("deleted %d passkey(s) for user %s", n, username), nil
 }
 
 func (u *Users) disableUserTwoFA(username string) (string, error) {

@@ -104,6 +104,7 @@ func UsersBulkActions(plans []paneldb.RowMap, ips []string) []webtemplates.BulkA
 		{Key: "ip", Label: "Change IP", Confirm: "Move the selected users to this IP address, their domains follow:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: ipOpts}},
 		{Key: "twofa", Label: "Disable 2FA", Confirm: "Turn off two-factor authentication for the selected users? They can log in with just their password until they set it up again."},
+		{Key: "passkeys", Label: "Delete Passkeys", Confirm: "Delete all passkeys of the selected users? They have to register them again to log in with a passkey."},
 		{Key: "backup", Label: "Generate backup", Confirm: "Start a full account backup for each selected user? They run in the background, one per user."},
 		{Key: "delete", Label: "Delete", Confirm: "Permanently delete the selected users with all their websites, databases, emails and files? This cannot be undone.", Danger: true},
 	}
@@ -141,8 +142,8 @@ func usersBulkRoute(action, value, username string) (*BulkCall, BulkResult) {
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/user/edit/" + url.PathEscape(username), Form: url.Values{usersEditFields[action]: {value}}})
 	case "backup":
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/user/export/create/" + url.PathEscape(username)})
-	case "twofa":
-		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/users/" + url.PathEscape(username) + "/account-setting/twofa"})
+	case "twofa", "passkeys":
+		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/users/" + url.PathEscape(username) + "/account-setting/" + action})
 	}
 	return BulkSkip("Unknown bulk action.")
 }

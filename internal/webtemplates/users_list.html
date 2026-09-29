@@ -88,6 +88,7 @@
                     {{template "plan_column_toggle" (dict "Col" "email" "Label" "Email address")}}
                     {{template "plan_column_toggle" (dict "Col" "online" "Label" "Online (active session)")}}
                     {{template "plan_column_toggle" (dict "Col" "twofa" "Label" "Two-factor authentication")}}
+                    {{template "plan_column_toggle" (dict "Col" "passkeys" "Label" "Passkeys")}}
                     {{template "plan_column_toggle" (dict "Col" "status" "Label" "Status")}}
                     {{template "plan_column_toggle" (dict "Col" "ip" "Label" "IP address")}}
                     {{template "plan_column_toggle" (dict "Col" "plan" "Label" "Package")}}
@@ -146,6 +147,16 @@
                                     <div class="-space-y-2">
                                         <a href="/users?sort=twofa&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "twofa") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
                                         <a href="/users?sort=twofa&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "twofa") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+
+                            <th x-show="columns.passkeys" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left w-10">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span>Passkeys</span>
+                                    <div class="-space-y-2">
+                                        <a href="/users?sort=passkeys&direction=desc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "passkeys") (eq .SortDirection "desc")}}opacity-30{{end}}"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="/users?sort=passkeys&direction=asc"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 {{if and (eq .SortCol "passkeys") (eq .SortDirection "asc")}}opacity-30{{end}}"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
                                     </div>
                                 </div>
                             </th>
@@ -249,6 +260,7 @@
 {{$owner := index $row "owner"}}
 {{$domains := index $row "user_domains"}}
 {{$twofa := index $row "twofa_enabled"}}
+{{$passkeys := index $row "passkeys"}}
 {{$context := index $row "server"}}
 {{$planName := index $row "name"}}
 {{$diskLimit := index $row "disk_limit"}}
@@ -264,7 +276,7 @@
               ((filters.active && !'{{$username}}'.includes('SUSPENDED_')) ||
                (filters.suspended && '{{$username}}'.includes('SUSPENDED_')))"
                            class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if $suspended}}bg-red-50 dark:bg-red-400/10{{end}}">
-{{$skip := "unsuspend"}}{{if $suspended}}{{$skip = "suspend"}}{{end}}{{if not $twofa}}{{$skip = printf "%s,twofa" $skip}}{{end}}
+{{$skip := "unsuspend"}}{{if $suspended}}{{$skip = "suspend"}}{{end}}{{if not $twofa}}{{$skip = printf "%s,twofa" $skip}}{{end}}{{if not $passkeys}}{{$skip = printf "%s,passkeys" $skip}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" $plain "Label" $username "Skip" $skip)}}
                             <td x-show="columns.username" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
 
@@ -283,6 +295,10 @@
                             <td x-show="columns.twofa" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums select-text w-10"><span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset {{if $twofa}}bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20{{else}}bg-blue-50 text-blue-900 ring-blue-500/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30{{end}} rounded-full">
 
                             <span class="size-1.5 shrink-0 rounded-full {{if $twofa}}bg-blue-500 dark:bg-blue-500{{else}}bg-gray-500 dark:bg-gray-500{{end}}" aria-hidden="true"></span>{{if $twofa}}On{{else}}Off{{end}}</span></td>
+
+                            <td x-show="columns.passkeys" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 tabular-nums select-text w-10"><span class="inline-flex items-center gap-x-1 whitespace-nowrap px-2 py-1 text-xs font-medium ring-1 ring-inset {{if $passkeys}}bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20{{else}}bg-blue-50 text-blue-900 ring-blue-500/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30{{end}} rounded-full">
+
+                            <span class="size-1.5 shrink-0 rounded-full {{if $passkeys}}bg-blue-500 dark:bg-blue-500{{else}}bg-gray-500 dark:bg-gray-500{{end}}" aria-hidden="true"></span>{{if $passkeys}}On{{else}}Off{{end}}</span></td>
 
 <td x-show="columns.status" class='{{if $suspended}}grid{{end}} p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-center'>
 
@@ -588,6 +604,7 @@ function userTable() {
             email: false,
             online: false,
             twofa: false,
+            passkeys: false,
             status: true,
             ip: false,
             plan: true,

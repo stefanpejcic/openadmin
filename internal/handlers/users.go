@@ -524,6 +524,15 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 	sortCol := r.URL.Query().Get("sort")
 	direction := r.URL.Query().Get("direction")
 	if !mysqlIsDown {
+		passkeys := paneldb.UserPasskeyCounts(u.MySQL)
+		for _, row := range users {
+			// 1/0 so the column sorts like any other int
+			row["passkeys"] = int64(0)
+			if passkeys[fmt.Sprint(row["id"])] > 0 {
+				row["passkeys"] = int64(1)
+			}
+		}
+
 		var allowed []int
 		if resellerOwner != "" {
 			ids, ok := paneldb.AllowedPlansForReseller(resellerOwner)

@@ -76,3 +76,30 @@ func GetUserDataByUsername(db *sql.DB, username string) (*UserData, error) {
 	}
 	return &d, nil
 }
+
+// UserPasskeyCounts maps user id to passkey count, the table only exists once 2083 created it so a missing one is just empty
+func UserPasskeyCounts(db *sql.DB) map[string]int64 {
+	counts := map[string]int64{}
+	rows, err := db.Query(`SELECT user_id, COUNT(*) FROM user_passkeys GROUP BY user_id`)
+	if err != nil {
+		return counts
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var n int64
+		if rows.Scan(&id, &n) == nil {
+			counts[id] = n
+		}
+	}
+	return counts
+}
+
+// DeleteUserPasskeys removes every passkey of a panel user
+func DeleteUserPasskeys(db *sql.DB, username string) (int64, error) {
+	res, err := db.Exec(`DELETE p FROM user_passkeys p JOIN users u ON p.user_id = u.id WHERE u.username = ?`, username)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}

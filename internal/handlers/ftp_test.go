@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
+
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
 )
@@ -91,6 +93,30 @@ func TestParseFTPAccountsValidAndMalformed(t *testing.T) {
 	}
 	if accounts[1].User != "user2" || accounts[1].Owner != "user2" {
 		t.Fatalf("expected owner to fall back to full username when there's no dot, got %+v", accounts[1])
+	}
+}
+
+func TestSetFTPOwnersFromDomains(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	mock.ExpectQuery(`SELECT`).WillReturnRows(sqlmock.NewRows(
+		[]string{"domain_id", "docroot", "domain_url", "php_version", "username"}).
+		AddRow(1, "/var/www/html/example.com", "example.com", "8.3", "alice"))
+
+	accounts := parseFTPAccounts(`USERS="ftp1@example.com|p|/data/a_data/x|1000|1000 ftp2@unknown.com|p|/data/b_data/y|1001|1001 old.bob|p|/data/c_data/z|1002|1002"`)
+	setFTPOwnersFromDomains(mysqlDB, accounts)
+
+	if accounts[0].Owner != "alice" {
+		t.Fatalf("expected domain owner alice, got %+v", accounts[0])
+	}
+	if accounts[1].Owner != "" {
+		t.Fatalf("expected empty owner for unknown domain, got %+v", accounts[1])
+	}
+	if accounts[2].Owner != "bob" {
+		t.Fatalf("expected legacy owner bob, got %+v", accounts[2])
 	}
 }
 

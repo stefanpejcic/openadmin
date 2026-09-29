@@ -131,3 +131,31 @@ func TestGetUserDataByUsernameNotFound(t *testing.T) {
 		t.Fatal("expected an error for a missing user")
 	}
 }
+
+func TestUserPasskeyCounts(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.ExpectQuery(regexp.QuoteMeta(`FROM user_passkeys GROUP BY user_id`)).
+		WillReturnRows(sqlmock.NewRows([]string{"user_id", "count"}).AddRow(7, 2))
+
+	counts := UserPasskeyCounts(db)
+	if counts["7"] != 2 || len(counts) != 1 {
+		t.Fatalf("unexpected counts: %v", counts)
+	}
+}
+
+func TestUserPasskeyCountsMissingTable(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.ExpectQuery(`user_passkeys`).WillReturnError(sqlmock.ErrCancelled)
+
+	if counts := UserPasskeyCounts(db); len(counts) != 0 {
+		t.Fatalf("expected empty map when the table is missing, got %v", counts)
+	}
+}
