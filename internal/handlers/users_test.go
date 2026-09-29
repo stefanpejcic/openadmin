@@ -1031,3 +1031,50 @@ func TestUsersListUsageColumnsLineUp(t *testing.T) {
 		t.Fatal("expected the passkey count in the row")
 	}
 }
+
+func TestUsersListPackageAndOwnerFilters(t *testing.T) {
+	origLicense := chromeSite.LicenseType
+	t.Cleanup(func() { chromeSite.LicenseType = origLicense })
+
+	render := func(license string) string {
+		chromeSite.LicenseType = license
+		mysqlDB, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer mysqlDB.Close()
+		mock.MatchExpectationsInOrder(false)
+		mock.ExpectQuery(`SELECT users\.\*`).WillReturnRows(sqlmock.NewRows(
+			[]string{"id", "username", "email", "owner", "twofa_enabled", "server", "user_domains", "name"}).
+			AddRow(1, "alice", "a@x.com", nil, 0, "alice", "", "Starter").
+			AddRow(2, "bob", "b@x.com", "agency", 0, "bob", "", "Business").
+			AddRow(3, "carol", "c@x.com", "agency", 0, "carol", "", "Starter"))
+		mock.ExpectQuery(`user_passkeys`).WillReturnRows(sqlmock.NewRows([]string{"user_id", "count"}))
+		mock.ExpectQuery(`FROM plans`).WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
+
+		srv, client := newUsersTestServer(t, &Users{MySQL: mysqlDB}, "admin")
+		resp, err := client.Get(srv.URL + "/users")
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+
+	page := render("Enterprise")
+	if !strings.Contains(page, `id="planFilter"`) {
+		t.Fatal("expected the package filter")
+	}
+	// each package once, sorted
+	if strings.Count(page, `value="Starter"`) != 1 || strings.Index(page, `value="Business"`) > strings.Index(page, `value="Starter"`) {
+		t.Fatal("expected Business and Starter once each, sorted")
+	}
+	if !strings.Contains(page, `id="ownerFilter"`) || strings.Count(page, `value="agency"`) != 1 || !strings.Contains(page, `value="__none__"`) {
+		t.Fatal("expected the owner filter with agency and no-reseller options on Enterprise")
+	}
+
+	if page := render("Community"); strings.Contains(page, `id="ownerFilter"`) || !strings.Contains(page, `id="planFilter"`) {
+		t.Fatal("owner filter should be Enterprise only, package filter always")
+	}
+}

@@ -507,6 +507,9 @@ type usersListPageData struct {
 	MySQLIsDown   bool
 	Widgets       map[string]usageWidgetData
 	Notes         map[string]string
+	PlanNames     []string
+	OwnerNames    []string
+	HasNoOwner    bool
 	SortCol       string
 	SortDirection string
 	CSRFToken     string
@@ -528,6 +531,27 @@ func annotateUserUsage(row paneldb.RowMap, w usageWidgetData) {
 		row["disk_usage"] = int64(w.DiskPercent)
 		row["inodes_usage"] = int64(w.InodesPercent)
 	}
+}
+
+// userFilterOptions lists the packages and owners present in rows for the filter dropdowns
+func userFilterOptions(rows []paneldb.RowMap) (plans, owners []string, hasNoOwner bool) {
+	seenPlan, seenOwner := map[string]bool{}, map[string]bool{}
+	for _, row := range rows {
+		if name, _ := row["name"].(string); name != "" && !seenPlan[name] {
+			seenPlan[name] = true
+			plans = append(plans, name)
+		}
+		owner, _ := row["owner"].(string)
+		if owner == "" {
+			hasNoOwner = true
+		} else if !seenOwner[owner] {
+			seenOwner[owner] = true
+			owners = append(owners, owner)
+		}
+	}
+	sort.Strings(plans)
+	sort.Strings(owners)
+	return plans, owners, hasNoOwner
 }
 
 // ServeList handles GET /users, /users/.
@@ -583,9 +607,13 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	planNames, ownerNames, hasNoOwner := userFilterOptions(users)
 	chrome := buildChrome(r, "Users")
 	chrome.BulkActions = UsersBulkActions(plans, serverPublicIPs())
 	webtemplates.Render(w, "users_list.html", usersListPageData{
+		PlanNames:     planNames,
+		OwnerNames:    ownerNames,
+		HasNoOwner:    hasNoOwner,
 		Chrome:        chrome,
 		Users:         users,
 		Plans:         plans,

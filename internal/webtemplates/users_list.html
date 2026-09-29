@@ -12,7 +12,7 @@
     <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div x-data="userTable()" x-init="init()" x-cloak>
+<div x-data="userTable()" x-init="init()" @click.capture="carryFiltersOnSort($event)" x-cloak>
     <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
@@ -73,6 +73,64 @@
                                 </li>
                         </ul>
                     </div>
+
+                    <button type="button" class="flex w-full items-center gap-x-1.5 whitespace-nowrap rounded border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 cursor-pointer" :class="filters.plan && 'border-solid'" id="planFilterButton" data-dropdown-toggle="planFilter">
+                        <span class="w-full text-left sm:w-fit" x-text="filters.plan ? 'Package: ' + filters.plan : 'Package'">Package</span>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-gray-500 sm:size-4"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg>
+                    </button>
+
+                    <div id="planFilter" class="z-10 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-56 max-h-80 overflow-y-auto dark:divide-gray-600 hidden">
+                        <ul class="p-2 space-y-1" aria-labelledby="planFilterButton">
+                                <li>
+                                    <div class="flex items-center py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input id="plan-filter-all" type="radio" name="plan-filter" value="" x-model="filters.plan" class="w-4 h-4 rounded-full text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
+                                        <label for="plan-filter-all" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">All packages</label>
+                                    </div>
+                                </li>
+                            {{range $i, $p := .PlanNames}}
+                                <li>
+                                    <div class="flex items-center py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input id="plan-filter-{{$i}}" type="radio" name="plan-filter" value="{{$p}}" x-model="filters.plan" class="w-4 h-4 rounded-full text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
+                                        <label for="plan-filter-{{$i}}" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">{{$p}}</label>
+                                    </div>
+                                </li>
+                            {{end}}
+                        </ul>
+                    </div>
+
+                    {{if and (eq .LicenseType "Enterprise") (not .IsReseller)}}
+                    <button type="button" class="flex w-full items-center gap-x-1.5 whitespace-nowrap rounded border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 cursor-pointer" :class="filters.owner && 'border-solid'" id="ownerFilterButton" data-dropdown-toggle="ownerFilter">
+                        <span class="w-full text-left sm:w-fit" x-text="filters.owner === '__none__' ? 'Owner: none' : (filters.owner ? 'Owner: ' + filters.owner : 'Owner')">Owner</span>
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-gray-500 sm:size-4"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg>
+                    </button>
+
+                    <div id="ownerFilter" class="z-10 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-56 max-h-80 overflow-y-auto dark:divide-gray-600 hidden">
+                        <ul class="p-2 space-y-1" aria-labelledby="ownerFilterButton">
+                                <li>
+                                    <div class="flex items-center py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input id="owner-filter-all" type="radio" name="owner-filter" value="" x-model="filters.owner" class="w-4 h-4 rounded-full text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
+                                        <label for="owner-filter-all" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">All owners</label>
+                                    </div>
+                                </li>
+                            {{if .HasNoOwner}}
+                                <li>
+                                    <div class="flex items-center py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input id="owner-filter-none" type="radio" name="owner-filter" value="__none__" x-model="filters.owner" class="w-4 h-4 rounded-full text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
+                                        <label for="owner-filter-none" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">No reseller</label>
+                                    </div>
+                                </li>
+                            {{end}}
+                            {{range $i, $o := .OwnerNames}}
+                                <li>
+                                    <div class="flex items-center py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input id="owner-filter-{{$i}}" type="radio" name="owner-filter" value="{{$o}}" x-model="filters.owner" class="w-4 h-4 rounded-full text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500">
+                                        <label for="owner-filter-{{$i}}" class="w-full ms-2 text-sm font-medium text-gray-900 rounded-sm dark:text-gray-300">{{$o}}</label>
+                                    </div>
+                                </li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    {{end}}
 
                 </div>
                 <div class="flex items-center gap-2">
@@ -288,12 +346,15 @@
 {{$ram := index $row "ram"}}
 {{$widget := index $root.Widgets $username}}
 {{$note := index $root.Notes $context}}
+{{$ownerKey := "__none__"}}{{if $owner}}{{$ownerKey = $owner}}{{end}}
 <tr       x-show="(searchQuery === '' || '{{$username}}'.toLowerCase().includes(searchQuery.toLowerCase())
 || '{{$planName}}'.toLowerCase().includes(searchQuery.toLowerCase())
 {{if $owner}} || '{{$owner}}'.toLowerCase().includes(searchQuery.toLowerCase()){{end}})
               &&
               ((filters.active && !'{{$username}}'.includes('SUSPENDED_')) ||
-               (filters.suspended && '{{$username}}'.includes('SUSPENDED_')))"
+               (filters.suspended && '{{$username}}'.includes('SUSPENDED_')))
+              && (filters.plan === '' || filters.plan === {{toJSON $planName}})
+              && (filters.owner === '' || filters.owner === {{toJSON $ownerKey}})"
                            class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if $suspended}}bg-red-50 dark:bg-red-400/10{{end}}">
 {{$skip := "unsuspend"}}{{if $suspended}}{{$skip = "suspend"}}{{end}}{{if not $twofa}}{{$skip = printf "%s,twofa" $skip}}{{end}}{{if not $passkeys}}{{$skip = printf "%s,passkeys" $skip}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" $plain "Label" $username "Skip" $skip)}}
@@ -606,7 +667,9 @@ function userTable() {
         searchQuery: '',
         filters: {
             active: true,
-            suspended: true
+            suspended: true,
+            plan: '',
+            owner: ''
         },
         columns: {
             username: true,
@@ -635,14 +698,36 @@ function userTable() {
             this.loadColumns();
             this.initWatchers();
             const params = new URLSearchParams(window.location.search);
-            const plan = params.get('plan');
-            if (plan) {
-                this.searchQuery = plan;
+            this.filters.plan = params.get('plan') || '';
+            // /resellers links here with ?reseller=, ?owner= is what the filter itself writes
+            const owner = params.get('owner') || params.get('reseller') || '';
+            if (owner && !document.getElementById('ownerFilter')) {
+                this.searchQuery = owner;
+            } else {
+                this.filters.owner = owner;
             }
-            const reseller = params.get('reseller');
-            if (reseller) {
-                this.searchQuery = reseller;
+        },
+
+        // sort links are plain urls, carry the current filters along when one is clicked
+        carryFiltersOnSort(e) {
+            const a = e.target.closest('a[href^="/users?sort="]');
+            if (!a) return;
+            const url = new URL(a.href);
+            for (const key of ['plan', 'owner']) {
+                if (this.filters[key]) url.searchParams.set(key, this.filters[key]);
             }
+            a.href = url;
+        },
+
+        // keep the package and owner filters in the url so a filtered view can be linked
+        syncFilterURL() {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('reseller');
+            for (const key of ['plan', 'owner']) {
+                if (this.filters[key]) url.searchParams.set(key, this.filters[key]);
+                else url.searchParams.delete(key);
+            }
+            history.replaceState(null, '', url);
         },
 
         initWatchers() {
@@ -652,6 +737,12 @@ function userTable() {
             this.$watch('filters.suspended', () => {
                 this.$nextTick(() => this.updateCount());
             });
+            for (const key of ['plan', 'owner']) {
+                this.$watch('filters.' + key, () => {
+                    this.syncFilterURL();
+                    this.$nextTick(() => this.updateCount());
+                });
+            }
             this.$watch('searchQuery', () => {
                 this.$nextTick(() => this.updateCount());
             });
@@ -662,7 +753,8 @@ function userTable() {
         },
 
         updateCount() {
-            this.count = [...this.$refs.tbody.querySelectorAll('tr.user-row')]
+            // the tbody sits inside a nested x-data so $refs can't see it
+            this.count = [...document.querySelectorAll('tr.user-row')]
                 .filter(row => row.offsetParent !== null).length;
         },
 
