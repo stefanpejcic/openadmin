@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -157,6 +158,14 @@ func compareAny(a, b interface{}) bool {
 	case string:
 		if bv, ok := b.(string); ok {
 			return av < bv
+		}
+	case float64:
+		if bv, ok := b.(float64); ok {
+			return av < bv
+		}
+	case time.Time:
+		if bv, ok := b.(time.Time); ok {
+			return av.Before(bv)
 		}
 	}
 	return false

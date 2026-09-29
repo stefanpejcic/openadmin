@@ -513,6 +513,23 @@ type usersListPageData struct {
 	Flashes       []auth.Flash
 }
 
+// usersSortKeys maps the ?sort= names used by the table headers to row keys
+var usersSortKeys = map[string]string{
+	"username": "username", "email": "email", "twofa": "twofa_enabled", "passkeys": "passkeys",
+	"plan": "name", "domains": "user_domains", "context": "server", "date": "registered_date",
+	"owner": "owner", "memory": "memory_usage", "cpu": "cpu_usage", "disk": "disk_usage", "inodes": "inodes_usage",
+}
+
+// annotateUserUsage copies the widget percentages onto the row so the usage columns sort by what they show
+func annotateUserUsage(row paneldb.RowMap, w usageWidgetData) {
+	row["memory_usage"] = int64(w.MemPercent)
+	row["cpu_usage"] = int64(w.CPUPercent)
+	if w.HasDiskData {
+		row["disk_usage"] = int64(w.DiskPercent)
+		row["inodes_usage"] = int64(w.InodesPercent)
+	}
+}
+
 // ServeList handles GET /users, /users/.
 func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 	resellerOwner := u.resellerScope(r)
@@ -523,39 +540,6 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 	var plans []paneldb.RowMap
 	sortCol := r.URL.Query().Get("sort")
 	direction := r.URL.Query().Get("direction")
-	if !mysqlIsDown {
-		passkeys := paneldb.UserPasskeyCounts(u.MySQL)
-		for _, row := range users {
-			// 1/0 so the column sorts like any other int
-			row["passkeys"] = int64(0)
-			if passkeys[fmt.Sprint(row["id"])] > 0 {
-				row["passkeys"] = int64(1)
-			}
-		}
-
-		var allowed []int
-		if resellerOwner != "" {
-			ids, ok := paneldb.AllowedPlansForReseller(resellerOwner)
-			if ok {
-				allowed = ids
-			}
-		}
-		plans, _ = paneldb.GetAllPlans(u.MySQL, allowed)
-
-		if sortCol != "" {
-			sortRowMaps(users, sortCol, strings.EqualFold(direction, "desc"))
-		}
-	}
-
-	if r.URL.Query().Get("output") == "json" {
-		writeJSON(w, map[string]interface{}{
-			"users": users,
-			"stats": readUsageStatsAll(),
-			"disk":  readDiskUsageAll(),
-		})
-		return
-	}
-
 	statsAll := readUsageStatsAll()
 	diskAll := readDiskUsageAll()
 	widgets := make(map[string]usageWidgetData, len(users))
@@ -567,6 +551,36 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 		plain := stripSuspendedPrefix(uname)
 		d, hasDisk := diskAll[plain]
 		widgets[uname] = buildUsageWidget(strings.Contains(uname, "SUSPENDED_"), statsAll[plain], d, hasDisk)
+		annotateUserUsage(row, widgets[uname])
+	}
+
+	if !mysqlIsDown {
+		passkeys := paneldb.UserPasskeyCounts(u.MySQL)
+		for _, row := range users {
+			row["passkeys"] = passkeys[fmt.Sprint(row["id"])]
+		}
+
+		var allowed []int
+		if resellerOwner != "" {
+			ids, ok := paneldb.AllowedPlansForReseller(resellerOwner)
+			if ok {
+				allowed = ids
+			}
+		}
+		plans, _ = paneldb.GetAllPlans(u.MySQL, allowed)
+
+		if key, ok := usersSortKeys[sortCol]; ok {
+			sortRowMaps(users, key, strings.EqualFold(direction, "desc"))
+		}
+	}
+
+	if r.URL.Query().Get("output") == "json" {
+		writeJSON(w, map[string]interface{}{
+			"users": users,
+			"stats": statsAll,
+			"disk":  diskAll,
+		})
+		return
 	}
 
 	chrome := buildChrome(r, "Users")

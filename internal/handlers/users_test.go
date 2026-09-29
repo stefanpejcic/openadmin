@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -980,5 +981,53 @@ func TestHandleCustomMessageDeniedForNonOwningReseller(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", resp.StatusCode)
+	}
+}
+
+func TestUsersListUsageColumnsLineUp(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mysqlDB.Close()
+	mock.MatchExpectationsInOrder(false)
+	mock.ExpectQuery(`SELECT users\.\*`).WillReturnRows(sqlmock.NewRows(
+		[]string{"id", "username", "email", "owner", "twofa_enabled", "server", "user_domains", "name", "disk_limit", "inodes_limit", "cpu", "ram"}).
+		AddRow(1, "alice", "a@x.com", nil, 1, "alice", "", "basic", "10 GB", 100000, "1", "1g"))
+	mock.ExpectQuery(`user_passkeys`).WillReturnRows(sqlmock.NewRows([]string{"user_id", "count"}).AddRow(1, 2))
+	mock.ExpectQuery(`FROM plans`).WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
+
+	u := &Users{MySQL: mysqlDB}
+	srv, client := newUsersTestServer(t, u, "admin")
+
+	resp, err := client.Get(srv.URL + "/users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	page := string(body)
+
+	if strings.Contains(page, "columns.usage") {
+		t.Fatal("the Usage column should be gone")
+	}
+	for _, col := range []string{"memory_limit", "cpu_limit", "disk_limit", "inodes_limit"} {
+		if n := strings.Count(page, `<th x-show="columns.`+col+`"`); n != 1 {
+			t.Fatalf("expected one %s header, got %d", col, n)
+		}
+		if n := strings.Count(page, `<td x-show="columns.`+col+`"`); n != 1 {
+			t.Fatalf("expected one %s cell, got %d", col, n)
+		}
+	}
+	for _, key := range []string{"memory", "cpu", "disk", "inodes"} {
+		if !strings.Contains(page, "/users?sort="+key+"&amp;direction=desc") && !strings.Contains(page, "/users?sort="+key+"&direction=desc") {
+			t.Fatalf("missing sort link for %s", key)
+		}
+	}
+	if strings.Count(page, "<th x-show=") != strings.Count(page, "<td x-show=") {
+		t.Fatalf("header/cell count mismatch: %d th vs %d td", strings.Count(page, "<th x-show="), strings.Count(page, "<td x-show="))
+	}
+	if !regexp.MustCompile(`columns\.passkeys"[^>]*>2</td>`).MatchString(page) {
+		t.Fatal("expected the passkey count in the row")
 	}
 }

@@ -65,6 +65,24 @@ var funcMap = template.FuncMap{
 			return ""
 		}
 	},
+	// timeAgo keeps it rough like "today", "5d ago", "3mo ago", "2y ago"
+	"timeAgo": func(v interface{}) string {
+		t, ok := v.(time.Time)
+		if !ok || t.IsZero() {
+			return ""
+		}
+		days := int(time.Since(t).Hours() / 24)
+		switch {
+		case days < 1:
+			return "today"
+		case days < 60:
+			return fmt.Sprintf("%dd ago", days)
+		case days < 730:
+			return fmt.Sprintf("%dmo ago", days/30)
+		default:
+			return fmt.Sprintf("%dy ago", days/365)
+		}
+	},
 	// formatDateTime is like formatDate but keeps seconds, and also parses
 	// a raw MySQL "2006-01-02 15:04:05" string (sql.NullString columns come
 	// back as the driver's raw text, not a parsed time.Time).
