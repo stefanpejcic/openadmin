@@ -2126,7 +2126,7 @@
 
               <!-- TRANSFER TO ANOTHER SERVER -->
               <div x-show="exportMode === 'transfer'">
-               <form method="POST" id="transfer-form" action="/import/transfer/">
+               <form method="POST" id="transfer-form" action="/import/transfer/" x-data="transferConnectionTest()" @input="if ($event.target.name !== 'live_transfer') reset()">
                   <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                   <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl">
                     <h3 class="font-semibold text-gray-900 dark:text-gray-50">Transfer account {{lastSegment .Username "_"}}</h3>
@@ -2148,14 +2148,18 @@
                         <div class="mt-4"><p class="text-xs text-gray-500">Insert remote server's IP address or domain name and SSH port (usually <b>22</b>).</p></div>
                         </div>
 
-                        <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
-                            <div class="relative w-full mt-2"><input type="text" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" minlength="3" maxlength="25" name="username" placeholder="Username" id="username" required autofocus></div>
-                        <div class="mt-4"><p class="text-xs text-gray-500">SSH username for the remote server (usually <b>root</b>).</p></div>
-                        </div>
-
                         <div class="col-span-full">
-{{template "macro_tooltip" (dict "ID" "password" "Label" "Password" "Description" "SSH password for the above username on remote server." "Required" true)}}
-                            <div class="relative w-full mt-2"><input type="password" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" name="password" id="password" required autofocus placeholder="Password"></div>
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                            <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
+                            <div class="relative w-full mt-2"><input type="text" class="block w-full rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" minlength="3" maxlength="25" name="username" placeholder="root" id="username" required></div>
+                            </div>
+                            <div class="flex-1">
+{{template "macro_tooltip" (dict "ID" "password" "Label" "Password" "Description" "SSH password for the remote server. It is only used for this transfer and is not saved." "Required" true)}}
+                            <div class="relative w-full mt-2"><input type="password" class="block w-full rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" name="password" id="password" required placeholder="Password"></div>
+                            </div>
+                        </div>
+                        <div class="mt-4"><p class="text-xs text-gray-500">SSH username (usually <b>root</b>) and password for the remote server.</p></div>
                         </div>
 
                         <div class="col-span-full">
@@ -2163,9 +2167,35 @@
                         <div class="relative w-full mt-2"><div class="mt-2 flex items-start"><input name="live_transfer" id="live_transfer" type="checkbox" tabindex="-1" class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"><label for="live_transfer" class="ml-2 block text-sm text-gray-500">Suspend account on this server and forward DNS to the remote server.</label></div></div></div>
                         </div>
                     </div>
-                    <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 mt-4 w-full" type="submit">Start Transfer</button>
+                    <div x-show="message" x-cloak class="mt-4 rounded border px-3 py-2 text-sm" :class="ok ? 'border-green-300 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-300' : 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-300'" x-text="message"></div>
+                    <button x-show="!ok" type="button" @click="test()" :disabled="testing" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 mt-4 w-full" x-text="testing ? 'Testing connection...' : 'Test Connection'">Test Connection</button>
+                    <button x-show="ok" x-cloak class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-green-600 dark:bg-green-600 hover:bg-green-700 dark:hover:bg-green-700 mt-4 w-full" type="submit">Start Transfer</button>
                    </div>
                </form>
+<script>
+function transferConnectionTest() {
+  return {
+    testing: false, ok: false, message: '',
+    reset() { this.ok = false; this.message = ''; },
+    async test() {
+      const form = document.getElementById('transfer-form');
+      if (!form.reportValidity()) return;
+      this.testing = true; this.message = '';
+      try {
+        const body = new URLSearchParams(new FormData(form));
+        const res = await fetch('/import/transfer/test', { method: 'POST', body, headers: { 'X-CSRF-Token': form.querySelector('[name=csrf_token]').value } });
+        const data = await res.json();
+        this.ok = !!data.success;
+        this.message = data.message || (this.ok ? 'Connection successful.' : 'Connection failed.');
+      } catch (e) {
+        this.ok = false; this.message = 'Connection test failed: ' + e;
+      } finally {
+        this.testing = false;
+      }
+    }
+  };
+}
+</script>
                <div id="existing-transfers" class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 sm:mx-auto sm:max-w-xl"></div>
               </div>
               <!-- END TRANSFER TO ANOTHER SERVER -->

@@ -627,6 +627,78 @@
 {{template "bulk_bar" .}}
 </div>
 
+<!-- Transfer to another server, opened by the bulk bar's Transfer action -->
+<div x-data="bulkTransferModal()" @open-bulk-transfer.window="show($event.detail.items)" x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @keydown.escape.window="open = false">
+  <form id="bulk-transfer-form" @submit.prevent="start()" @input="if ($event.target.name !== 'live_transfer') { ok = false; message = ''; }" class="relative w-full max-w-xl p-6 text-left shadow-lg bg-white dark:bg-[#090E1A] border border-gray-200 dark:border-gray-900 rounded">
+    <template x-for="u in items" :key="u"><input type="hidden" name="accounts" :value="u"></template>
+    <h3 class="font-semibold text-gray-900 dark:text-gray-50">Transfer <span x-text="items.length"></span> account(s) to another server</h3>
+    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Each account is transferred with all its containers and data via SSH, two accounts at a time. Progress is shown in <a href="/import/transfer/" class="text-blue-600 hover:underline">Account Transfer Logs</a>.</p>
+    <p class="mt-2 text-xs text-gray-500 break-words" x-text="items.join(', ')"></p>
+    <div class="mt-4 space-y-4">
+      <div>
+        <label class="text-sm font-medium text-gray-900 dark:text-gray-50" for="bulk_server">Server<span class="text-red-500">*</span></label>
+        <div class="flex gap-4 mt-2">
+          <div class="flex-2"><input type="text" class="block w-full rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" name="server" id="bulk_server" required placeholder="IP address"></div>
+          <div class="flex-1"><label class="sr-only" for="bulk_port">Port</label><input type="number" min="1" max="65535" class="block w-full rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" name="port" id="bulk_port" placeholder="Port (22)"></div>
+        </div>
+      </div>
+      <div class="flex gap-4">
+        <div class="flex-1">
+          <label class="text-sm font-medium text-gray-900 dark:text-gray-50" for="bulk_username">Username<span class="text-red-500">*</span></label>
+          <input type="text" class="block w-full rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 mt-2" name="username" id="bulk_username" required placeholder="root">
+        </div>
+        <div class="flex-1">
+          <label class="text-sm font-medium text-gray-900 dark:text-gray-50" for="bulk_password">Password<span class="text-red-500">*</span></label>
+          <input type="password" class="block w-full rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 mt-2" name="password" id="bulk_password" required placeholder="Password" autocomplete="new-password">
+        </div>
+      </div>
+      <p class="text-xs text-gray-500">SSH login for the remote server. The password is only used for this transfer and is not saved.</p>
+      <div class="flex items-start"><input name="live_transfer" id="bulk_live_transfer" type="checkbox" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded"><label for="bulk_live_transfer" class="ml-2 block text-sm text-gray-500">Live transfer: suspend each account on this server and forward DNS to the remote server when it's done.</label></div>
+    </div>
+    <div x-show="message" class="mt-4 rounded border px-3 py-2 text-sm" :class="ok ? 'border-green-300 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-300' : 'border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-300'" x-text="message"></div>
+    <div class="mt-4 flex gap-2 justify-end">
+      <button type="button" @click="open = false" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50">Close</button>
+      <button type="button" x-show="!ok && !started" @click="test()" :disabled="busy" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300" x-text="busy ? 'Testing connection...' : 'Test Connection'">Test Connection</button>
+      <button type="submit" x-show="ok && !started" :disabled="busy" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white bg-green-600 hover:bg-green-700 disabled:bg-green-300">Start Transfer</button>
+    </div>
+  </form>
+</div>
+<script>
+function bulkTransferModal() {
+    return {
+        open: false, busy: false, ok: false, started: false, message: '', items: [],
+        show(items) {
+            this.items = items; this.open = true; this.busy = false; this.ok = false; this.started = false; this.message = '';
+        },
+        async post(url) {
+            const form = document.getElementById('bulk-transfer-form');
+            if (!form.reportValidity()) return null;
+            this.busy = true;
+            try {
+                const res = await fetch(url, { method: 'POST', body: new URLSearchParams(new FormData(form)), headers: { 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content } });
+                return await res.json();
+            } catch (e) {
+                return { success: false, message: 'Request failed: ' + e };
+            } finally {
+                this.busy = false;
+            }
+        },
+        async test() {
+            const data = await this.post('/import/transfer/test');
+            if (!data) return;
+            this.ok = !!data.success;
+            this.message = data.message;
+        },
+        async start() {
+            const data = await this.post('/import/transfer/bulk');
+            if (!data) return;
+            this.message = data.message;
+            if (data.success) this.started = true; else this.ok = false;
+        }
+    };
+}
+</script>
+
 <script>
     fetch('/json/ips')
         .then(response => response.json())

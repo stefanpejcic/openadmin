@@ -75,6 +75,15 @@ function bulkActions(cfg) {
                 if (input) input.focus();
             });
         },
+        // for actions with their own dialog, the page listens for the event and gets the rows that can run it
+        bulkOpenModal(action, eventName) {
+            const items = Object.keys(this.bulkSelected).filter(k => !this.bulkSelected[k].includes(action) && !this.bulkSelected[k].includes('*'));
+            if (items.length === 0) {
+                showToast(cfg.messages.none, 'warning');
+                return;
+            }
+            window.dispatchEvent(new CustomEvent(eventName, { detail: { items: items } }));
+        },
         bulkCancel() {
             if (!this.bulkRunning) this.bulkConfirming = null;
         },

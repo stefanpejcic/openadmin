@@ -610,6 +610,10 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 	planNames, ownerNames, hasNoOwner := userFilterOptions(users)
 	chrome := buildChrome(r, "Users")
 	chrome.BulkActions = UsersBulkActions(plans, serverPublicIPs())
+	// transfer runs through the admin-only /import/transfer routes, so resellers don't get it
+	if u.resellerScope(r) == "" {
+		chrome.BulkActions = append(chrome.BulkActions, webtemplates.BulkAction{Key: "transfer", Label: "Transfer to another server", Modal: "open-bulk-transfer"})
+	}
 	webtemplates.Render(w, "users_list.html", usersListPageData{
 		PlanNames:     planNames,
 		OwnerNames:    ownerNames,

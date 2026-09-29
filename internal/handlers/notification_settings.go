@@ -34,7 +34,7 @@ var (
 		"admin_password", "admin_rename", "admin_suspend", "admin_unsuspend",
 		"waf_domain", "waf_status",
 		"user_status", "user_create", "user_delete", "user_email",
-		"user_ip", "user_password", "user_rename",
+		"user_ip", "user_password", "user_rename", "user_transfer",
 		"ftp_create", "ftp_delete", "ftp_password",
 		"domains_add", "domains_delete", "domains_status", "domains_ssl", "domains_hsts",
 	}
@@ -126,6 +126,7 @@ var notifUserActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"user_ip", "User IP changed", "Fires when IP is changed for OpenPanel user."},
 	{"user_password", "User password changed", "Fires when password is changed for an OpenPanel user."},
 	{"user_rename", "User renamed", "Fires when the username is changed for an OpenPanel account."},
+	{"user_transfer", "User transferred", "Fires on the destination server when accounts are transferred to it with Transfer to another server or Migrate server, with a summary of what was moved."},
 	{"ftp_create", "FTP account created", "Fires when a new FTP account is added."},
 	{"ftp_delete", "FTP account deleted", "Fires when an FTP account is deleted."},
 	{"ftp_password", "FTP account password change", "Triggered when an FTP password changes."},

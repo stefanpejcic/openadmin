@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -27,28 +26,22 @@ type Migrate struct {
 var (
 	MigrateLogPath        = "/tmp/server_migrate.log"
 	MigrateProcessPIDFile = "/tmp/server_migrate.pid"
+	// opencli server-migrate keeps a log per run here
+	MigrateLogDir = "/var/log/openpanel/admin/migrations/"
 )
 
 // migrateStartRun is injectable so tests never spawn a real opencli
 // process, matching the ftpPsRun/rebootGracefulRun pattern used elsewhere.
-// It starts the migration non-blocking (the handler returns immediately),
-// with stdout/stderr redirected to MigrateLogPath and the child's PID
-// recorded to MigrateProcessPIDFile.
+// It starts the migration non-blocking in its own systemd unit (so an admin
+// restart mid-migration doesn't kill it), with stdout/stderr redirected to
+// MigrateLogPath and the child's PID recorded to MigrateProcessPIDFile.
 var migrateStartRun = func(host, root, password string) error {
-	logFile, err := os.Create(MigrateLogPath)
+	pid, err := startDetached("openpanel-server-migrate", MigrateLogPath, []string{"opencli", "server-migrate", "-h", host, "--user", root, "--password", password})
 	if err != nil {
 		return err
 	}
-	defer logFile.Close()
 
-	cmd := exec.Command("opencli", "server-migrate", "-h", host, "--user", root, "--password", password)
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	return os.WriteFile(MigrateProcessPIDFile, []byte(strconv.Itoa(cmd.Process.Pid)), 0644)
+	return os.WriteFile(MigrateProcessPIDFile, []byte(strconv.Itoa(pid)), 0644)
 }
 
 // processAlive is true if the pid belongs to a live process, even one we
@@ -131,4 +124,21 @@ func (m *Migrate) ServeMigrateStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]string{"status": status, "output": output})
+}
+
+// ServeMigrateLogs handles GET /server/migrate/logs: every past and running migration's log.
+func (m *Migrate) ServeMigrateLogs(w http.ResponseWriter, r *http.Request) {
+	webtemplates.Render(w, "users_import_import_users.html", mergeChrome(map[string]interface{}{
+		"LogFiles":     listLogFilesWithStatus(MigrateLogDir),
+		"Flashes":      auth.PopFlashes(w, r, m.Sessions),
+		"PageTitle":    "Server Migration Logs",
+		"PageSubtitle": "View running and past server migration logs.",
+		"LogURLPrefix": "/server/migrate/logs/",
+		"BackURL":      "/server/migrate",
+	}, r, "Server Migration Logs"))
+}
+
+// ServeMigrateLog handles GET /server/migrate/logs/{log_filename}.
+func (m *Migrate) ServeMigrateLog(w http.ResponseWriter, r *http.Request) {
+	serveImportLog(w, r, MigrateLogDir)
 }

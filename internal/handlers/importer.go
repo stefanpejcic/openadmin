@@ -6,6 +6,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -174,10 +175,12 @@ var importerBackupPanelDisplayNames = map[string]string{
 }
 
 // importerRestoreOpenPanelBackupRun starts a fire-and-forget background
-// restore for the openpanel backup type.
+// restore for the openpanel backup type, in its own systemd unit so an
+// admin restart doesn't kill it halfway.
 var importerRestoreOpenPanelBackupRun = func(backupPath string) error {
-	return exec.Command("opencli", "user-restore", "--file", backupPath,
-		"--temp-dir="+ImporterRestoreTempDir).Start()
+	_, err := startDetached("openpanel-user-restore", "", []string{"opencli", "user-restore", "--file", backupPath,
+		"--temp-dir=" + ImporterRestoreTempDir})
+	return err
 }
 
 // importerCloneAndRunImportScriptRun handles the cpanel/cyberpanel case:
@@ -207,10 +210,9 @@ var importerCloneAndRunImportScriptRun = func(displayName, backupPath, planName 
 		return true, errors.New(msg)
 	}
 
-	importCmd := exec.Command("bash", importScript,
+	if _, err := startDetached("openpanel-"+strings.ToLower(displayName)+"-import", "", []string{"bash", importScript,
 		fmt.Sprintf("--backup-location='%s'", backupPath),
-		fmt.Sprintf("--plan-name='%s'", planName))
-	if err := importCmd.Start(); err != nil {
+		fmt.Sprintf("--plan-name='%s'", planName)}); err != nil {
 		return false, err
 	}
 	return false, nil
@@ -512,9 +514,178 @@ var configureIptablesRun = func(server string) bool {
 }
 
 // importerStartTransferRun fires off `opencli user-transfer` in the
-// background without waiting for it to complete.
+// background without waiting for it to complete, in its own systemd unit so
+// an admin restart doesn't kill it (the script writes its own log file).
 var importerStartTransferRun = func(args []string) error {
-	return exec.Command(args[0], args[1:]...).Start()
+	_, err := startDetached("openpanel-user-transfer", "", args)
+	return err
+}
+
+var transferAccountNameRe = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
+
+// importerTestConnectionRun is injectable so tests never ssh anywhere, it checks the login, that OpenPanel is installed and that the account isn't taken there
+var importerTestConnectionRun = func(server, port, username, password string, accounts []string) (bool, string) {
+	if port == "" {
+		port = "22"
+	}
+	remote := "command -v opencli >/dev/null 2>&1 || { echo NO_OPENPANEL; exit 0; }; echo OPENPANEL_OK"
+	var quoted []string
+	for _, account := range accounts {
+		if transferAccountNameRe.MatchString(account) {
+			quoted = append(quoted, "'"+account+"'")
+		}
+	}
+	if len(quoted) > 0 {
+		remote += "; mariadb --defaults-extra-file=/etc/my.cnf -D panel -sN -e \"SELECT username FROM users WHERE username IN (" + strings.Join(quoted, ",") + ")\" 2>/dev/null"
+	}
+	sshArgs := []string{"-p", port, "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null",
+		"-o", "ConnectTimeout=10", "-o", "LogLevel=ERROR", "-o", "NumberOfPasswordPrompts=1"}
+	if password == "" {
+		sshArgs = append(sshArgs, "-o", "BatchMode=yes")
+	}
+	sshArgs = append(sshArgs, username+"@"+server, remote)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var cmd *exec.Cmd
+	if password != "" {
+		cmd = exec.CommandContext(ctx, "sshpass", append([]string{"-e", "ssh"}, sshArgs...)...)
+		cmd.Env = append(os.Environ(), "SSHPASS="+password)
+	} else {
+		cmd = exec.CommandContext(ctx, "ssh", sshArgs...)
+	}
+	var stdout, stderr strings.Builder
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	err := cmd.Run()
+	target := fmt.Sprintf("%s@%s:%s", username, server, port)
+	out := stdout.String()
+
+	if err != nil && !strings.Contains(out, "OPENPANEL_OK") && !strings.Contains(out, "NO_OPENPANEL") {
+		errText := strings.TrimSpace(stderr.String())
+		switch {
+		case ctx.Err() == context.DeadlineExceeded:
+			return false, "Connection to " + target + " timed out."
+		case strings.Contains(errText, "Permission denied"), exitCode(err) == 5:
+			return false, "SSH login to " + target + " failed: wrong username or password."
+		case strings.Contains(errText, "Connection refused"):
+			return false, "Connection refused by " + server + " on port " + port + ", check the SSH port."
+		case strings.Contains(errText, "timed out"), strings.Contains(errText, "No route to host"):
+			return false, "Could not reach " + server + " on port " + port + ", check the IP address and the firewall."
+		case strings.Contains(errText, "Could not resolve hostname"):
+			return false, "Could not resolve " + server + "."
+		case errors.Is(err, exec.ErrNotFound):
+			return false, "sshpass is not installed on this server."
+		case errText != "":
+			return false, "Connection to " + target + " failed: " + errText
+		default:
+			return false, "Connection to " + target + " failed: " + err.Error()
+		}
+	}
+	if strings.Contains(out, "NO_OPENPANEL") {
+		return false, "Connected to " + target + ", but OpenPanel is not installed on that server."
+	}
+	var existing []string
+	afterMarker := false
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "OPENPANEL_OK" {
+			afterMarker = true
+		} else if afterMarker && line != "" {
+			existing = append(existing, line)
+		}
+	}
+	if len(existing) == 1 {
+		return false, "Connected to " + target + ", but account " + existing[0] + " already exists on that server."
+	} else if len(existing) > 1 {
+		return false, "Connected to " + target + ", but these accounts already exist on that server: " + strings.Join(existing, ", ") + "."
+	}
+	return true, "Connected to " + target + " and OpenPanel is installed. You can start the transfer."
+}
+
+// exitCode is the process exit status, -1 if it didn't exit normally
+func exitCode(err error) int {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitCode()
+	}
+	return -1
+}
+
+// ServeImportTransferTest handles POST /import/transfer/test: the "Test Connection" step before a transfer can be started.
+func (im *Importer) ServeImportTransferTest(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	server := strings.TrimSpace(r.PostFormValue("server"))
+	username := strings.TrimSpace(r.PostFormValue("username"))
+	if username == "" {
+		username = "root"
+	}
+	if server == "" {
+		writeJSON(w, map[string]interface{}{"success": false, "message": "Server IP address is required."})
+		return
+	}
+	if !isDomain(server) {
+		configureIptablesRun(server)
+	}
+	accounts := r.PostForm["openpanel_username"]
+	accounts = append(accounts, r.PostForm["accounts"]...)
+	ok, msg := importerTestConnectionRun(server, strings.TrimSpace(r.PostFormValue("port")), username, r.PostFormValue("password"), accounts)
+	writeJSON(w, map[string]interface{}{"success": ok, "message": msg})
+}
+
+// importerStartBulkTransferRun is injectable so tests never spawn opencli, it runs the accounts through user-transfer two at a time
+var importerStartBulkTransferRun = func(server, port, username, password string, live bool, accounts []string) error {
+	liveFlag := ""
+	if live {
+		liveFlag = "--live-transfer"
+	}
+	script := `host=$1 user=$2 port=$3 pass=$4 live=$5; shift 5; printf '%s\n' "$@" | xargs -P 2 -I{} opencli user-transfer --account {} --host "$host" --username "$user" --port "$port" --password "$pass" $live`
+	args := append([]string{"bash", "-c", script, "_", server, username, port, password, liveFlag}, accounts...)
+	_, err := startDetached("openpanel-user-transfer-bulk", "", args)
+	return err
+}
+
+// ServeImportTransferBulk handles POST /import/transfer/bulk: the Transfer bulk action on the users list.
+func (im *Importer) ServeImportTransferBulk(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	server := strings.TrimSpace(r.PostFormValue("server"))
+	username := strings.TrimSpace(r.PostFormValue("username"))
+	if username == "" {
+		username = "root"
+	}
+	port := strings.TrimSpace(r.PostFormValue("port"))
+	if port == "" {
+		port = "22"
+	}
+	if server == "" {
+		writeJSON(w, map[string]interface{}{"success": false, "message": "Server IP address is required."})
+		return
+	}
+	var accounts []string
+	seen := map[string]bool{}
+	for _, account := range r.PostForm["accounts"] {
+		account = stripSuspendedPrefix(strings.TrimSpace(account))
+		if account == "" || seen[account] {
+			continue
+		}
+		if !transferAccountNameRe.MatchString(account) {
+			writeJSON(w, map[string]interface{}{"success": false, "message": "Invalid account name: " + account})
+			return
+		}
+		seen[account] = true
+		accounts = append(accounts, account)
+	}
+	if len(accounts) == 0 {
+		writeJSON(w, map[string]interface{}{"success": false, "message": "Select at least one account to transfer."})
+		return
+	}
+	if !isDomain(server) {
+		configureIptablesRun(server)
+	}
+	if err := importerStartBulkTransferRun(server, port, username, r.PostFormValue("password"), r.PostFormValue("live_transfer") != "", accounts); err != nil {
+		writeJSON(w, map[string]interface{}{"success": false, "message": "Error starting transfer: " + err.Error()})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "message": fmt.Sprintf("Transfer of %d account(s) to %s started, two at a time.", len(accounts), server)})
 }
 
 // ServeImportTransfer handles GET/POST /import/transfer/.

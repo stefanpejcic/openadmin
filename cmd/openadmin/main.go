@@ -775,6 +775,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /server/migrate", auth.RequireAdmin(sessions, authOpts, migrate.ServeMigrate))
 	mux.HandleFunc("POST /server/migrate", auth.RequireAdmin(sessions, authOpts, migrate.ServeMigrate))
 	mux.HandleFunc("GET /server/migrate/status", auth.RequireAdmin(sessions, authOpts, migrate.ServeMigrateStatus))
+	mux.HandleFunc("GET /server/migrate/logs", auth.RequireAdmin(sessions, authOpts, migrate.ServeMigrateLogs))
+	mux.HandleFunc("GET /server/migrate/logs/{log_filename...}", auth.RequireAdmin(sessions, authOpts, migrate.ServeMigrateLog))
 	mux.HandleFunc("GET /settings/custom-code", auth.RequireAdmin(sessions, authOpts, customCode.ServeCustomCode))
 	mux.HandleFunc("POST /settings/custom-code", auth.RequireAdmin(sessions, authOpts, customCode.ServeCustomCode))
 	mux.HandleFunc("GET /settings/general", auth.RequireAdmin(sessions, authOpts, general.ServeGeneral))
@@ -903,6 +905,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /user/export/delete/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserExportDelete))
 	mux.HandleFunc("GET /import/transfer/", auth.RequireAdmin(sessions, authOpts, importer.ServeImportTransfer))
 	mux.HandleFunc("POST /import/transfer/", auth.RequireAdmin(sessions, authOpts, importer.ServeImportTransfer))
+	mux.HandleFunc("POST /import/transfer/test", auth.RequireAdmin(sessions, authOpts, importer.ServeImportTransferTest))
+	mux.HandleFunc("POST /import/transfer/bulk", auth.RequireAdmin(sessions, authOpts, importer.ServeImportTransferBulk))
 	// no auth wrapper, these are public files
 	mux.HandleFunc("GET /{filename}", generalStatic.ServeFile)
 

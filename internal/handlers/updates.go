@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"regexp"
 	"sort"
 	"strconv"
@@ -120,7 +119,9 @@ var updatesComposeUpRun = func() error {
 }
 
 var updatesUpdateNowRun = func() error {
-	return exec.Command("timeout", "600s", "opencli", "update", "--force").Start()
+	// the update restarts the admin service, as its child it would get killed along with it
+	_, err := startDetached("openpanel-update", "", []string{"timeout", "600s", "opencli", "update", "--force"})
+	return err
 }
 
 // fetchDockerTags does a plain lexicographic string sort descending (not
