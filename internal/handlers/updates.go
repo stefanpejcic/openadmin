@@ -119,8 +119,8 @@ var updatesComposeUpRun = func() error {
 }
 
 var updatesUpdateNowRun = func() error {
-	// the update restarts the admin service, as its child it would get killed along with it
-	_, err := startDetached("openpanel-update", "", []string{"timeout", "600s", "opencli", "update", "--force"})
+	// --no-restart leaves both services running and just sets the restart-needed flags
+	_, err := startDetached("openpanel-update", "", []string{"timeout", "600s", "opencli", "update", "--force", "--no-restart"})
 	return err
 }
 
@@ -329,7 +329,7 @@ func (u *Updates) ServeUpdateNow(w http.ResponseWriter, r *http.Request) {
 	if err := updatesUpdateNowRun(); err != nil {
 		auth.AddFlash(w, r, u.Sessions, "Error: Failed to start the update process. Details: "+err.Error(), "error")
 	} else {
-		auth.AddFlash(w, r, u.Sessions, "Update process started successfully.", "info")
+		auth.AddFlash(w, r, u.Sessions, "Update process started successfully. OpenPanel and OpenAdmin won't be restarted automatically, restart them once the update log shows it's completed.", "info")
 	}
 	http.Redirect(w, r, "/settings/updates", http.StatusSeeOther)
 }
