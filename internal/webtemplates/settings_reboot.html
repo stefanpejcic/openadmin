@@ -34,37 +34,44 @@
 
 {{if .RebootStarted}}
     <script>
-        let timeout = 180;
+        const initialBootID = "{{.BootID}}";
+        const deadline = Date.now() + 300000;
         let timer;
         let successShown = false;
 
+        function failReboot() {
+            clearInterval(timer);
+            showToast(`Server is not running or OpenAdmin is unavailable.`, 'error');
+            document.getElementById("progress_reboot").classList.add("hidden");
+            document.getElementById("error_reboot").classList.remove("hidden");
+        }
+
         function checkAppStatus() {
+            if (successShown) return;
+            if (Date.now() > deadline) {
+                failReboot();
+                return;
+            }
             $.ajax({
                 url: '/server/reboot/status',
                 method: 'GET',
+                cache: false,
                 success: function(response) {
-                    if (response.status === "up" && !successShown) {
+                    // server answers until the delayed reboot fires, so wait for a new boot_id
+                    if (!response || response.status !== "up" || !response.boot_id || response.boot_id === initialBootID) return;
+                    if (!successShown) {
                         successShown = true;
                         clearInterval(timer);
                         showToast(`Server rebooted successfully!`, 'success');
                         document.getElementById("progress_reboot").classList.add("hidden");
                         document.getElementById("success_reboot").classList.remove("hidden");
                     }
-                },
-                error: function() {
-                    timeout--;
-                    if (timeout <= 0) {
-                        clearInterval(timer);
-                        showToast(`Server is not running or OpenAdmin is unavailable.`, 'error');
-                        document.getElementById("progress_reboot").classList.add("hidden");
-                        document.getElementById("error_reboot").classList.remove("hidden");
-                    }
                 }
             });
         }
 
         $(document).ready(function () {
-            timer = setInterval(checkAppStatus, 1000);
+            timer = setInterval(checkAppStatus, 2000);
         });
     </script>
 

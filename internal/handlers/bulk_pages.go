@@ -93,20 +93,20 @@ func UsersBulkActions(plans []paneldb.RowMap, ips []string) []webtemplates.BulkA
 		}
 	}
 	return []webtemplates.BulkAction{
-		{Key: "suspend", Label: "Suspend", Confirm: "Suspend the selected users? Their websites stop working until they are unsuspended."},
-		{Key: "unsuspend", Label: "Unsuspend", Confirm: "Unsuspend the selected users?"},
-		{Key: "plan", Label: "Change plan", Confirm: "Move the selected users to this plan:",
+		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected users? Their websites stop working until they are unsuspended."},
+		{Key: "unsuspend", Icon: "play", Label: "Unsuspend", Confirm: "Unsuspend the selected users?"},
+		{Key: "plan", Icon: "package", Label: "Change plan", Confirm: "Move the selected users to this plan:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: planOpts}},
-		{Key: "password", Label: "Change password", Confirm: "Set this password for the selected users:",
+		{Key: "password", Icon: "key-round", Label: "Change password", Confirm: "Set this password for the selected users:",
 			Input: &webtemplates.BulkInput{Type: "password", Placeholder: "New password", Pattern: ".{8,}", Hint: "at least 8 characters"}},
-		{Key: "email", Label: "Change email", Confirm: "Set this email address for the selected users:",
+		{Key: "email", Icon: "mail", Label: "Change email", Confirm: "Set this email address for the selected users:",
 			Input: &webtemplates.BulkInput{Type: "email", Placeholder: "user@example.com"}},
-		{Key: "ip", Label: "Change IP", Confirm: "Move the selected users to this IP address, their domains follow:",
+		{Key: "ip", Icon: "network", Label: "Change IP", Confirm: "Move the selected users to this IP address, their domains follow:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: ipOpts}},
-		{Key: "twofa", Label: "Disable 2FA", Confirm: "Turn off two-factor authentication for the selected users? They can log in with just their password until they set it up again."},
-		{Key: "passkeys", Label: "Delete Passkeys", Confirm: "Delete all passkeys of the selected users? They have to register them again to log in with a passkey."},
-		{Key: "backup", Label: "Generate backup", Confirm: "Start a full account backup for each selected user? They run in the background, one per user."},
-		{Key: "delete", Label: "Delete", Confirm: "Permanently delete the selected users with all their websites, databases, emails and files? This cannot be undone.", Danger: true},
+		{Key: "twofa", Icon: "shield-off", Label: "Disable 2FA", Confirm: "Turn off two-factor authentication for the selected users? They can log in with just their password until they set it up again."},
+		{Key: "passkeys", Icon: "fingerprint", Label: "Delete Passkeys", Confirm: "Delete all passkeys of the selected users? They have to register them again to log in with a passkey."},
+		{Key: "backup", Icon: "archive", Label: "Generate backup", Confirm: "Start a full account backup for each selected user? They run in the background, one per user."},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected users with all their websites, databases, emails and files? This cannot be undone.", Danger: true},
 	}
 }
 
@@ -155,15 +155,15 @@ func DomainsBulkActions(phpVersions []string) []webtemplates.BulkAction {
 		phpOpts = append(phpOpts, webtemplates.BulkOption{Value: v, Label: "PHP " + v})
 	}
 	return []webtemplates.BulkAction{
-		{Key: "php", Label: "Change PHP version", Confirm: "Set the PHP version for the selected domains:",
+		{Key: "php", Icon: "code", Label: "Change PHP version", Confirm: "Set the PHP version for the selected domains:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: phpOpts}},
-		{Key: "hsts_on", Label: "Enable HSTS", Confirm: "Enable HSTS for the selected domains?"},
-		{Key: "hsts_off", Label: "Disable HSTS", Confirm: "Disable HSTS for the selected domains?"},
-		{Key: "waf_on", Label: "Enable WAF", Confirm: "Enable the WAF for the selected domains?"},
-		{Key: "waf_off", Label: "Disable WAF", Confirm: "Disable the WAF for the selected domains?"},
-		{Key: "suspend", Label: "Suspend", Confirm: "Suspend the selected domains?"},
-		{Key: "unsuspend", Label: "Unsuspend", Confirm: "Unsuspend the selected domains?"},
-		{Key: "delete", Label: "Delete", Confirm: "Permanently delete the selected domains? Their files are kept, but DNS zones, SSL and web server config are removed.", Danger: true},
+		{Key: "hsts_on", Icon: "lock", Label: "Enable HSTS", Confirm: "Enable HSTS for the selected domains?"},
+		{Key: "hsts_off", Icon: "lock-open", Label: "Disable HSTS", Confirm: "Disable HSTS for the selected domains?"},
+		{Key: "waf_on", Icon: "shield-check", Label: "Enable WAF", Confirm: "Enable the WAF for the selected domains?"},
+		{Key: "waf_off", Icon: "shield-off", Label: "Disable WAF", Confirm: "Disable the WAF for the selected domains?"},
+		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected domains?"},
+		{Key: "unsuspend", Icon: "play", Label: "Unsuspend", Confirm: "Unsuspend the selected domains?"},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected domains? Their files are kept, but DNS zones, SSL and web server config are removed.", Danger: true},
 	}
 }
 
@@ -246,9 +246,9 @@ func domainsBulkRoute(action, value, domain string) (*BulkCall, BulkResult) {
 
 func ServicesBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "start", Label: "Start", Confirm: "Start the selected services?"},
-		{Key: "stop", Label: "Stop", Confirm: "Stop the selected services? Websites or features that depend on them stop working."},
-		{Key: "restart", Label: "Restart", Confirm: "Restart the selected services?"},
+		{Key: "start", Icon: "play", Label: "Start", Confirm: "Start the selected services?"},
+		{Key: "stop", Icon: "square", Label: "Stop", Confirm: "Stop the selected services? Websites or features that depend on them stop working."},
+		{Key: "restart", Icon: "rotate-cw", Label: "Restart", Confirm: "Restart the selected services?"},
 	}
 }
 
@@ -264,7 +264,7 @@ func servicesBulkRoute(action, _, item string) (*BulkCall, BulkResult) {
 
 func ProcessesBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "kill", Label: "Kill", Confirm: "Kill the selected processes?", Danger: true},
+		{Key: "kill", Icon: "octagon-x", Label: "Kill", Confirm: "Kill the selected processes?", Danger: true},
 	}
 }
 
@@ -277,9 +277,9 @@ func processesBulkRoute(_, _, pid string) (*BulkCall, BulkResult) {
 
 func AccountsBulkActions(kind string) []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "suspend", Label: "Suspend", Confirm: "Suspend the selected " + kind + "? They can't log in until unsuspended."},
-		{Key: "unsuspend", Label: "Unsuspend", Confirm: "Unsuspend the selected " + kind + "?"},
-		{Key: "delete", Label: "Delete", Confirm: "Permanently delete the selected " + kind + "? This cannot be undone.", Danger: true},
+		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected " + kind + "? They can't log in until unsuspended."},
+		{Key: "unsuspend", Icon: "play", Label: "Unsuspend", Confirm: "Unsuspend the selected " + kind + "?"},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected " + kind + "? This cannot be undone.", Danger: true},
 	}
 }
 
@@ -299,11 +299,11 @@ const cronNeverSchedule = "59 23 31 2 *"
 
 func CronsBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "schedule", Label: "Change schedule", Confirm: "Set this schedule for the selected cron jobs:",
+		{Key: "schedule", Icon: "clock", Label: "Change schedule", Confirm: "Set this schedule for the selected cron jobs:",
 			Input: &webtemplates.BulkInput{Type: "text", Pattern: `[0-9*/,\-]+( [0-9*/,\-]+){4}`, Placeholder: "0 3 * * *", Hint: "minute hour day month weekday"}},
-		{Key: "disable", Label: "Disable", Confirm: "Disable the selected cron jobs? Their schedule is set to Feb 31st (" + cronNeverSchedule + "), so they never run until you set a new one."},
-		{Key: "log_on", Label: "Logging on", Confirm: "Log each run of the selected cron jobs to /var/log/openpanel-cron.log?"},
-		{Key: "log_off", Label: "Logging off", Confirm: "Stop logging the runs of the selected cron jobs?"},
+		{Key: "disable", Icon: "ban", Label: "Disable", Confirm: "Disable the selected cron jobs? Their schedule is set to Feb 31st (" + cronNeverSchedule + "), so they never run until you set a new one."},
+		{Key: "log_on", Icon: "file-text", Label: "Logging on", Confirm: "Log each run of the selected cron jobs to /var/log/openpanel-cron.log?"},
+		{Key: "log_off", Icon: "file-x", Label: "Logging off", Confirm: "Stop logging the runs of the selected cron jobs?"},
 	}
 }
 
@@ -338,16 +338,16 @@ func cronsBulkRoute(jobs func() []CronJob) BulkRoute {
 
 func EmailAccountsBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "password", Label: "Change password", Confirm: "Set this password for the selected email accounts:",
+		{Key: "password", Icon: "key-round", Label: "Change password", Confirm: "Set this password for the selected email accounts:",
 			Input: &webtemplates.BulkInput{Type: "password", Placeholder: "New password"}},
-		{Key: "quota", Label: "Set quota", Confirm: "Set the mailbox quota for the selected email accounts:",
+		{Key: "quota", Icon: "hard-drive", Label: "Set quota", Confirm: "Set the mailbox quota for the selected email accounts:",
 			Input: &webtemplates.BulkInput{Type: "text", Pattern: "[0-9]+[KMGT]", Placeholder: "2G", Hint: "a number with K, M, G or T, e.g. 512M or 2G"}},
-		{Key: "quota_del", Label: "Remove quota", Confirm: "Remove the mailbox quota limit from the selected email accounts?"},
-		{Key: "restrict_send", Label: "Restrict sending", Confirm: "Block the selected email accounts from sending email?"},
-		{Key: "restrict_receive", Label: "Restrict receiving", Confirm: "Block the selected email accounts from receiving email?"},
-		{Key: "allow_send", Label: "Allow sending", Confirm: "Remove the sending restriction from the selected email accounts?"},
-		{Key: "allow_receive", Label: "Allow receiving", Confirm: "Remove the receiving restriction from the selected email accounts?"},
-		{Key: "delete", Label: "Delete", Confirm: "Permanently delete the selected email accounts and their mail? This cannot be undone.", Danger: true},
+		{Key: "quota_del", Icon: "infinity", Label: "Remove quota", Confirm: "Remove the mailbox quota limit from the selected email accounts?"},
+		{Key: "restrict_send", Icon: "send-off", Label: "Restrict sending", Confirm: "Block the selected email accounts from sending email?"},
+		{Key: "restrict_receive", Icon: "inbox-off", Label: "Restrict receiving", Confirm: "Block the selected email accounts from receiving email?"},
+		{Key: "allow_send", Icon: "send", Label: "Allow sending", Confirm: "Remove the sending restriction from the selected email accounts?"},
+		{Key: "allow_receive", Icon: "inbox", Label: "Allow receiving", Confirm: "Remove the receiving restriction from the selected email accounts?"},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected email accounts and their mail? This cannot be undone.", Danger: true},
 	}
 }
 
@@ -404,8 +404,8 @@ func PlansBulkActions(featureSets []string) []webtemplates.BulkAction {
 		fields = append(fields, webtemplates.BulkField{Key: "feature_set", Label: "Feature set", Input: webtemplates.BulkInput{Type: "select", Options: fsOpts}})
 	}
 	return []webtemplates.BulkAction{
-		{Key: "update", Label: "Update", Confirm: "Set this limit on the selected plans, users on them get it too:", Input: &webtemplates.BulkInput{Fields: fields}},
-		{Key: "delete", Label: "Delete", Confirm: "Delete the selected plans? Plans that still have users can't be deleted.", Danger: true},
+		{Key: "update", Icon: "pencil", Label: "Update", Confirm: "Set this limit on the selected plans, users on them get it too:", Input: &webtemplates.BulkInput{Fields: fields}},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Delete the selected plans? Plans that still have users can't be deleted.", Danger: true},
 	}
 }
 
@@ -450,8 +450,8 @@ func planEditForm(p paneldb.RowMap) url.Values {
 
 func NotificationsBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "mark_as_read", Label: "Mark as read", Confirm: "Mark the selected notifications as read?"},
-		{Key: "delete", Label: "Delete", Confirm: "Delete the selected notifications?", Danger: true},
+		{Key: "mark_as_read", Icon: "check-check", Label: "Mark as read", Confirm: "Mark the selected notifications as read?"},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Delete the selected notifications?", Danger: true},
 	}
 }
 
@@ -477,7 +477,7 @@ func notificationsBulkOrder(action string, items []string) {
 
 func SystemBackupsBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "delete", Label: "Delete", Confirm: "Permanently delete the selected backups? This cannot be undone.", Danger: true},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected backups? This cannot be undone.", Danger: true},
 	}
 }
 
@@ -490,8 +490,8 @@ func systemBackupsBulkRoute(_, _, name string) (*BulkCall, BulkResult) {
 
 func WAFRulesBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "on", Label: "Enable", Confirm: "Enable the selected rule sets? Restart Caddy afterwards to apply."},
-		{Key: "off", Label: "Disable", Confirm: "Disable the selected rule sets? Restart Caddy afterwards to apply."},
+		{Key: "on", Icon: "shield-check", Label: "Enable", Confirm: "Enable the selected rule sets? Restart Caddy afterwards to apply."},
+		{Key: "off", Icon: "shield-off", Label: "Disable", Confirm: "Disable the selected rule sets? Restart Caddy afterwards to apply."},
 	}
 }
 
@@ -501,9 +501,9 @@ func wafRulesBulkRoute(action, _, name string) (*BulkCall, BulkResult) {
 
 func LocalesBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "locale", Label: "Install", Confirm: "Install the selected locales?"},
-		{Key: "update", Label: "Update", Confirm: "Update the selected locales to the latest translations?"},
-		{Key: "delete", Label: "Delete", Confirm: "Delete the selected locales? Users who picked them fall back to the default locale.", Danger: true},
+		{Key: "locale", Icon: "download", Label: "Install", Confirm: "Install the selected locales?"},
+		{Key: "update", Icon: "refresh-cw", Label: "Update", Confirm: "Update the selected locales to the latest translations?"},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Delete the selected locales? Users who picked them fall back to the default locale.", Danger: true},
 	}
 }
 
@@ -514,14 +514,14 @@ func localesBulkRoute(action, _, locale string) (*BulkCall, BulkResult) {
 
 func UserContainersBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "start", Label: "Start", Confirm: "Start the selected services?"},
-		{Key: "stop", Label: "Stop", Confirm: "Stop the selected services?"},
-		{Key: "restart", Label: "Restart", Confirm: "Restart the selected services?"},
-		{Key: "cpu", Label: "Edit CPU", Confirm: "Set the CPU limit for the selected services:",
+		{Key: "start", Icon: "play", Label: "Start", Confirm: "Start the selected services?"},
+		{Key: "stop", Icon: "square", Label: "Stop", Confirm: "Stop the selected services?"},
+		{Key: "restart", Icon: "rotate-cw", Label: "Restart", Confirm: "Restart the selected services?"},
+		{Key: "cpu", Icon: "cpu", Label: "Edit CPU", Confirm: "Set the CPU limit for the selected services:",
 			Input: &webtemplates.BulkInput{Type: "number", Min: "0", Step: ".01", Placeholder: "cores", Hint: "0 = unlimited"}},
-		{Key: "ram", Label: "Edit RAM", Confirm: "Set the memory limit (GB) for the selected services:",
+		{Key: "ram", Icon: "memory-stick", Label: "Edit RAM", Confirm: "Set the memory limit (GB) for the selected services:",
 			Input: &webtemplates.BulkInput{Type: "number", Min: "0", Step: ".01", Placeholder: "GB", Hint: "0 = unlimited"}},
-		{Key: "pids", Label: "Edit PIDs", Confirm: "Set the max processes for the selected services:",
+		{Key: "pids", Icon: "list", Label: "Edit PIDs", Confirm: "Set the max processes for the selected services:",
 			Input: &webtemplates.BulkInput{Type: "number", Min: "0", Step: "1", Placeholder: "PIDs", Hint: "0 = unlimited"}},
 	}
 }

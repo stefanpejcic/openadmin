@@ -197,3 +197,25 @@ func TestServeRebootStatusReturnsUp(t *testing.T) {
 		t.Fatalf(`expected {"status":"up"}, got %s`, body)
 	}
 }
+
+func TestServeRebootStatusIncludesBootID(t *testing.T) {
+	withScratchRebootDisableFlag(t)
+
+	orig := rebootBootIDPath
+	rebootBootIDPath = filepath.Join(t.TempDir(), "boot_id")
+	t.Cleanup(func() { rebootBootIDPath = orig })
+	os.WriteFile(rebootBootIDPath, []byte("abc-123\n"), 0644)
+
+	rb := &Reboot{}
+	srv, client := newRebootTestServer(t, rb)
+
+	resp, err := client.Get(srv.URL + "/server/reboot/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), `"boot_id":"abc-123"`) {
+		t.Fatalf(`expected boot_id in status, got %s`, body)
+	}
+}

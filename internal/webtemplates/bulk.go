@@ -8,6 +8,7 @@ type BulkAction struct {
 	Danger  bool
 	Input   *BulkInput // asks for a value on confirm, e.g. a PHP version
 	Modal   string     // window event the page listens for to open its own dialog with the selected items, instead of the confirm step
+	Icon    string     // name from bulk_icons.go, on small screens the button shows just this
 }
 
 // BulkInput describes the value field shown on confirm, Options turns it into a select and Fields into a pick-what-to-change select with one field per choice

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/gorilla/csrf"
 
@@ -40,6 +41,17 @@ var (
 	}
 )
 
+// changes on every boot, so the UI can tell the server actually came back up
+var rebootBootIDPath = "/proc/sys/kernel/random/boot_id"
+
+func currentBootID() string {
+	b, err := os.ReadFile(rebootBootIDPath)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(b))
+}
+
 // ServeReboot handles GET/POST /server/reboot.
 func (rb *Reboot) ServeReboot(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(RebootDisableFlagPath); err == nil {
@@ -67,6 +79,7 @@ func (rb *Reboot) ServeReboot(w http.ResponseWriter, r *http.Request) {
 
 	webtemplates.Render(w, "settings_reboot.html", mergeChrome(map[string]interface{}{
 		"RebootStarted": rebootStarted,
+		"BootID":        currentBootID(),
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, rb.Sessions),
 	}, r, "Server Reboot"))
@@ -74,5 +87,5 @@ func (rb *Reboot) ServeReboot(w http.ResponseWriter, r *http.Request) {
 
 // ServeRebootStatus handles GET /server/reboot/status.
 func (rb *Reboot) ServeRebootStatus(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, map[string]string{"status": "up"})
+	writeJSON(w, map[string]string{"status": "up", "boot_id": currentBootID()})
 }

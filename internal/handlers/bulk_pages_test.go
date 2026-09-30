@@ -60,3 +60,26 @@ func TestCronsBulkRouteKeepsTheOtherSetting(t *testing.T) {
 		t.Fatal("expected a missing line to be skipped")
 	}
 }
+
+func TestBulkActionIconsExist(t *testing.T) {
+	check := func(page string, actions []webtemplates.BulkAction) {
+		for _, a := range actions {
+			if a.Icon != "" && !webtemplates.HasBulkIcon(a.Icon) {
+				t.Errorf("%s: action %q uses unknown icon %q", page, a.Key, a.Icon)
+			}
+		}
+	}
+	check("users", UsersBulkActions(nil, nil))
+	check("containers", UserContainersBulkActions())
+	check("locales", LocalesBulkActions())
+	check("waf", WAFRulesBulkActions())
+	check("backups", SystemBackupsBulkActions())
+	check("notifications", NotificationsBulkActions())
+	check("processes", ProcessesBulkActions())
+	check("services", ServicesBulkActions())
+	check("crons", CronsBulkActions())
+	check("emails", EmailAccountsBulkActions())
+	check("plans", PlansBulkActions(nil))
+	check("resellers", AccountsBulkActions("resellers"))
+	check("domains", DomainsBulkActions(nil))
+}
