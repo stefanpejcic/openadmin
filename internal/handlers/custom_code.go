@@ -29,6 +29,7 @@ var customCodeFilePaths = map[string]string{
 	"post_update":         "/root/openpanel_run_after_update",
 	"pre_startup":         "/root/openpanel_run_on_startup",
 	"custom_section":      "/etc/openpanel/openpanel/conf/custom_dashboard_section.json",
+	"welcome_email":       "/etc/openpanel/openpanel/custom_code/welcome.html",
 	"forbidden_usernames": "/etc/openpanel/openadmin/config/forbidden_usernames.txt",
 	"restricted_domains":  "/etc/openpanel/openpanel/conf/domain_restriction.txt",
 	"howto_guides":        "/etc/openpanel/openpanel/conf/knowledge_base_articles.json",
@@ -41,7 +42,7 @@ var customCodeFilePaths = map[string]string{
 // preserve one -- used for deterministic template/JSON output.
 var customCodeFieldOrder = []string{
 	"custom_css", "custom_js", "in_header", "in_footer", "post_update",
-	"pre_startup", "custom_section", "forbidden_usernames", "restricted_domains",
+	"pre_startup", "custom_section", "welcome_email", "forbidden_usernames", "restricted_domains",
 	"howto_guides", "wp_themes", "wp_plugins", "pagespeed_api_key",
 }
 
@@ -53,6 +54,7 @@ var customCodeEnterpriseFields = map[string]bool{
 	"in_header":      true,
 	"in_footer":      true,
 	"custom_section": true,
+	"welcome_email":  true,
 	"howto_guides":   true,
 }
 
@@ -79,7 +81,7 @@ func hasEnterpriseAccess(r *http.Request, checker *license.Checker) bool {
 // backing files.
 //
 // SECURITY NOTE: only the Enterprise-only fields (custom_css, custom_js,
-// in_header, in_footer, custom_section, howto_guides) require an active
+// in_header, in_footer, custom_section, welcome_email, howto_guides) require an active
 // Enterprise license and non-reseller role before being written; the
 // Community-tier fields are unrestricted.
 func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
@@ -132,6 +134,7 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 		"InHeader":          fileContents["in_header"],
 		"InFooter":          fileContents["in_footer"],
 		"CustomSection":     fileContents["custom_section"],
+		"WelcomeEmail":      fileContents["welcome_email"],
 		"PostUpdate":        fileContents["post_update"],
 		"PreStartup":        fileContents["pre_startup"],
 		"WPThemes":          fileContents["wp_themes"],

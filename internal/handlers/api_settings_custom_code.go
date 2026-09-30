@@ -5,7 +5,7 @@
 //
 // SECURITY NOTE: unlike the HTML page, which gates the Enterprise-only
 // fields (custom_css, custom_js, in_header, in_footer, custom_section,
-// howto_guides) behind an active license and non-reseller role, this API
+// welcome_email, howto_guides) behind an active license and non-reseller role, this API
 // endpoint applies no such gating -- any admin-role caller can write any
 // field. This is kept as-is rather than silently tightened, since it's a
 // genuine existing behavior real callers may already depend on.

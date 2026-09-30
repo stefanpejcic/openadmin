@@ -245,3 +245,34 @@ func TestServeCustomCodePostEmptyStringStillSaves(t *testing.T) {
 		t.Fatalf("expected a present-but-empty field to clear the file (matching `is not None`), got %q", saved)
 	}
 }
+
+func TestServeCustomCodeWelcomeEmailIsEnterpriseOnly(t *testing.T) {
+	withScratchCustomCodePaths(t)
+
+	srv, client := newCustomCodeTestServer(t, &CustomCode{}, "admin")
+	resp, err := client.PostForm(srv.URL+"/settings/custom-code", url.Values{"welcome_email": {"<p>{{EMAIL}}</p>"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if _, err := os.Stat(customCodeFilePaths["welcome_email"]); !os.IsNotExist(err) {
+		t.Fatalf("expected welcome_email NOT to be written on Community edition, err=%v", err)
+	}
+
+	withMockLicenseAPI(t, "Active")
+	srv, client = newCustomCodeTestServer(t, &CustomCode{LicenseChecker: license.NewChecker("enterprise-test", "203.0.113.1")}, "admin")
+	resp, err = client.PostForm(srv.URL+"/settings/custom-code", url.Values{"welcome_email": {"<p>{{EMAIL}}</p>"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	io.ReadAll(resp.Body)
+	resp.Body.Close()
+	saved, err := os.ReadFile(customCodeFilePaths["welcome_email"])
+	if err != nil {
+		t.Fatalf("expected welcome_email to be saved on Enterprise: %v", err)
+	}
+	if string(saved) != "<p>{{EMAIL}}</p>" {
+		t.Fatalf("expected saved content to match, got %q", saved)
+	}
+}
