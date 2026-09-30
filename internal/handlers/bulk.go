@@ -113,7 +113,7 @@ func serveBulkDispatchOrdered(sessions *auth.Manager, h http.Handler, w http.Res
 		}
 		results = append(results, res)
 	}
-	finishBulk(sessions, w, r, act.Label, results)
+	finishBulk(sessions, w, r, act, results)
 }
 
 // validateBulkValue checks the value against the same limits the browser was given, once, before any row runs
@@ -184,8 +184,8 @@ func findBulkAction(actions []webtemplates.BulkAction, key string) (webtemplates
 }
 
 // finishBulk flashes one summary banner for the page reload and returns the per-item results as JSON
-func finishBulk(sessions *auth.Manager, w http.ResponseWriter, r *http.Request, actionLabel string, results []BulkResult) {
-	_ = auth.AddFlash(w, r, sessions, bulkFlashMessage(actionLabel, results), bulkFlashCategory(results))
+func finishBulk(sessions *auth.Manager, w http.ResponseWriter, r *http.Request, act webtemplates.BulkAction, results []BulkResult) {
+	_ = auth.AddFlash(w, r, sessions, bulkFlashMessage(act, results), bulkFlashCategory(results))
 	writeJSON(w, map[string]any{"results": results})
 }
 
@@ -207,7 +207,8 @@ func bulkFlashCategory(results []BulkResult) string {
 }
 
 // bulkFlashMessage is plain text, the layout escapes flashes itself
-func bulkFlashMessage(actionLabel string, results []BulkResult) string {
+func bulkFlashMessage(act webtemplates.BulkAction, results []BulkResult) string {
+	actionLabel := act.Label
 	var failed []BulkResult
 	for _, res := range results {
 		if !res.OK {
@@ -216,7 +217,11 @@ func bulkFlashMessage(actionLabel string, results []BulkResult) string {
 	}
 	total := strconv.Itoa(len(results))
 	if len(failed) == 0 {
-		return actionLabel + ": completed successfully for all " + total + " selected item(s). " + bulkItemList(results)
+		msg := actionLabel + ": completed successfully for all " + total + " selected item(s)."
+		if act.CountOnly {
+			return msg
+		}
+		return msg + " " + bulkItemList(results)
 	}
 	msg := actionLabel + ": " + strconv.Itoa(len(failed)) + " of " + total + " selected item(s) failed."
 	for _, res := range failed {

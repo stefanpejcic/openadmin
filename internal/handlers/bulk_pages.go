@@ -450,8 +450,8 @@ func planEditForm(p paneldb.RowMap) url.Values {
 
 func NotificationsBulkActions() []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
-		{Key: "mark_as_read", Icon: "check-check", Label: "Mark as read", Confirm: "Mark the selected notifications as read?"},
-		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Delete the selected notifications?", Danger: true},
+		{Key: "mark_as_read", Icon: "check-check", Label: "Mark as read", Confirm: "Mark the selected notifications as read?", CountOnly: true},
+		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Delete the selected notifications?", Danger: true, CountOnly: true},
 	}
 }
 
