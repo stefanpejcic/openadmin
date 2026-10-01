@@ -49,6 +49,9 @@ type BulkCall struct {
 // BulkRoute maps one selected item to the existing route that handles it, or returns nil and the item's result when nothing needs to run
 type BulkRoute func(action, value, item string) (*BulkCall, BulkResult)
 
+// BulkBatch runs the whole selection in one go, ok=false falls back to the per-item route
+type BulkBatch func(action, value string, items []string) (results []BulkResult, ok bool)
+
 // BulkSkip is a BulkRoute result for an item that can't run the action
 func BulkSkip(msg string) (*BulkCall, BulkResult) { return nil, BulkResult{Message: msg} }
 
@@ -57,11 +60,11 @@ func BulkDo(call BulkCall) (*BulkCall, BulkResult) { return &call, BulkResult{} 
 
 // ServeBulkDispatch is a complete POST /<page>/bulk handler: validate the action, then replay each item through its single-item route on h
 func ServeBulkDispatch(sessions *auth.Manager, h http.Handler, w http.ResponseWriter, r *http.Request, actions []webtemplates.BulkAction, route BulkRoute) {
-	serveBulkDispatchOrdered(sessions, h, w, r, actions, route, nil)
+	serveBulkDispatchOrdered(sessions, h, w, r, actions, route, nil, nil)
 }
 
-// serveBulkDispatchOrdered lets order rearrange the items first, for routes where running one item changes the keys of the others
-func serveBulkDispatchOrdered(sessions *auth.Manager, h http.Handler, w http.ResponseWriter, r *http.Request, actions []webtemplates.BulkAction, route BulkRoute, order func(action string, items []string)) {
+// serveBulkDispatchOrdered lets order rearrange the items first, for routes where running one item changes the keys of the others, and batch take the whole selection at once
+func serveBulkDispatchOrdered(sessions *auth.Manager, h http.Handler, w http.ResponseWriter, r *http.Request, actions []webtemplates.BulkAction, route BulkRoute, order func(action string, items []string), batch BulkBatch) {
 	req, ok := decodeBulkRequest(w, r)
 	if !ok {
 		return
@@ -100,6 +103,12 @@ func serveBulkDispatchOrdered(sessions *auth.Manager, h http.Handler, w http.Res
 			return
 		}
 		req.Value = prefix + req.Value
+	}
+	if batch != nil {
+		if results, ok := batch(req.Action, req.Value, req.Items); ok {
+			finishBulk(sessions, w, r, act, results)
+			return
+		}
 	}
 	results := make([]BulkResult, 0, len(req.Items))
 	for _, item := range req.Items {

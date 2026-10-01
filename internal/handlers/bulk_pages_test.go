@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strings"
 	"testing"
 
 	"openadmin/internal/paneldb"
@@ -58,6 +59,60 @@ func TestCronsBulkRouteKeepsTheOtherSetting(t *testing.T) {
 	}
 	if call, _ := route("disable", "", "99"); call != nil {
 		t.Fatal("expected a missing line to be skipped")
+	}
+}
+
+func TestDomainsBulkRouteOnOff(t *testing.T) {
+	call, _ := domainsBulkRoute("hsts", "on", "example.com")
+	if call.Path != "/domains/hsts/toggle" || call.Form.Get("hsts_action") != "On" || call.Form.Get("domain_name") != "example.com" {
+		t.Fatalf("hsts on: %s %v", call.Path, call.Form)
+	}
+	call, _ = domainsBulkRoute("waf", "off", "example.com")
+	if call.Path != "/domains/waf/toggle" || call.Form.Get("modsec_action") != "Off" {
+		t.Fatalf("waf off: %s %v", call.Path, call.Form)
+	}
+}
+
+func TestDomainsBulkBatchCloudflareRunsOnce(t *testing.T) {
+	var calls [][]string
+	orig := cloudflareRun
+	cloudflareRun = func(args ...string) (string, error) {
+		calls = append(calls, args)
+		return "Enabled: /etc/openpanel/caddy/domains/a.com.conf\n" +
+			"ERROR: Domain config not found: /etc/openpanel/caddy/domains/b.com.conf\n" +
+			"Enabled: /etc/openpanel/caddy/domains/c.com.conf\n" +
+			"Reloading Caddy to apply the setting...\nSUCCESS: Caddy reloaded successfully.\n", nil
+	}
+	t.Cleanup(func() { cloudflareRun = orig })
+
+	results, ok := domainsBulkBatch("cloudflare", "on", []string{"a.com", "b.com", "c.com", "bad domain"})
+	if !ok {
+		t.Fatal("expected cloudflare to be batched")
+	}
+	if len(calls) != 1 || strings.Join(calls[0], " ") != "enable a.com b.com c.com" {
+		t.Fatalf("expected one opencli call with the valid domains, got %v", calls)
+	}
+	want := map[string]bool{"a.com": true, "b.com": false, "c.com": true, "bad domain": false}
+	for _, res := range results {
+		if res.OK != want[res.Item] {
+			t.Errorf("%s: ok=%v (%s)", res.Item, res.OK, res.Message)
+		}
+	}
+
+	if _, ok := domainsBulkBatch("waf", "on", []string{"a.com"}); ok {
+		t.Fatal("expected other actions to go through the per-item route")
+	}
+}
+
+func TestCloudflareBulkReloadFailureFailsAll(t *testing.T) {
+	orig := cloudflareRun
+	cloudflareRun = func(args ...string) (string, error) {
+		return "Disabled: /etc/openpanel/caddy/domains/a.com.conf\nReloading Caddy to apply the setting...\nWARNING: Failed to reload Caddy.\n", nil
+	}
+	t.Cleanup(func() { cloudflareRun = orig })
+
+	if res := cloudflareBulk("disable", []string{"a.com"}); res[0].OK {
+		t.Fatal("expected a failed reload to fail the domain")
 	}
 }
 

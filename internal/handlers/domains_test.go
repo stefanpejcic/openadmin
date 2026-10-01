@@ -95,20 +95,44 @@ example.com {
 }
 `), 0644)
 
-	ssl, status, waf, hsts := readCaddyFileForDomain("example.com")
+	ssl, status, waf, hsts, cf := readCaddyFileForDomain("example.com")
 	if ssl != "automatic" || status != "active" || hsts != "on" {
 		t.Fatalf("unexpected: ssl=%q status=%q waf=%q hsts=%q", ssl, status, waf, hsts)
 	}
 	if waf != "none" {
 		t.Fatalf("expected default waf=none when no SecRuleEngine directive present, got %q", waf)
 	}
+	if cf {
+		t.Fatal("expected cloudflare=false without an import cloudflare-only line")
+	}
+}
+
+func TestReadCaddyFileForDomainDetectsCloudflareOnly(t *testing.T) {
+	dir := withScratchCaddyDomainsDir(t)
+	os.WriteFile(dir+"/example.com.conf", []byte(`http://example.com {
+  import cloudflare-only
+  reverse_proxy localhost:8080
+}
+`), 0644)
+	os.WriteFile(dir+"/other.com.conf", []byte(`http://other.com {
+  # import cloudflare-only
+  reverse_proxy localhost:8080
+}
+`), 0644)
+
+	if _, _, _, _, cf := readCaddyFileForDomain("example.com"); !cf {
+		t.Fatal("expected cloudflare=true for import cloudflare-only line")
+	}
+	if _, _, _, _, cf := readCaddyFileForDomain("other.com"); cf {
+		t.Fatal("expected commented-out import to be ignored")
+	}
 }
 
 func TestReadCaddyFileForDomainDefaultsWhenMissing(t *testing.T) {
 	withScratchCaddyDomainsDir(t)
 
-	ssl, status, waf, hsts := readCaddyFileForDomain("nonexistent.com")
-	if ssl != "none" || status != "suspended" || waf != "none" || hsts != "off" {
+	ssl, status, waf, hsts, cf := readCaddyFileForDomain("nonexistent.com")
+	if ssl != "none" || status != "suspended" || waf != "none" || hsts != "off" || cf {
 		t.Fatalf("unexpected defaults: ssl=%q status=%q waf=%q hsts=%q", ssl, status, waf, hsts)
 	}
 }

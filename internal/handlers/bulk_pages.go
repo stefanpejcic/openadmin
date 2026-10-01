@@ -26,14 +26,14 @@ func BulkRoutes(mux *http.ServeMux, sessions *auth.Manager, opts auth.Options, u
 		}))
 	}
 	mux.HandleFunc("POST /domains/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
-		ServeBulkDispatch(sessions, mux, w, r, DomainsBulkActions(domains.ownerPHPVersions(nil)), domainsBulkRoute)
+		serveBulkDispatchOrdered(sessions, mux, w, r, DomainsBulkActions(domains.ownerPHPVersions(nil)), domainsBulkRoute, nil, domainsBulkBatch)
 	}))
 	admin("POST /services/bulk", ServicesBulkActions, servicesBulkRoute)
 	admin("POST /server/processes/bulk", ProcessesBulkActions, processesBulkRoute)
 	admin("POST /tasks/bulk", ProcessesBulkActions, processesBulkRoute)
 	admin("POST /administrators/bulk", func() []webtemplates.BulkAction { return AccountsBulkActions("administrators") }, accountsBulkRoute("/administrators"))
 	mux.HandleFunc("POST /notifications/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
-		serveBulkDispatchOrdered(sessions, mux, w, r, NotificationsBulkActions(), notificationsBulkRoute, notificationsBulkOrder)
+		serveBulkDispatchOrdered(sessions, mux, w, r, NotificationsBulkActions(), notificationsBulkRoute, notificationsBulkOrder, nil)
 	}))
 	admin("POST /backups/system/bulk", SystemBackupsBulkActions, systemBackupsBulkRoute)
 	admin("POST /security/waf/rules/bulk", WAFRulesBulkActions, wafRulesBulkRoute)
@@ -157,10 +157,12 @@ func DomainsBulkActions(phpVersions []string) []webtemplates.BulkAction {
 	return []webtemplates.BulkAction{
 		{Key: "php", Icon: "code", Label: "Change PHP version", Confirm: "Set the PHP version for the selected domains:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: phpOpts}},
-		{Key: "hsts_on", Icon: "lock", Label: "Enable HSTS", Confirm: "Enable HSTS for the selected domains?"},
-		{Key: "hsts_off", Icon: "lock-open", Label: "Disable HSTS", Confirm: "Disable HSTS for the selected domains?"},
-		{Key: "waf_on", Icon: "shield-check", Label: "Enable WAF", Confirm: "Enable the WAF for the selected domains?"},
-		{Key: "waf_off", Icon: "shield-off", Label: "Disable WAF", Confirm: "Disable the WAF for the selected domains?"},
+		{Key: "hsts", Icon: "lock", Label: "HSTS", Confirm: "Set HSTS for the selected domains:",
+			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
+		{Key: "waf", Icon: "shield-check", Label: "WAF", Confirm: "Set the WAF for the selected domains:",
+			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
+		{Key: "cloudflare", Icon: "cloud", Label: "Cloudflare", Confirm: "Cloudflare-only access for the selected domains, restricted domains not proxied through Cloudflare return 403 to visitors:",
+			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Restrict to Cloudflare", "Unrestrict")}},
 		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected domains?"},
 		{Key: "unsuspend", Icon: "play", Label: "Unsuspend", Confirm: "Unsuspend the selected domains?"},
 		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected domains? Their files are kept, but DNS zones, SSL and web server config are removed.", Danger: true},
@@ -214,6 +216,25 @@ func phpVersionLess(a, b string) bool {
 	return ci < di
 }
 
+func onOffOptions(on, off string) []webtemplates.BulkOption {
+	return []webtemplates.BulkOption{{Value: "on", Label: on}, {Value: "off", Label: off}}
+}
+
+// domainsBulkBatch sends every selected domain to one opencli call so caddy only reloads once
+func domainsBulkBatch(action, value string, items []string) ([]BulkResult, bool) {
+	if action != "cloudflare" {
+		return nil, false
+	}
+	return cloudflareBulk(bulkOnOff(value, "enable", "disable"), items), true
+}
+
+func bulkOnOff(value, on, off string) string {
+	if value == "on" {
+		return on
+	}
+	return off
+}
+
 var bulkPHPVersionRE = regexp.MustCompile(`^\d+\.\d+$`)
 
 func domainsBulkRoute(action, value, domain string) (*BulkCall, BulkResult) {
@@ -230,14 +251,10 @@ func domainsBulkRoute(action, value, domain string) (*BulkCall, BulkResult) {
 			return BulkSkip("Invalid PHP version.")
 		}
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/php/" + domain, Form: url.Values{"version": {value}}})
-	case "hsts_on":
-		return toggle("hsts", url.Values{"hsts_action": {"On"}})
-	case "hsts_off":
-		return toggle("hsts", url.Values{"hsts_action": {"Off"}})
-	case "waf_on":
-		return toggle("waf", url.Values{"modsec_action": {"On"}})
-	case "waf_off":
-		return toggle("waf", url.Values{"modsec_action": {"Off"}})
+	case "hsts":
+		return toggle("hsts", url.Values{"hsts_action": {bulkOnOff(value, "On", "Off")}})
+	case "waf":
+		return toggle("waf", url.Values{"modsec_action": {bulkOnOff(value, "On", "Off")}})
 	case "suspend", "unsuspend", "delete":
 		return toggle(action, url.Values{})
 	}

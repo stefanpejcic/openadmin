@@ -1,6 +1,6 @@
 // This file implements listing domains (with SSL/status/WAF/HSTS
 // detection), adding a domain, and the feature-toggle actions
-// (waf/hsts/dns/suspend/unsuspend/delete). Deliberately out of scope for
+// (waf/hsts/cloudflare/dns/suspend/unsuspend/delete). Deliberately out of scope for
 // this pass (see the migration backlog): the DNS zone editor, Caddyfile
 // editor, VirtualHosts editor, SSL certificate management page, access log
 // viewer, and GoAccess stats viewer -- each of those is its own substantial
@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
@@ -37,12 +38,12 @@ var CaddyDomainsConfDir = "/etc/openpanel/caddy/domains"
 
 // readCaddyFileForDomain does a substring-sniffing read of a domain's
 // Caddy config, not a real parse.
-func readCaddyFileForDomain(domainURL string) (ssl, status, waf, hsts string) {
+func readCaddyFileForDomain(domainURL string) (ssl, status, waf, hsts string, cloudflare bool) {
 	ssl, status, waf, hsts = "none", "suspended", "none", "off"
 
 	content, err := os.ReadFile(CaddyDomainsConfDir + "/" + domainURL + ".conf")
 	if err != nil {
-		return ssl, status, waf, hsts
+		return ssl, status, waf, hsts, false
 	}
 	s := string(content)
 
@@ -71,8 +72,71 @@ func readCaddyFileForDomain(domainURL string) (ssl, status, waf, hsts string) {
 		hsts = "on"
 	}
 
-	return ssl, status, waf, hsts
+	return ssl, status, waf, hsts, cloudflareOnlyRe.MatchString(s)
 }
+
+// cloudflareRun is a var so tests can skip the real opencli call
+var cloudflareRun = func(args ...string) (string, error) {
+	out, err := exec.Command("opencli", append([]string{"domains-cloudflare"}, args...)...).CombinedOutput()
+	return string(out), err
+}
+
+// cloudflareBulk enables or disables several domains in one opencli call, opencli prints an Enabled:/Disabled: line per domain it changed
+func cloudflareBulk(action string, items []string) []BulkResult {
+	results := make([]BulkResult, len(items))
+	var domains []string
+	for i, item := range items {
+		results[i].Item = item
+		if isDomain(item) {
+			domains = append(domains, item)
+		} else {
+			results[i].Message = "Invalid domain."
+		}
+	}
+	if len(domains) == 0 {
+		return results
+	}
+
+	out, _ := cloudflareRun(append([]string{action}, domains...)...)
+	changed := map[string]bool{}
+	notFound := map[string]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		name := strings.TrimSuffix(line[strings.LastIndex(line, "/")+1:], ".conf")
+		switch {
+		case strings.HasPrefix(line, "Enabled: "), strings.HasPrefix(line, "Disabled: "):
+			changed[name] = true
+		case strings.HasPrefix(line, "ERROR: Domain config not found"):
+			notFound[name] = true
+		}
+	}
+	reloadFailed := strings.Contains(out, "Failed to reload Caddy")
+
+	done := "Restricted to Cloudflare."
+	if action == "disable" {
+		done = "Cloudflare restriction removed."
+	}
+	for i := range results {
+		d := results[i].Item
+		if results[i].Message != "" {
+			continue
+		}
+		switch {
+		case changed[d] && !reloadFailed:
+			results[i].OK, results[i].Message = true, done
+		case changed[d]:
+			results[i].Message = "Caddy reload failed."
+		case notFound[d]:
+			results[i].Message = "Domain config not found."
+		default:
+			results[i].Message = "opencli failed: " + firstLine(strings.TrimSpace(out))
+		}
+	}
+	return results
+}
+
+// same check opencli domains-cloudflare status does
+var cloudflareOnlyRe = regexp.MustCompile(`(?m)^[ \t]*import[ \t]+cloudflare-only([ \t]|$)`)
 
 // annotateDomainsWithWebserverInfo sets "webserver" and "varnish" on each
 // domain row, reusing the same .env-based detection as the /users/<username>
@@ -127,11 +191,12 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 	tlsIndex := getCaddyTLSIndex()
 	for _, dom := range domains {
 		domainURL, _ := dom["domain_url"].(string)
-		ssl, status, waf, hsts := readCaddyFileForDomain(domainURL)
+		ssl, status, waf, hsts, cloudflare := readCaddyFileForDomain(domainURL)
 		dom["ssl"] = ssl
 		dom["status"] = status
 		dom["waf"] = waf
 		dom["hsts"] = hsts
+		dom["cloudflare"] = cloudflare
 
 		health := checkDomainSSLHealth(domainURL, ssl, tlsIndex)
 		dom["ssl_problem"] = health.Status
@@ -238,7 +303,7 @@ func (d *Domains) HandleToggleFeature(w http.ResponseWriter, r *http.Request) {
 	domain := strings.SplitN(domainName, "/", 2)[0]
 
 	var cliArgs []string
-	var action string
+	var action, fallbackErr string
 
 	switch feature {
 	case "waf":
@@ -254,6 +319,15 @@ func (d *Domains) HandleToggleFeature(w http.ResponseWriter, r *http.Request) {
 			action = "enable"
 		}
 		cliArgs = []string{"opencli", "domains-hsts", domain, action}
+
+	case "cloudflare":
+		action = "disable"
+		if r.FormValue("cloudflare_action") == "enable" {
+			action = "enable"
+		}
+		cliArgs = []string{"opencli", "domains-cloudflare", action, domain}
+		// the script prints errors to stdout, so stderr is usually empty
+		fallbackErr = "Caddy reload failed, run 'opencli domains-cloudflare " + action + " " + domain + "' for details."
 
 	case "dns":
 		newStatus := r.FormValue("dns_action")
@@ -288,7 +362,7 @@ func (d *Domains) HandleToggleFeature(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	success, output := runOpenCLI("", cliArgs...)
+	success, output := runOpenCLI(fallbackErr, cliArgs...)
 	if success {
 		auth.AddFlash(w, r, d.Sessions, "Successfully "+action+" "+strings.ToUpper(feature)+" for domain "+domain, "info")
 	} else {
