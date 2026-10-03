@@ -250,6 +250,7 @@ func (rs *Resellers) runAction(action, username, password string, r *http.Reques
 		if !resellersEnabled() {
 			return false, "Resellers are disabled. Enable them on this page first."
 		}
+	    return runOpenCLI(adminCommandError, "opencli", "admin", "new", username, password, "--reseller")
 		hash, err := auth.GeneratePasswordHash(password)
 		if err != nil {
 			return false, "Failed creating a new reseller user: " + username
