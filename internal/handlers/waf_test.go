@@ -201,6 +201,50 @@ func TestServeWAFRulesPOSTTogglesOn(t *testing.T) {
 	}
 }
 
+func TestServeWAFRulesPOSTRefusesRequiredRuleSet(t *testing.T) {
+	wf := &WAF{}
+	srv, client := newWAFTestServer(t, wf)
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return nil }
+
+	os.WriteFile(filepath.Join(WAFRulesDir, "REQUEST-901-INITIALIZATION.conf"), []byte("rule1\n"), 0644)
+
+	resp, err := client.PostForm(srv.URL+"/security/waf/rules", url.Values{
+		"rule_name": {"REQUEST-901-INITIALIZATION"},
+		"action":    {"off"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "can&#39;t be disabled") && !strings.Contains(string(body), "can't be disabled") {
+		t.Fatalf("expected refusal flash, got %s", truncate(string(body)))
+	}
+	if _, err := os.Stat(filepath.Join(WAFRulesDir, "REQUEST-901-INITIALIZATION.conf")); err != nil {
+		t.Fatal("expected REQUEST-901-INITIALIZATION.conf to stay enabled")
+	}
+}
+
+func TestServeWAFRulesPOSTReenablesRequiredRuleSet(t *testing.T) {
+	wf := &WAF{}
+	srv, client := newWAFTestServer(t, wf)
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return nil }
+
+	os.WriteFile(filepath.Join(WAFRulesDir, "REQUEST-901-INITIALIZATION.conf.disabled"), []byte("rule1\n"), 0644)
+
+	resp, err := client.PostForm(srv.URL+"/security/waf/rules", url.Values{
+		"rule_name": {"REQUEST-901-INITIALIZATION"},
+		"action":    {"on"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if _, err := os.Stat(filepath.Join(WAFRulesDir, "REQUEST-901-INITIALIZATION.conf")); err != nil {
+		t.Fatal("expected a disabled REQUEST-901-INITIALIZATION.conf to be enabled again")
+	}
+}
+
 func TestServeWAFRulesPOSTMissingRuleFlashesError(t *testing.T) {
 	wf := &WAF{}
 	srv, client := newWAFTestServer(t, wf)

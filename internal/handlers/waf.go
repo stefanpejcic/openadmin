@@ -99,6 +99,12 @@ type wafRuleDetail struct {
 	Path     string `json:"path"`
 	NumRules int    `json:"num_rules"`
 	Status   string `json:"status"`
+	Required bool   `json:"required"`
+}
+
+// wafRequiredRuleSets can't be disabled, 901 sets the allowed methods, HTTP versions and score thresholds every other rule reads, without it all requests get blocked
+var wafRequiredRuleSets = map[string]bool{
+	"REQUEST-901-INITIALIZATION": true,
 }
 
 func wafListRuleFiles() []string {
@@ -153,6 +159,8 @@ func (wf *WAF) ServeWAFRules(w http.ResponseWriter, r *http.Request) {
 		if matchedFile != "" {
 			rulePath := filepath.Join(WAFRulesDir, matchedFile)
 			switch {
+			case action == "off" && wafRequiredRuleSets[ruleName]:
+				auth.AddFlash(w, r, wf.Sessions, "Rules set "+ruleName+" can't be disabled, all other rules depend on it and every request would be blocked.", "error")
 			case action == "off" && strings.HasSuffix(matchedFile, ".conf"):
 				if err := os.Rename(rulePath, rulePath+".disabled"); err == nil {
 					auth.AddFlash(w, r, wf.Sessions, "Rules set disabled. Restart Caddy to apply changes.", "success")
@@ -193,6 +201,7 @@ func (wf *WAF) ServeWAFRules(w http.ResponseWriter, r *http.Request) {
 			Path:     path,
 			NumRules: wafCountNonEmptyLines(path),
 			Status:   status,
+			Required: wafRequiredRuleSets[name],
 		})
 	}
 
