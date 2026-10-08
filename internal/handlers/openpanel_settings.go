@@ -65,7 +65,7 @@ var openpanelStringFields = []string{
 	"permit_username_change_by_user", "permit_subdomain_sharing",
 	"twofa_nag", "twofa_enforce", "how_to_guides", "onboarding", "found_a_bug_link", "ip_county_flag",
 	"validate_ip_address_cookie",
-	"mysql_restricted_usernames", "mysql_restricted_databases",
+	"mysql_restricted_usernames", "mysql_restricted_databases", "mysql_enforce_username_prefix",
 	"filemanager_buttons_style", "filemanager_edit_extensions",
 	"filemanager_image_extensions", "filemanager_archives_extensions",
 	"logout_url",
@@ -108,6 +108,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"mysql_import_max_size_gb":        {kind: openpanelNonNegativeInt},
 	"mysql_restricted_usernames":      {kind: openpanelSpaceSeparatedList},
 	"mysql_restricted_databases":      {kind: openpanelSpaceSeparatedList},
+	"mysql_enforce_username_prefix":   {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"applications_dashboard_items":    {kind: openpanelSpaceSeparatedList},
 	"filemanager_buttons_style":       {kind: openpanelEnum, options: []string{"classic", "modern"}},
 	"filemanager_files_per_page":      {kind: openpanelNonNegativeInt},
@@ -272,13 +273,9 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 			configData.Set(openpanelSectionForKey(key), key, strconv.Itoa(n))
 		}
 
-		// "weakpass" is a checkbox, so its presence indicates the enabled
-		// state rather than a submitted string value. It's converted here
-		// to the same "yes"/"no" string convention as every other enum
-		// toggle on this page, so it validates correctly against the enum
-		// rule for weakpass and is actually stored.
+		// toggle always posts yes/no via a hidden input, so check the value not just presence
 		weakpassValue := "no"
-		if formHasKey(r, "weakpass") {
+		if formHasKey(r, "weakpass") && r.PostFormValue("weakpass") != "no" {
 			weakpassValue = "yes"
 		}
 		configData.Set(openpanelSectionForKey("weakpass"), "weakpass", weakpassValue)
