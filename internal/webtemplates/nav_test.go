@@ -127,3 +127,19 @@ func TestHelpDocForUsersSplitsTheDoc(t *testing.T) {
 		}
 	}
 }
+
+func TestHelpDocForWAFOpensTheTabSection(t *testing.T) {
+	for path, want := range map[string]string{
+		"/security/waf":                   "until:Rules",
+		"/security/waf/rules":             "from:Rules",
+		"/security/waf/domains":           "from:Domains",
+		"/security/waf/rules/example.com": "from:Domains",
+		"/security/waf/logs":              "from:Logs",
+		"/security/waf/logs/alice":        "from:Logs",
+	} {
+		_, tabs := BuildModernNav(&Chrome{CurrentPath: path})
+		if doc, part := HelpDocFor(tabs, path); doc != "admin/security/waf" || part != want {
+			t.Errorf("%s: got %q %q, want admin/security/waf %q", path, doc, part, want)
+		}
+	}
+}

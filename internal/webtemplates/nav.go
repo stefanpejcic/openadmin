@@ -315,6 +315,17 @@ func helpSection(doc, path string) string {
 			return "from:Single User"
 		}
 		return "until:Single User"
+	case "admin/security/waf":
+		// each WAF tab opens its own section, per-domain and per-user rule pages live under the Domains tab
+		switch {
+		case strings.HasPrefix(path, "/security/waf/logs"):
+			return "from:Logs"
+		case strings.HasPrefix(path, "/security/waf/domains"), strings.HasPrefix(path, "/security/waf/rules/"):
+			return "from:Domains"
+		case strings.HasPrefix(path, "/security/waf/rules"):
+			return "from:Rules"
+		}
+		return "until:Rules"
 	}
 	return ""
 }
