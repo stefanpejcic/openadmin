@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow min-w-0">
+                <h1 class="mb-1 truncate text-xl font-bold">Web Firewall Logs{{if .Target}}: {{.Target}}{{end}}</h1>
+            </div>
+            <div class="flex flex-none flex-wrap items-center justify-center gap-2 sm:justify-end">
+                {{if .Target}}
+                <a href="/security/waf/rules/{{.Target}}" class="inline-flex items-center rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900">Manage rules</a>
+                <form method="post" action="{{.Self}}" onsubmit="return confirm('Clear the WAF logs for {{.Target}}?');">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                    <input type="hidden" name="action" value="purge">
+                    <button type="submit" class="inline-flex items-center rounded border border-red-300 px-3 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950">Clear logs</button>
+                </form>
+                {{end}}
+            </div>
+        </div>
+    </header>
+</div>
+
+{{template "waf_subnav" .}}
+
+<div class="space-y-8 pb-8">
+
+    {{if and (ne .Kind "domain") .Users}}
+    <div class="px-6 pt-3">
+        <select aria-label="Filter by user" onchange="window.location = this.value ? '/security/waf/logs/' + encodeURIComponent(this.value) : '/security/waf/logs'" class="rounded border px-2.5 py-1.5 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+            <option value="">All users</option>
+            {{range .Users}}<option value="{{.}}" {{if eq . $.Target}}selected{{end}}>{{.}}</option>{{end}}
+        </select>
+    </div>
+    {{end}}
+
+    <dl class="grid grid-cols-1 gap-4 px-6 pt-3 sm:grid-cols-3">
+        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+            <dt class="text-sm text-gray-500">Blocked</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-red-700 dark:text-red-400">{{.Report.Blocked}}</dd>
+        </div>
+        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+            <dt class="text-sm text-gray-500">Would block (monitor only)</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums">{{.Report.WouldBlock}}</dd>
+        </div>
+        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+            <dt class="text-sm text-gray-500">Flagged, not blocked</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums">{{.Report.Flagged}}</dd>
+        </div>
+    </dl>
+
+    {{if ne .Kind "domain"}}
+    <section id="waf-domains" class="scroll-mt-4">
+        <h2 class="px-6 pb-3 font-semibold text-gray-900 dark:text-gray-50">Domains hit the most</h2>
+        <div class="relative overflow-x-auto">
+        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+            <thead>
+                <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Domain" "Key" "domain" "Base" $.Self "SortCol" (index (index $.Sorts "d") 0) "SortDirection" (index (index $.Sorts "d") 1) "Param" "d_sort" "DirParam" "d_direction" "Hash" "waf-domains")}}</th>
+                    {{if eq .Kind "server"}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "User" "Key" "user" "Base" $.Self "SortCol" (index (index $.Sorts "d") 0) "SortDirection" (index (index $.Sorts "d") 1) "Param" "d_sort" "DirParam" "d_direction" "Hash" "waf-domains")}}</th>{{end}}
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Blocked" "Key" "blocked" "Base" $.Self "SortCol" (index (index $.Sorts "d") 0) "SortDirection" (index (index $.Sorts "d") 1) "Param" "d_sort" "DirParam" "d_direction" "Hash" "waf-domains")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Would block" "Key" "would_block" "Base" $.Self "SortCol" (index (index $.Sorts "d") 0) "SortDirection" (index (index $.Sorts "d") 1) "Param" "d_sort" "DirParam" "d_direction" "Hash" "waf-domains")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Flagged" "Key" "flagged" "Base" $.Self "SortCol" (index (index $.Sorts "d") 0) "SortDirection" (index (index $.Sorts "d") 1) "Param" "d_sort" "DirParam" "d_direction" "Hash" "waf-domains")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Last seen" "Key" "last_seen" "Base" $.Self "SortCol" (index (index $.Sorts "d") 0) "SortDirection" (index (index $.Sorts "d") 1) "Param" "d_sort" "DirParam" "d_direction" "Hash" "waf-domains")}}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Report.Domains}}
+                <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400"><a href="/security/waf/logs/{{.Domain}}" class="font-medium text-blue-600 hover:underline dark:text-blue-400">{{.Domain}}</a></td>
+                    {{if eq $.Kind "server"}}<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">{{if .Owner}}<a href="/security/waf/logs/{{.Owner}}" class="text-blue-600 hover:underline dark:text-blue-400">{{.Owner}}</a>{{else}}-{{end}}</td>{{end}}
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums font-semibold text-red-700 dark:text-red-400">{{.Blocked}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">{{.WouldBlock}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">{{.Flagged}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">{{.LastSeen}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="6" class="p-6 text-center text-sm text-gray-500">No WAF events logged.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+        </div>
+    </section>
+    {{end}}
+
+    <section id="waf-rules" class="scroll-mt-4">
+        <div class="px-6 pb-3">
+            <h2 class="font-semibold text-gray-900 dark:text-gray-50">Rules triggered</h2>
+            <p class="mt-1 text-sm text-gray-500">Rules behind actual blocks first. Disable one if it keeps blocking normal visitors.</p>
+        </div>
+        <div class="relative overflow-x-auto">
+        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+            <thead>
+                <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Rule" "Key" "rule" "Base" $.Self "SortCol" (index (index $.Sorts "r") 0) "SortDirection" (index (index $.Sorts "r") 1) "Param" "r_sort" "DirParam" "r_direction" "Hash" "waf-rules")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Reason" "Key" "reason" "Base" $.Self "SortCol" (index (index $.Sorts "r") 0) "SortDirection" (index (index $.Sorts "r") 1) "Param" "r_sort" "DirParam" "r_direction" "Hash" "waf-rules")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Hits" "Key" "hits" "Base" $.Self "SortCol" (index (index $.Sorts "r") 0) "SortDirection" (index (index $.Sorts "r") 1) "Param" "r_sort" "DirParam" "r_direction" "Hash" "waf-rules")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Blocked" "Key" "blocked" "Base" $.Self "SortCol" (index (index $.Sorts "r") 0) "SortDirection" (index (index $.Sorts "r") 1) "Param" "r_sort" "DirParam" "r_direction" "Hash" "waf-rules")}}</th>
+                    {{if ne .Kind "domain"}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Domains" "Key" "domains" "Base" $.Self "SortCol" (index (index $.Sorts "r") 0) "SortDirection" (index (index $.Sorts "r") 1) "Param" "r_sort" "DirParam" "r_direction" "Hash" "waf-rules")}}</th>{{end}}
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">Paths</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Report.Rules}}
+                <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-mono text-xs">{{.ID}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 max-w-xs"><div class="font-medium text-gray-900 dark:text-gray-50">{{.Category}}</div><div class="truncate text-xs" title="{{.Msg}}">{{.Msg}}</div></td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">{{.Count}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">{{.Blocked}}</td>
+                    {{if ne $.Kind "domain"}}<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums" title="{{range .Domains}}{{.}} {{end}}">{{len .Domains}}</td>{{end}}
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 max-w-xs font-mono text-xs">{{range .Paths}}<div class="truncate" title="{{.}}">{{.}}</div>{{end}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
+                        <div class="flex items-center gap-3">
+                        {{if ne $.Kind "server"}}
+                        <form method="post" action="/security/waf/rules/{{$.Target}}">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                            <input type="hidden" name="rule_id" value="{{.ID}}">
+                            <input type="hidden" name="back" value="{{$.Self}}">
+                            {{if .DisabledHere}}
+                            <button type="submit" name="action" value="enable_rule" class="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">Enable for {{if eq $.Kind "user"}}user{{else}}domain{{end}}</button>
+                            {{else}}
+                            <button type="submit" name="action" value="disable_rule" class="text-sm font-medium text-red-600 hover:underline dark:text-red-400">Disable for {{if eq $.Kind "user"}}user{{else}}domain{{end}}</button>
+                            {{end}}
+                        </form>
+                        {{end}}
+                        <form method="post" action="/security/waf/rules">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                            <input type="hidden" name="rule_id" value="{{.ID}}">
+                            <input type="hidden" name="back" value="{{$.Self}}">
+                            {{if .Disabled}}
+                            <button type="submit" name="action" value="enable_rule" class="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">Enable server-wide</button>
+                            {{else}}
+                            <button type="submit" name="action" value="disable_rule" onclick="return confirm('Disable rule {{.ID}} on every domain on the server?');" class="text-sm font-medium text-red-600 hover:underline dark:text-red-400">Disable server-wide</button>
+                            {{end}}
+                        </form>
+                        </div>
+                    </td>
+                </tr>
+                {{else}}
+                <tr><td colspan="7" class="p-6 text-center text-sm text-gray-500">No rules triggered.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+        </div>
+    </section>
+
+    <section id="waf-ips" class="scroll-mt-4">
+        <h2 class="px-6 pb-3 font-semibold text-gray-900 dark:text-gray-50">Top IP addresses</h2>
+        <div class="relative overflow-x-auto">
+        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+            <thead>
+                <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "IP address" "Key" "ip" "Base" $.Self "SortCol" (index (index $.Sorts "i") 0) "SortDirection" (index (index $.Sorts "i") 1) "Param" "i_sort" "DirParam" "i_direction" "Hash" "waf-ips")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Hits" "Key" "hits" "Base" $.Self "SortCol" (index (index $.Sorts "i") 0) "SortDirection" (index (index $.Sorts "i") 1) "Param" "i_sort" "DirParam" "i_direction" "Hash" "waf-ips")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Blocked" "Key" "blocked" "Base" $.Self "SortCol" (index (index $.Sorts "i") 0) "SortDirection" (index (index $.Sorts "i") 1) "Param" "i_sort" "DirParam" "i_direction" "Hash" "waf-ips")}}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Report.IPs}}
+                <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-mono text-xs">{{.IP}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">{{.Count}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">{{.Blocked}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="3" class="p-6 text-center text-sm text-gray-500">None yet.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+        </div>
+    </section>
+
+    <section id="waf-events" class="scroll-mt-4">
+        <h2 class="px-6 pb-3 font-semibold text-gray-900 dark:text-gray-50">Latest requests</h2>
+        <div class="relative overflow-x-auto">
+        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+            <thead>
+                <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Time" "Key" "time" "Base" $.Self "SortCol" (index (index $.Sorts "e") 0) "SortDirection" (index (index $.Sorts "e") 1) "Param" "e_sort" "DirParam" "e_direction" "Hash" "waf-events")}}</th>
+                    {{if ne .Kind "domain"}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Domain" "Key" "domain" "Base" $.Self "SortCol" (index (index $.Sorts "e") 0) "SortDirection" (index (index $.Sorts "e") 1) "Param" "e_sort" "DirParam" "e_direction" "Hash" "waf-events")}}</th>{{end}}
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "IP" "Key" "ip" "Base" $.Self "SortCol" (index (index $.Sorts "e") 0) "SortDirection" (index (index $.Sorts "e") 1) "Param" "e_sort" "DirParam" "e_direction" "Hash" "waf-events")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Request" "Key" "request" "Base" $.Self "SortCol" (index (index $.Sorts "e") 0) "SortDirection" (index (index $.Sorts "e") 1) "Param" "e_sort" "DirParam" "e_direction" "Hash" "waf-events")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Status" "Key" "status" "Base" $.Self "SortCol" (index (index $.Sorts "e") 0) "SortDirection" (index (index $.Sorts "e") 1) "Param" "e_sort" "DirParam" "e_direction" "Hash" "waf-events")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Result" "Key" "result" "Base" $.Self "SortCol" (index (index $.Sorts "e") 0) "SortDirection" (index (index $.Sorts "e") 1) "Param" "e_sort" "DirParam" "e_direction" "Hash" "waf-events")}}</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">Rules</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Report.Events}}
+                <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-xs">{{.Time}}</td>
+                    {{if ne $.Kind "domain"}}<td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400"><a href="/security/waf/logs/{{.Domain}}" class="text-blue-600 hover:underline dark:text-blue-400">{{.Domain}}</a></td>{{end}}
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-mono text-xs">{{.IP}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 max-w-xs font-mono text-xs"><div class="truncate" title="{{.Method}} {{.URI}}">{{.Method}} {{.URI}}</div></td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">{{.Status}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">{{template "waf_result_badge" .Result}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-mono text-xs">{{range .Rules}}<span title="{{.Category}}: {{.Msg}}{{if .Data}} ({{.Data}}){{end}}" class="mr-1 inline-block">{{.ID}}</span>{{end}}</td>
+                </tr>
+                {{else}}
+                <tr><td colspan="7" class="p-6 text-center text-sm text-gray-500">No WAF events logged.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+        </div>
+    </section>
+
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

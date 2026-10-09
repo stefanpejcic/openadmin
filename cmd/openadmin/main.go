@@ -265,7 +265,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	tasks := &handlers.Tasks{Sessions: sessions}
 	slave := &handlers.Slave{Sessions: sessions}
 	imunify := &handlers.Imunify{Sessions: sessions}
-	waf := &handlers.WAF{Sessions: sessions}
+	waf := &handlers.WAF{Sessions: sessions, MySQL: d.MySQL}
 	sshHandlers := &handlers.SSH{Sessions: sessions}
 	podmanHandlers := &handlers.Podman{Sessions: sessions, MySQL: d.MySQL}
 	backupsHandlers := &handlers.Backups{Sessions: sessions}
@@ -852,6 +852,12 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /security/waf/rules", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFRules))
 	mux.HandleFunc("POST /security/waf/rules", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFRules))
 	mux.HandleFunc("GET /security/waf/view-rules", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFViewRules))
+	mux.HandleFunc("GET /security/waf/domains", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFDomains))
+	mux.HandleFunc("GET /security/waf/rules/{target}", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFTargetRules))
+	mux.HandleFunc("POST /security/waf/rules/{target}", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFTargetRules))
+	mux.HandleFunc("GET /security/waf/logs", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFLogs))
+	mux.HandleFunc("GET /security/waf/logs/{target}", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFLogs))
+	mux.HandleFunc("POST /security/waf/logs/{target}", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFLogs))
 	mux.HandleFunc("GET /server/ssh", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSH))
 	mux.HandleFunc("POST /server/ssh", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSH))
 	mux.HandleFunc("GET /server/ssh/config", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSHFullConfig))

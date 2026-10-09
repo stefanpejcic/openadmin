@@ -218,3 +218,111 @@ func sortActivity(rows []activity.Entry, col, direction string) {
 	}
 	sortBy(rows, direction, less)
 }
+
+var wafDomainSortKeys = map[string]bool{"domain": true, "user": true, "mode": true, "level": true, "disabled": true}
+
+// wafLevelRank orders protection levels weakest first, custom last since it can be anything
+var wafLevelRank = map[string]int{"compatibility": 1, "standard": 2, "strict": 3, "custom": 4}
+
+func sortWAFDomains(rows []wafDomainRow, col, direction string) {
+	var less func(a, b wafDomainRow) bool
+	switch col {
+	case "domain":
+		less = func(a, b wafDomainRow) bool { return a.Domain < b.Domain }
+	case "user":
+		less = func(a, b wafDomainRow) bool { return a.Owner < b.Owner }
+	case "mode":
+		less = func(a, b wafDomainRow) bool { return a.Engine < b.Engine }
+	case "level":
+		less = func(a, b wafDomainRow) bool { return wafLevelRank[a.Level] < wafLevelRank[b.Level] }
+	case "disabled":
+		less = func(a, b wafDomainRow) bool { return a.Disabled < b.Disabled }
+	default:
+		return
+	}
+	sortBy(rows, direction, less)
+}
+
+var wafLogDomainSortKeys = map[string]bool{"domain": true, "user": true, "blocked": true, "would_block": true, "flagged": true, "last_seen": true}
+
+func sortWAFLogDomains(rows []wafDomainHits, col, direction string) {
+	var less func(a, b wafDomainHits) bool
+	switch col {
+	case "domain":
+		less = func(a, b wafDomainHits) bool { return a.Domain < b.Domain }
+	case "user":
+		less = func(a, b wafDomainHits) bool { return a.Owner < b.Owner }
+	case "blocked":
+		less = func(a, b wafDomainHits) bool { return a.Blocked < b.Blocked }
+	case "would_block":
+		less = func(a, b wafDomainHits) bool { return a.WouldBlock < b.WouldBlock }
+	case "flagged":
+		less = func(a, b wafDomainHits) bool { return a.Flagged < b.Flagged }
+	case "last_seen":
+		less = func(a, b wafDomainHits) bool { return a.LastSeen < b.LastSeen }
+	default:
+		return
+	}
+	sortBy(rows, direction, less)
+}
+
+var wafLogRuleSortKeys = map[string]bool{"rule": true, "reason": true, "hits": true, "blocked": true, "domains": true}
+
+func sortWAFLogRules(rows []wafRuleGroup, col, direction string) {
+	var less func(a, b wafRuleGroup) bool
+	switch col {
+	case "rule":
+		less = func(a, b wafRuleGroup) bool { return a.ID < b.ID }
+	case "reason":
+		less = func(a, b wafRuleGroup) bool { return a.Category < b.Category }
+	case "hits":
+		less = func(a, b wafRuleGroup) bool { return a.Count < b.Count }
+	case "blocked":
+		less = func(a, b wafRuleGroup) bool { return a.Blocked < b.Blocked }
+	case "domains":
+		less = func(a, b wafRuleGroup) bool { return len(a.Domains) < len(b.Domains) }
+	default:
+		return
+	}
+	sortBy(rows, direction, less)
+}
+
+var wafLogIPSortKeys = map[string]bool{"ip": true, "hits": true, "blocked": true}
+
+func sortWAFLogIPs(rows []wafIPHits, col, direction string) {
+	var less func(a, b wafIPHits) bool
+	switch col {
+	case "ip":
+		less = func(a, b wafIPHits) bool { return a.IP < b.IP }
+	case "hits":
+		less = func(a, b wafIPHits) bool { return a.Count < b.Count }
+	case "blocked":
+		less = func(a, b wafIPHits) bool { return a.Blocked < b.Blocked }
+	default:
+		return
+	}
+	sortBy(rows, direction, less)
+}
+
+var wafLogEventSortKeys = map[string]bool{"time": true, "domain": true, "ip": true, "request": true, "status": true, "result": true}
+
+func sortWAFLogEvents(rows []wafLogEvent, col, direction string) {
+	var less func(a, b wafLogEvent) bool
+	switch col {
+	case "time":
+		less = func(a, b wafLogEvent) bool { return a.Time < b.Time }
+	case "domain":
+		less = func(a, b wafLogEvent) bool { return a.Domain < b.Domain }
+	case "ip":
+		less = func(a, b wafLogEvent) bool { return a.IP < b.IP }
+	case "request":
+		less = func(a, b wafLogEvent) bool { return a.URI < b.URI }
+	case "status":
+		less = func(a, b wafLogEvent) bool { return a.Status < b.Status }
+	case "result":
+		less = func(a, b wafLogEvent) bool { return a.Result < b.Result }
+	default:
+		return
+	}
+	sortBy(rows, direction, less)
+}

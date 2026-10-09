@@ -12,44 +12,114 @@
     <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<form method="post" action="">
-  <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-<div x-data="{ searchQuery: '' }">
-    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
                     <h1 class="mb-1 text-xl font-bold">Web Firewall (Coraza)</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Manage <a href="https://openpanel.com/docs/admin/security/waf/" target="_blank" class="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">CorazaWAF<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg></a></h2>
-    </div>
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-
-            <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400"
-                    type="submit">Save settings</button>
-
                 </div>
             </div>
         </header>
     </div>
 
-  <div class="m-8">
+    {{template "waf_subnav" .}}
 
+  <div class="m-4 sm:m-8">
+
+    <dl class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+            <dt class="text-sm text-gray-500">Module</dt>
+            <dd class="mt-1 text-lg font-semibold">{{if eq .Status "on"}}Enabled{{else}}Disabled{{end}}</dd>
+        </div>
+        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+            <dt class="text-sm text-gray-500">Domains</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums">{{.TotalDomains}}</dd>
+            <dd class="mt-1 text-xs text-gray-500">{{index .Modes "On"}} protect · {{index .Modes "DetectionOnly"}} monitor · {{index .Modes "Off"}} off</dd>
+        </div>
+        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+            <dt class="text-sm text-gray-500">Rule sets</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums">{{.ActiveSets}} / {{.TotalSets}}</dd>
+            <dd class="mt-1 text-xs text-gray-500">{{.GlobalExcluded}} rules/tags disabled server-wide</dd>
+        </div>
+        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+            <dt class="text-sm text-gray-500">Recent requests stopped</dt>
+            <dd class="mt-1 text-lg font-semibold tabular-nums">{{.Report.Blocked}}</dd>
+            <dd class="mt-1 text-xs text-gray-500">{{.Report.WouldBlock}} would block · {{.Report.Flagged}} flagged</dd>
+        </div>
+    </dl>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+    <form id="waf-status-form" method="post" action="/security/waf">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
     <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
         <div>
             <h2 id="enable" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Enable</h2>
-            <p class="mt-1 text-sm leading-6 text-gray-500">Enable/disable CorazaWAF.</p>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Enable/disable CorazaWAF. Disabling turns WAF off on every domain.</p>
         </div>
         <div class="md:col-span-2">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
                 <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="status">Enable</label>
                     <div class="relative w-full mt-2">
-                        <select name="status" id="status" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2">
+                        <div class="mt-2 flex items-center gap-2">
+                        <select name="status" id="status" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
                             <option value="yes" {{if eq .Status "on"}}selected{{end}}>Enabled {{if eq .Status "on"}}(current){{end}}</option>
                             <option value="no" {{if eq .Status "off"}}selected{{end}}>Disabled {{if eq .Status "off"}}(current){{end}}</option>
                         </select>
+                        <button type="submit" class="relative inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 border-black bg-black text-white hover:bg-gray-800">Save</button>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    </form>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 id="crs" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">OWASP Core Rule Set</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Pull the latest CRS rules and app profiles, then reload the web server. Rule sets you disabled stay disabled.</p>
+        </div>
+        <div class="md:col-span-2 space-y-4">
+            {{if .Installed}}
+            {{$v := index .Installed 0}}
+            <p class="text-sm text-gray-700 dark:text-gray-300">Installed version: <code class="text-xs">{{$v.Hash}}</code> <span class="text-gray-500">· {{$v.Date}}</span></p>
+            {{if .Pending}}
+            <div>
+                <p class="mb-2 text-sm font-medium text-gray-900 dark:text-gray-50">Coming in this update</p>
+                <ul class="divide-y divide-gray-200 rounded border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
+                    {{range .Pending}}
+                    <li class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+                        <code class="text-xs text-gray-500">{{.Hash}}</code>
+                        <span class="text-xs text-gray-500">{{.Date}}</span>
+                        <span class="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300" title="{{.Subject}}">{{.Subject}}</span>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>
+            {{end}}
+            {{else}}
+            <p class="text-sm text-gray-500">OWASP CRS isn't installed yet, enable the module to download it.</p>
+            {{end}}
+            {{if .Installed}}
+            <form method="post" action="/security/waf" class="flex flex-wrap items-center gap-3">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                {{if gt .UpdatesBehind 0}}
+                <input type="hidden" name="action" value="update">
+                <span class="text-sm font-medium text-blue-700 dark:text-blue-400">{{.UpdatesBehind}} new change{{if gt .UpdatesBehind 1}}s{{end}} available</span>
+                <button type="submit" onclick="this.disabled=true;this.textContent='Updating...';this.form.submit();" class="inline-flex items-center rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900">Update rules</button>
+                {{else}}
+                <input type="hidden" name="action" value="check_updates">
+                <span class="text-sm text-gray-500">Up to date{{if .UpdatesChecked}} · checked {{.UpdatesChecked}}{{end}}</span>
+                <button type="submit" onclick="this.disabled=true;this.textContent='Checking...';this.form.submit();" class="inline-flex items-center rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900">Check for updates</button>
+                {{end}}
+                <a id="tour-waf-manage-rules" href="/security/waf/rules" class="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Manage Rules</a>
+            </form>
+            {{else}}
+            <a id="tour-waf-manage-rules" href="/security/waf/rules" class="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Manage Rules</a>
+            {{end}}
         </div>
     </div>
 
@@ -57,25 +127,93 @@
 
     <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
         <div>
-            <h2 id="sets" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Sets</h2>
-            <p class="mt-1 text-sm leading-6 text-gray-500">WAF rules sets.</p>
+            <h2 id="profiles" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">App profiles</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Official CRS exclusion plugins that users can turn on per domain to stop false blocks in popular apps.</p>
         </div>
-        <div class="md:col-span-2">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-                    <div class="relative w-full mt-2">
+        <div class="md:col-span-2 space-y-4">
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-200 text-left text-xs text-gray-900 dark:border-gray-800 dark:text-gray-50">
+                        <th class="py-2 pr-4 font-semibold">Profile</th>
+                        <th class="py-2 pr-4 font-semibold">Status</th>
+                        <th class="py-2 pr-4 font-semibold">Domains using it</th>
+                        <th class="py-2 font-semibold"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    {{range .Profiles}}
+                    <tr>
+                        <td class="py-2 pr-4 font-medium">{{.Name}}</td>
+                        <td class="py-2 pr-4">{{if .Installed}}<span class="text-emerald-700 dark:text-emerald-400">Installed</span>{{else}}<span class="text-yellow-700 dark:text-yellow-500">Missing</span>{{end}}</td>
+                        <td class="py-2 pr-4 tabular-nums">{{.Domains}}</td>
+                        <td class="py-2 text-right">
+                            <form method="post" action="/security/waf" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                <input type="hidden" name="action" value="redownload_profile">
+                                <input type="hidden" name="profile" value="{{.Key}}">
+                                <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">{{if .Installed}}Re-download{{else}}Download{{end}}</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            </div>
+            <form method="post" action="/security/waf">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <input type="hidden" name="action" value="install_profiles">
+                <button type="submit" class="inline-flex items-center rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900">Download missing profiles</button>
+            </form>
+        </div>
+    </div>
 
-<div class="sm:flex sm:items-center sm:space-x-2"><span class="group-data-[state=active]:text-gray-900 group-data-[state=active]:dark:text-gray-50">Active:</span><span class="hidden rounded bg-white px-2 py-1 text-xs font-semibold tabular-nums ring-1 ring-inset ring-gray-200 group-data-[state=active]:text-gray-700 dark:bg-[#090E1A] dark:ring-gray-800 group-data-[state=active]:dark:text-gray-300 sm:block">{{.ActiveSets}} / {{.TotalSets}}</span></div>
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
-<a id="tour-waf-manage-rules" href="/security/waf/rules" class="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Manage Rules</a>
-
-                    </div>
-                </div>
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 id="activity" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Most hit domains</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">From the newest {{.TailLines}} WAF log entries of each domain.</p>
+            <a href="/security/waf/logs" class="mt-2 inline-flex text-sm text-indigo-600 dark:text-indigo-500">View all logs</a>
+        </div>
+        <div class="md:col-span-2 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div>
+                <h3 class="mb-2 text-sm font-semibold">Domains</h3>
+                {{if .Report.Domains}}
+                <ul class="divide-y divide-gray-200 rounded border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
+                    {{range .Report.Domains}}
+                    <li class="flex items-center justify-between gap-3 px-3 py-2">
+                        <a href="/security/waf/logs/{{.Domain}}" class="min-w-0 truncate text-blue-600 hover:underline dark:text-blue-400">{{.Domain}}</a>
+                        <span class="shrink-0 text-xs tabular-nums text-gray-500"><span class="font-semibold text-red-700 dark:text-red-400">{{.Blocked}}</span> blocked · {{.Total}} total</span>
+                    </li>
+                    {{end}}
+                </ul>
+                {{else}}
+                <p class="text-sm text-gray-500">No WAF events logged yet.</p>
+                {{end}}
+            </div>
+            <div>
+                <h3 class="mb-2 text-sm font-semibold">Rules triggered most</h3>
+                {{if .Report.Rules}}
+                <ul class="divide-y divide-gray-200 rounded border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
+                    {{range .Report.Rules}}
+                    <li class="px-3 py-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <code class="text-xs">{{.ID}}</code>
+                            <span class="shrink-0 text-xs tabular-nums text-gray-500">{{.Count}} hits · {{len .Domains}} domains</span>
+                        </div>
+                        <p class="truncate text-xs text-gray-500" title="{{.Msg}}">{{.Category}}{{if .Msg}}: {{.Msg}}{{end}}</p>
+                    </li>
+                    {{end}}
+                </ul>
+                {{else}}
+                <p class="text-sm text-gray-500">No rules triggered yet.</p>
+                {{end}}
             </div>
         </div>
     </div>
 
   </div>
-</form>
 
     </main>
 

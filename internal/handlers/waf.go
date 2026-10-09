@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"bufio"
+	"database/sql"
 	"encoding/json"
 	"html"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 // WAF bundles the /security/waf and /security/waf/rules handlers.
 type WAF struct {
 	Sessions *auth.Manager
+	MySQL    *sql.DB
 }
 
 // WAFRulesDir is the hardcoded directory holding the CorazaWAF rule files.
@@ -115,6 +117,10 @@ func wafListRuleFiles() []string {
 	var files []string
 	for _, e := range entries {
 		name := e.Name()
+		// server-wide exclusions have their own section, toggling them like a rule set would be confusing
+		if name == wafGlobalExclusionsName {
+			continue
+		}
 		if strings.HasSuffix(name, ".conf") || strings.HasSuffix(name, ".conf.disabled") {
 			files = append(files, name)
 		}
@@ -147,6 +153,9 @@ func (wf *WAF) ServeWAFRules(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		ruleName := r.PostFormValue("rule_name")
 		action := r.PostFormValue("action")
+		if ruleName == "" && wf.handleGlobalRulesPOST(w, r, action) {
+			return
+		}
 
 		var matchedFile string
 		for _, f := range ruleFiles {
@@ -214,13 +223,17 @@ func (wf *WAF) ServeWAFRules(w http.ResponseWriter, r *http.Request) {
 	sortCol, sortDirection := readSort(r, wafRuleSortKeys)
 	sortWAFRules(rulesDetails, sortCol, sortDirection)
 
+	globalRules, globalTags := wafReadGlobalExclusions()
 	webtemplates.Render(w, "security_coraza_rules.html", mergeChrome(map[string]interface{}{
 		"SortCol":       sortCol,
 		"SortDirection": sortDirection,
 		"RulesDetails":  rulesDetails,
+		"GlobalRules":   globalRules,
+		"GlobalTags":    globalTags,
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, wf.Sessions),
 		"BulkActions":   WAFRulesBulkActions(),
+		"WAFTab":        "rules",
 	}, r, "Web Firewall Rules"))
 }
 
@@ -253,6 +266,9 @@ func (wf *WAF) ServeWAFStatus(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
+		if wf.handleStatusAction(w, r, r.PostFormValue("action")) {
+			return
+		}
 		enabledValue := strings.ToLower(r.PostFormValue("status"))
 		switch enabledValue {
 		case "yes":
@@ -296,12 +312,95 @@ func (wf *WAF) ServeWAFStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	domains, owners := wf.wafAllDomains()
+	modes := map[string]int{}
+	for _, d := range domains {
+		st, _ := wafReadDomainState(d)
+		modes[st.Engine]++
+	}
+	report := wafBuildReport(domains, owners, 0)
+	if len(report.Domains) > 5 {
+		report.Domains = report.Domains[:5]
+	}
+	if len(report.Rules) > 5 {
+		report.Rules = report.Rules[:5]
+	}
+	globalRules, globalTags := wafReadGlobalExclusions()
+	behind, checked := wafPendingUpdates(false)
+	checkedText := ""
+	if !checked.IsZero() {
+		checkedText = checked.Format("2006-01-02 15:04")
+	}
+
 	webtemplates.Render(w, "security_coraza_waf.html", mergeChrome(map[string]interface{}{
-		"Status":       status,
-		"ActiveSets":   confCount,
-		"InactiveSets": confDisabledCount,
-		"TotalSets":    totalCount,
-		"CSRFToken":    csrf.Token(r),
-		"Flashes":      auth.PopFlashes(w, r, wf.Sessions),
+		"Status":         status,
+		"ActiveSets":     confCount,
+		"InactiveSets":   confDisabledCount,
+		"TotalSets":      totalCount,
+		"TotalDomains":   len(domains),
+		"Modes":          modes,
+		"Report":         report,
+		"TailLines":      wafLogTailLines,
+		"Profiles":       wf.wafProfileRows(domains),
+		"Installed":      wafCRSHistory("1"),
+		"Pending":        wafCRSPending("5"),
+		"UpdatesBehind":  behind,
+		"UpdatesChecked": checkedText,
+		"GlobalExcluded": len(globalRules) + len(globalTags),
+		"CSRFToken":      csrf.Token(r),
+		"Flashes":        auth.PopFlashes(w, r, wf.Sessions),
+		"WAFTab":         "overview",
 	}, r, "Web Firewall (Coraza)"))
+}
+
+// handleStatusAction runs the CRS update and profile download buttons on /security/waf, handled reports whether action was one of them
+func (wf *WAF) handleStatusAction(w http.ResponseWriter, r *http.Request, action string) (handled bool) {
+	var out string
+	var err error
+	var done string
+	switch action {
+	case "update":
+		out, err = wafOpenCLIOutput("waf", "update")
+		done = "OWASP CRS and app profiles updated."
+	case "check_updates":
+		if behind, _ := wafPendingUpdates(true); behind > 0 {
+			auth.AddFlash(w, r, wf.Sessions, "New WAF rule updates are available.", "success")
+		} else {
+			auth.AddFlash(w, r, wf.Sessions, "WAF rules are up to date.", "success")
+		}
+		http.Redirect(w, r, "/security/waf", http.StatusSeeOther)
+		return true
+	case "install_profiles":
+		out, err = wafOpenCLIOutput("waf", "plugins", "install")
+		done = "Missing app profiles downloaded."
+	case "redownload_profile":
+		key := r.PostFormValue("profile")
+		known := false
+		for _, p := range wafProfileCatalog {
+			known = known || p.Key == key
+		}
+		if !known {
+			auth.AddFlash(w, r, wf.Sessions, "Error: unknown app profile.", "error")
+			http.Redirect(w, r, "/security/waf", http.StatusSeeOther)
+			return true
+		}
+		out, err = wafRedownloadProfile(key)
+		done = "App profile " + key + " downloaded again."
+		if err == nil {
+			caddyReloadRun()
+		}
+	default:
+		return false
+	}
+	if err != nil {
+		msg := "Error: " + err.Error()
+		if out != "" {
+			msg += ": " + wafFirstLines(out, 3)
+		}
+		auth.AddFlash(w, r, wf.Sessions, msg, "error")
+	} else {
+		auth.AddFlash(w, r, wf.Sessions, done, "success")
+	}
+	http.Redirect(w, r, "/security/waf", http.StatusSeeOther)
+	return true
 }

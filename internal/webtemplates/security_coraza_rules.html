@@ -12,12 +12,11 @@
     <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
     <header>
         <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
             <div class="grow">
                 <h1 class="mb-1 text-xl font-bold">Web Firewall Rules</h1>
-                <h2 class="text-sm font-medium text-slate-500">Manage Rule Sets.</h2>
             </div>
             <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
 
@@ -25,6 +24,8 @@
         </div>
     </header>
 </div>
+
+{{template "waf_subnav" .}}
 
     <div class="" x-data="{ searchQuery: '' }">
         <div class="space-y-3">
@@ -129,6 +130,31 @@
                     </tbody>
                 </table>
 {{template "bulk_bar" .}}
+</div>
+
+<div class="m-4 space-y-10 sm:m-8">
+
+    <section class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+        <div>
+            <h2 id="server-wide" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Disabled on all domains</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Rule IDs and tags turned off server-wide. Saved to RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf, which CRS updates leave alone.</p>
+        </div>
+        <form method="post" action="/security/waf/rules" class="md:col-span-2 space-y-4">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="action" value="global_exclusions">
+            <div>
+                <label for="global_rules" class="text-sm font-medium text-gray-900 dark:text-gray-50">Rule IDs</label>
+                <textarea id="global_rules" name="removed_rules" rows="2" placeholder="920350 942100" class="mt-2 block w-full rounded border px-2.5 py-2 font-mono shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:border-blue-500">{{range $i, $r := .GlobalRules}}{{if $i}} {{end}}{{$r}}{{end}}</textarea>
+                <p class="mt-1 text-xs text-gray-500">Separated by spaces. Scoring rules 949xxx, 959xxx and 980xxx can't be disabled.</p>
+            </div>
+            <div>
+                <label for="global_tags" class="text-sm font-medium text-gray-900 dark:text-gray-50">Tags</label>
+                <textarea id="global_tags" name="removed_tags" rows="2" placeholder="attack-xss language-java" class="mt-2 block w-full rounded border px-2.5 py-2 font-mono shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:border-blue-500">{{range $i, $t := .GlobalTags}}{{if $i}} {{end}}{{$t}}{{end}}</textarea>
+            </div>
+            <button type="submit" class="inline-flex items-center rounded border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 dark:bg-indigo-500 dark:text-gray-900">Save</button>
+        </form>
+    </section>
+
 </div>
 
                 <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>

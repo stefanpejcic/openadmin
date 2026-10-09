@@ -352,8 +352,14 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 	"POST /security/blacklist-useragents": func(r *http.Request) string { return "Edited blocked user agents" },
 	"POST /security/waf":                  func(r *http.Request) string { return "Changed WAF settings" },
 	"POST /security/waf/rules":            func(r *http.Request) string { return "Changed WAF rules" },
-	"POST /configservercsf/iframe/":       func(r *http.Request) string { return "Changed ConfigServer Firewall" },
-	"POST /imav/{path...}":                func(r *http.Request) string { return "Changed ImunifyAV" },
+	"POST /security/waf/rules/{target}": func(r *http.Request) string {
+		return actJoin("Changed WAF rules for", actPath(r, "target"))
+	},
+	"POST /security/waf/logs/{target}": func(r *http.Request) string {
+		return actJoin("Cleared WAF logs for", actPath(r, "target"))
+	},
+	"POST /configservercsf/iframe/": func(r *http.Request) string { return "Changed ConfigServer Firewall" },
+	"POST /imav/{path...}":          func(r *http.Request) string { return "Changed ImunifyAV" },
 
 	// notifications
 	"POST /notifications/delete/{line_number}":       func(r *http.Request) string { return "Deleted a notification" },

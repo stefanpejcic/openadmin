@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow min-w-0">
+                <h1 class="mb-1 truncate text-xl font-bold">Web Firewall Rules: {{.Target}}</h1>
+            </div>
+            <div class="flex flex-none items-center justify-center gap-2 sm:justify-end">
+                <a href="/security/waf/logs/{{.Target}}" class="inline-flex items-center rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900">View logs</a>
+            </div>
+        </div>
+    </header>
+</div>
+
+{{template "waf_subnav" .}}
+
+<div class="m-4 space-y-10 sm:m-8">
+
+{{if eq .Kind "domain"}}
+{{$d := index .Rows 0}}
+    <section class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+        <div>
+            <h2 class="font-semibold text-gray-900 dark:text-gray-50">Protection</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Monitor only logs attacks without blocking them, useful to check for false blocks first.</p>
+            <dl class="mt-4 space-y-2 text-sm">
+                <div class="flex gap-2"><dt class="text-gray-500">Current mode:</dt><dd>{{template "waf_engine_badge" $d.Engine}}</dd></div>
+                <div class="flex gap-2"><dt class="text-gray-500">Level:</dt><dd class="capitalize">{{$d.Level}}</dd></div>
+                <div class="flex flex-wrap gap-2"><dt class="text-gray-500">App profiles:</dt><dd>{{if $d.Profiles}}{{range $i, $p := $d.Profiles}}{{if $i}}, {{end}}{{$p}}{{end}}{{else}}none{{end}}</dd></div>
+            </dl>
+            <p class="mt-2 text-xs text-gray-500">Level and app profiles are picked by the user in OpenPanel.</p>
+        </div>
+        <form method="post" action="/security/waf/rules/{{.Target}}" class="md:col-span-2 space-y-4">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="action" value="save">
+            <div>
+                <label for="engine" class="text-sm font-medium text-gray-900 dark:text-gray-50">Mode</label>
+                <select id="engine" name="engine" class="mt-2 block w-full rounded border px-3 py-2 shadow-sm outline-none sm:max-w-xs sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                    <option value="On" {{if eq $d.Engine "On"}}selected{{end}}>Protect: block attacks</option>
+                    <option value="DetectionOnly" {{if eq $d.Engine "DetectionOnly"}}selected{{end}}>Monitor only: log, don't block</option>
+                    <option value="Off" {{if eq $d.Engine "Off"}}selected{{end}}>Off</option>
+                </select>
+            </div>
+            <div>
+                <label for="removed_rules" class="text-sm font-medium text-gray-900 dark:text-gray-50">Disabled rule IDs</label>
+                <textarea id="removed_rules" name="removed_rules" rows="2" placeholder="920350 942100" class="mt-2 block w-full rounded border px-2.5 py-2 font-mono shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">{{range $i, $r := $d.RemovedRules}}{{if $i}} {{end}}{{$r}}{{end}}</textarea>
+                <p class="mt-1 text-xs text-gray-500">Separated by spaces. The user sees and can change these in OpenPanel too.</p>
+            </div>
+            <div>
+                <label for="removed_tags" class="text-sm font-medium text-gray-900 dark:text-gray-50">Disabled tags</label>
+                <textarea id="removed_tags" name="removed_tags" rows="2" placeholder="attack-xss" class="mt-2 block w-full rounded border px-2.5 py-2 font-mono shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">{{range $i, $t := $d.RemovedTags}}{{if $i}} {{end}}{{$t}}{{end}}</textarea>
+            </div>
+            <button type="submit" class="inline-flex items-center rounded border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 dark:bg-indigo-500 dark:text-gray-900">Save</button>
+        </form>
+    </section>
+{{else}}
+    <section class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+        <div>
+            <h2 class="font-semibold text-gray-900 dark:text-gray-50">All domains of {{.Target}}</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Applies to the user's current domains. Domains added later start with the server defaults.</p>
+        </div>
+        <div class="md:col-span-2 space-y-6">
+            <form method="post" action="/security/waf/rules/{{.Target}}" class="flex flex-wrap items-end gap-3">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <input type="hidden" name="action" value="engine">
+                <div>
+                    <label for="engine" class="text-sm font-medium text-gray-900 dark:text-gray-50">Mode</label>
+                    <select id="engine" name="engine" class="mt-2 block rounded border px-3 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                        <option value="On">Protect: block attacks</option>
+                        <option value="DetectionOnly">Monitor only: log, don't block</option>
+                        <option value="Off">Off</option>
+                    </select>
+                </div>
+                <button type="submit" class="inline-flex items-center rounded border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 dark:bg-indigo-500 dark:text-gray-900">Set for all domains</button>
+            </form>
+            <form method="post" action="/security/waf/rules/{{.Target}}" class="flex flex-wrap items-end gap-3">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <div>
+                    <label for="rule_id" class="text-sm font-medium text-gray-900 dark:text-gray-50">Rule ID</label>
+                    <input id="rule_id" name="rule_id" inputmode="numeric" pattern="[0-9]+" required placeholder="942100" class="mt-2 block w-40 rounded border px-2.5 py-2 font-mono shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                </div>
+                <button type="submit" name="action" value="disable_rule" class="inline-flex items-center rounded border border-transparent bg-red-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700">Disable on all domains</button>
+                <button type="submit" name="action" value="enable_rule" class="inline-flex items-center rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900">Enable on all domains</button>
+            </form>
+        </div>
+    </section>
+
+    <section>
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-gray-200 text-left text-xs text-gray-900 dark:border-gray-800 dark:text-gray-50">
+                    <th class="py-2 pr-4 font-semibold">Domain</th>
+                    <th class="py-2 pr-4 font-semibold">Mode</th>
+                    <th class="py-2 pr-4 font-semibold">Level</th>
+                    <th class="py-2 pr-4 font-semibold">Disabled rules</th>
+                    <th class="py-2 pr-4 font-semibold">Disabled tags</th>
+                    <th class="py-2 font-semibold"><span class="sr-only">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Rows}}
+                <tr>
+                    <td class="py-2 pr-4 font-medium">{{.Domain}}</td>
+                    <td class="py-2 pr-4">{{template "waf_engine_badge" .Engine}}</td>
+                    <td class="py-2 pr-4 capitalize">{{.Level}}</td>
+                    <td class="py-2 pr-4 font-mono text-xs">{{range $i, $r := .RemovedRules}}{{if $i}} {{end}}{{$r}}{{else}}-{{end}}</td>
+                    <td class="py-2 pr-4 font-mono text-xs">{{range $i, $t := .RemovedTags}}{{if $i}} {{end}}{{$t}}{{else}}-{{end}}</td>
+                    <td class="py-2 whitespace-nowrap text-right space-x-3">
+                        <a href="/security/waf/rules/{{.Domain}}" class="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">Manage</a>
+                        <a href="/security/waf/logs/{{.Domain}}" class="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400">Logs</a>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        </div>
+    </section>
+{{end}}
+
+    {{if or .GlobalRules .GlobalTags}}
+    <p class="text-sm text-gray-500">Also disabled on all domains: <span class="font-mono text-xs">{{range .GlobalRules}}{{.}} {{end}}{{range .GlobalTags}}{{.}} {{end}}</span> <a href="/security/waf/rules#server-wide" class="text-indigo-600 dark:text-indigo-500">Change</a></p>
+    {{end}}
+
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

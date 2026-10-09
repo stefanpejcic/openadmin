@@ -57,6 +57,12 @@ func newWAFTestServer(t *testing.T, wf *WAF) (*httptest.Server, *http.Client) {
 	mux.HandleFunc("GET /security/waf/rules", wf.ServeWAFRules)
 	mux.HandleFunc("POST /security/waf/rules", wf.ServeWAFRules)
 	mux.HandleFunc("GET /security/waf/view-rules", wf.ServeWAFViewRules)
+	mux.HandleFunc("GET /security/waf/domains", wf.ServeWAFDomains)
+	mux.HandleFunc("GET /security/waf/rules/{target}", wf.ServeWAFTargetRules)
+	mux.HandleFunc("POST /security/waf/rules/{target}", wf.ServeWAFTargetRules)
+	mux.HandleFunc("GET /security/waf/logs", wf.ServeWAFLogs)
+	mux.HandleFunc("GET /security/waf/logs/{target}", wf.ServeWAFLogs)
+	mux.HandleFunc("POST /security/waf/logs/{target}", wf.ServeWAFLogs)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
 		auth.LoginUser(w, r, sessions, caller, "203.0.113.1")
 	})

@@ -250,15 +250,7 @@ func (rs *Resellers) runAction(action, username, password string, r *http.Reques
 		if !resellersEnabled() {
 			return false, "Resellers are disabled. Enable them on this page first."
 		}
-	    return runOpenCLI(adminCommandError, "opencli", "admin", "new", username, password, "--reseller")
-		hash, err := auth.GeneratePasswordHash(password)
-		if err != nil {
-			return false, "Failed creating a new reseller user: " + username
-		}
-		if err := rs.DB.CreateUser(username, hash, "reseller"); err != nil {
-			return false, "Failed creating a new reseller user: " + username
-		}
-		return true, "Successfully created a new reseller user: " + username
+		return runOpenCLI(adminCommandError, "opencli", "admin", "new", username, password, "--reseller")
 
 	case "rename_user":
 		return runOpenCLI(adminCommandError, "opencli", "admin", "rename", username, r.FormValue("new_username"))
