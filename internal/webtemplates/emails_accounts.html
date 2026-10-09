@@ -125,8 +125,9 @@
 
                             <!-- Actions dropdown -->
                             <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap text-end">
-<div class="relative" x-data="{ open: false }" @click.outside="open = false">
-    <button @click="open = !open"
+<div class="relative" x-data="{ open: false, pos: '' }" @click.outside="open = false" @scroll.window="open = false" @resize.window="open = false">
+    <!-- fixed position so the table's overflow wrapper can't clip the menu -->
+    <button x-ref="btn" @click="const r = $refs.btn.getBoundingClientRect(); pos = (r.bottom + 200 > window.innerHeight ? 'bottom:' + (window.innerHeight - r.top + 4) : 'top:' + (r.bottom + 4)) + 'px;right:' + (window.innerWidth - r.right) + 'px'; open = !open"
             class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer"
             type="button">
         <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
@@ -134,8 +135,8 @@
         </svg>
     </button>
 
-    <div x-show="open" x-cloak x-transition
-         class="absolute right-0 z-50 rounded border p-1 shadow-xl shadow-black/[2.5%] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 min-w-40 text-left cursor-pointer">
+    <div x-show="open" x-cloak x-transition :style="pos"
+         class="fixed z-50 rounded border p-1 shadow-xl shadow-black/[2.5%] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 min-w-40 text-left cursor-pointer">
         <!-- aria-labelledby is intentionally left blank here: `email` is only
              an Alpine x-for loop variable, not an actual element id, so
              there's nothing valid to point it at. (Note: this comment
