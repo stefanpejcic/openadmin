@@ -139,9 +139,10 @@ func TestCaddyfileDomainSSLInfoAutoWhenNoTLSDirective(t *testing.T) {
 	if err := os.WriteFile(caddyfilePath, []byte(sampleCaddyfile), 0644); err != nil {
 		t.Fatal(err)
 	}
-	orig := sslMainCaddyfilePath
+	orig, origStorage := sslMainCaddyfilePath, sslCaddyStorageDir
 	sslMainCaddyfilePath = caddyfilePath
-	t.Cleanup(func() { sslMainCaddyfilePath = orig })
+	sslCaddyStorageDir = filepath.Join(dir, "ssl")
+	t.Cleanup(func() { sslMainCaddyfilePath, sslCaddyStorageDir = orig, origStorage })
 
 	setting, keys, found := caddyfileDomainSSLInfo("example.net")
 	if !found {
@@ -152,6 +153,23 @@ func TestCaddyfileDomainSSLInfoAutoWhenNoTLSDirective(t *testing.T) {
 	}
 	if keys != "" {
 		t.Fatalf("expected no keys, got %q", keys)
+	}
+
+	// local CA cert is the fallback, the letsencrypt one wins once it exists
+	localDir := filepath.Join(sslCaddyStorageDir, "local", "example.net")
+	os.MkdirAll(localDir, 0755)
+	os.WriteFile(filepath.Join(localDir, "example.net.crt"), []byte("LOCAL CERT\n"), 0644)
+	os.WriteFile(filepath.Join(localDir, "example.net.key"), []byte("LOCAL KEY\n"), 0644)
+	if _, keys, _ := caddyfileDomainSSLInfo("example.net"); keys != "LOCAL CERT\nLOCAL KEY" {
+		t.Fatalf("expected local CA cert and key, got %q", keys)
+	}
+
+	leDir := filepath.Join(sslCaddyStorageDir, "acme-v02.api.letsencrypt.org-directory", "example.net")
+	os.MkdirAll(leDir, 0755)
+	os.WriteFile(filepath.Join(leDir, "example.net.crt"), []byte("LE CERT\n"), 0644)
+	os.WriteFile(filepath.Join(leDir, "example.net.key"), []byte("LE KEY\n"), 0644)
+	if _, keys, _ := caddyfileDomainSSLInfo("example.net"); keys != "LE CERT\nLE KEY" {
+		t.Fatalf("expected letsencrypt cert and key, got %q", keys)
 	}
 }
 

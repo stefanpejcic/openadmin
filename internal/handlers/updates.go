@@ -35,6 +35,11 @@ var (
 	UpdatesConfigFilePath = "/etc/openpanel/openpanel/conf/openpanel.config"
 	UpdatesEnvPath        = "/root/.env"
 	UpdatesLogDir         = "/var/log/openpanel/updates/"
+	// live output of the last "update now" run, tailed by the settings page
+	UpdateNowLogPath = "/tmp/openpanel_update_now.log"
+	UpdateNowPIDFile = "/tmp/openpanel_update_now.pid"
+	// update.sh flocks this, containers it restarts inherit the fd and keep it locked forever
+	UpdateLockPath = "/var/lock/openpanel_update.lock"
 )
 
 var updatesPreferenceMap = map[string]map[string]string{
@@ -120,8 +125,25 @@ var updatesComposeUpRun = func() error {
 
 var updatesUpdateNowRun = func() error {
 	// --no-restart leaves both services running and just sets the restart-needed flags
-	_, err := startDetached("openpanel-update", "", []string{"timeout", "600s", "opencli", "update", "--force", "--no-restart"})
-	return err
+	// a fresh file means the stale holders don't block this run
+	if err := os.Remove(UpdateLockPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	pid, err := startDetached("openpanel-update", UpdateNowLogPath, []string{"timeout", "600s", "opencli", "update", "--force", "--no-restart"})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(UpdateNowPIDFile, []byte(strconv.Itoa(pid)), 0644)
+}
+
+// updateNowRunning is true while the last started update process is still alive
+func updateNowRunning() bool {
+	raw, err := os.ReadFile(UpdateNowPIDFile)
+	if err != nil {
+		return false
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
+	return err == nil && processAlive(pid)
 }
 
 // fetchDockerTags does a plain lexicographic string sort descending (not
@@ -295,6 +317,22 @@ func (u *Updates) handleDockerTagsPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/settings/updates", http.StatusSeeOther)
 }
 
+// currentPanelVersion re-reads .env since updates run with --no-restart and the startup value goes stale
+func (u *Updates) currentPanelVersion() string {
+	raw, err := os.ReadFile(UpdatesEnvPath)
+	if err != nil {
+		return u.PanelVersion
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if v, ok := strings.CutPrefix(strings.TrimSpace(line), "VERSION="); ok {
+			if v = strings.Trim(v, `"' `); v != "" {
+				return v
+			}
+		}
+	}
+	return u.PanelVersion
+}
+
 // writeEnvVersion rewrites the VERSION= line in the .env file: replace
 // the existing line if present, append one if not, create the file fresh
 // if it doesn't exist at all.
@@ -326,12 +364,40 @@ func writeEnvVersion(version string) error {
 
 // ServeUpdateNow handles POST /settings/updates/update_now.
 func (u *Updates) ServeUpdateNow(w http.ResponseWriter, r *http.Request) {
+	// the settings page calls this via fetch and tails the output instead of reloading
+	if strings.Contains(r.Header.Get("Accept"), "application/json") {
+		if updateNowRunning() {
+			writeJSONStatus(w, http.StatusConflict, map[string]interface{}{"success": false, "error": "An update is already running."})
+			return
+		}
+		if err := updatesUpdateNowRun(); err != nil {
+			writeJSONStatus(w, http.StatusInternalServerError, map[string]interface{}{"success": false, "error": "Failed to start the update process. Details: " + err.Error()})
+			return
+		}
+		writeJSON(w, map[string]interface{}{"success": true})
+		return
+	}
 	if err := updatesUpdateNowRun(); err != nil {
 		auth.AddFlash(w, r, u.Sessions, "Error: Failed to start the update process. Details: "+err.Error(), "error")
 	} else {
 		auth.AddFlash(w, r, u.Sessions, "Update process started successfully. OpenPanel and OpenAdmin won't be restarted automatically, restart them once the update log shows it's completed.", "info")
 	}
 	http.Redirect(w, r, "/settings/updates", http.StatusSeeOther)
+}
+
+// ServeUpdateNowStatus handles GET /settings/updates/update_now/status.
+func (u *Updates) ServeUpdateNowStatus(w http.ResponseWriter, r *http.Request) {
+	output := ""
+	if raw, err := os.ReadFile(UpdateNowLogPath); err == nil {
+		output = string(raw)
+	}
+	status := "idle"
+	if updateNowRunning() {
+		status = "running"
+	} else if _, err := os.Stat(UpdateNowPIDFile); err == nil {
+		status = "finished"
+	}
+	writeJSON(w, map[string]string{"status": status, "output": output})
 }
 
 // ServeUpdates handles GET/POST /settings/updates.
@@ -370,20 +436,23 @@ func (u *Updates) ServeUpdates(w http.ResponseWriter, r *http.Request) {
 	// so a just-saved preference change is reflected immediately.
 	configData := config.Load(UpdatesConfigFilePath)
 	latestVersion := getLatestVersion()
+	panelVersion := u.currentPanelVersion()
 	updateLogs := getOpUpdateLogs()
 
 	webtemplates.Render(w, "settings_updates.html", mergeChrome(map[string]interface{}{
-		"PanelVersion":  u.PanelVersion,
-		"LatestVersion": latestVersion,
-		"Autoupdate":    configData.Get("PANEL", "autoupdate", ""),
-		"Autopatch":     configData.Get("PANEL", "autopatch", ""),
-		"UpdateLogs":    updateLogs,
+		"PanelVersion": panelVersion,
+		// separate key since mergeChrome overwrites PanelVersion with the startup value
+		"InstalledVersion": panelVersion,
+		"LatestVersion":    latestVersion,
+		"Autoupdate":       configData.Get("PANEL", "autoupdate", ""),
+		"Autopatch":        configData.Get("PANEL", "autopatch", ""),
+		"UpdateLogs":       updateLogs,
 		// A naive lexicographic STRING comparison here, instead of a
 		// semantic version comparison (e.g. "9.0" > "10.0" as strings), could
 		// hide or show the "Update Now" button incorrectly around version 10+,
 		// so this uses the same numeric per-component comparison as
 		// getLatestVersion.
-		"ShowUpdateNow": compareVersionTags(latestVersion, u.PanelVersion) > 0,
+		"ShowUpdateNow": compareVersionTags(latestVersion, panelVersion) > 0,
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, u.Sessions),
 	}, r, "Update Settings"))

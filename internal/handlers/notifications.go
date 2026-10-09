@@ -196,6 +196,10 @@ func newNotificationRow(n Notification, index int) notificationRow {
 			row.LinkHref = "/settings/updates/log/?log_name=" + filepath.Base(d.LogFile)
 		}
 	}
+	if row.LinkHref == "" && n.Title == "New OpenPanel update is available" {
+		row.LinkText = "Update Now"
+		row.LinkHref = "/settings/updates#update-now"
+	}
 	if until, snoozed := currentNotificationSnooze(n.Title); snoozed {
 		row.Snoozed = true
 		row.SnoozedUntil = until.Format("Jan 2, 15:04")

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -8,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -55,6 +57,7 @@ func newUpdatesTestServer(t *testing.T, u *Updates) (*httptest.Server, *http.Cli
 	mux.HandleFunc("GET /api/docker-tags", u.ServeDockerTags)
 	mux.HandleFunc("POST /api/docker-tags", u.ServeDockerTags)
 	mux.HandleFunc("POST /settings/updates/update_now", u.ServeUpdateNow)
+	mux.HandleFunc("GET /settings/updates/update_now/status", u.ServeUpdateNowStatus)
 	mux.HandleFunc("GET /settings/updates", u.ServeUpdates)
 	mux.HandleFunc("POST /settings/updates", u.ServeUpdates)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
@@ -350,6 +353,60 @@ func TestServeUpdateNowSuccessAndFailure(t *testing.T) {
 	t.Cleanup(func() { updatesUpdateNowRun = origRun })
 }
 
+func TestServeUpdateNowJSONAndStatus(t *testing.T) {
+	dir := t.TempDir()
+	origLog, origPID, origRun := UpdateNowLogPath, UpdateNowPIDFile, updatesUpdateNowRun
+	UpdateNowLogPath = filepath.Join(dir, "update.log")
+	UpdateNowPIDFile = filepath.Join(dir, "update.pid")
+	t.Cleanup(func() { UpdateNowLogPath, UpdateNowPIDFile, updatesUpdateNowRun = origLog, origPID, origRun })
+
+	// fake a run that's still alive by pointing the pid file at ourselves
+	updatesUpdateNowRun = func() error {
+		os.WriteFile(UpdateNowLogPath, []byte("pulling images\n"), 0644)
+		return os.WriteFile(UpdateNowPIDFile, []byte(strconv.Itoa(os.Getpid())), 0644)
+	}
+	srv, client := newUpdatesTestServer(t, &Updates{})
+
+	getStatus := func() map[string]string {
+		resp, err := client.Get(srv.URL + "/settings/updates/update_now/status")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var out map[string]string
+		json.NewDecoder(resp.Body).Decode(&out)
+		return out
+	}
+	if st := getStatus(); st["status"] != "idle" {
+		t.Fatalf("expected idle before start, got %v", st)
+	}
+
+	post := func() *http.Response {
+		req, _ := http.NewRequest("POST", srv.URL+"/settings/updates/update_now", nil)
+		req.Header.Set("Accept", "application/json")
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp
+	}
+	if resp := post(); resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 on start, got %d", resp.StatusCode)
+	}
+	if st := getStatus(); st["status"] != "running" || st["output"] != "pulling images\n" {
+		t.Fatalf("expected running with output, got %v", st)
+	}
+	if resp := post(); resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 while already running, got %d", resp.StatusCode)
+	}
+
+	os.WriteFile(UpdateNowPIDFile, []byte("0"), 0644)
+	if st := getStatus(); st["status"] != "finished" {
+		t.Fatalf("expected finished once the process is gone, got %v", st)
+	}
+}
+
 func TestServeUpdatesPostInvalidPreferenceFlashesInsteadOfCrashing(t *testing.T) {
 	withScratchUpdatesPaths(t)
 	os.WriteFile(UpdatesConfigFilePath, []byte("[PANEL]\nautoupdate=on\nautopatch=on\n"), 0644)
@@ -488,6 +545,34 @@ func TestServeUpdatesGetShowUpdateNowUsesNumericComparison(t *testing.T) {
 	resp.Body.Close()
 	if strings.Contains(string(body), "Start update to 9.0") {
 		t.Fatalf("expected the numeric comparison to correctly hide the update-now button, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeUpdatesGetUsesEnvVersionAfterUpdateWithoutRestart(t *testing.T) {
+	withScratchUpdatesPaths(t)
+	os.WriteFile(UpdatesConfigFilePath, []byte("[PANEL]\nautoupdate=on\nautopatch=on\n"), 0644)
+	os.WriteFile(UpdatesEnvPath, []byte("FOO=bar\nVERSION=\"10.1\"\n"), 0644)
+
+	origHub := updatesDockerHubTagsRun
+	updatesDockerHubTagsRun = func() ([]string, error) { return []string{"10.1"}, nil }
+	t.Cleanup(func() { updatesDockerHubTagsRun = origHub })
+
+	// startup saw 10.0, the update has since bumped .env to 10.1
+	u := &Updates{PanelVersion: "10.0"}
+	srv, client := newUpdatesTestServer(t, u)
+
+	resp, err := client.Get(srv.URL + "/settings/updates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	if strings.Contains(got, "Start update to 10.1") {
+		t.Fatalf("expected no update button once .env is on the latest version, got %s", truncate(got))
+	}
+	if !strings.Contains(got, `<div id="installed_version" class="relative w-full mt-2">10.1`) {
+		t.Fatalf("expected installed version from .env, got %s", truncate(got))
 	}
 }
 

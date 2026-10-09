@@ -185,6 +185,37 @@ func TestServeLimitsGetHTML(t *testing.T) {
 	}
 }
 
+func TestServeLimitsTimezoneRendersAsDropdown(t *testing.T) {
+	path := withScratchGlobalEnvPath(t)
+	os.WriteFile(path, []byte("BIND_TIMEZONE=\"America/New_York\"\nNGINX_TIMEZONE=\"Mars/Base\"\n"), 0644)
+	orig := AllTimezones
+	AllTimezones = func() []string { return []string{"America/New_York", "Europe/Belgrade"} }
+	t.Cleanup(func() { AllTimezones = orig })
+
+	srv, client := newLimitsTestServer(t, &Limits{})
+	resp, err := client.Get(srv.URL + "/services/limits")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	for _, want := range []string{
+		`<select name="BIND_TIMEZONE"`,
+		`<option value="America/New_York" selected>America/New_York</option>`,
+		`<option value="Europe/Belgrade" >Europe/Belgrade</option>`,
+		// unknown values stay selected rather than being replaced
+		`<option value="Mars/Base" selected>Mars/Base</option>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
+		}
+	}
+	if strings.Contains(got, `<input type="text" name="BIND_TIMEZONE"`) {
+		t.Fatalf("expected no text input for the timezone, got %s", truncate(got))
+	}
+}
+
 func TestServeLimitsGetJSON(t *testing.T) {
 	path := withScratchGlobalEnvPath(t)
 	os.WriteFile(path, []byte("NGINX_CPU=\"1.5\"\n"), 0644)

@@ -114,6 +114,25 @@ func TestNotificationsViewRendersHTMLForEachMessageKind(t *testing.T) {
 	}
 }
 
+func TestNotificationsUpdateAvailableLinksToUpdateNow(t *testing.T) {
+	path := withScratchNotificationsLog(t)
+	os.WriteFile(path, []byte(`{"time":"2026-01-01 10:00:00","status":"unread","severity":"info","category":"update","title":"New OpenPanel update is available","message":"Installed version: 2.0.13 | Available version: 2.0.14"}`+"\n"), 0644)
+
+	n := &Notifications{Sessions: auth.NewManager("test-secret", false)}
+	srv := httptest.NewServer(newNotificationsMux(n))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), `<a href="/settings/updates#update-now" class="ml-1 text-blue-600 underline">Update Now</a>`) {
+		t.Fatalf("expected Update Now link, got %s", truncate(string(body)))
+	}
+}
+
 func TestNotificationsDeleteSpecificLine(t *testing.T) {
 	path := withScratchNotificationsLog(t)
 	os.WriteFile(path, []byte("line1\nline2\nline3\n"), 0644)

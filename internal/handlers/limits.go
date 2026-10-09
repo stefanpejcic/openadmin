@@ -4,6 +4,7 @@ package handlers
 import (
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 
@@ -81,6 +82,8 @@ type limitsRow struct {
 	FieldName string
 	Label     string
 	Value     string
+	// set for *_TIMEZONE keys so they render as a dropdown like /server/timezone
+	Timezones []string
 }
 
 type limitsGroup struct {
@@ -102,6 +105,7 @@ func buildLimitsView(groups map[string]map[string]string) []limitsGroup {
 	}
 	sort.Strings(keys)
 
+	var zones []string
 	view := make([]limitsGroup, 0, len(keys))
 	for _, k := range keys {
 		sub := groups[k]
@@ -113,7 +117,18 @@ func buildLimitsView(groups map[string]map[string]string) []limitsGroup {
 
 		rows := make([]limitsRow, 0, len(subkeys))
 		for _, sk := range subkeys {
-			rows = append(rows, limitsRow{FieldName: k + "_" + sk, Label: sk, Value: sub[sk]})
+			row := limitsRow{FieldName: k + "_" + sk, Label: sk, Value: sub[sk]}
+			if strings.HasSuffix(sk, "TIMEZONE") {
+				if zones == nil {
+					zones = AllTimezones()
+				}
+				row.Timezones = zones
+				// keep a value that isn't in the zoneinfo list selectable instead of silently swapping it
+				if row.Value != "" && !slices.Contains(zones, row.Value) {
+					row.Timezones = append([]string{row.Value}, zones...)
+				}
+			}
+			rows = append(rows, row)
 		}
 		view = append(view, limitsGroup{Name: k, Rows: rows})
 	}

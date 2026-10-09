@@ -25,6 +25,8 @@ import (
 var (
 	sslMainCaddyfilePath = "/etc/openpanel/caddy/Caddyfile"
 	sslCustomCaddySSLDir = "/etc/openpanel/caddy/ssl/custom"
+	// where caddy keeps the certs it issues itself
+	sslCaddyStorageDir = "/etc/openpanel/caddy/ssl"
 )
 
 // domainConfMissingOrEmpty reports whether domainName has no (or an empty)
@@ -198,7 +200,7 @@ func caddyfileDomainSSLInfo(domainName string) (currentSetting, keys string, fou
 
 	dir, hasTLS := findTLSDirective(lines, block.headerLine+1, block.closeLine-1)
 	if !hasTLS {
-		return "autossl", "", true
+		return "autossl", caddyAutoCertKeys(domainName), true
 	}
 
 	if dir.startLine == dir.endLine {
@@ -211,7 +213,24 @@ func caddyfileDomainSSLInfo(domainName string) (currentSetting, keys string, fou
 			}
 		}
 	}
-	return "autossl", "", true
+	return "autossl", caddyAutoCertKeys(domainName), true
+}
+
+// caddyAutoCertKeys reads the cert caddy issued for domainName, same lookup as opencli domains-ssl info
+func caddyAutoCertKeys(domainName string) string {
+	for _, issuer := range []string{"acme-v02.api.letsencrypt.org-directory", "local"} {
+		dir := filepath.Join(sslCaddyStorageDir, issuer, domainName)
+		certBytes, err := os.ReadFile(filepath.Join(dir, domainName+".crt"))
+		if err != nil {
+			continue
+		}
+		keys := strings.TrimSpace(string(certBytes))
+		if keyBytes, err := os.ReadFile(filepath.Join(dir, domainName+".key")); err == nil {
+			keys += "\n" + strings.TrimSpace(string(keyBytes))
+		}
+		return keys
+	}
+	return ""
 }
 
 // applyCaddyfileCustomSSL writes the pasted cert/key content under

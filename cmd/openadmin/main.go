@@ -788,6 +788,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/docker-tags", auth.RequireAdmin(sessions, authOpts, updates.ServeDockerTags))
 	mux.HandleFunc("POST /api/docker-tags", auth.RequireAdmin(sessions, authOpts, updates.ServeDockerTags))
 	mux.HandleFunc("POST /settings/updates/update_now", auth.RequireAdmin(sessions, authOpts, updates.ServeUpdateNow))
+	mux.HandleFunc("GET /settings/updates/update_now/status", auth.RequireAdmin(sessions, authOpts, updates.ServeUpdateNowStatus))
 	mux.HandleFunc("GET /settings/updates", auth.RequireAdmin(sessions, authOpts, updates.ServeUpdates))
 	mux.HandleFunc("POST /settings/updates", auth.RequireAdmin(sessions, authOpts, updates.ServeUpdates))
 	mux.HandleFunc("GET /features", auth.RequireLogin(sessions, authOpts, features.ServeFeatures))
