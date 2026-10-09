@@ -134,8 +134,9 @@ func newResellersTestServer2(t *testing.T, rs *Resellers, role string) (*httptes
 
 func TestServeResellersPostCreate(t *testing.T) {
 	withScratchResellersConfigDir(t)
+	argsLog := withFakeResellerOpenCLI(t)
 	rs := &Resellers{}
-	srv, client, db := newResellersTestServer(t, rs, "admin")
+	srv, client, _ := newResellersTestServer(t, rs, "admin")
 
 	resp, err := client.PostForm(srv.URL+"/resellers", url.Values{
 		"action": {"create"}, "username": {"newreseller"}, "password": {"secret123"},
@@ -148,13 +149,21 @@ func TestServeResellersPostCreate(t *testing.T) {
 	if !strings.Contains(string(body), "Successfully created a new reseller user: newreseller") {
 		t.Fatalf("expected success flash without 'Success:' prefix, got %s", truncate(string(body)))
 	}
-	u, err := db.UserByUsername("newreseller")
-	if err != nil {
-		t.Fatalf("expected reseller created: %v", err)
+	args, _ := os.ReadFile(argsLog)
+	if got := strings.TrimSpace(string(args)); got != "admin new newreseller secret123 --reseller" {
+		t.Fatalf("expected opencli admin new call, got %q", got)
 	}
-	if u.Role != "reseller" {
-		t.Fatalf("expected role reseller, got %q", u.Role)
-	}
+}
+
+// create shells out to opencli now, so tests put a fake one on PATH that logs its args
+func withFakeResellerOpenCLI(t *testing.T) string {
+	t.Helper()
+	binDir := t.TempDir()
+	argsLog := filepath.Join(binDir, "args.log")
+	script := "#!/bin/sh\necho \"$@\" > " + argsLog + "\necho \"Successfully created a new reseller user: $3\"\n"
+	os.WriteFile(filepath.Join(binDir, "opencli"), []byte(script), 0755)
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return argsLog
 }
 
 // TestServeResellersCreateBlockedWhenDisabled deliberately does NOT call
@@ -218,10 +227,8 @@ func TestServeResellersToggleEnableThenDisable(t *testing.T) {
 		t.Fatal("expected resellersEnabled() to be true after enabling")
 	}
 
-	// Create one reseller, then disabling should be refused.
-	if _, err := client.PostForm(srv.URL+"/resellers", url.Values{
-		"action": {"create"}, "username": {"blocker"}, "password": {"secret123"},
-	}); err != nil {
+	// Seed one reseller straight into the DB since create goes through opencli, then disabling should be refused.
+	if err := db.CreateUser("blocker", "x", "reseller"); err != nil {
 		t.Fatal(err)
 	}
 
