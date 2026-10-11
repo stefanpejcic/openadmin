@@ -332,24 +332,26 @@ func (wf *WAF) ServeWAFStatus(w http.ResponseWriter, r *http.Request) {
 		checkedText = checked.Format("2006-01-02 15:04")
 	}
 
+	profiles := wf.wafProfileRows(domains)
 	webtemplates.Render(w, "security_coraza_waf.html", mergeChrome(map[string]interface{}{
-		"Status":         status,
-		"ActiveSets":     confCount,
-		"InactiveSets":   confDisabledCount,
-		"TotalSets":      totalCount,
-		"TotalDomains":   len(domains),
-		"Modes":          modes,
-		"Report":         report,
-		"TailLines":      wafLogTailLines,
-		"Profiles":       wf.wafProfileRows(domains),
-		"Installed":      wafCRSHistory("1"),
-		"Pending":        wafCRSPending("5"),
-		"UpdatesBehind":  behind,
-		"UpdatesChecked": checkedText,
-		"GlobalExcluded": len(globalRules) + len(globalTags),
-		"CSRFToken":      csrf.Token(r),
-		"Flashes":        auth.PopFlashes(w, r, wf.Sessions),
-		"WAFTab":         "overview",
+		"Status":          status,
+		"ActiveSets":      confCount,
+		"InactiveSets":    confDisabledCount,
+		"TotalSets":       totalCount,
+		"TotalDomains":    len(domains),
+		"Modes":           modes,
+		"Report":          report,
+		"TailLines":       wafLogTailLines,
+		"Profiles":        profiles,
+		"MissingProfiles": countMissingProfiles(profiles),
+		"Installed":       wafCRSHistory("1"),
+		"Pending":         wafCRSPending("5"),
+		"UpdatesBehind":   behind,
+		"UpdatesChecked":  checkedText,
+		"GlobalExcluded":  len(globalRules) + len(globalTags),
+		"CSRFToken":       csrf.Token(r),
+		"Flashes":         auth.PopFlashes(w, r, wf.Sessions),
+		"WAFTab":          "overview",
 	}, r, "Web Firewall (Coraza)"))
 }
 

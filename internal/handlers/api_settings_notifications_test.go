@@ -242,3 +242,27 @@ func TestAPISettingsNotificationsChangedHelper(t *testing.T) {
 		t.Fatal("expected different values to count as changed")
 	}
 }
+
+func TestAPISettingsNotificationsPostWebhookRejectsInvalidURL(t *testing.T) {
+	withScratchNotificationConfig(t)
+	srv, client := newAPISettingsNotificationsTestServer(t)
+
+	resp := postJSON(t, client, srv.URL+"/api/settings/notifications", `{"webhook_url": ["https://ok.example", "not a url"]}`)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for an invalid webhook URL, got %d: %s", resp.StatusCode, body)
+	}
+}
+
+func TestAPIWebhookValueAcceptsStringOrList(t *testing.T) {
+	for _, raw := range []interface{}{"https://a.example  https://b.example", []interface{}{"https://a.example", "https://b.example"}} {
+		got, err := apiWebhookValue(map[string]interface{}{"webhook_url": raw})
+		if err != nil || got == nil || *got != "https://a.example https://b.example" {
+			t.Fatalf("apiWebhookValue(%v) = %v, %v", raw, got, err)
+		}
+	}
+	if got, _ := apiWebhookValue(map[string]interface{}{}); got != nil {
+		t.Fatal("expected nil when webhook_url isn't sent")
+	}
+}

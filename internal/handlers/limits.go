@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"net/http"
 	"os"
 	"slices"
@@ -17,6 +18,8 @@ import (
 // Limits bundles the /services/limits handler.
 type Limits struct {
 	Sessions *auth.Manager
+	// panel DB, only used for the user and domain counts behind the recommendations
+	MySQL *sql.DB
 }
 
 // GlobalEnvPath is the global environment file holding CPU/RAM/service
@@ -84,6 +87,7 @@ type limitsRow struct {
 	Value     string
 	// set for *_TIMEZONE keys so they render as a dropdown like /server/timezone
 	Timezones []string
+	Advice    limitAdvice
 }
 
 type limitsGroup struct {
@@ -191,7 +195,7 @@ func (l *Limits) ServeLimits(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "services_limits.html", mergeChrome(map[string]interface{}{
-		"Groups":    buildLimitsView(groups),
+		"Groups":    adviseLimits(buildLimitsView(groups), groups, limitsHostRun(l.MySQL)),
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, l.Sessions),
 	}, r, "Service Limits"))

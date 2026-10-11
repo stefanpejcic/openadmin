@@ -149,6 +149,15 @@ func TestNotificationSettingsValidators(t *testing.T) {
 	if !isValidEmail("a@b.com") || isValidEmail("not-an-email") {
 		t.Fatal("isValidEmail behaved unexpectedly")
 	}
+	if !isValidEmailList("a@b.com, c@d.org") || isValidEmailList("a@b.com,nope") || isValidEmailList(" , ") {
+		t.Fatal("isValidEmailList behaved unexpectedly")
+	}
+	if !isRecipientList("root@localhost,a@b.com") || isRecipientList("a@b.com,nope") || isRecipientList("") {
+		t.Fatal("isRecipientList behaved unexpectedly")
+	}
+	if got := splitEmailList(" a@b.com ,, c@d.org,"); len(got) != 2 || got[0] != "a@b.com" || got[1] != "c@d.org" {
+		t.Fatalf("splitEmailList = %q", got)
+	}
 }
 
 func TestFormValueOrNilDistinguishesAbsentFromEmpty(t *testing.T) {
@@ -255,5 +264,175 @@ func TestTestSMTPFailureIsReportedNotErrored(t *testing.T) {
 	}
 	if payload["success"] != false || !strings.Contains(fmt.Sprint(payload["error"]), "connection refused") {
 		t.Fatalf("expected a reported failure with the underlying error, got %v", payload)
+	}
+}
+
+func TestJoinWebhookURLs(t *testing.T) {
+	got, err := joinWebhookURLs([]string{" https://a.example/x ", "", "http://b.example/y https://c.example"})
+	if err != nil || got != "https://a.example/x http://b.example/y https://c.example" {
+		t.Fatalf("joinWebhookURLs = %q, %v", got, err)
+	}
+	if got, err := joinWebhookURLs([]string{""}); err != nil || got != "" {
+		t.Fatalf("expected empty input to clear webhooks, got %q, %v", got, err)
+	}
+	if _, err := joinWebhookURLs([]string{"https://ok.example", "ftp://nope"}); err == nil {
+		t.Fatal("expected a non-http URL to be rejected")
+	}
+}
+
+func TestNotificationSettingsRendersWebhookList(t *testing.T) {
+	_, notifPath, _ := withScratchNotificationConfig(t)
+	os.WriteFile(notifPath, []byte("[DEFAULT]\nwebhook_url=https://a.example/x https://b.example/y\n"), 0644)
+
+	ns := &NotificationSettings{Sessions: auth.NewManager("test-secret", false)}
+	srv := httptest.NewServer(newNotificationSettingsMux(ns))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/settings/notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), `data-items="[&#34;https://a.example/x&#34;,&#34;https://b.example/y&#34;]"`) {
+		t.Fatal("expected both webhook URLs passed to the webhook list")
+	}
+}
+
+func TestTestWebhookPostsSentinelPayload(t *testing.T) {
+	var got map[string]string
+	hook := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&got)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer hook.Close()
+
+	ns := &NotificationSettings{}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/settings/notifications/test-webhook", strings.NewReader(url.Values{"url": {hook.URL}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	ns.TestWebhook(rec, req)
+
+	var payload map[string]interface{}
+	json.Unmarshal(rec.Body.Bytes(), &payload)
+	if payload["success"] != true {
+		t.Fatalf("expected success, got %s", rec.Body.String())
+	}
+	if !strings.Contains(got["text"], "test notification") || !strings.Contains(got["content"], "test notification") || !strings.HasPrefix(got["username"], "OpenAdmin-") {
+		t.Fatalf("unexpected webhook payload %v", got)
+	}
+}
+
+func TestTestWebhookReportsBadStatus(t *testing.T) {
+	hook := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Invalid Webhook Token", http.StatusUnauthorized)
+	}))
+	defer hook.Close()
+
+	ns := &NotificationSettings{}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/settings/notifications/test-webhook", strings.NewReader(url.Values{"url": {hook.URL}}.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	ns.TestWebhook(rec, req)
+
+	var payload map[string]interface{}
+	json.Unmarshal(rec.Body.Bytes(), &payload)
+	if payload["success"] != false || !strings.Contains(fmt.Sprint(payload["error"]), "401") || !strings.Contains(fmt.Sprint(payload["error"]), "Invalid Webhook Token") {
+		t.Fatalf("expected the 401 and body in the error, got %s", rec.Body.String())
+	}
+}
+
+func TestTestWebhookRejectsInvalidURL(t *testing.T) {
+	ns := &NotificationSettings{}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/settings/notifications/test-webhook", strings.NewReader("url=javascript:alert(1)"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	ns.TestWebhook(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestJoinEmailList(t *testing.T) {
+	got, err := joinEmailList([]string{" a@b.com ", "", "c@d.org"})
+	if err != nil || got != "a@b.com,c@d.org" {
+		t.Fatalf("joinEmailList = %q, %v", got, err)
+	}
+	if got, err := joinEmailList([]string{""}); err != nil || got != "" {
+		t.Fatalf("expected empty input to clear the email, got %q, %v", got, err)
+	}
+	if _, err := joinEmailList([]string{"a@b.com", "nope"}); err == nil || !strings.Contains(err.Error(), "nope") {
+		t.Fatalf("expected the bad address named in the error, got %v", err)
+	}
+}
+
+func TestNotificationSettingsRendersEmailList(t *testing.T) {
+	mainPath, _, _ := withScratchNotificationConfig(t)
+	os.WriteFile(mainPath, []byte("[DEFAULT]\nemail=a@b.com, c@d.org\n"), 0644)
+
+	ns := &NotificationSettings{Sessions: auth.NewManager("test-secret", false)}
+	srv := httptest.NewServer(newNotificationSettingsMux(ns))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/settings/notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), `data-items="[&#34;a@b.com&#34;,&#34;c@d.org&#34;]"`) {
+		t.Fatal("expected one email row per address")
+	}
+}
+
+func TestThresholdAdvice(t *testing.T) {
+	h := thresholdHost{Cores: 4, RAMGB: 8, SwapGB: 2, DiskGB: 200}
+	adv := func(key string, h thresholdHost) notifThresholdView {
+		v := notifThresholdView{Key: key}
+		thresholdAdvice(&v, h)
+		return v
+	}
+
+	if v := adv("load", h); v.WarnBelow != 8 || !strings.Contains(v.Hint, "at least 8") || !strings.Contains(v.Hint, "4 CPU cores") {
+		t.Fatalf("load advice = %+v", v)
+	}
+	if v := adv("load", thresholdHost{Cores: 64}); v.WarnBelow != 100 || !strings.Contains(v.Hint, "Recommended: 100") {
+		t.Fatalf("expected load capped at sentinel's max of 100, got %+v", v)
+	}
+	if v := adv("du", h); v.WarnAbove != 97 || v.WarnBelow != 70 {
+		t.Fatalf("expected 5 GB reserve on a 200 GB disk, got %+v", v)
+	}
+	if v := adv("du", thresholdHost{DiskGB: 20}); v.WarnAbove != 90 {
+		t.Fatalf("expected 10%% reserve on a small disk, got %+v", v)
+	}
+	if v := adv("swap", thresholdHost{}); v.WarnBelow != 0 || !strings.Contains(v.Hint, "no swap") {
+		t.Fatalf("expected no-swap hint without warnings, got %+v", v)
+	}
+	if v := adv("cpu", h); v.WarnBelow != 80 || v.Hint == "" {
+		t.Fatalf("cpu advice = %+v", v)
+	}
+}
+
+func TestNotificationSettingsRendersThresholdAdvice(t *testing.T) {
+	_, notifPath, _ := withScratchNotificationConfig(t)
+	os.WriteFile(notifPath, []byte("[DEFAULT]\nload=4\n"), 0644)
+	orig := thresholdHostRun
+	thresholdHostRun = func() thresholdHost { return thresholdHost{Cores: 6, RAMGB: 16, SwapGB: 4, DiskGB: 100} }
+	t.Cleanup(func() { thresholdHostRun = orig })
+
+	ns := &NotificationSettings{Sessions: auth.NewManager("test-secret", false)}
+	srv := httptest.NewServer(newNotificationSettingsMux(ns))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/settings/notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	for _, want := range []string{"at least 12, 2× the 6 CPU cores", `data-value="4"`, "Number(v) < 12", "Below 12, normal load on 6 cores"} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected %q in the page", want)
+		}
 	}
 }

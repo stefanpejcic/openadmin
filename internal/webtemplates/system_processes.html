@@ -61,6 +61,13 @@
             </div>
             <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
                 {{template "bulk_open" (dict "Table" "#processes_table" "Endpoint" "/server/processes/bulk")}}
+{{if .Hogs}}
+<div class="mx-4 my-3 space-y-1 text-sm text-amber-600 dark:text-amber-500">
+{{range .Hogs}}<p><b>{{.Name}}</b> (PID {{.PID}}) is using {{printf "%.0f" .CPUPercent}}% CPU and {{printf "%.1f" .MemoryPercent}}% RAM.
+{{if .PanelUser}}It runs in the container of OpenPanel user <a href="/users/{{.PanelUser}}" class="font-medium underline hover:no-underline">{{.PanelUser}}</a>, check their container limits for a misconfiguration or their sites for unusual traffic.
+{{else}}It's a system process, <a href="/server/processes/{{.PID}}/strace" class="font-medium underline hover:no-underline">trace it</a> to see what it's doing or restart its service.{{end}}</p>{{end}}
+</div>
+{{end}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="processes_table">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">

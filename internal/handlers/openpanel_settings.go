@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,6 +24,8 @@ import (
 type OpenpanelSettings struct {
 	Sessions       *auth.Manager
 	LicenseChecker *license.Checker // nil on Community
+	// panel DB, only used to count sites for the PageSpeed hint
+	MySQL *sql.DB
 }
 
 // openpanelFileFields lists the custom-code-backed fields (raw files, not
@@ -359,14 +362,43 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 		fileContents[key] = content
 	}
 
+	// the file manager works inside the openpanel container, so its size limits are compared to that container's RAM
+	openpanelRAMGB := parseRAMLimitGB(readEnvGroups()["OPENPANEL"]["RAM"])
+
 	webtemplates.Render(w, "settings_openpanel.html", mergeChrome(map[string]interface{}{
-		"ConfigData":        configData,
-		"CSRFToken":         csrf.Token(r),
-		"Flashes":           auth.PopFlashes(w, r, o.Sessions),
-		"HasEnterprise":     hasEnterpriseAccess(r, o.LicenseChecker),
-		"HowtoGuides":       fileContents["howto_guides"],
-		"ForbiddenUsers":    fileContents["forbidden_usernames"],
-		"RestrictedDomains": fileContents["restricted_domains"],
-		"PagespeedAPIKey":   fileContents["pagespeed_api_key"],
+		"DNSModuleEnabled":   hasModule(modulesEnabledList(ModulesConfigFilePath), "dns"),
+		"SMTPConfigured":     strings.TrimSpace(config.Load(config.OpenpanelConfigPath).Get("SMTP", "mail_server", "")) != "",
+		"OpenpanelRAMMB":     int(openpanelRAMGB * 1024),
+		"OpenpanelRAM":       formatLimit(openpanelRAMGB) + " GB",
+		"MySQLCustomVersion": mysqlCustomVersion(),
+		"SiteCount":          totalSites(defaultsSiteTypesRun(o.MySQL)),
+		"ConfigData":         configData,
+		"CSRFToken":          csrf.Token(r),
+		"Flashes":            auth.PopFlashes(w, r, o.Sessions),
+		"HasEnterprise":      hasEnterpriseAccess(r, o.LicenseChecker),
+		"HowtoGuides":        fileContents["howto_guides"],
+		"ForbiddenUsers":     fileContents["forbidden_usernames"],
+		"RestrictedDomains":  fileContents["restricted_domains"],
+		"PagespeedAPIKey":    fileContents["pagespeed_api_key"],
 	}, r, "OpenPanel Settings"))
+}
+
+// mysqlCustomVersion is the MYSQL_VERSION tag new users get when it isn't latest, the first start has to pull that image
+func mysqlCustomVersion() string {
+	raw, err := os.ReadFile(DefaultsEnvPath)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		k, v, ok := strings.Cut(strings.TrimSpace(line), "=")
+		if !ok || strings.TrimSpace(k) != "MYSQL_VERSION" {
+			continue
+		}
+		v = strings.Trim(strings.TrimSpace(v), `"'`)
+		if v == "" || v == "latest" {
+			return ""
+		}
+		return v
+	}
+	return ""
 }

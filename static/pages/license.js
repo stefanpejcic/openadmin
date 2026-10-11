@@ -129,6 +129,13 @@ function verifyLicense() {
                            Object.keys(infoObject).map(key => `<li><strong>${key}:</strong> ${infoObject[key]}</li>`).join('') +
                            `</ul>`;
             infoContainer.innerHTML = listHtml;
+            const dueWarning = licenseDueWarning(infoObject['Next Due Date'], new Date());
+            if (dueWarning) {
+                const p = document.createElement('p');
+                p.className = 'mt-3 text-sm text-amber-600 dark:text-amber-500';
+                p.textContent = dueWarning;
+                infoContainer.appendChild(p);
+            }
         } catch (e) {
             infoContainer.innerHTML = `<p class="text-red-600">${response.info}</p>`;
         }
@@ -142,4 +149,18 @@ function verifyLicense() {
         document.querySelector('.btn-verify').innerHTML = 'Re-Verify';
         document.querySelector('.btn-verify').disabled = false;
     });
+}
+
+// warns from 3 days before the next due date, the license gets suspended on that date
+function licenseDueWarning(dueDate, now) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dueDate || '');
+    if (!m) return '';
+    const due = new Date(+m[1], +m[2] - 1, +m[3]);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const days = Math.round((due - today) / 86400000);
+    if (days > 3) return '';
+    const what = 'Renew the license, or remove the license key to downgrade to the Community edition.';
+    if (days < 0) return `The license was due on ${m[0]} and gets suspended. ${what}`;
+    if (days === 0) return `The license is due today (${m[0]}) and gets suspended once that date passes. ${what}`;
+    return `The license is due in ${days} day${days === 1 ? '' : 's'} (${m[0]}) and gets suspended on that date. ${what}`;
 }

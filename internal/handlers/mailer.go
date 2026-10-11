@@ -9,6 +9,7 @@ import (
 	"crypto/hmac"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -207,7 +209,10 @@ var mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) err
 	if from == "" {
 		from = cfg.Username
 	}
-	msg := buildMIMEMessage(from, to, subject, htmlBody)
+	rcpts := splitEmailList(to)
+	if len(rcpts) == 0 {
+		return fmt.Errorf("no recipient address")
+	}
 	addr := fmt.Sprintf("%s:%d", cfg.Server, cfg.Port)
 
 	var auth smtp.Auth
@@ -251,16 +256,59 @@ var mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) err
 	if err := client.Mail(from); err != nil {
 		return err
 	}
-	if err := client.Rcpt(to); err != nil {
-		return err
+	// a rejected address shouldn't stop the email going to the rest of the list
+	var accepted []string
+	rejected := map[string]error{}
+	for _, rcpt := range rcpts {
+		if err := client.Rcpt(rcpt); err != nil {
+			rejected[rcpt] = err
+			continue
+		}
+		accepted = append(accepted, rcpt)
 	}
+	if len(accepted) == 0 {
+		return &rejectedRecipientsError{rejected: rejected, all: true}
+	}
+
 	w, err := client.Data()
 	if err != nil {
 		return err
 	}
-	defer w.Close()
-	_, err = w.Write([]byte(msg))
-	return err
+	if _, err := w.Write([]byte(buildMIMEMessage(from, strings.Join(accepted, ", "), subject, htmlBody))); err != nil {
+		w.Close()
+		return err
+	}
+	// the server can still reject the message after the body is sent, so this error matters
+	if err := w.Close(); err != nil {
+		return err
+	}
+	client.Quit()
+
+	if len(rejected) > 0 {
+		return &rejectedRecipientsError{rejected: rejected}
+	}
+	return nil
+}
+
+// rejectedRecipientsError with all=false means the email still went out to the other addresses
+type rejectedRecipientsError struct {
+	rejected map[string]error
+	all      bool
+}
+
+func (e *rejectedRecipientsError) Error() string {
+	parts := make([]string, 0, len(e.rejected))
+	for rcpt, err := range e.rejected {
+		parts = append(parts, rcpt+": "+err.Error())
+	}
+	sort.Strings(parts)
+	return "recipient rejected: " + strings.Join(parts, "; ")
+}
+
+// isPartialSend is true when some addresses were rejected but the email was still delivered to others
+func isPartialSend(err error) bool {
+	var re *rejectedRecipientsError
+	return errors.As(err, &re) && !re.all
 }
 
 func buildMIMEMessage(from, to, subject, htmlBody string) string {
@@ -396,7 +444,7 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	subject := r.PostFormValue("subject")
 	messageContent := r.PostFormValue("body")
 
-	if recipient == "" || !strings.Contains(recipient, "@") {
+	if !isRecipientList(recipient) {
 		m.logf("rejected: invalid recipient %q (subject=%q)", recipient, subject)
 		writeJSONError(w, http.StatusBadRequest, "Invalid recipient email address provided.")
 		return
@@ -480,7 +528,9 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := mailerSendRun(cfg, recipient, messageTitle, emailTemplate); err != nil {
+	if err := mailerSendRun(cfg, recipient, messageTitle, emailTemplate); isPartialSend(err) {
+		m.logf("sent with some recipients skipped: subject=%q: %v", subject, err)
+	} else if err != nil {
 		m.logf("send failed: recipient=%q subject=%q server=%s:%d ssl=%v tls=%v username=%q sender=%q: %v",
 			recipient, subject, cfg.Server, cfg.Port, cfg.UseSSL, cfg.UseTLS, cfg.Username, cfg.DefaultSender, err)
 		devMode := strings.EqualFold(config.Load(config.OpenpanelConfigPath).Get("PANEL", "dev_mode", "off"), "on")

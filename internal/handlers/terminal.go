@@ -53,6 +53,8 @@ func (t *Terminal) ServeHostTerminalPage(w http.ResponseWriter, r *http.Request)
 	webtemplates.Render(w, "settings_terminal.html", mergeChrome(map[string]interface{}{
 		"TerminalType":    "root",
 		"TerminalTimeout": int(terminalCommandTimeout.Seconds()),
+		"WebSessions":     openWebTerminals("host"),
+		"SSHPeers":        openSSHPeers(sshSessionsRun()),
 	}, r, "Web Terminal"))
 }
 
@@ -65,6 +67,7 @@ func (t *Terminal) ServeUserTerminalPage(w http.ResponseWriter, r *http.Request)
 		"TerminalTimeout": int(terminalCommandTimeout.Seconds()),
 		"Username":        r.PathValue("username"),
 		"ContainerName":   r.PathValue("container_name"),
+		"WebSessions":     openWebTerminals(r.PathValue("username") + "/" + r.PathValue("container_name")),
 	}, r, "Docker Terminal"))
 }
 
@@ -191,6 +194,7 @@ func (t *Terminal) ServeHostTerminalWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+	defer trackWebTerminal(r, "host")()
 
 	init, ok := terminalReadInit(conn)
 	if !ok {
@@ -213,6 +217,7 @@ func (t *Terminal) ServeUserTerminalWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+	defer trackWebTerminal(r, username+"/"+containerName)()
 
 	init, ok := terminalReadInit(conn)
 	if !ok {

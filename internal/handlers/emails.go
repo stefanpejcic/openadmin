@@ -449,6 +449,7 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 
 	webtemplates.Render(w, "emails_settings.html", mergeChrome(map[string]interface{}{
 		"MailserverStatus":     mailserverStatus,
+		"EmailsModuleEnabled":  hasModule(modulesEnabledList(ModulesConfigFilePath), "emails"),
 		"WebmailStatus":        webmailStatus,
 		"WebmailServices":      webmailServices,
 		"WebmailDomain":        webmailDomain,

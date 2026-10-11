@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -10,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"openadmin/internal/config"
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
@@ -358,5 +361,122 @@ func TestServeOpenpanelSettingsGetRendersStrippedQuotes(t *testing.T) {
 	resp.Body.Close()
 	if !strings.Contains(string(body), `value="Quoted Brand"`) {
 		t.Fatalf("expected quotes stripped from the displayed value, got %s", truncate(string(body)))
+	}
+}
+
+func TestServeOpenpanelSettingsRecommendations(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[DEFAULT]\nns1=\n[USERS]\npassword_reset=yes\n"), 0644)
+
+	dir := t.TempDir()
+	origMain, origModules := config.OpenpanelConfigPath, ModulesConfigFilePath
+	config.OpenpanelConfigPath = filepath.Join(dir, "main.config")
+	ModulesConfigFilePath = filepath.Join(dir, "modules.config")
+	t.Cleanup(func() { config.OpenpanelConfigPath, ModulesConfigFilePath = origMain, origModules })
+	os.WriteFile(config.OpenpanelConfigPath, []byte("[SMTP]\nmail_server=\n"), 0644)
+	os.WriteFile(ModulesConfigFilePath, []byte("enabled_modules=\"domains,dns,crons\"\n"), 0644)
+
+	get := func() string {
+		srv, client := newOpenpanelSettingsTestServer(t, &OpenpanelSettings{})
+		resp, err := client.Get(srv.URL + "/settings/open-panel")
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+
+	body := get()
+	for _, want := range []string{"No nameservers are set but the DNS module is enabled", `href="/settings/modules"`, "SMTP isn't configured", `href="/settings/notifications#smtp"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected %q in the page", want)
+		}
+	}
+
+	os.WriteFile(config.OpenpanelConfigPath, []byte("[SMTP]\nmail_server=smtp.example.com\n"), 0644)
+	os.WriteFile(ModulesConfigFilePath, []byte("enabled_modules=\"domains,crons\"\n"), 0644)
+	body = get()
+	if strings.Contains(body, "No nameservers are set") || strings.Contains(body, "SMTP isn't configured") {
+		t.Fatal("expected no hints with SMTP set up and the DNS module off")
+	}
+}
+
+func TestServeOpenpanelSettingsWarnsWhenFileSizesExceedContainerRAM(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[FILES]\nfilemanager_upload_size=3000\n"), 0644)
+	origEnv := GlobalEnvPath
+	GlobalEnvPath = filepath.Join(t.TempDir(), ".env")
+	t.Cleanup(func() { GlobalEnvPath = origEnv })
+	os.WriteFile(GlobalEnvPath, []byte("OPENPANEL_RAM=\"2g\"\nOPENPANEL_CPUS=\"1.0\"\n"), 0644)
+
+	srv, client := newOpenpanelSettingsTestServer(t, &OpenpanelSettings{})
+	resp, err := client.Get(srv.URL + "/settings/open-panel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if n := strings.Count(string(body), "Number(v) > 2048"); n != 4 {
+		t.Fatalf("expected the 2 GB limit checked on all 4 size fields, got %d", n)
+	}
+	if !strings.Contains(string(body), "more than the 2 GB RAM limit of the OpenPanel container") || !strings.Contains(string(body), `href="/services/limits"`) {
+		t.Fatal("expected the warning text with a link to Service Limits")
+	}
+	if !strings.Contains(string(body), "Trash is never purged") || !strings.Contains(string(body), `href="/server/crons"`) {
+		t.Fatal("expected the auto-purge trash hints")
+	}
+	if !strings.Contains(string(body), "Number(v) * 1024 > 2048") || !strings.Contains(string(body), "MySQL needs time to initialize") {
+		t.Fatal("expected the MySQL import and startup hints")
+	}
+	for _, want := range []string{"Below 50, weak passwords are accepted", "passwords found in known data breaches", "can be reused by an attacker from any IP", "in both the OpenPanel web terminal and OpenAdmin"} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected %q in the page", want)
+		}
+	}
+}
+
+func TestMySQLCustomVersion(t *testing.T) {
+	orig := DefaultsEnvPath
+	DefaultsEnvPath = filepath.Join(t.TempDir(), ".env")
+	t.Cleanup(func() { DefaultsEnvPath = orig })
+
+	for content, want := range map[string]string{
+		"MYSQL_VERSION=\"latest\"\n": "",
+		"MYSQL_VERSION=\"8.0.36\"\n": "8.0.36",
+		"MYSQL_TYPE=\"mariadb\"\n":   "",
+		"MYSQL_VERSION=11.4\n":       "11.4",
+	} {
+		os.WriteFile(DefaultsEnvPath, []byte(content), 0644)
+		if got := mysqlCustomVersion(); got != want {
+			t.Fatalf("mysqlCustomVersion() with %q = %q, want %q", content, got, want)
+		}
+	}
+}
+
+func TestServeOpenpanelSettingsPagespeedHint(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[PANEL]\n"), 0644)
+	orig := defaultsSiteTypesRun
+	t.Cleanup(func() { defaultsSiteTypesRun = orig })
+
+	get := func() string {
+		srv, client := newOpenpanelSettingsTestServer(t, &OpenpanelSettings{})
+		resp, err := client.Get(srv.URL + "/settings/open-panel")
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+
+	defaultsSiteTypesRun = func(_ *sql.DB) map[string]int { return map[string]int{"WordPress": 9, "Joomla": 3} }
+	if !strings.Contains(get(), "There are 12 sites on this server but no PageSpeed API key") {
+		t.Fatal("expected the PageSpeed hint with more than 10 sites")
+	}
+	defaultsSiteTypesRun = func(_ *sql.DB) map[string]int { return map[string]int{"WordPress": 10} }
+	if strings.Contains(get(), "no PageSpeed API key") {
+		t.Fatal("expected no PageSpeed hint with 10 sites or fewer")
 	}
 }

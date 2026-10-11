@@ -322,3 +322,29 @@ func TestServeSwapActionStatusNoActionYet(t *testing.T) {
 		t.Fatalf("expected placeholder message, got %s", body)
 	}
 }
+
+func TestRecommendedSwapGB(t *testing.T) {
+	for ram, want := range map[float64]float64{0: 0, 1: 2, 2: 4, 4: 2, 16: 4, 94: 10, 256: 16} {
+		if got := recommendedSwapGB(ram); got != want {
+			t.Fatalf("recommendedSwapGB(%v) = %v, want %v", ram, got, want)
+		}
+	}
+}
+
+func TestServeSwapWarnsWhenAlmostFull(t *testing.T) {
+	origFree, origShow := swapFreeRun, swapShowRun
+	t.Cleanup(func() { swapFreeRun, swapShowRun = origFree, origShow })
+	swapShowRun = func() (string, error) { return "", nil }
+	swapFreeRun = func() (string, error) { return "Swap:           1000        950          50\n", nil }
+
+	srv, client := newSwapTestServer(t, &Swap{}, "admin")
+	resp, err := client.Get(srv.URL + "/server/swap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "Swap is 95% used, so the server is short on memory") {
+		t.Fatal("expected the swap usage warning above 90%")
+	}
+}

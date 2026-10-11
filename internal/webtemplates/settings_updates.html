@@ -198,11 +198,11 @@ function updateNow() {
             <div class="col-span-full">
             <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="first-name">Update automatically</label>
 
-                <form method="post" id="general_form" action="" data-warn-unsaved>
+                <form method="post" id="general_form" action="" data-warn-unsaved x-data="{ pref: $el.dataset.pref }" data-pref="{{.UpdatePreference}}">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
                 <div class="flex">
-                                    <select name="preference" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-l border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                                    <select name="preference" x-model="pref" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-l border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
                                         <option {{if and (eq .Autoupdate "off") (eq .Autopatch "on")}}selected{{end}} value="minor_only">Minor versions only (bug fixes and security patches)</option>
                                         <option {{if and (eq .Autoupdate "on") (eq .Autopatch "on")}}selected{{end}} value="minor_and_major">Both minor and major versions (bug fixes, security patches & new features)</option>
                                         <option {{if and (eq .Autoupdate "on") (eq .Autopatch "off")}}selected{{end}} value="major_only">Major versions only (new features)</option>
@@ -212,6 +212,8 @@ function updateNow() {
                                 <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded-r border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400"
                                         type="submit">Save</button>
                 </div>
+                <p x-show="pref === 'none'" x-cloak class="mt-2 text-sm text-amber-600 dark:text-amber-500">Nothing is updated automatically, including security patches. Recommended: <a href="https://openpanel.com/docs/articles/opencli/update/" target="_blank" class="font-medium underline hover:no-underline">update manually</a> at least once a month.{{if ge .LastUpdateDays 30}} The last update ran {{.LastUpdateDays}} days ago.{{end}}</p>
+                <p x-show="pref === 'major_only'" x-cloak class="mt-2 text-sm text-amber-600 dark:text-amber-500">Minor versions with bug fixes and security patches aren't installed automatically. Recommended: <a href="https://openpanel.com/docs/articles/opencli/update/" target="_blank" class="font-medium underline hover:no-underline">update manually</a> at least once a quarter to get them.{{if ge .LastUpdateDays 90}} The last update ran {{.LastUpdateDays}} days ago.{{end}}</p>
                 </form>
             </div>
         </div>

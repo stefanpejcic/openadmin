@@ -58,6 +58,19 @@
 
     <div class="relative">
         <div class="space-y-3">
+{{if .Suggestions}}
+<div class="mx-4 mt-4 sm:mx-6 lg:mx-8 space-y-2">
+{{range .Suggestions}}
+    <form method="POST" class="flex flex-wrap items-center gap-2 text-sm text-amber-600 dark:text-amber-500">
+        <input type="hidden" name="locale" value="{{.Locale}}">
+        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+        <img class="w-4 h-4 rounded" src="/static/dist/img/flags/{{lower .Country}}.svg" alt="">
+        <span>{{if eq (len .Users) 1}}User <b>{{index .Users 0}}</b> last logged in{{else}}<b>{{len .Users}} users</b> last logged in{{end}} from {{.Country}}. Recommended: install <b>{{.Locale}}</b> so OpenPanel can be shown in their language.{{if gt (len .Users) 1}} <span class="text-gray-500">({{range $i, $u := .Users}}{{if lt $i 5}}{{if $i}}, {{end}}{{$u}}{{end}}{{end}}{{if gt (len .Users) 5}} and {{len (slice .Users 5)}} more{{end}})</span>{{end}}</span>
+        <button type="submit" class="rounded border px-2 py-0.5 text-xs font-medium border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60">Install {{.Locale}}</button>
+    </form>
+{{end}}
+</div>
+{{end}}
             <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
                 <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
 

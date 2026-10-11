@@ -110,6 +110,9 @@ func TestServeDomainTemplatesRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
+	if n := strings.Count(got, "This file is changed from the default"); n != 5 {
+		t.Fatalf("expected the changed-from-default note on all 5 config editors, got %d", n)
+	}
 	for _, want := range []string{"caddy content", "Edit Domain Templates", "function restoreComponentFor", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))

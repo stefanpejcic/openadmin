@@ -1,12 +1,19 @@
 package handlers
 
 import (
+	"bytes"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -18,6 +25,8 @@ import (
 // NotificationSettings bundles the /settings/notifications handlers.
 type NotificationSettings struct {
 	Sessions *auth.Manager
+	// panel DB, only used for the domain count behind the traffic recommendations
+	MySQL *sql.DB
 }
 
 var (
@@ -42,36 +51,47 @@ var (
 
 type notificationSettingsPageData struct {
 	webtemplates.Chrome
-	MailServer        string
-	MailPort          string
-	MailUseSSL        string
-	MailUseTLS        string
-	MailDebug         string
-	MailUsername      string
-	MailPassword      string
-	MailDefaultSender string
-	EmailAddress      string
-	SSHWhitelist      string
-	ConfigData        config.Data
-	Services          []notifServiceView
-	Thresholds        []notifThresholdView
-	ServerActions     []notifToggleView
-	UserActions       []notifToggleView
-	AttackEnabled     bool
-	MaxTotalConn      string
-	MaxConnPerIP      string
-	CSRFToken         string
-	Flashes           []auth.Flash
+	MailServer         string
+	MailPort           string
+	MailUseSSL         string
+	MailUseTLS         string
+	MailDebug          string
+	MailUsername       string
+	MailPassword       string
+	MailDefaultSender  string
+	EmailAddress       string
+	EmailAddressesJSON string
+	WebhookURLs        []string
+	WebhookURLsJSON    string
+	SSHWhitelist       string
+	ConfigData         config.Data
+	Services           []notifServiceView
+	Thresholds         []notifThresholdView
+	ServerActions      []notifToggleView
+	UserActions        []notifToggleView
+	UserActionGroups   []notifActionGroup
+	TotalConnAdvice    connAdvice
+	PerIPConnAdvice    connAdvice
+	WhitelistIdeas     []whitelistSuggestion
+	AttackEnabled      bool
+	MaxTotalConn       string
+	MaxConnPerIP       string
+	CSRFToken          string
+	Flashes            []auth.Flash
 }
 
 type notifServiceView struct {
 	Key, Name, Desc string
 	Enabled         bool
+	WhenOff, WhenOn string
 }
 
 type notifThresholdView struct {
-	Key, Label, Value string
-	ShowPercent       bool
+	Key, Label, Value         string
+	ShowPercent               bool
+	Hint                      string
+	WarnBelow, WarnAbove      int
+	WarnLowText, WarnHighText string
 }
 
 type notifToggleView struct {
@@ -146,17 +166,23 @@ func (n *NotificationSettings) ServeSettings(w http.ResponseWriter, r *http.Requ
 	for _, s := range strings.Split(notifConfig.Get("DEFAULT", "services", ""), ",") {
 		enabledServices[strings.TrimSpace(s)] = true
 	}
+	modules := modulesEnabledList(ModulesConfigFilePath)
 	services := make([]notifServiceView, 0, len(notifServiceOrder))
 	for _, s := range notifServiceOrder {
-		services = append(services, notifServiceView{Key: s.Key, Name: s.Name, Desc: s.Desc, Enabled: enabledServices[s.Key]})
+		v := notifServiceView{Key: s.Key, Name: s.Name, Desc: s.Desc, Enabled: enabledServices[s.Key]}
+		v.WhenOff, v.WhenOn = serviceAdvice(s.Key, modules)
+		services = append(services, v)
 	}
 
+	host := thresholdHostRun()
 	thresholds := make([]notifThresholdView, 0, len(notifThresholdOrder))
 	for _, t := range notifThresholdOrder {
-		thresholds = append(thresholds, notifThresholdView{
+		v := notifThresholdView{
 			Key: t.Key, Label: t.Label, Value: notifConfig.Get("DEFAULT", t.Key, ""),
 			ShowPercent: t.Key != "load",
-		})
+		}
+		thresholdAdvice(&v, host)
+		thresholds = append(thresholds, v)
 	}
 
 	serverActions := make([]notifToggleView, 0, len(notifServerActionOrder))
@@ -181,7 +207,15 @@ func (n *NotificationSettings) ServeSettings(w http.ResponseWriter, r *http.Requ
 	}
 	maxConnPerIP := notifConfig.Get("HTTP", "max_conn_per_ip", "")
 	if maxConnPerIP == "" {
-		maxConnPerIP = "200"
+		// same default sentinel.sh uses
+		maxConnPerIP = "500"
+	}
+
+	peaks := readTrafficPeaks(SentinelSnapshotsPath)
+	domains := notifDomainCountRun(n.MySQL)
+	if domains < 0 && peaks.Total > 0 {
+		// no DB answer, traffic in the snapshots is proof enough there are sites
+		domains = 1
 	}
 
 	data := notificationSettingsPageData{
@@ -195,18 +229,26 @@ func (n *NotificationSettings) ServeSettings(w http.ResponseWriter, r *http.Requ
 		MailPassword:      mainConfig.Get("SMTP", "mail_password", ""),
 		MailDefaultSender: mainConfig.Get("SMTP", "mail_default_sender", ""),
 		EmailAddress:      mainConfig.Get("DEFAULT", "email", ""),
+		WebhookURLs:       strings.Fields(notifConfig.Get("DEFAULT", "webhook_url", "")),
 		SSHWhitelist:      readSSHWhitelist(),
 		ConfigData:        notifConfig,
 		Services:          services,
 		Thresholds:        thresholds,
 		ServerActions:     serverActions,
 		UserActions:       userActions,
+		UserActionGroups:  groupUserActions(userActions),
+		TotalConnAdvice:   trafficAdvice(peaks.Total, peaks.TotalAt, peaks.TotalSpan, 500, domains, "total connections"),
+		PerIPConnAdvice:   trafficAdvice(peaks.PerIP, peaks.PerIPAt, peaks.PerIPSpan, 50, domains, "connections from one IP"),
+		WhitelistIdeas:    whitelistSuggestions(clientIP(r), LoginLogPath, strings.Fields(readSSHWhitelist())),
 		AttackEnabled:     notifConfig.Get("DEFAULT", "attack", "") == "yes",
 		MaxTotalConn:      maxTotalConn,
 		MaxConnPerIP:      maxConnPerIP,
 		CSRFToken:         csrf.Token(r),
 		Flashes:           auth.PopFlashes(w, r, n.Sessions),
 	}
+
+	data.WebhookURLsJSON = jsonStringList(data.WebhookURLs)
+	data.EmailAddressesJSON = jsonStringList(splitEmailList(data.EmailAddress))
 
 	if r.URL.Query().Get("output") == "json" {
 		writeJSON(w, map[string]interface{}{
@@ -260,18 +302,76 @@ func (n *NotificationSettings) TestSMTP(w http.ResponseWriter, r *http.Request) 
 	if recipient == "" {
 		recipient = config.Load(config.OpenpanelConfigPath).Get("DEFAULT", "email", "")
 	}
-	if !isValidEmail(recipient) {
+	if !isValidEmailList(recipient) {
 		writeJSONError(w, http.StatusBadRequest, "Set a default sender, username, or notification email to send the test to.")
 		return
 	}
 
 	body := "This is a test email from OpenAdmin confirming your SMTP settings are working."
-	if err := mailerSendRun(cfg, recipient, "OpenAdmin SMTP test", body); err != nil {
+	err := mailerSendRun(cfg, recipient, "OpenAdmin SMTP test", body)
+	if isPartialSend(err) {
+		writeJSON(w, map[string]interface{}{"success": true, "message": "Test email sent to " + recipient + ", but some addresses were skipped: " + err.Error()})
+		return
+	}
+	if err != nil {
 		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
 		return
 	}
 
 	writeJSON(w, map[string]interface{}{"success": true, "message": "Test email sent to " + recipient + "."})
+}
+
+// TestWebhook handles POST /settings/notifications/test-webhook, it posts a sample alert to the URL from the form (saved or not).
+func (n *NotificationSettings) TestWebhook(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	target := strings.TrimSpace(r.FormValue("url"))
+	if !isValidWebhookURL(target) {
+		writeJSONError(w, http.StatusBadRequest, "Enter a valid http(s) webhook URL.")
+		return
+	}
+
+	hostname, _ := os.Hostname()
+	title := "OpenAdmin test notification"
+	message := "This is a test notification from OpenAdmin confirming your webhook is working."
+	if err := webhookSendRun(target, hostname, title, message); err != nil {
+		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "message": "Test notification sent."})
+}
+
+// same payload sentinel.sh sends, text for Slack and content for Discord
+func webhookPayload(hostname, title, message string) []byte {
+	content := "**" + title + "**\n" + message
+	if len(content) > 2000 {
+		content = content[:1997] + "..."
+	}
+	b, _ := json.Marshal(map[string]string{
+		"text":     "*" + title + "*\n" + message,
+		"username": "OpenAdmin-" + hostname,
+		"content":  content,
+	})
+	return b
+}
+
+// webhookSendRun is swapped out in tests
+var webhookSendRun = func(target, hostname, title, message string) error {
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post(target, "application/json", bytes.NewReader(webhookPayload(hostname, title, message)))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 300))
+		msg := fmt.Sprintf("Webhook responded with %s", resp.Status)
+		// Discord/Slack explain errors in JSON or text, an HTML page is just noise
+		if b := strings.TrimSpace(string(body)); b != "" && !strings.Contains(resp.Header.Get("Content-Type"), "html") {
+			msg += ": " + b
+		}
+		return fmt.Errorf("%s", msg)
+	}
+	return nil
 }
 
 func readSSHWhitelist() string {
@@ -301,12 +401,24 @@ func (n *NotificationSettings) HandleUpdate(w http.ResponseWriter, r *http.Reque
 		updateNumericIfChanged(r, key, notifConfig.Get("HTTP", key, ""))
 	}
 
-	if newWebhook := formValueOrNil(r, "webhook_url"); newWebhook != nil && *newWebhook != notifConfig.Get("DEFAULT", "webhook_url", "") {
-		runOpenCLINotificationUpdate("webhook_url", *newWebhook)
+	var errMsgs []string
+	r.ParseForm()
+	if vals, ok := r.PostForm["webhook_url"]; ok {
+		newWebhook, err := joinWebhookURLs(vals)
+		if err != nil {
+			errMsgs = append(errMsgs, err.Error())
+		} else if newWebhook != normalizeWebhookURLs(notifConfig.Get("DEFAULT", "webhook_url", "")) {
+			runOpenCLINotificationUpdate("webhook_url", newWebhook)
+		}
 	}
 
-	if newEmail := formValueOrNil(r, "email"); newEmail != nil && *newEmail != mainConfig.Get("DEFAULT", "email", "") {
-		runOpenCLI("", "opencli", "config", "update", "email", *newEmail)
+	if vals, ok := r.PostForm["email"]; ok {
+		newEmail, err := joinEmailList(vals)
+		if err != nil {
+			errMsgs = append(errMsgs, err.Error())
+		} else if newEmail != strings.Join(splitEmailList(mainConfig.Get("DEFAULT", "email", "")), ",") {
+			runOpenCLI("", "opencli", "config", "update", "email", newEmail)
+		}
 	}
 
 	updateSMTPFieldIfChanged(r, mainConfig, "mail_server", nil)
@@ -336,7 +448,12 @@ func (n *NotificationSettings) HandleUpdate(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := n.updateSSHWhitelist(w, r); err != nil {
-		auth.AddFlash(w, r, n.Sessions, err.Error(), "error")
+		errMsgs = append(errMsgs, err.Error())
+	}
+	if len(errMsgs) > 0 {
+		for _, msg := range errMsgs {
+			auth.AddFlash(w, r, n.Sessions, msg, "error")
+		}
 	} else {
 		auth.AddFlash(w, r, n.Sessions, "Settings updated successfully.", "success")
 	}
@@ -462,6 +579,78 @@ func isValidPort(v string) bool {
 func isValidBool(v string) bool { return v == "True" || v == "False" }
 
 func isValidEmail(v string) bool { return emailRe.MatchString(v) }
+
+// the notification email field can hold several addresses separated by commas
+func splitEmailList(v string) []string {
+	var out []string
+	for _, a := range strings.Split(v, ",") {
+		if a = strings.TrimSpace(a); a != "" {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+func isValidEmailList(v string) bool {
+	list := splitEmailList(v)
+	for _, a := range list {
+		if !isValidEmail(a) {
+			return false
+		}
+	}
+	return len(list) > 0
+}
+
+// the form sends one email field per address, they're stored comma separated
+func joinEmailList(vals []string) (string, error) {
+	list := splitEmailList(strings.Join(vals, ","))
+	for _, a := range list {
+		if !isValidEmail(a) {
+			return "", fmt.Errorf("Invalid email address: %s", a)
+		}
+	}
+	return strings.Join(list, ","), nil
+}
+
+func jsonStringList(v []string) string {
+	if len(v) == 0 {
+		return "[]"
+	}
+	b, _ := json.Marshal(v)
+	return string(b)
+}
+
+// webhook_url holds several URLs separated by spaces
+func joinWebhookURLs(vals []string) (string, error) {
+	var out []string
+	for _, v := range vals {
+		for _, u := range strings.Fields(v) {
+			if !isValidWebhookURL(u) {
+				return "", fmt.Errorf("Invalid webhook URL: %s", u)
+			}
+			out = append(out, u)
+		}
+	}
+	return strings.Join(out, " "), nil
+}
+
+func normalizeWebhookURLs(v string) string { return strings.Join(strings.Fields(v), " ") }
+
+func isValidWebhookURL(v string) bool {
+	u, err := url.Parse(v)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != ""
+}
+
+// looser than isValidEmailList since local senders may use addresses like root@hostname
+func isRecipientList(v string) bool {
+	list := splitEmailList(v)
+	for _, a := range list {
+		if !strings.Contains(a, "@") {
+			return false
+		}
+	}
+	return len(list) > 0
+}
 
 // SMTP usernames aren't always email addresses, e.g. SES access key IDs like AKIA..., so just reject blank/whitespace.
 func isValidSMTPUsername(v string) bool { return v != "" && !strings.ContainsAny(v, " \t\n") }

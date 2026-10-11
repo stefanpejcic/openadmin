@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -258,6 +259,24 @@ func getOpUpdateLogs() []updateLogEntry {
 	return logs
 }
 
+// updatePreferenceFor maps the two config flags back to the select's value, falling back to its first option like the browser does
+func updatePreferenceFor(autoupdate, autopatch string) string {
+	for pref, flags := range updatesPreferenceMap {
+		if flags["autoupdate"] == autoupdate && flags["autopatch"] == autopatch {
+			return pref
+		}
+	}
+	return "minor_only"
+}
+
+// daysSinceLastUpdate is -1 when there are no update logs to go by
+func daysSinceLastUpdate(logs []updateLogEntry, now time.Time) int {
+	if len(logs) == 0 {
+		return -1
+	}
+	return int(now.Sub(time.Unix(logs[0].Timestamp, 0)).Hours() / 24)
+}
+
 // ServeDockerTags handles GET/POST /api/docker-tags.
 func (u *Updates) ServeDockerTags(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -438,14 +457,18 @@ func (u *Updates) ServeUpdates(w http.ResponseWriter, r *http.Request) {
 	latestVersion := getLatestVersion()
 	panelVersion := u.currentPanelVersion()
 	updateLogs := getOpUpdateLogs()
+	autoupdate := configData.Get("PANEL", "autoupdate", "")
+	autopatch := configData.Get("PANEL", "autopatch", "")
 
 	webtemplates.Render(w, "settings_updates.html", mergeChrome(map[string]interface{}{
 		"PanelVersion": panelVersion,
 		// separate key since mergeChrome overwrites PanelVersion with the startup value
 		"InstalledVersion": panelVersion,
 		"LatestVersion":    latestVersion,
-		"Autoupdate":       configData.Get("PANEL", "autoupdate", ""),
-		"Autopatch":        configData.Get("PANEL", "autopatch", ""),
+		"Autoupdate":       autoupdate,
+		"Autopatch":        autopatch,
+		"UpdatePreference": updatePreferenceFor(autoupdate, autopatch),
+		"LastUpdateDays":   daysSinceLastUpdate(updateLogs, time.Now()),
 		"UpdateLogs":       updateLogs,
 		// A naive lexicographic STRING comparison here, instead of a
 		// semantic version comparison (e.g. "9.0" > "10.0" as strings), could

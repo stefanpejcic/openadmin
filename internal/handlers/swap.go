@@ -5,6 +5,7 @@ package handlers
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -143,11 +144,12 @@ func (s *Swap) ServeSwap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "server_swap.html", mergeChrome(map[string]interface{}{
-		"Swap":         status,
-		"SwapFilePath": SwapFilePath,
-		"TotalGB":      totalGB,
-		"CSRFToken":    csrf.Token(r),
-		"Flashes":      auth.PopFlashes(w, r, s.Sessions),
+		"Swap":          status,
+		"SwapFilePath":  SwapFilePath,
+		"TotalGB":       totalGB,
+		"RecommendedGB": recommendedSwapGB(float64(readMemInfo()["MemTotal"]) / (1024 * 1024 * 1024)),
+		"CSRFToken":     csrf.Token(r),
+		"Flashes":       auth.PopFlashes(w, r, s.Sessions),
 	}, r, "Swap"))
 }
 
@@ -286,4 +288,15 @@ func (s *Swap) ServeSwapActionStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, *pendingSwapAction)
+}
+
+// recommendedSwapGB: 2x RAM on small servers, then the square root of RAM since big servers don't need swap to match it
+func recommendedSwapGB(ramGB float64) float64 {
+	if ramGB <= 0 {
+		return 0
+	}
+	if ramGB <= 2 {
+		return math.Ceil(ramGB * 2)
+	}
+	return math.Max(2, math.Round(math.Sqrt(ramGB)))
 }

@@ -53,6 +53,9 @@ func (s *SecurityToggles) ServeDisableAdmin(w http.ResponseWriter, r *http.Reque
 // --- basic auth ---
 
 type basicAuthPageData struct {
+	// OpenAdmin port is open in the firewall, the page then recommends basic auth
+	AdminPortOpen bool
+	AdminPort     string
 	webtemplates.Chrome
 	BasicAuth         string
 	BasicAuthUsername string
@@ -74,6 +77,8 @@ func (s *SecurityToggles) ServeBasicAuth(w http.ResponseWriter, r *http.Request)
 		BasicAuth:         cfg.Get("SECURITY", "basic_auth", ""),
 		BasicAuthUsername: cfg.Get("SECURITY", "basic_auth_username", ""),
 		BasicAuthPassword: cfg.Get("SECURITY", "basic_auth_password", ""),
+		AdminPort:         generalOpenadminPort(),
+		AdminPortOpen:     csfTCPPortOpen(generalOpenadminPort(), CSFConfPath),
 		CSRFToken:         csrf.Token(r),
 		Flashes:           auth.PopFlashes(w, r, s.Sessions),
 	})

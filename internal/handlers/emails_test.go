@@ -871,3 +871,38 @@ func TestServeEmailsSettingsRendersHTMLRunning(t *testing.T) {
 		}
 	}
 }
+
+func TestServeEmailsSettingsWarnsWhenEmailsModuleDisabled(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
+	origModules := ModulesConfigFilePath
+	ModulesConfigFilePath = filepath.Join(t.TempDir(), "openpanel.config")
+	t.Cleanup(func() { ModulesConfigFilePath = origModules })
+
+	get := func() string {
+		resp, err := client.Get(srv.URL + "/emails/settings")
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+
+	os.WriteFile(ModulesConfigFilePath, []byte("enabled_modules=\"domains,dns\"\n"), 0644)
+	body := get()
+	if !strings.Contains(body, "the Emails module is disabled") {
+		t.Fatal("expected the Emails module warning")
+	}
+	for _, want := range []string{"hourly email limits set on plans", "IMAP and POP3 are disabled", "Rspamd, Amavis and ClamAV are all off"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected %q in the page", want)
+		}
+	}
+	os.WriteFile(ModulesConfigFilePath, []byte("enabled_modules=\"domains,emails\"\n"), 0644)
+	if strings.Contains(get(), "the Emails module is disabled") {
+		t.Fatal("expected no warning with the Emails module enabled")
+	}
+}

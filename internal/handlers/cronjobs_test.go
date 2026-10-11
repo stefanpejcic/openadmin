@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"openadmin/internal/auth"
 )
@@ -261,5 +262,20 @@ func TestServeCronsPostUpdatesMultipleEntries(t *testing.T) {
 	// line 2 didn't have "N_logging=on" submitted -> logging should be off
 	if !strings.Contains(lines[1], "#&& echo cron executed") {
 		t.Fatalf("expected line 2's logging to remain disabled, got %q", lines[1])
+	}
+}
+
+func TestCronWarnings(t *testing.T) {
+	now := time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)
+	jobs := []CronJob{
+		{Schedule: "*/5 * * * *", Command: "opencli sentinel"},
+		{Schedule: "59 23 31 2 *", Command: "opencli docker-backup"},
+		{Schedule: "59 23 31 2 *", Command: "opencli files-purge_trash"},
+		{Schedule: "0 25 * * *", Command: "opencli update"},
+		{Schedule: "0 0 30 2,4 *", Command: "opencli backup"},
+	}
+	got := cronWarnings(jobs, now)
+	if len(got) != 2 || got[0].Command != "opencli files-purge_trash" || !strings.Contains(got[0].Problem, "never runs") || got[1].Command != "opencli update" || got[1].Problem != "invalid schedule" {
+		t.Fatalf("cronWarnings = %+v", got)
 	}
 }

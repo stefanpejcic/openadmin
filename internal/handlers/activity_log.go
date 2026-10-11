@@ -45,16 +45,17 @@ func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter 
 
 // activityIgnored are POSTs that don't change anything an admin did, logins have their own log
 var activityIgnored = map[string]bool{
-	"POST /login":                            true,
-	"POST /login/":                           true,
-	"POST /login/2fa":                        true,
-	"POST /login/passkey/begin":              true,
-	"POST /login/passkey/complete":           true,
-	"POST /send_email":                       true,
-	"POST /security/passkeys/register/begin": true,
-	"POST /settings/notifications/test-smtp": true,
-	"POST /api/tour/complete":                true,
-	"POST /api/quickstart/dismiss":           true,
+	"POST /login":                               true,
+	"POST /login/":                              true,
+	"POST /login/2fa":                           true,
+	"POST /login/passkey/begin":                 true,
+	"POST /login/passkey/complete":              true,
+	"POST /send_email":                          true,
+	"POST /security/passkeys/register/begin":    true,
+	"POST /settings/notifications/test-smtp":    true,
+	"POST /settings/notifications/test-webhook": true,
+	"POST /api/tour/complete":                   true,
+	"POST /api/quickstart/dismiss":              true,
 }
 
 // ActivityMiddleware writes one line to the acting account's activity log for every request that changes something

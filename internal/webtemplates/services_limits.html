@@ -56,19 +56,23 @@
         {{range .Rows}}
 
   {{if or (hasSuffix .Label "CPU") (hasSuffix .Label "CPUS")}}
-        <label class="block">
+        <label class="block" x-data="{ v: $el.querySelector('input').value }">
           <span class="text-gray-700">CPU:</span>
-          <input type="number" min="0" step="0.001" name="{{.FieldName}}" value="{{rstrip .Value "G"}}" required
+          <input type="number" min="0" step="0.001" name="{{.FieldName}}" @input="v = $event.target.value" value="{{rstrip .Value "G"}}" required
                  class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" />
+          {{if .Advice.Low}}<span x-show="Number(v) > 0 && Number(v) < {{.Advice.Low}}" x-cloak class="mt-1 block text-xs text-amber-600 dark:text-amber-500">{{.Advice.LowText}}</span>{{end}}
+          {{if .Advice.High}}<span x-show="Number(v) > {{.Advice.High}}" x-cloak class="mt-1 block text-xs text-amber-600 dark:text-amber-500">{{.Advice.HighText}}</span>{{end}}
         </label>
   {{else if hasSuffix .Label "RAM"}}
-        <label class="block">
+        <label class="block" x-data="{ v: $el.querySelector('input').value }">
           <span class="text-gray-700">Memory:</span>
-          <input type="number" min="0" step="0.001" name="{{.FieldName}}" value="{{rstrip .Value "gG"}}" required class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" />
+          <input type="number" min="0" step="0.001" name="{{.FieldName}}" @input="v = $event.target.value" value="{{rstrip .Value "gG"}}" required class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" />
+          {{if .Advice.Low}}<span x-show="Number(v) > 0 && Number(v) < {{.Advice.Low}}" x-cloak class="mt-1 block text-xs text-amber-600 dark:text-amber-500">{{.Advice.LowText}}</span>{{end}}
+          {{if .Advice.High}}<span x-show="Number(v) > {{.Advice.High}}" x-cloak class="mt-1 block text-xs text-amber-600 dark:text-amber-500">{{.Advice.HighText}}</span>{{end}}
         </label>
   {{else}}
 
-        <label class="block">
+        <label class="block" x-data="{ v: ($el.querySelector('input') || {}).value || '' }">
           <span class="text-gray-700">{{titleWords .Label}}:</span>
       {{if .Timezones}}
 <select name="{{.FieldName}}" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" required>
@@ -80,8 +84,10 @@
     <option value="false" {{if eq (lower .Value) "false"}}selected{{end}}>False</option>
   </select>
     {{else}}
-          <input type="text" name="{{.FieldName}}" value="{{.Value}}" required
+          <input type="text" name="{{.FieldName}}" value="{{.Value}}" @input="v = $event.target.value" required
                  class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" />
+          {{if .Advice.Low}}<span x-show="Number(v) > 0 && Number(v) < {{.Advice.Low}}" x-cloak class="mt-1 block text-xs text-amber-600 dark:text-amber-500">{{.Advice.LowText}}</span>{{end}}
+          {{if .Advice.High}}<span x-show="Number(v) > {{.Advice.High}}" x-cloak class="mt-1 block text-xs text-amber-600 dark:text-amber-500">{{.Advice.HighText}}</span>{{end}}
   {{end}}
 
         </label>

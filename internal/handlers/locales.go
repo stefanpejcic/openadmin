@@ -26,6 +26,8 @@ import (
 // Locales bundles the /settings/locales handler.
 type Locales struct {
 	Sessions *auth.Manager
+	// logins from this IP are OpenAdmin's own autologins, not where the user is
+	PublicIP string
 }
 
 // LocalesGithubURL / TranslationsDir / DefaultLocaleFilePath are the
@@ -429,5 +431,6 @@ func (l *Locales) handleGet(w http.ResponseWriter, r *http.Request) {
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       flashes,
 		"BulkActions":   LocalesBulkActions(),
+		"Suggestions":   suggestLocales(results, userLoginCountries(LocalesUsersDir, l.PublicIP)),
 	}, r, "Locale Settings"))
 }

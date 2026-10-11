@@ -182,6 +182,7 @@
                     <div class="row form-selectgroup form-selectgroup-boxes d-flex">
                         <div class="mt-4 grid grid-cols-1 gap-4">
                             <textarea id="docker_apache_domain" name="docker_apache_domain" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerApacheDomain}}</textarea>
+                            <p x-show="modified" x-cloak class="text-sm text-amber-600 dark:text-amber-500">This file is changed from the default. Editing it is recommended for advanced users only, test by adding a new user and domain that everything still works after these changes.</p>
                         </div>
                     </div>
                 </div>
@@ -220,6 +221,7 @@
                     <div class="row form-selectgroup form-selectgroup-boxes d-flex">
                         <div class="mt-4 grid grid-cols-1 gap-4">
                             <textarea id="docker_nginx_domain" name="docker_nginx_domain" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerNginxDomain}}</textarea>
+                            <p x-show="modified" x-cloak class="text-sm text-amber-600 dark:text-amber-500">This file is changed from the default. Editing it is recommended for advanced users only, test by adding a new user and domain that everything still works after these changes.</p>
                         </div>
                     </div>
                 </div>
@@ -258,6 +260,7 @@
                     <div class="row form-selectgroup form-selectgroup-boxes d-flex">
                         <div class="mt-4 grid grid-cols-1 gap-4">
                             <textarea id="docker_openresty_domain" name="docker_openresty_domain" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerOpenrestyDomain}}</textarea>
+                            <p x-show="modified" x-cloak class="text-sm text-amber-600 dark:text-amber-500">This file is changed from the default. Editing it is recommended for advanced users only, test by adding a new user and domain that everything still works after these changes.</p>
                         </div>
                     </div>
                 </div>
@@ -298,6 +301,7 @@
                     <div class="row form-selectgroup form-selectgroup-boxes d-flex">
                         <div class="mt-4 grid grid-cols-1 gap-4">
                             <textarea id="docker_varnish" name="docker_varnish" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerVarnish}}</textarea>
+                            <p x-show="modified" x-cloak class="text-sm text-amber-600 dark:text-amber-500">This file is changed from the default. Editing it is recommended for advanced users only, test by adding a new user and domain that everything still works after these changes.</p>
                         </div>
                     </div>
                 </div>
@@ -339,6 +343,7 @@
                     <div class="row form-selectgroup form-selectgroup-boxes d-flex">
                         <div class="mt-4 grid grid-cols-1 gap-4">
                             <textarea id="docker_caddy" name="docker_caddy" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerCaddy}}</textarea>
+                            <p x-show="modified" x-cloak class="text-sm text-amber-600 dark:text-amber-500">This file is changed from the default. Editing it is recommended for advanced users only, test by adding a new user and domain that everything still works after these changes.</p>
                         </div>
                     </div>
                 </div>
@@ -353,6 +358,25 @@
 function restoreComponentFor(id, githubFile) {
   return {
     loading: false,
+    // config files without a live preview warn when they differ from the default
+    modified: false,
+    defaultText: null,
+    async init() {
+      if (!id.startsWith('docker_')) return;
+      const textarea = document.getElementById(id);
+      if (!textarea) return;
+      try {
+        const res = await fetch(githubFile);
+        if (!res.ok) return;
+        this.defaultText = await res.text();
+      } catch (e) {
+        return;
+      }
+      const norm = t => t.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trim();
+      const check = () => { this.modified = norm(textarea.value) !== norm(this.defaultText); };
+      textarea.addEventListener('input', check);
+      check();
+    },
     async restoreDefault() {
       this.loading = true;
       try {
@@ -360,7 +384,10 @@ function restoreComponentFor(id, githubFile) {
         if (!res.ok) throw new Error('Failed to fetch default configuration from GitHub');
         const text = await res.text();
         const textarea = document.getElementById(id);
-        if (textarea) textarea.value = text;
+        if (textarea) {
+          textarea.value = text;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
 
         if (typeof setupLivePreview === 'function' && !id.startsWith('docker_')) {
           setupLivePreview(id, `preview_${id}`);

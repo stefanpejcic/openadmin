@@ -284,6 +284,9 @@ type defaultsFieldView struct {
 	Label     string
 	Value     string
 	Required  bool
+	// smallest plan limit in use, the page warns below it, 0 means no recommendation
+	MinRec     float64
+	MinRecText string
 }
 
 type defaultsGroupView struct {
@@ -401,6 +404,16 @@ func buildPHPVersionOptions(current string, phpVersionsData map[string]phpVersio
 		options = append(options, phpVersionOption{Version: v, Label: label, Selected: selected})
 	}
 	return options
+}
+
+// latestPHPOption is the installed version php.watch marks as latest, empty when that one isn't installed
+func latestPHPOption(options []phpVersionOption, phpVersionsData map[string]phpVersionStatus) string {
+	for _, o := range options {
+		if phpVersionsData[o.Version].IsLatestVersion {
+			return o.Version
+		}
+	}
+	return ""
 }
 
 // composePortLineRe matches whichever form of the varnish port variable is
@@ -598,13 +611,19 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	activeJSON, _ := json.Marshal(activeServices)
+	siteTypes := defaultsSiteTypesRun(d.MySQL)
+	phpOptions := buildPHPVersionOptions(phpVersion, phpVersionsData)
+	planMins := defaultsPlanMinimumsRun(d.MySQL)
 
 	webtemplates.Render(w, "settings_defaults.html", mergeChrome(map[string]interface{}{
-		"WebServer":          webServer,
-		"MySQLType":          mysqlType,
-		"VarnishEnabled":     varnishEnabled,
-		"PHPVersionOptions":  buildPHPVersionOptions(phpVersion, phpVersionsData),
-		"AvailableServices":  availableServices,
+		"WebServer":         webServer,
+		"WebserverAdvice":   adviseWebserver(siteTypes),
+		"WordPressSites":    countSitesOfType(siteTypes, "wordpress"),
+		"MySQLType":         mysqlType,
+		"VarnishEnabled":    varnishEnabled,
+		"PHPVersionOptions": phpOptions,
+		"LatestPHPVersion":  latestPHPOption(phpOptions, phpVersionsData),
+		"AvailableServices": availableServices,
 		// template.JS tells html/template's contextual autoescaper this
 		// value is already valid JS/JSON, not a plain string to be
 		// re-encoded -- without it, the autoescaper wraps the array in an
@@ -613,8 +632,8 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		// `new Set(...)` on that string ends up splitting it into
 		// individual characters instead of service names.
 		"ActiveServicesJSON": htmltemplate.JS(activeJSON),
-		"PHPFPMGroups":       buildPHPFPMGroups(phpFPM, phpVersionsData),
-		"OtherGroups":        buildOtherDefaultsGroups(defaults),
+		"PHPFPMGroups":       applyPlanMinimums(buildPHPFPMGroups(phpFPM, phpVersionsData), planMins),
+		"OtherGroups":        applyPlanMinimums(buildOtherDefaultsGroups(defaults), planMins),
 		"CSRFToken":          csrf.Token(r),
 		"Flashes":            auth.PopFlashes(w, r, d.Sessions),
 	}, r, "Edit defaults"))

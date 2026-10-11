@@ -18,12 +18,24 @@ function formatDiskSize(bytes) {
 }
 
 // --- Disk Usage ---
+// warnings above the tabs, each check sets or clears its own key
+const usageWarnings = {};
+let usageCores = 0;
+function setUsageWarning(key, text) {
+    if (text) usageWarnings[key] = text; else delete usageWarnings[key];
+    const box = $('#usage_warnings').empty();
+    const order = ['cpu', 'load', 'ram', 'swap', 'disk'];
+    order.filter(k => usageWarnings[k]).forEach(k => box.append($('<p>').text(usageWarnings[k])));
+    box.toggleClass('hidden', box.children().length === 0);
+}
+
 function updateHomeUsage(data) {
     const home = data.find(d => d.mountpoint === '/');
     if (!home) return console.log('Mountpoint "/" not found.');
     const percent = Math.round(home.percent);
 
     $('#current_disk_usage_percentage_also, .home_usage').text(percent + '%');
+    setUsageWarning('disk', percent >= 90 ? `Disk / is ${percent}% full. Free up space or add disk before it fills up, services and databases stop when it does.` : '');
 
     // Donut chart visual
     const radius = 45, circ = 2 * Math.PI * radius;
@@ -61,6 +73,9 @@ function updateRamInfo() {
         const ramPercent = parseInt(ram.percent);
         $("#human-readable-info").html(`${ram.used} / ${ram.total} (${ram.percent})`);
         $('.ram_usage').text(ramPercent + '%');
+        const swapPercent = parseInt(swap.percent);
+        setUsageWarning('ram', ramPercent >= 90 ? `RAM is ${ramPercent}% used. Find what's using it on Processes, or add RAM before processes get killed.` : '');
+        setUsageWarning('swap', swapPercent >= 90 ? `Swap is ${swapPercent}% used, so the server is short on memory. Add RAM, lower memory usage or increase swap.` : '');
         $("#swap-human-readable-info").html(`${swap.used} / ${swap.total} (${swap.percent})`);
         updateRamChart(data.human_readable);
     });
@@ -251,6 +266,9 @@ function getServerLoad() {
         $('#load5min').text(formatDecimal(l5));
         $('#load15min').text(formatDecimal(l15));
         updateLoadChart({ load1min: l1, load5min: l5, load15min: l15 });
+        // 5 min average so a short spike doesn't warn
+        const loadPercent = usageCores ? Math.round(l5 / usageCores * 100) : 0;
+        setUsageWarning('load', loadPercent >= 90 ? `Load average ${formatDecimal(l5)} is ${loadPercent}% of the ${usageCores} CPU cores, processes are waiting for CPU time.` : '');
 
         // Load indicator/arrows
         const diff = l1 - l5;
@@ -283,6 +301,8 @@ function fetchCpuUsage() {
             container.append($('<div>').css('background-color', color).append(`<span>${usage.toFixed(1)}%</span>`));
         });
         const avg = count ? (total / count).toFixed(1) : 0;
+        usageCores = count;
+        setUsageWarning('cpu', avg >= 90 ? `CPU is ${avg}% used. Check Processes for what's using it.` : '');
         $('#cpu_avg-now').removeClass("text-red-500 text-orange-500 text-emerald-500 text-gray-500")
             .addClass(avg >= 90 ? "text-red-500" : avg >= 80 ? "text-orange-500" : avg >= 50 ? "text-gray-500" : "text-gray-500")
             .text(avg + '%');

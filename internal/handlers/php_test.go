@@ -34,9 +34,13 @@ func withScratchPHPPaths(t *testing.T) {
 	origIniDir := phpIniDir
 	phpOptionsPath = filepath.Join(dir, "options.txt")
 	phpIniDir = dir
+	// keeps the missing-version check off the network
+	origWatch := defaultsPHPWatchRun
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
 	t.Cleanup(func() {
 		phpOptionsPath = origOptions
 		phpIniDir = origIniDir
+		defaultsPHPWatchRun = origWatch
 	})
 }
 
@@ -449,5 +453,33 @@ func TestServePHPDefaultVersionPOSTFailure(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "Failed to retrieve or update default PHP version") {
 		t.Fatalf("expected the failure message, got %s", truncate(string(body)))
+	}
+}
+
+func TestMissingPHPVersions(t *testing.T) {
+	withScratchPHPPaths(t)
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) {
+		return map[string]phpVersionStatus{
+			"8.5": {IsLatestVersion: true},
+			"8.4": {IsSecureVersion: true},
+			"8.3": {IsSecureVersion: true},
+			"7.4": {IsEOLVersion: true},
+			"8.6": {IsFutureVersion: true},
+		}, nil
+	}
+	if got := strings.Join(missingPHPVersions([]string{"8.3", "7.4"}), ","); got != "8.5,8.4" {
+		t.Fatalf("missingPHPVersions = %s, want 8.5,8.4", got)
+	}
+
+	os.WriteFile(phpIniTestPath("8.3"), []byte(""), 0644)
+	srv, client := newPHPTestServer(t, &PHP{})
+	resp, err := client.Get(srv.URL + "/settings/php")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "PHP 8.5, 8.4 are supported but not installed") || !strings.Contains(string(body), "opencli/update/#php") {
+		t.Fatal("expected the missing PHP versions hint")
 	}
 }

@@ -220,8 +220,9 @@
                 <div class="relative w-full mt-2">
 
                     <div class="row form-selectgroup form-selectgroup-boxes d-flex">
-                        <div class="mt-4 grid grid-cols-1 gap-4">
+                        <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             <textarea id="welcome_email" name="welcome_email" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" rows="14" cols="50">{{.WelcomeEmail}}</textarea>
+                            <iframe id="preview_welcome_email" sandbox="" title="Welcome email preview" class="min-h-[72rem] w-full rounded border border-gray-300 bg-white dark:border-gray-800"></iframe>
                         </div>
                     </div>
                 </div>
@@ -415,7 +416,11 @@ function restoreComponentFor(id, githubFile) {
         if (!res.ok) throw new Error('Failed to fetch default configuration from GitHub');
         const text = await res.text();
         const textarea = document.getElementById(id);
-        if (textarea) textarea.value = text;
+        if (textarea) {
+          textarea.value = text;
+          // refreshes the live preview
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
       } catch (e) {
         showToast(e.message, 'error');
       } finally {
@@ -424,6 +429,18 @@ function restoreComponentFor(id, githubFile) {
     }
   }
 }
+</script>
+
+<script>
+// sandboxed so scripts in the email HTML never run in OpenAdmin
+(function () {
+    const textarea = document.getElementById('welcome_email');
+    const iframe = document.getElementById('preview_welcome_email');
+    if (!textarea || !iframe) return;
+    const update = () => { iframe.srcdoc = textarea.value; };
+    textarea.addEventListener('input', update);
+    update();
+})();
 </script>
 
 

@@ -824,6 +824,16 @@ type wafProfileRow struct {
 	Domains   int
 }
 
+func countMissingProfiles(rows []wafProfileRow) int {
+	n := 0
+	for _, r := range rows {
+		if !r.Installed {
+			n++
+		}
+	}
+	return n
+}
+
 func (wf *WAF) wafProfileRows(domains []string) []wafProfileRow {
 	used := map[string]int{}
 	for _, d := range domains {

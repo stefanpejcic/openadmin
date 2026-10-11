@@ -263,6 +263,7 @@ func (p *ProcessManager) ServeProcesses(w http.ResponseWriter, r *http.Request) 
 
 	webtemplates.Render(w, "system_processes.html", mergeChrome(map[string]interface{}{
 		"Processes":   processes,
+		"Hogs":        findProcessHogs(processes, LocalesUsersDir, SubuidPath),
 		"SortBy":      sortBy,
 		"CSRFToken":   csrf.Token(r),
 		"Flashes":     auth.PopFlashes(w, r, p.Sessions),

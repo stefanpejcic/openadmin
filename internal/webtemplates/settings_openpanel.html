@@ -114,7 +114,7 @@
         <p class="mt-1 text-sm leading-6 text-gray-500">Refer to the documentation for instructions no how to properly configure nameservers. <a href="https://openpanel.com/docs/articles/domains/how-to-configure-nameservers-in-openpanel/" target="_blank" class="inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400">Learn more<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a></p>
     </div>
     <div class="md:col-span-2">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6" x-data="{ empty: false, root: null, init() { this.root = this.$el; this.check() }, check() { this.empty = [...this.root.querySelectorAll('input[name^=ns]')].every(i => !i.value.trim()) } }" @input="check()">
             <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ns1">ns1</label>
                 <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
                         name="ns1" placeholder="ns1" value="{{.ConfigData.Get "DEFAULT" "ns1" ""}}" type="text"></div>
@@ -131,6 +131,7 @@
                 <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
                         name="ns4" placeholder="ns4" value="{{.ConfigData.Get "DEFAULT" "ns4" ""}}" type="text"></div>
             </div>
+            {{if .DNSModuleEnabled}}<p x-show="empty" x-cloak class="col-span-full text-sm text-amber-600 dark:text-amber-500">No nameservers are set but the DNS module is enabled. Recommended: set at least ns1 and ns2 so user domains resolve, or <a href="/settings/modules" class="font-medium underline hover:no-underline">disable the DNS module</a> if you won't use it, so BIND9 isn't autostarted and DNS zone files aren't created for every domain.</p>{{end}}
             <div class="col-span-full mt-6 flex justify-end"></div>
         </div>
     </div>
@@ -450,6 +451,7 @@ When enabled, users can reset password from the login page.
         <!-- Hidden input -->
         <input type="hidden" name="password_reset" :value="password_reset ? 'yes' : 'no'">
     </div>
+    {{if not .SMTPConfigured}}<p x-show="password_reset" x-cloak class="mt-2 text-sm text-amber-600 dark:text-amber-500">SMTP isn't configured, so password reset emails won't reach users until you <a href="/settings/notifications#smtp" class="font-medium underline hover:no-underline">set up SMTP</a>.</p>{{end}}
 </div>
 
         
@@ -826,30 +828,36 @@ Select how action buttons are shown on 'File Manager' page
 
 
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_view_size">Max file size for Viewer:</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_view_size">Max file size for Viewer:</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                        name="filemanager_view_size" required placeholder="10" value="{{.ConfigData.Get "FILES" "filemanager_view_size" ""}}" type="number" min="0"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">MB</span></div>
+                        name="filemanager_view_size" required placeholder="10" value="{{.ConfigData.Get "FILES" "filemanager_view_size" ""}}" type="number" min="0" @input="v = $event.target.value"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">MB</span></div>
+                {{if .OpenpanelRAMMB}}<p x-show="v !== '' && Number(v) > {{.OpenpanelRAMMB}}" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">This is more than the {{.OpenpanelRAM}} RAM limit of the OpenPanel container, so files this big can fail. Recommended: lower it or <a href="/services/limits" class="font-medium underline hover:no-underline">raise the OpenPanel RAM limit</a> to at least <span x-text="Math.ceil(Number(v) / 1024) + ' GB'"></span>.</p>{{end}}
             </div>
 
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_edit_size">Max file size for Editor:</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_edit_size">Max file size for Editor:</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                        name="filemanager_edit_size" required placeholder="10" value="{{.ConfigData.Get "FILES" "filemanager_edit_size" ""}}" type="number" min="0"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">MB</span></div>
+                        name="filemanager_edit_size" required placeholder="10" value="{{.ConfigData.Get "FILES" "filemanager_edit_size" ""}}" type="number" min="0" @input="v = $event.target.value"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">MB</span></div>
+                {{if .OpenpanelRAMMB}}<p x-show="v !== '' && Number(v) > {{.OpenpanelRAMMB}}" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">This is more than the {{.OpenpanelRAM}} RAM limit of the OpenPanel container, so files this big can fail. Recommended: lower it or <a href="/services/limits" class="font-medium underline hover:no-underline">raise the OpenPanel RAM limit</a> to at least <span x-text="Math.ceil(Number(v) / 1024) + ' GB'"></span>.</p>{{end}}
             </div>
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_upload_size">Max file size for Upload:</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_upload_size">Max file size for Upload:</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                        name="filemanager_upload_size" required placeholder="2000" value="{{.ConfigData.Get "FILES" "filemanager_upload_size" ""}}" type="number" min="0"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">MB</span></div>
+                        name="filemanager_upload_size" required placeholder="2000" value="{{.ConfigData.Get "FILES" "filemanager_upload_size" ""}}" type="number" min="0" @input="v = $event.target.value"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">MB</span></div>
+                {{if .OpenpanelRAMMB}}<p x-show="v !== '' && Number(v) > {{.OpenpanelRAMMB}}" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">This is more than the {{.OpenpanelRAM}} RAM limit of the OpenPanel container, so files this big can fail. Recommended: lower it or <a href="/services/limits" class="font-medium underline hover:no-underline">raise the OpenPanel RAM limit</a> to at least <span x-text="Math.ceil(Number(v) / 1024) + ' GB'"></span>.</p>{{end}}
             </div>
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_download_size">Max file size for Download:</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_download_size">Max file size for Download:</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                        name="filemanager_download_size" required placeholder="2000" value="{{.ConfigData.Get "FILES" "filemanager_download_size" ""}}" type="number" min="0"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">MB</span></div>
+                        name="filemanager_download_size" required placeholder="2000" value="{{.ConfigData.Get "FILES" "filemanager_download_size" ""}}" type="number" min="0" @input="v = $event.target.value"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">MB</span></div>
+                {{if .OpenpanelRAMMB}}<p x-show="v !== '' && Number(v) > {{.OpenpanelRAMMB}}" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">This is more than the {{.OpenpanelRAM}} RAM limit of the OpenPanel container, so files this big can fail. Recommended: lower it or <a href="/services/limits" class="font-medium underline hover:no-underline">raise the OpenPanel RAM limit</a> to at least <span x-text="Math.ceil(Number(v) / 1024) + ' GB'"></span>.</p>{{end}}
             </div>
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="autopurge_trash">Auto-purge trash after:</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="autopurge_trash">Auto-purge trash after:</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center">
-                    <input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="autopurge_trash" required placeholder="30" value="{{.ConfigData.Get "FILES" "autopurge_trash" ""}}" type="number" min="0"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Days</span></div>
+                    <input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="autopurge_trash" required placeholder="30" value="{{.ConfigData.Get "FILES" "autopurge_trash" ""}}" type="number" min="0" @input="v = $event.target.value"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Days</span></div>
+                <p x-show="v !== '' && Number(v) === 0" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">Trash is never purged, so deleted files pile up in users' Trash folders and keep using their disk space until they empty it themselves.</p>
+                <p x-show="Number(v) > 30" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">With trash kept over 30 days, the purge job doesn't need to run daily. Recommended: change the <code>opencli files-purge_trash</code> schedule to weekly on <a href="/server/crons" class="font-medium underline hover:no-underline">Scheduled Actions</a>.</p>
             </div>
 
             <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="filemanager_compress_max_time">Max time for compress process:</label>
@@ -944,15 +952,18 @@ Select how action buttons are shown on 'File Manager' page
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mysql_startup_time">Max startup time for MySQL:</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mysql_startup_time">Max startup time for MySQL:</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                        name="mysql_startup_time" required placeholder="10" value="{{.ConfigData.Get "DATABASES" "mysql_startup_time" ""}}" type="number" min="10" max="600"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Sec</span></div>
+                        name="mysql_startup_time" required placeholder="10" value="{{.ConfigData.Get "DATABASES" "mysql_startup_time" ""}}" type="number" min="10" max="600" @input="v = $event.target.value"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Sec</span></div>
+                <p x-show="v !== '' && Number(v) < 10" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">MySQL needs time to initialize on first start, below 10 seconds it can be reported as failed while it's still starting.</p>
+                {{if .MySQLCustomVersion}}<p x-show="v !== '' && Number(v) < 60" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">MYSQL_VERSION is set to {{.MySQLCustomVersion}}, so the first start downloads that image from Docker Hub. Recommended: at least 60 seconds.</p>{{end}}
             </div>
 
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mysql_import_max_size_gb">Max file size for MySQL Import:</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mysql_import_max_size_gb">Max file size for MySQL Import:</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                        name="mysql_import_max_size_gb" required placeholder="1" value="{{.ConfigData.Get "DATABASES" "mysql_import_max_size_gb" ""}}" type="number" min="1" max="10" ><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">GB</span></div>
+                        name="mysql_import_max_size_gb" required placeholder="1" value="{{.ConfigData.Get "DATABASES" "mysql_import_max_size_gb" ""}}" type="number" min="1" max="10"  @input="v = $event.target.value"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">GB</span></div>
+                {{if .OpenpanelRAMMB}}<p x-show="v !== '' && Number(v) * 1024 > {{.OpenpanelRAMMB}}" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">This is more than the {{.OpenpanelRAM}} RAM limit of the OpenPanel container, so imports this big can fail. Recommended: lower it or <a href="/services/limits" class="font-medium underline hover:no-underline">raise the OpenPanel RAM limit</a> to at least <span x-text="Math.ceil(Number(v)) + ' GB'"></span>.</p>{{end}}
             </div>
 
             <div class="col-span-full" x-data="restoreComponentFor('mysql_restricted_usernames', 'https://gist.githubusercontent.com/stefanpejcic/7bbed6780d3fab0ba8621ad821f27bc5/raw/37582ec67ea055522a07bb8365d4acca6b89d18a/mysql_restricted_usernames.txt')"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="mysql_restricted_usernames">Restricted MySQL (system) users:</label>
@@ -1080,7 +1091,7 @@ When enabled, all MySQL usernames and database names created by users must start
                         name="custom_captcha_site_key" placeholder="Site key" value="{{.ConfigData.Get "CAPTCHA" "custom_captcha_site_key" ""}}" type="text"></div>
             </div>
 
-<div class="col-span-full sm:col-span-3" x-data="{ tooltip: false }">
+<div class="col-span-full sm:col-span-3" x-data="{ tooltip: false, v: $el.querySelector('input[name=password_strength]').value }">
     <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium flex items-center gap-1" for="password_strength">
         Minimum password strength
         <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
@@ -1096,7 +1107,8 @@ When enabled, all MySQL usernames and database names created by users must start
             </template>
         </span>
     </label>
-    <div class="relative w-full mt-2 flex-grow flex items-center"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="password_strength" min="1" max="100" required placeholder="50" value="{{.ConfigData.Get "USERS" "password_strength" ""}}" type="number"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">1-100</span></div>
+    <div class="relative w-full mt-2 flex-grow flex items-center"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="password_strength" min="1" max="100" required placeholder="50" value="{{.ConfigData.Get "USERS" "password_strength" ""}}" type="number" @input="v = $event.target.value"><span class="ml-2 text-sm text-gray-600 dark:text-gray-400">1-100</span></div>
+    <p x-show="v !== '' && Number(v) < 50" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">Below 50, weak passwords are accepted. Recommended: at least 50.</p>
 
 </div>
 
@@ -1139,6 +1151,7 @@ When enabled, user passwords during account creation and password resets are che
         <!-- Hidden input -->
         <input type="hidden" name="weakpass" :value="weakpass ? 'yes' : 'no'">
     </div>
+    <p x-show="!weakpass" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">Recommended: on, so passwords found in known data breaches can't be used.</p>
 </div>
 
 <div class="col-span-full sm:col-span-3" x-data="{ twofa_enforce: {{if eq (.ConfigData.Get "USERS" "twofa_enforce" "") "yes"}}true{{else}}false{{end}}, tooltip: false }">
@@ -1222,6 +1235,7 @@ When enabled, a session cookie is rejected if the request's IP address doesn't m
         <!-- Hidden input -->
         <input type="hidden" name="validate_ip_address_cookie" :value="validate_ip_address_cookie ? 'yes' : 'no'">
     </div>
+    <p x-show="!validate_ip_address_cookie" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">With this off, a session cookie stolen from a user, for example through phishing, can be reused by an attacker from any IP. Recommended: on.</p>
 </div>
 
             <div class="col-span-full mt-6 flex justify-end"></div>
@@ -1303,14 +1317,16 @@ When enabled, a session cookie is rejected if the request's IP address doesn't m
             </div>
 
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="terminal_timeout">Terminal commands timeout (in seconds):</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input[name=terminal_timeout]').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="terminal_timeout">Terminal commands timeout (in seconds):</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center">
-                    <input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="terminal_timeout" required placeholder="10" value="{{.ConfigData.Get "PANEL" "terminal_timeout" ""}}" type="number" min="5" max="3600"></div>
+                    <input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="terminal_timeout" required placeholder="10" value="{{.ConfigData.Get "PANEL" "terminal_timeout" ""}}" type="number" min="5" max="3600" @input="v = $event.target.value"></div>
+                <p x-show="v !== '' && Number(v) < 30" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">Commands running longer than this are stopped, in both the OpenPanel web terminal and OpenAdmin. Recommended: at least 30 seconds.</p>
             </div>
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="pagespeed_api_key">PageSpeed API key:</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.querySelector('input[name=pagespeed_api_key]').value }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="pagespeed_api_key">PageSpeed API key:</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center">
-                    <input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" id="pagespeed_api_key" name="pagespeed_api_key" value="{{.PagespeedAPIKey}}" type="text"></div>
+                    <input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" id="pagespeed_api_key" name="pagespeed_api_key" value="{{.PagespeedAPIKey}}" type="text" @input="v = $event.target.value"></div>
+                {{if gt .SiteCount 10}}<p x-show="!v.trim()" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">There are {{.SiteCount}} sites on this server but no PageSpeed API key, so their PageSpeed data can't be fetched reliably. Recommended: set a key.</p>{{end}}
             </div>
 
     </div>

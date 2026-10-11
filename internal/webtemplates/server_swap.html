@@ -118,6 +118,7 @@ function swapResize() {
                     <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Swap.FreeMB}} MB</p>
                 </div>
             </div>
+            {{if gt .Swap.UsedPercent 90}}<p class="mt-3 text-sm text-amber-600 dark:text-amber-500">Swap is {{.Swap.UsedPercent}}% used, so the server is short on memory and slows down while it swaps. Recommended: add RAM, find and lower what's using it on <a href="/server/processes" class="font-medium underline hover:no-underline">Processes</a>, or increase swap below.</p>{{end}}
 
             <div class="mt-4 relative overflow-x-auto">
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
@@ -157,14 +158,15 @@ function swapResize() {
             <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Change allocation</h2>
             <p class="mt-1 text-sm leading-6 text-gray-500">Recreates the swap file at <code>{{.SwapFilePath}}</code> with the new size and re-enables it. {{if .Swap.ManagedFileExists}}A managed swap file already exists.{{else}}No managed swap file exists yet -- this will create one.{{end}}</p>
         </div>
-        <div class="md:col-span-2">
+        <div class="md:col-span-2" x-data="{ v: '{{.TotalGB}}' }">
             <div class="flex flex-wrap items-end gap-3">
                 <div>
                     <label for="swap_size_gb" class="block text-sm font-medium text-gray-900 dark:text-gray-50 mb-1">Swap size (GB)</label>
-                    <input id="swap_size_gb" type="number" min="0.125" step="0.125" value="{{.TotalGB}}" autocomplete="off" class="relative block w-40 appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-100 dark:bg-gray-950">
+                    <input id="swap_size_gb" type="number" min="0.125" step="0.125" value="{{.TotalGB}}" @input="v = $event.target.value" autocomplete="off" class="relative block w-40 appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-100 dark:bg-gray-950">
                 </div>
                 <button type="button" onclick="swapResize()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 cursor-pointer">Apply</button>
             </div>
+            {{if .RecommendedGB}}<p x-show="{{if eq .Swap.TotalMB 0}}true{{else}}Number(v) < {{.RecommendedGB}}{{end}}" x-cloak class="mt-2 text-sm text-amber-600 dark:text-amber-500">{{if eq .Swap.TotalMB 0}}No swap is set up. {{end}}Recommended: at least {{.RecommendedGB}} GB of swap for this server's RAM, so it has room to swap instead of killing processes when memory runs out.</p>{{end}}
         </div>
     </div>
 

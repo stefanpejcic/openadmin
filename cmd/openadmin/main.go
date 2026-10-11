@@ -224,7 +224,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	twofa := &handlers.TwoFA{DB: d.AdminDB, Sessions: sessions}
 	passkeys := &handlers.Passkeys{DB: d.AdminDB, Sessions: sessions}
 	notifications := &handlers.Notifications{Sessions: sessions}
-	notificationSettings := &handlers.NotificationSettings{Sessions: sessions}
+	notificationSettings := &handlers.NotificationSettings{Sessions: sessions, MySQL: d.MySQL}
 	serverUtils := &handlers.ServerUtils{Sessions: sessions}
 	cronjobs := &handlers.Cronjobs{Sessions: sessions}
 	securityToggles := &handlers.SecurityToggles{Sessions: sessions}
@@ -239,7 +239,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	goAccessStats := &handlers.GoAccessStats{Sessions: sessions}
 	services := &handlers.Services{MySQL: d.MySQL, Sessions: sessions}
 	ftp := &handlers.FTP{MySQL: d.MySQL, Sessions: sessions}
-	limits := &handlers.Limits{Sessions: sessions}
+	limits := &handlers.Limits{Sessions: sessions, MySQL: d.MySQL}
 	logs := &handlers.Logs{Sessions: sessions}
 	reboot := &handlers.Reboot{Sessions: sessions}
 	swap := &handlers.Swap{Sessions: sessions}
@@ -248,12 +248,12 @@ func newHandler(d appDeps) (http.Handler, error) {
 	migrate := &handlers.Migrate{Sessions: sessions}
 	customCode := &handlers.CustomCode{Sessions: sessions, LicenseChecker: d.LicenseChecker}
 	general := &handlers.General{Sessions: sessions, DevMode: d.DevMode}
-	locales := &handlers.Locales{Sessions: sessions}
+	locales := &handlers.Locales{Sessions: sessions, PublicIP: d.PublicIP}
 	modules := &handlers.Modules{Sessions: sessions}
 	updates := &handlers.Updates{Sessions: sessions, PanelVersion: d.PanelVersion}
 	features := &handlers.Features{MySQL: d.MySQL, Sessions: sessions}
 	resellers := &handlers.Resellers{DB: d.AdminDB, MySQL: d.MySQL, Sessions: sessions}
-	openpanelSettings := &handlers.OpenpanelSettings{Sessions: sessions, LicenseChecker: d.LicenseChecker}
+	openpanelSettings := &handlers.OpenpanelSettings{Sessions: sessions, LicenseChecker: d.LicenseChecker, MySQL: d.MySQL}
 	defaultsSettings := &handlers.Defaults{MySQL: d.MySQL, Sessions: sessions}
 	generalStatic := &handlers.GeneralStatic{Static: static.Files}
 	licensePage := &handlers.LicensePage{Sessions: sessions}
@@ -622,6 +622,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /settings/notifications", auth.RequireAdmin(sessions, authOpts, notificationSettings.ServeSettings))
 	mux.HandleFunc("POST /settings/notifications", auth.RequireAdmin(sessions, authOpts, notificationSettings.HandleUpdate))
 	mux.HandleFunc("POST /settings/notifications/test-smtp", auth.RequireAdmin(sessions, authOpts, notificationSettings.TestSMTP))
+	mux.HandleFunc("POST /settings/notifications/test-webhook", auth.RequireAdmin(sessions, authOpts, notificationSettings.TestWebhook))
 
 	mux.HandleFunc("GET /server/timezone", auth.RequireAdmin(sessions, authOpts, serverUtils.ServeTimezone))
 	mux.HandleFunc("POST /server/timezone", auth.RequireAdmin(sessions, authOpts, serverUtils.ServeTimezone))
