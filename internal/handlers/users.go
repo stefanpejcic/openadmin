@@ -870,7 +870,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		PlanCPU:           planCPU,
 		PlanRAM:           planRAM,
 		Services:          services,
-		ServiceAdvice:     adviseUserServices(username, userServiceStateRun(u.MySQL, username, services)),
+		ServiceAdvice:     append(adviseUserServices(username, userServiceStateRun(u.MySQL, username, services)), adviseServiceLimits(services, planName, planCPU, planRAM, thresholdHostRun())...),
 		Features:          features,
 		HasCustomFeatures: hasCustomFeatures,
 		CSRFToken:         csrf.Token(r),

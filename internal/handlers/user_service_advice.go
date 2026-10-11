@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -151,6 +152,29 @@ func adviseUserServices(username string, st userServiceState) []string {
 
 	if !st.AdminBackups && has["backup"] && st.Running != nil && !st.Running["backup"] {
 		out = append(out, "Backups aren't configured for this user: the backup service isn't running and backups aren't admin-configured.")
+	}
+	return out
+}
+
+// adviseServiceLimits flags service limits above the plan (the plan is the ceiling) or above the server itself (the container can't start), 0 is unlimited
+func adviseServiceLimits(services []composeServiceView, planName, planCPU, planRAM string, host thresholdHost) []string {
+	pCPU, pRAM := parseCPULimit(planCPU), parseRAMLimitGB(planRAM)
+	var out []string
+	for _, s := range services {
+		cpu, _ := strconv.ParseFloat(strings.TrimSpace(s.CPULimit), 64)
+		ram, _ := strconv.ParseFloat(strings.TrimSpace(s.MemoryLimitGB), 64)
+		switch {
+		case cpu > 0 && host.Cores > 0 && cpu > float64(host.Cores):
+			out = append(out, fmt.Sprintf("%s can't be started with a CPU limit of %s, the server has %d CPU cores. Set it under %d.", s.ContainerName, formatLimit(cpu), host.Cores, host.Cores))
+		case cpu > 0 && pCPU > 0 && cpu > pCPU:
+			out = append(out, fmt.Sprintf("%s has a CPU limit of %s, above the %s plan's %s CPU. The plan limit is the ceiling, so it can't use more than %s.", s.ContainerName, formatLimit(cpu), planName, formatLimit(pCPU), formatLimit(pCPU)))
+		}
+		switch {
+		case ram > 0 && host.RAMGB > 0 && ram > host.RAMGB:
+			out = append(out, fmt.Sprintf("%s can't be started with a memory limit of %s GB, the server has %.1f GB RAM. Set it under %.1f GB.", s.ContainerName, formatLimit(ram), host.RAMGB, host.RAMGB))
+		case ram > 0 && pRAM > 0 && ram > pRAM:
+			out = append(out, fmt.Sprintf("%s has a memory limit of %s GB, above the %s plan's %s GB. The plan limit is the ceiling, so it can't use more than %s GB.", s.ContainerName, formatLimit(ram), planName, formatLimit(pRAM), formatLimit(pRAM)))
+		}
 	}
 	return out
 }

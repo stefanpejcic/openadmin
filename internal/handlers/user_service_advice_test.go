@@ -76,3 +76,31 @@ func TestDetailStatsWidgetOverLimit(t *testing.T) {
 		t.Fatalf("OverLimit = %v", w.OverLimit)
 	}
 }
+
+func TestAdviseServiceLimits(t *testing.T) {
+	host := thresholdHost{Cores: 8, RAMGB: 16}
+	services := []composeServiceView{
+		{ContainerName: "apache", CPULimit: "4", MemoryLimitGB: "3.00"},
+		{ContainerName: "mariadb", CPULimit: "12", MemoryLimitGB: "32.00"},
+		{ContainerName: "redis", CPULimit: "0", MemoryLimitGB: ""},
+		{ContainerName: "nginx", CPULimit: "1", MemoryLimitGB: "1.00"},
+	}
+	got := strings.Join(adviseServiceLimits(services, "Standard", "2", "2g", host), "\n")
+	for _, want := range []string{
+		"apache has a CPU limit of 4, above the Standard plan's 2 CPU. The plan limit is the ceiling",
+		"apache has a memory limit of 3 GB, above the Standard plan's 2 GB",
+		"mariadb can't be started with a CPU limit of 12, the server has 8 CPU cores. Set it under 8.",
+		"mariadb can't be started with a memory limit of 32 GB, the server has 16.0 GB RAM. Set it under 16.0 GB.",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected %q in\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "redis") || strings.Contains(got, "nginx") || strings.Contains(got, "mariadb has a CPU limit") {
+		t.Fatalf("unexpected advice:\n%s", got)
+	}
+	// unlimited plan only checks the server
+	if got := adviseServiceLimits(services[:1], "Unlimited", "0", "0g", host); len(got) != 0 {
+		t.Fatalf("expected no plan advice on an unlimited plan, got %q", got)
+	}
+}
