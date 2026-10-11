@@ -320,6 +320,7 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 	// backups
 	"POST /backups/user/settings":      func(r *http.Request) string { return "Changed user backup settings" },
 	"POST /backups/user/configuration": func(r *http.Request) string { return "Changed user backup configuration" },
+	"POST /backups/user/exclusions":    func(r *http.Request) string { return "Changed accounts excluded from user backups" },
 	"POST /backups/user/run":           func(r *http.Request) string { return "Started a user backup" },
 	"POST /backups/system":             func(r *http.Request) string { return "Changed system backup settings" },
 	"POST /backups/system/run":         func(r *http.Request) string { return "Started a system backup" },

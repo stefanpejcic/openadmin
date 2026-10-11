@@ -11,11 +11,14 @@ package handlers
 
 import (
 	"bufio"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -31,6 +34,7 @@ import (
 // Backups bundles the /backups/* handlers.
 type Backups struct {
 	Sessions *auth.Manager
+	MySQL    *sql.DB
 }
 
 var (
@@ -261,14 +265,22 @@ func (b *Backups) ServeUserBackups(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		backupEnv = []byte{}
 	}
+	exclusions, exclusionsErr := backupsListExclusions(b.MySQL)
+	exclusionsError := ""
+	if exclusionsErr != nil {
+		exclusionsError = exclusionsErr.Error()
+	}
 
 	webtemplates.Render(w, "backups_user.html", mergeChrome(map[string]interface{}{
-		"ScheduleChoice": scheduleChoice,
-		"ScheduleLabel":  backupScheduleLabel(schedule),
-		"BackupEnv":      string(backupEnv),
-		"RunsLog":        backupsReadLastLines(DockerBackupLogPath, 500),
-		"CSRFToken":      csrf.Token(r),
-		"Flashes":        auth.PopFlashes(w, r, b.Sessions),
+		"ScheduleChoice":  scheduleChoice,
+		"ScheduleLabel":   backupScheduleLabel(schedule),
+		"BackupEnv":       string(backupEnv),
+		"BackupEnvForm":   parseBackupEnvForm(string(backupEnv)),
+		"Exclusions":      exclusions,
+		"ExclusionsError": exclusionsError,
+		"RunsLog":         backupsReadLastLines(DockerBackupLogPath, 500),
+		"CSRFToken":       csrf.Token(r),
+		"Flashes":         auth.PopFlashes(w, r, b.Sessions),
 	}, r, "User Backups"))
 }
 
@@ -318,12 +330,136 @@ func (b *Backups) ServeUserBackupsConfiguration(w http.ResponseWriter, r *http.R
 	r.ParseForm()
 	backupEnv := r.PostFormValue("backup_env")
 
+	if r.PostFormValue("mode") == "form" {
+		current, err := os.ReadFile(BackupEnvPath)
+		if err != nil {
+			auth.AddFlash(w, r, b.Sessions, "Failed to read backup.env: "+err.Error(), "error")
+			http.Redirect(w, r, "/backups/user#configuration", http.StatusSeeOther)
+			return
+		}
+		destination := r.PostFormValue("destination")
+		if _, ok := backupEnvSectionKeys[destination]; !ok {
+			auth.AddFlash(w, r, b.Sessions, "Select a backup destination.", "error")
+			http.Redirect(w, r, "/backups/user#configuration", http.StatusSeeOther)
+			return
+		}
+		// one line per value, a newline would inject extra keys into the file
+		clean := func(v string) string { return strings.TrimSpace(strings.NewReplacer("\r", "", "\n", "").Replace(v)) }
+		destValues := map[string]string{}
+		for _, k := range backupEnvSectionKeys[destination] {
+			if vs, ok := r.PostForm["values["+k+"]"]; ok && len(vs) > 0 {
+				destValues[k] = clean(vs[0])
+			}
+		}
+		settings := map[string]string{}
+		for _, f := range parseBackupEnvForm(string(current)).Settings {
+			if vs, ok := r.PostForm["settings["+f.Key+"]"]; ok && len(vs) > 0 {
+				settings[f.Key] = clean(vs[0])
+			}
+		}
+		backupEnv = renderBackupEnvForm(string(current), destination, destValues, settings)
+	}
+
 	if err := os.WriteFile(BackupEnvPath, []byte(backupEnv), 0644); err != nil {
 		auth.AddFlash(w, r, b.Sessions, "Failed to save backup.env: "+err.Error(), "error")
 	} else {
 		auth.AddFlash(w, r, b.Sessions, "Saved. New users will be provisioned with this backup.env -- existing users' own settings are unaffected.", "success")
 	}
 	http.Redirect(w, r, "/backups/user#configuration", http.StatusSeeOther)
+}
+
+// backupExcludeFile is the marker `opencli docker-backup` checks to skip a user
+const backupExcludeFile = "backup.off"
+
+// context names end up in a path, so only plain names are allowed
+var backupContextRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+
+type backupExcludeRow struct {
+	Username string
+	Context  string
+	Excluded bool
+}
+
+// backupsListExclusions lists active users with their context and whether backup.off exists
+func backupsListExclusions(db *sql.DB) ([]backupExcludeRow, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database unavailable")
+	}
+	rows, err := db.Query(`SELECT username, server FROM users ORDER BY username`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []backupExcludeRow
+	for rows.Next() {
+		var username string
+		var server sql.NullString
+		if err := rows.Scan(&username, &server); err != nil {
+			return nil, err
+		}
+		// suspended users are never backed up anyway
+		if strings.HasPrefix(username, "SUSPENDED_") {
+			continue
+		}
+		ctx := server.String
+		if ctx == "" {
+			ctx = username
+		}
+		if !backupContextRe.MatchString(ctx) {
+			continue
+		}
+		_, statErr := os.Stat(filepath.Join(UserHomeBase, ctx, backupExcludeFile))
+		out = append(out, backupExcludeRow{Username: username, Context: ctx, Excluded: statErr == nil})
+	}
+	return out, rows.Err()
+}
+
+// backupsApplyExclusions creates/removes backup.off so exactly the given users are excluded, returns how many changed
+func backupsApplyExclusions(db *sql.DB, exclude map[string]bool) (int, error) {
+	rows, err := backupsListExclusions(db)
+	if err != nil {
+		return 0, err
+	}
+	changed := 0
+	for _, row := range rows {
+		want := exclude[row.Username]
+		if want == row.Excluded {
+			continue
+		}
+		home := filepath.Join(UserHomeBase, row.Context)
+		if fi, err := os.Stat(home); err != nil || !fi.IsDir() {
+			return changed, fmt.Errorf("home directory %s not found", home)
+		}
+		marker := filepath.Join(home, backupExcludeFile)
+		if want {
+			err = os.WriteFile(marker, []byte("excluded from opencli docker-backup via OpenAdmin\n"), 0644)
+		} else {
+			err = os.Remove(marker)
+		}
+		if err != nil {
+			return changed, err
+		}
+		changed++
+	}
+	return changed, nil
+}
+
+// ServeUserBackupsExclusions handles POST /backups/user/exclusions: checked users get backup.off, unchecked lose it.
+func (b *Backups) ServeUserBackupsExclusions(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	exclude := map[string]bool{}
+	for _, u := range r.PostForm["exclude"] {
+		exclude[u] = true
+	}
+
+	changed, err := backupsApplyExclusions(b.MySQL, exclude)
+	if err != nil {
+		auth.AddFlash(w, r, b.Sessions, "Failed to update excluded accounts: "+err.Error(), "error")
+	} else {
+		auth.AddFlash(w, r, b.Sessions, fmt.Sprintf("Saved. %d account(s) updated.", changed), "success")
+	}
+	http.Redirect(w, r, "/backups/user#exclusions", http.StatusSeeOther)
 }
 
 // pendingUserBackupAction mirrors pendingBackupAction (the system backups

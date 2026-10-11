@@ -268,7 +268,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	waf := &handlers.WAF{Sessions: sessions, MySQL: d.MySQL}
 	sshHandlers := &handlers.SSH{Sessions: sessions}
 	podmanHandlers := &handlers.Podman{Sessions: sessions, MySQL: d.MySQL}
-	backupsHandlers := &handlers.Backups{Sessions: sessions}
+	backupsHandlers := &handlers.Backups{Sessions: sessions, MySQL: d.MySQL}
 	search := &handlers.Search{MySQL: d.MySQL, Sessions: sessions, JSONFilePath: d.SearchJSONPath}
 	dnsCluster := &handlers.DNSCluster{Sessions: sessions, PublicIP: d.PublicIP}
 	emails := &handlers.Emails{Sessions: sessions, PublicIP: d.PublicIP, MasterPass: d.DovecotMasterPass}
@@ -730,6 +730,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /backups/user", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackups))
 	mux.HandleFunc("POST /backups/user/settings", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackupsSettings))
 	mux.HandleFunc("POST /backups/user/configuration", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackupsConfiguration))
+	mux.HandleFunc("POST /backups/user/exclusions", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackupsExclusions))
 	mux.HandleFunc("POST /backups/user/run", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackupsRun))
 	mux.HandleFunc("GET /backups/user/action-status", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeUserBackupsActionStatus))
 	mux.HandleFunc("GET /backups/system", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeSystemBackups))
