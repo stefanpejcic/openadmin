@@ -274,6 +274,21 @@ type detailStatsWidget struct {
 	RAMColor          string
 	RAMHumanUsage     string
 	RAMHumanTotal     string
+
+	// names of the rings at 90% or more, the tab then suggests checking usage and the plan limits
+	OverLimit []string
+}
+
+func (w detailStatsWidget) withOverLimit() detailStatsWidget {
+	for _, ring := range []struct{ name, value string }{
+		{"Disk", w.DiskUsageRounded}, {"Inodes", w.InodesUsageRounded},
+		{"CPU", w.CPURatioRounded}, {"Memory", w.RAMPercentRounded},
+	} {
+		if v, err := strconv.ParseFloat(ring.value, 64); err == nil && v >= 90 {
+			w.OverLimit = append(w.OverLimit, ring.name)
+		}
+	}
+	return w
 }
 
 const detailRingCircumference = 182.212373908208
@@ -654,6 +669,7 @@ type userDetailPageData struct {
 	PlanCPU           string
 	PlanRAM           string
 	Services          []composeServiceView
+	ServiceAdvice     []string
 	Features          []map[string]interface{}
 	HasCustomFeatures bool
 	CSRFToken         string
@@ -830,6 +846,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 
 	chrome := buildChrome(r, "User: "+stripSuspendedPrefix(username))
 	chrome.BulkActions = UserContainersBulkActions()
+	services := composeServicesForUser(u.MySQL, username)
 	webtemplates.Render(w, "user_detail.html", userDetailPageData{
 		Chrome:            chrome,
 		Username:          username,
@@ -837,7 +854,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Disk:              disk,
 		Notes:             readUserNotes(userData.Context),
 		Stats:             parsedStats,
-		StatsWidget:       buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats),
+		StatsWidget:       buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats).withOverLimit(),
 		ServerIP:          serverIP,
 		ServerName:        serverName(),
 		DockerCtx:         userData.Context,
@@ -852,7 +869,8 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		PlanName:          planName,
 		PlanCPU:           planCPU,
 		PlanRAM:           planRAM,
-		Services:          composeServicesForUser(u.MySQL, username),
+		Services:          services,
+		ServiceAdvice:     adviseUserServices(username, userServiceStateRun(u.MySQL, username, services)),
 		Features:          features,
 		HasCustomFeatures: hasCustomFeatures,
 		CSRFToken:         csrf.Token(r),

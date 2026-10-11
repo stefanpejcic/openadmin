@@ -587,6 +587,7 @@
                <div x-show="activeTab === 'stats'">
                   <div class="relative w-full p-6 text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden !p-0 sm:mx-auto">
                      <div class="p-6">
+                        {{if .StatsWidget.OverLimit}}<p class="text-sm text-amber-600 dark:text-amber-500">{{range $i, $n := .StatsWidget.OverLimit}}{{if $i}}, {{end}}{{$n}}{{end}} {{if eq (len .StatsWidget.OverLimit) 1}}is{{else}}are{{end}} at 90% or more of the plan limit. Check the <a href="#usage" class="font-medium underline hover:no-underline">usage history</a> below{{if .PlanID}}, or <a href="/plans/{{.PlanID}}" class="font-medium underline hover:no-underline">edit the {{.PlanName}} plan limits</a>{{end}}.</p>{{end}}
                         <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
 <div
   x-data="{ hovered: false }"
@@ -1034,6 +1035,11 @@
                   <div class="overflow-x-auto">
                      <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
                         <div x-show="!showEditor">
+                        {{if .ServiceAdvice}}
+                        <div class="px-4 py-3 space-y-1 text-sm text-amber-600 dark:text-amber-500 sm:px-6">
+                        {{range .ServiceAdvice}}<p>{{.}}</p>{{end}}
+                        </div>
+                        {{end}}
                         {{if .Services}}
                         {{template "bulk_open" (dict "Table" "#user_services_table" "Endpoint" (printf "/containers/%s/bulk" (lastSegment .Username "_")))}}
                         <table id="user_services_table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
