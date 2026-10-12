@@ -81,8 +81,20 @@ func saveEmailToFile(subject, recipient, body string) error {
 	if err := os.MkdirAll(MailerEmailLogDir, 0755); err != nil {
 		return err
 	}
-	filename := recipient + "_" + subject + ".txt"
+	filename := safeMailLogName(recipient) + "_" + safeMailLogName(subject) + ".txt"
 	return os.WriteFile(filepath.Join(MailerEmailLogDir, filename), []byte(body), 0644)
+}
+
+var mailLogNameUnsafe = regexp.MustCompile(`[^A-Za-z0-9@._ -]+`)
+
+// safeMailLogName keeps recipient/subject from turning into a path, slashes and dot-runs can't escape the log dir
+func safeMailLogName(s string) string {
+	s = mailLogNameUnsafe.ReplaceAllString(s, "_")
+	s = strings.ReplaceAll(s, "..", "_")
+	if len(s) > 100 {
+		s = s[:100]
+	}
+	return s
 }
 
 // validateOneTimeCode is a constant-time comparison against
