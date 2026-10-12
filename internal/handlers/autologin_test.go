@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -246,5 +247,31 @@ func TestServeLoginTokenResellerDeniedForNonOwnedUser(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403 for a reseller without a verifiable ownership record, got %d", resp.StatusCode)
+	}
+}
+
+func TestServeLoginTokenPassesNext(t *testing.T) {
+	withScratchAutologinConfig(t, "no")
+	withScratchAutologinTokenDir(t)
+
+	origDomain, origPort, origSSL := autologinOpenpanelDomainRun, autologinOpenpanelPortRun, autologinCheckSSLExistsRun
+	autologinOpenpanelDomainRun = func() string { return "" }
+	autologinOpenpanelPortRun = func() string { return "2083" }
+	autologinCheckSSLExistsRun = func(domain string) bool { return false }
+	t.Cleanup(func() {
+		autologinOpenpanelDomainRun, autologinOpenpanelPortRun, autologinCheckSSLExistsRun = origDomain, origPort, origSSL
+	})
+
+	a := &Autologin{PublicIP: "198.51.100.5", AdminPort: "2087", MySQL: newUserExistsMock(t, "testuser", true)}
+	srv, client := newAutologinTestServer(t, a, "admin")
+
+	resp, err := client.Get(srv.URL + "/login/token/testuser?output=json&next=" + url.QueryEscape("/website?domain=example.com"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "next=%2Fwebsite%3Fdomain%3Dexample.com") {
+		t.Fatalf("expected next in link, got %s", body)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -216,6 +217,11 @@ func (a *Autologin) ServeLoginToken(w http.ResponseWriter, r *http.Request) {
 		link = fmt.Sprintf("%s/login_autologin?username=%s&admin_port=%s&impersonate=yes&admin_token=%s", openPanel, username, a.AdminPort, randomToken)
 	} else {
 		link = fmt.Sprintf("%s/login_autologin?username=%s&admin_port=%s&admin_token=%s", openPanel, username, a.AdminPort, randomToken)
+	}
+
+	// openpanel checks next is a local path before redirecting to it
+	if next := r.URL.Query().Get("next"); strings.HasPrefix(next, "/") {
+		link += "&next=" + url.QueryEscape(next)
 	}
 
 	if r.URL.Query().Get("output") == "json" {

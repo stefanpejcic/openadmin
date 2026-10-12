@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+{{$root := .}}
+{{template "bulk_open" (dict "Table" "#websites_table" "Endpoint" "/websites/bulk")}}
+<div x-data="websitesPage" x-cloak>
+{{vulnSourceSprite}}
+{{siteTypeSprite .TypeNames}}
+{{/* icons repeated on every row, defined once */}}
+<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="ws-speed" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/><path fill-rule="evenodd" d="M0 10a8 8 0 1 1 15.547 2.661c-.442 1.253-1.845 1.602-2.932 1.25C11.309 13.488 9.475 13 8 13c-1.474 0-3.31.488-4.615.911-1.087.352-2.49.003-2.932-1.25A8 8 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.575.923.876 1.68.63C4.397 12.533 6.358 12 8 12s3.604.532 4.923.96c.757.245 1.477-.056 1.68-.631A7 7 0 0 0 8 3"/></symbol>
+    <symbol id="ws-login" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0z"/><path fill-rule="evenodd" d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/></symbol>
+    <symbol id="ws-dots" viewBox="0 0 16 3"><path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></symbol>
+    <symbol id="ws-warn" viewBox="0 0 24 24"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></symbol>
+    <symbol id="ws-scan" viewBox="0 0 24 24"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></symbol>
+    <symbol id="ws-check" viewBox="0 0 24 24"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></symbol>
+</svg>
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Websites</h1>
+                    <h2 class="text-sm font-medium text-slate-500">
+                        {{if .Sites}}
+                            <b>{{len .Sites}}</b> {{if gt (len .Sites) 1}}websites{{else}}website{{end}} in Site Manager across all users.
+                        {{else if .MySQLIsDown}}
+                            Unable to read websites from the database.
+                        {{else}}
+                            No websites in Site Manager yet.
+                        {{end}}
+                    </h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    <a @click="showScan = !showScan" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Scan for Websites</a>
+                </div>
+            </div>
+        </header>
+
+        <form x-show="showScan" x-transition method="POST" action="/websites/scan" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="grow">
+                <label for="scan_username" class="text-sm font-medium">Username</label>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Finds sites in users' files that aren't in Site Manager yet, leave empty to scan every user.</p>
+                <input type="text" name="username" id="scan_username" placeholder="all users" autocomplete="off"
+                    class="mt-2 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+            </div>
+            <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white bg-blue-500 hover:bg-blue-600">Start Scan</button>
+        </form>
+    </div>
+
+    <div class="space-y-3">
+        <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+                <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+                    <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 pl-8" placeholder="Search sites, owners, domains..." type="search">
+                    <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                    </div>
+                </div>
+                {{if gt (len .Types) 1}}
+                <div class="flex flex-nowrap shrink-0 items-center gap-1 overflow-x-auto">
+                    <button type="button" @click="typeFilter = ''" :class="typeFilter === '' ? 'bg-gray-900 text-white dark:bg-gray-50 dark:text-gray-900' : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'" class="shrink-0 whitespace-nowrap rounded px-2 py-1 text-xs font-medium">All</button>
+                    {{range .Types}}
+                    <button type="button" @click="typeFilter = {{toJSON .Type}}" :class="typeFilter === {{toJSON .Type}} ? 'bg-gray-900 text-white dark:bg-gray-50 dark:text-gray-900' : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300'" class="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded px-2 py-1 text-xs font-medium">{{siteTypeUse .Type}} {{siteTypeLabel .Type}} <span class="opacity-60">{{.Count}}</span></button>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                <button type="button" @click="open = !open" class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg> Show Columns</button>
+                <div x-show="open" x-transition class="absolute right-0 z-10 mt-1 w-72 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-900 shadow-md dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
+                            <ul class="p-2 space-y-1">
+                                <li>
+                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input type="checkbox" x-model="columns.type" class="sr-only peer">
+                                        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Type</span>
+                                    </label>
+                                </li>
+                                <li>
+                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input type="checkbox" x-model="columns.owner" class="sr-only peer">
+                                        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Owner</span>
+                                    </label>
+                                </li>
+                                <li>
+                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input type="checkbox" x-model="columns.version" class="sr-only peer">
+                                        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Version</span>
+                                    </label>
+                                </li>
+                                <li>
+                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input type="checkbox" x-model="columns.vulns" class="sr-only peer">
+                                        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Vulnerabilities</span>
+                                    </label>
+                                </li>
+                                {{if .Imunify}}
+                                <li>
+                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input type="checkbox" x-model="columns.imunify" class="sr-only peer">
+                                        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">ImunifyAV</span>
+                                    </label>
+                                </li>
+                                {{end}}
+                                <li>
+                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input type="checkbox" x-model="columns.speed" class="sr-only peer">
+                                        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">PageSpeed</span>
+                                    </label>
+                                </li>
+                                <li>
+                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input type="checkbox" x-model="columns.created" class="sr-only peer">
+                                        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Created</span>
+                                    </label>
+                                </li>
+                            </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative overflow-x-auto">
+            <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="websites_table">
+                <thead>
+                    <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+{{template "bulk_head_checkbox" .}}
+                        <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Site" "Key" "name" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th x-show="columns.type" class="border-b px-4 text-center font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Type" "Key" "type" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th x-show="columns.owner" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Owner" "Key" "owner" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th x-show="columns.version" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Version" "Key" "version" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th x-show="columns.vulns" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Vulnerabilities" "Key" "vulns" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        {{if .Imunify}}<th x-show="columns.imunify" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "ImunifyAV" "Key" "imunify" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>{{end}}
+                        <th x-show="columns.speed" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "PageSpeed" "Key" "speed" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th x-show="columns.created" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Created" "Key" "created" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+{{if .Sites}}
+{{range .Sites}}
+{{$owner := .Owner}}
+{{$suspended := contains $owner "SUSPENDED_"}}
+{{$type := lower .Type}}
+{{$id := .ID}}
+                    <tr x-show="(typeFilter === '' || typeFilter === {{toJSON $type}}) && (searchQuery === '' || {{toJSON (lower (printf "%s %s %s %s %s" .SiteName $owner .Domain .AdminEmail .Type))}}.includes(searchQuery.toLowerCase()))" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if $suspended}}bg-red-50 dark:bg-red-400/10{{end}}">
+{{template "bulk_row_checkbox" (dict "Key" (printf "%d" .ID) "Label" .SiteName "Skip" (or (and (not .IsWordPress) "vulnerability") ""))}}
+                        <td class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
+                            <div class="flex items-center gap-3">
+                                {{/* light bg in both themes so dark favicons don't vanish in dark mode */}}
+                                <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-50">
+                                    <img class="size-4 rounded-full" src="{{$root.FaviconBase}}{{.SiteName}}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+                                </span>
+                                <div>
+                                    <a href="http://{{.SiteName}}" target="_blank" rel="noopener" class="hover:underline">{{.SiteName}}</a>
+                                    {{if .HostDocroot}}<p class="text-xs font-normal text-gray-500 dark:text-gray-400" title="{{.Docroot}} in the container">{{.HostDocroot}}</p>{{end}}
+                                </div>
+                            </div>
+                        </td>
+                        <td x-show="columns.type" class="p-4 text-sm whitespace-nowrap py-2 text-gray-700 dark:text-gray-300 text-center"><span class="inline-flex" title="{{siteTypeLabel .Type}}" aria-label="{{siteTypeLabel .Type}}">{{siteTypeUse .Type}}</span></td>
+                        <td x-show="columns.owner" class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
+                            {{if $owner}}<a href="/users/{{$owner}}" class="hover:underline">{{lastSegment $owner "_"}}</a> {{if $suspended}}<span class="badge bg-red-lt">SUSPENDED</span>{{end}}{{else}}<span class="text-gray-400">no owner</span>{{end}}
+                        </td>
+                        <td x-show="columns.version" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left tabular-nums">
+                            <div>{{or .Version "-"}}</div>
+                            {{if .LatestVersion}}<span class="mt-1 inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-400/10 dark:text-amber-400" title="WordPress {{.LatestVersion}} is available">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-3.5" aria-hidden="true"><path d="M13 7.82843V20H11V7.82843L5.63604 13.1924L4.22183 11.7782L12 4L19.7782 11.7782L18.364 13.1924L13 7.82843Z"></path></svg>
+                                {{.LatestVersion}} available
+                            </span>{{end}}
+                        </td>
+                        <td x-show="columns.vulns" class="p-4 text-sm whitespace-nowrap py-2 text-left">
+                            {{if not .IsWordPress}}
+                            <span class="text-xs text-gray-400" title="Only WordPress sites are scanned for vulnerabilities">-</span>
+                            {{else if .Vulns}}
+                            <button type="button" @click="openVulns({{.ID}}, {{toJSON .SiteName}})" class="cursor-pointer inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-400/10 dark:text-red-400 dark:hover:bg-red-400/20">
+                                <svg class="size-3.5" fill="currentColor" aria-hidden="true"><use href="#ws-warn"></use></svg>
+                                {{.Vulns.Total}} in {{len .Vulns.Components}} {{if gt (len .Vulns.Components) 1}}components{{else}}component{{end}}
+                            </button>
+                            {{else}}
+                            <span class="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400" title="No known vulnerabilities in the last scan, or not scanned yet">
+                                <svg class="size-3.5" fill="currentColor" aria-hidden="true"><use href="#ws-check"></use></svg>
+                                None found
+                            </span>
+                            {{end}}
+                        </td>
+                        {{if $root.Imunify}}
+                        <td x-show="columns.imunify" class="p-4 text-sm whitespace-nowrap py-2 text-left">
+                            {{/* button always last so it lines up on every row */}}
+                            <div class="flex items-center justify-between gap-3">
+                                <div>
+                                    {{with .Imunify}}
+                                    {{if .Scanning}}
+                                    <span class="text-xs font-medium text-blue-600 dark:text-blue-400">Scanning...</span>
+                                    {{else if .Total}}
+                                    <a href="/security/imunify/" title="Open ImunifyAV to see and handle the infected files" class="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-400/10 dark:text-red-400"><svg class="size-3.5" fill="currentColor" aria-hidden="true"><use href="#ws-warn"></use></svg>{{.Total}} infected</a>
+                                    {{else}}
+                                    <span class="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400"><svg class="size-3.5" fill="currentColor" aria-hidden="true"><use href="#ws-check"></use></svg>Clean</span>
+                                    {{end}}
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{with .ScanAgo}}<span title="Last scan of the owner's files" class="cursor-help">scanned {{.}}</span>{{else}}never scanned{{end}}</p>
+                                    {{else}}
+                                    <span class="text-xs text-gray-400" title="ImunifyAV hasn't scanned the owner's files yet">-</span>
+                                    {{end}}
+                                </div>
+                                {{if $owner}}
+                                <button type="button" @click="post('/security/imunify/' + {{toJSON $owner}})" {{if and .Imunify .Imunify.Scanning}}disabled{{end}} title="Scan {{lastSegment $owner "_"}}'s files with ImunifyAV" class="shrink-0 cursor-pointer rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-white"><svg class="size-4" fill="currentColor" aria-hidden="true"><use href="#ws-scan"></use></svg></button>
+                                {{else}}
+                                <span class="inline-block h-6 w-6 shrink-0" aria-hidden="true"></span>
+                                {{end}}
+                            </div>
+                        </td>
+                        {{end}}
+                        <td x-show="columns.speed" class="p-4 text-sm whitespace-nowrap py-2 text-left">
+                            {{with .Speed}}
+                            <div class="flex cursor-pointer gap-2" @mouseenter="showSpeed($el, {{$id}}, {{toJSON .}})" @mouseleave="hideSpeed()">
+                                <div class="flex items-center gap-x-2.5">
+                                <div class="relative" role="progressbar" aria-label="Desktop PageSpeed score" aria-valuenow="{{.Desktop.Score}}" aria-valuemin="0" aria-valuemax="100">
+                                    <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
+                                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
+                                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54 78.54" stroke-dashoffset="{{.RingOffset}}" fill="transparent" class="{{.RingColor}}"></circle>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center"><span class="text-[11px] font-semibold text-gray-900 dark:text-gray-50">{{.Desktop.Score}}</span></div>
+                                </div>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-gray-900 dark:text-gray-50"><span class="text-gray-500">Mobile: </span><span class="font-medium">{{.Mobile.FCP}}</span></span>
+                                    <span class="text-xs text-gray-500">Desktop {{.Desktop.FCP}}</span>
+                                </div>
+                            </div>
+                            {{else}}
+                            <a href="https://pagespeed.web.dev/report?url={{printf "https://%s" .SiteName | urlquery}}" target="_blank" rel="noopener" title="No speed data yet, check on Google PageSpeed Insights" class="inline-flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"><svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#ws-speed"></use></svg></a>
+                            {{end}}
+                        </td>
+                        <td x-show="columns.created" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left">{{if .CreatedAgo}}<span title="{{.Created}}" class="cursor-help">{{.CreatedAgo}}</span>{{else}}{{or .Created "-"}}{{end}}</td>
+                        <td class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-right">
+                            <div class="inline-flex items-center gap-1">
+                            {{if and .IsWordPress $owner}}
+                            <a href="/websites/login/{{.ID}}" target="_blank" title="Log in to wp-admin as administrator" aria-label="Log in to wp-admin of {{.SiteName}}" class="inline-flex items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-white"><svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#ws-login"></use></svg></a>
+                            {{else}}
+                            <span class="inline-block size-7" aria-hidden="true"></span>
+                            {{end}}
+                            <button type="button" @click.stop="openMenu($event.currentTarget, {{toJSON .Menu}})" aria-label="Actions for {{.SiteName}}" class="inline-flex cursor-pointer items-center justify-center rounded border border-transparent p-1.5 text-gray-900 hover:border-gray-300 hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-800/80 hover:dark:border-gray-700"><svg class="w-5 h-5" fill="currentColor" aria-hidden="true"><use href="#ws-dots"></use></svg></button>
+                            </div>
+                        </td>
+                    </tr>
+{{end}}
+{{else if .MySQLIsDown}}
+                    <tr><td colspan="10" class="p-6 text-center">{{template "partial_mysql_error" .}}</td></tr>
+{{else}}
+                    <tr><td colspan="10" class="p-6 text-center text-sm">No websites yet. Use <b>Scan for Websites</b> to find sites users installed outside Site Manager.</td></tr>
+{{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{/* one actions menu and one pagespeed popover for the page, filled from the row that opened them */}}
+    <form x-ref="actionForm" method="POST" class="hidden">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <input type="hidden" name="id" :value="menu.id">
+        <input type="hidden" name="back" value="/websites">
+    </form>
+    <div x-show="menuOpen" x-ref="menu" x-cloak @click.outside="menuOpen = false" @keydown.escape.window="menuOpen = false" @scroll.window="menuOpen = false" :style="menuPos" class="fixed z-50 min-w-48 rounded border border-gray-200 bg-white p-1 text-left text-gray-900 shadow-xl dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
+        <ul class="py-2 text-sm">
+            <li class="flex"><a :href="'http://' + menu.name" target="_blank" rel="noopener" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Visit site</a></li>
+            <template x-if="menu.wp && menu.owner"><li class="flex"><a :href="'/websites/login/' + menu.id" target="_blank" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Log in to wp-admin</a></li></template>
+            <template x-if="menu.owner"><li class="flex"><a :href="'/login/token/' + menu.login + '?next=' + encodeURIComponent('/website?domain=' + menu.name)" target="_blank" :title="'Log in to OpenPanel as ' + menu.login + ' and open this site in Site Manager'" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Manage as owner</a></li></template>
+            <template x-if="menu.owner"><li class="flex"><a :href="'/users/' + menu.owner" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Owner account</a></li></template>
+            <template x-if="menu.owner && menu.domain"><li class="flex"><a :href="'/domains/vhost/' + menu.owner + '/' + menu.domain" target="_blank" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Virtual Host</a></li></template>
+            <li class="flex"><button type="button" @click="post('/websites/pagespeed')" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Check PageSpeed</button></li>
+            {{if .Imunify}}<template x-if="menu.owner"><li class="flex"><button type="button" @click="post('/security/imunify/' + menu.owner)" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Scan with ImunifyAV</button></li></template>{{end}}
+            <template x-if="menu.wp"><li class="flex"><button type="button" @click="post('/websites/vulnerability')" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Scan for vulnerabilities</button></li></template>
+            <li class="flex"><button type="button" @click="confirm('Detach ' + menu.name + ' from Site Manager? Files and databases are kept.') && post('/websites/detach')" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">Detach</button></li>
+        </ul>
+    </div>
+    <div x-show="speed" x-cloak x-transition.opacity :style="speedPos" style="width:22rem" @mouseenter="clearTimeout(speedTimer)" @mouseleave="hideSpeed()" @scroll.window="speed = null" class="fixed z-50 rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-500 shadow-lg dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400">
+        <template x-if="speed">
+            <table class="w-full text-xs">
+                <thead>
+                    <tr><td class="p-2"></td><td class="text-end font-medium text-slate-500 dark:text-gray-400">Desktop</td><td class="text-end font-medium text-slate-500 dark:text-gray-400">Mobile</td></tr>
+                </thead>
+                <tbody>
+                    <tr><td class="p-2 font-medium text-slate-500 dark:text-gray-400">Performance:</td><td class="text-end font-bold" x-text="speed.desktop.score"></td><td class="text-end font-bold" x-text="speed.mobile.score"></td></tr>
+                    <tr><td class="p-2 font-medium text-slate-500 dark:text-gray-400">First Contentful Paint:</td><td class="text-end font-bold" x-text="speed.desktop.first_contentful_paint"></td><td class="text-end font-bold" x-text="speed.mobile.first_contentful_paint"></td></tr>
+                    <tr><td class="p-2 font-medium text-slate-500 dark:text-gray-400">Speed Index:</td><td class="text-end font-bold" x-text="speed.desktop.speed_index"></td><td class="text-end font-bold" x-text="speed.mobile.speed_index"></td></tr>
+                    <tr><td class="p-2 font-medium text-slate-500 dark:text-gray-400">Time to Interactive:</td><td class="text-end font-bold" x-text="speed.desktop.interactive"></td><td class="text-end font-bold" x-text="speed.mobile.interactive"></td></tr>
+                    <tr>
+                        <td colspan="2" class="p-2 font-medium text-slate-500 dark:text-gray-400" x-text="'Measured at ' + speed.checked"></td>
+                        <td class="p-2 text-end"><button type="button" @click="menu = { id: speedSite }; $nextTick(() => post('/websites/pagespeed'))" class="inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded border border-black bg-black px-2 py-1 text-xs font-medium text-white shadow-sm hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900/60">Update</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </template>
+    </div>
+    {{/* one popup for the page, details load on open so the page doesn't carry every report */}}
+    <div x-show="vulnSite" x-cloak x-transition.opacity @keydown.escape.window="vulnSite = 0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="vulnSite = 0">
+        <div style="max-height:85vh" class="w-full max-w-2xl overflow-y-auto rounded-lg border border-gray-200 bg-white p-4 shadow-xl dark:border-gray-800 dark:bg-gray-950">
+            <div class="mb-4 flex items-start justify-between gap-4">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Vulnerabilities on <span x-text="vulnName"></span></h3>
+                <button type="button" @click="vulnSite = 0" class="cursor-pointer rounded p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-900" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"></path></svg>
+                </button>
+            </div>
+            <p x-show="vulnLoading" class="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+            <div x-show="!vulnLoading" x-html="vulnHTML"></div>
+        </div>
+    </div>
+</div>
+{{template "bulk_bar" .}}
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('websitesPage', () => ({
+        searchQuery: '',
+        typeFilter: '',
+        // every column on by default, saved per browser like on /domains
+        columns: { type: true, owner: true, version: true, vulns: true, imunify: true, speed: true, created: true },
+        init() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('websitescolumnsVisibility') || '{}');
+                this.columns = Object.assign(this.columns, saved);
+            } catch (e) {}
+            this.$watch('columns', () => {
+                try { localStorage.setItem('websitescolumnsVisibility', JSON.stringify(this.columns)); } catch (e) {}
+            }, { deep: true });
+        },
+        showScan: false,
+        vulnSite: 0,
+        vulnName: '',
+        vulnHTML: '',
+        vulnLoading: false,
+        menu: {},
+        menuOpen: false,
+        menuPos: '',
+        speed: null,
+        speedSite: 0,
+        speedPos: '',
+        speedTimer: null,
+        // places a fixed popup under el, kept inside the window
+        below(el, width) {
+            const r = el.getBoundingClientRect();
+            return 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, Math.min(r.left, window.innerWidth - width - 8)) + 'px';
+        },
+        openMenu(el, site) {
+            if (this.menuOpen && this.menu.id === site.id) { this.menuOpen = false; return; }
+            this.menu = site;
+            const r = el.getBoundingClientRect();
+            const left = 'left:' + Math.max(8, r.right - 200) + 'px';
+            this.menuPos = 'top:' + (r.bottom + 4) + 'px;' + left;
+            this.menuOpen = true;
+            // flip above the button when it would run off the bottom of the window
+            this.$nextTick(() => {
+                const h = this.$refs.menu.offsetHeight;
+                if (r.bottom + 4 + h > window.innerHeight && r.top - 4 - h > 0) {
+                    this.menuPos = 'top:' + (r.top - 4 - h) + 'px;' + left;
+                }
+            });
+        },
+        post(action) {
+            this.$refs.actionForm.action = action;
+            this.$refs.actionForm.submit();
+        },
+        showSpeed(el, id, data) {
+            clearTimeout(this.speedTimer);
+            this.speedSite = id;
+            this.speed = data;
+            this.speedPos = this.below(el, 352);
+        },
+        hideSpeed() {
+            this.speedTimer = setTimeout(() => this.speed = null, 150);
+        },
+        async openVulns(id, name) {
+            this.vulnSite = id;
+            this.vulnName = name;
+            this.vulnLoading = true;
+            try {
+                const r = await fetch('/websites/vulnerabilities/' + id);
+                this.vulnHTML = r.ok ? await r.text() : '<p class="text-sm text-red-600">Failed to load the report.</p>';
+            } catch (e) {
+                this.vulnHTML = '<p class="text-sm text-red-600">Failed to load the report.</p>';
+            }
+            if (this.vulnSite === id) this.vulnLoading = false;
+        },
+    }));
+});
+</script>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>
+
+{{/* body of the vulnerabilities popup, fetched from /websites/vulnerabilities/{id} */}}
+{{define "websites_vulns"}}
+{{if .Vulns}}
+<p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{.Vulns.Total}} known {{if gt .Vulns.Total 1}}issues{{else}}issue{{end}}{{if .Vulns.Checked}}, last scanned {{.Vulns.Checked}}{{end}}</p>
+<div class="space-y-4 text-left">
+{{range .Vulns.Components}}
+<div>
+    <p class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-50">
+        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium capitalize text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{.Kind}}</span>
+        {{if .Link}}<a href="{{.Link}}" target="_blank" rel="noopener" class="hover:underline">{{.Name}}</a>{{else}}{{.Name}}{{end}}
+    </p>
+    <ul class="mt-2 space-y-2">
+        {{range .Issues}}
+        <li class="rounded bg-gray-50 p-3 text-sm dark:bg-gray-900">
+            <p class="font-medium text-gray-800 dark:text-gray-200">{{.Name}}</p>
+            {{if .FixedIn}}<p class="mt-1 text-xs text-gray-600 dark:text-gray-400">Fixed in {{.FixedIn}}, update to fix it.</p>{{end}}
+            {{if .Sources}}<p class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400">Source:
+                {{range $src := .Sources}}{{if $src.Link}}{{with vulnSourceLogo $src.Link}}<a href="{{$src.Link}}" target="_blank" rel="noopener" title="{{$src.Name}}" class="inline-flex items-center rounded bg-white px-1 py-0.5 transition">{{.}}</a>{{else}}<a href="{{$src.Link}}" target="_blank" rel="noopener" class="text-blue-600 hover:underline dark:text-blue-400">{{$src.Name}}</a>{{end}}{{end}}{{end}}
+            </p>{{end}}
+        </li>
+        {{end}}
+    </ul>
+</div>
+{{end}}
+</div>
+{{else}}
+<p class="text-sm text-gray-500 dark:text-gray-400">No known vulnerabilities in the last scan.</p>
+{{end}}
+{{end}}

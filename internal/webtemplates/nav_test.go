@@ -29,7 +29,7 @@ func TestBuildModernNavAdmin(t *testing.T) {
 	c := &Chrome{CurrentPath: "/domains/dns", IsAdmin: true, LicenseType: "Enterprise", EnabledModules: []string{"dns"}}
 	items, tabs := BuildModernNav(c)
 
-	if got := labels(items); got != "Accounts,Hosting Plans,Domains,Emails,Backups,Services,Security,Server,System,Settings,License & Support" {
+	if got := labels(items); got != "Accounts,Hosting Plans,Domains,Websites,Emails,Backups,Services,Security,Server,System,Settings,License & Support" {
 		t.Errorf("unexpected sidebar: %s", got)
 	}
 	for _, i := range items {

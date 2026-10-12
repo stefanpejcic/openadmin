@@ -230,6 +230,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	securityToggles := &handlers.SecurityToggles{Sessions: sessions}
 	users := &handlers.Users{MySQL: d.MySQL, Sessions: sessions, AdminDB: d.AdminDB}
 	domains := &handlers.Domains{MySQL: d.MySQL, Sessions: sessions}
+	websites := &handlers.Websites{MySQL: d.MySQL, Sessions: sessions}
 	dnsZoneEditor := &handlers.DNSZoneEditor{MySQL: d.MySQL, Sessions: sessions}
 	caddyFileEditor := &handlers.CaddyFileEditor{MySQL: d.MySQL, Sessions: sessions}
 	vhostFileEditor := &handlers.VHostFileEditor{MySQL: d.MySQL, Sessions: sessions}
@@ -265,6 +266,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	tasks := &handlers.Tasks{Sessions: sessions}
 	slave := &handlers.Slave{Sessions: sessions}
 	imunify := &handlers.Imunify{Sessions: sessions}
+	imunifyScan := &handlers.ImunifyScan{MySQL: d.MySQL, Sessions: sessions}
 	waf := &handlers.WAF{Sessions: sessions, MySQL: d.MySQL}
 	sshHandlers := &handlers.SSH{Sessions: sessions}
 	podmanHandlers := &handlers.Podman{Sessions: sessions, MySQL: d.MySQL}
@@ -662,6 +664,16 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /users/{username}/account-setting/{field}", auth.RequireLogin(sessions, authOpts, users.ServeUserAccountSetting))
 	mux.HandleFunc("GET /containers/stats/{username}", auth.RequireLogin(sessions, authOpts, users.ServeContainersStats))
 
+	mux.HandleFunc("GET /websites", auth.RequireAdmin(sessions, authOpts, websites.ServeList))
+	mux.HandleFunc("GET /websites/login/{id}", auth.RequireAdmin(sessions, authOpts, websites.ServeLogin))
+	mux.HandleFunc("GET /websites/vulnerabilities/{id}", auth.RequireAdmin(sessions, authOpts, websites.ServeVulnerabilities))
+	mux.HandleFunc("POST /websites/scan", auth.RequireAdmin(sessions, authOpts, websites.HandleScan))
+	mux.HandleFunc("POST /websites/detach", auth.RequireAdmin(sessions, authOpts, websites.HandleDetach))
+	mux.HandleFunc("POST /websites/{check}", auth.RequireAdmin(sessions, authOpts, websites.HandleCheck))
+	mux.HandleFunc("POST /websites/bulk", auth.RequireAdmin(sessions, authOpts, func(w http.ResponseWriter, r *http.Request) {
+		handlers.ServeBulkDispatch(sessions, mux, w, r, handlers.WebsitesBulkActions(handlers.ImunifyInstalled()), websites.BulkRoute)
+	}))
+
 	mux.HandleFunc("GET /domains", auth.RequireAdmin(sessions, authOpts, domains.ServeList))
 	mux.HandleFunc("GET /domains/", auth.RequireAdmin(sessions, authOpts, domains.ServeList))
 	mux.HandleFunc("POST /domains/add", auth.RequireAdmin(sessions, authOpts, domains.HandleAdd))
@@ -847,6 +859,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /security/imunify/", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyGUI))
 	mux.HandleFunc("GET /security/imunify/assets/static/{filename...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyStatic))
 	mux.HandleFunc("POST /security/imunify/install", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyInstall))
+	mux.HandleFunc("POST /security/imunify/{user}", auth.RequireAdmin(sessions, authOpts, imunifyScan.HandleScanUser))
 	mux.HandleFunc("GET /security/imunify/install/status", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyInstallStatus))
 	// exempt from CSRF, proxies to a PHP app that handles its own CSRF
 	mux.HandleFunc("GET /imav/{path...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyPHP))

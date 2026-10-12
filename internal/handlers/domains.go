@@ -226,7 +226,7 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 
 	chrome := buildChrome(r, "Domains")
 	chrome.BulkActions = DomainsBulkActions(d.ownerPHPVersions(domains))
-	webtemplates.Render(w, "domains_list.html", domainsListPageData{
+	renderGzip(w, r, "domains_list.html", domainsListPageData{
 		Chrome:        chrome,
 		Domains:       domains,
 		PHPVersions:   phpVersionsEOL(),

@@ -200,6 +200,11 @@ var funcMap = template.FuncMap{
 		s, _ := v.(string)
 		return strings.ReplaceAll(s, old, new)
 	},
+	"siteTypeLabel":    SiteTypeLabel,
+	"vulnSourceLogo":   VulnSourceLogo,
+	"vulnSourceSprite": VulnSourceSprite,
+	"siteTypeSprite":   SiteTypeSprite,
+	"siteTypeUse":      SiteTypeUse,
 	"firstUpper": func(s string) string {
 		if s == "" {
 			return ""

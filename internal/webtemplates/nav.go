@@ -125,6 +125,11 @@ var modernAreas = []navArea{
 				tabSpec{true, "/domains/file-templates", "Domain Templates", isFile},
 			)
 		}},
+	{label: "Websites", icon: websitesIcon, menuID: "websites-menu", show: adminOnly,
+		match: func(c *Chrome, path string) bool { return strings.HasPrefix(path, "/websites") },
+		tabs: func(c *Chrome, path string) []NavLink {
+			return buildTabs(tabSpec{true, "/websites", "Websites", true})
+		}},
 	{label: "Emails", icon: emailsIcon, menuID: "emails-menu",
 		show:  func(c *Chrome) bool { return !c.IsReseller && isEnterprise(c) },
 		match: func(c *Chrome, path string) bool { return strings.HasPrefix(path, "/emails") },
@@ -263,6 +268,7 @@ var helpDocs = map[string]string{
 	"/domains/dns-cluster":           "admin/domains/dns-cluster",
 	"/domains/zone-templates":        "admin/domains/dns_templates",
 	"/domains/file-templates":        "admin/domains/file_templates",
+	"/websites":                      "admin/websites/websites",
 	"/emails/accounts":               "admin/emails/emails",
 	"/emails/queue":                  "admin/emails/queue",
 	"/emails/reports":                "admin/emails/summary",

@@ -119,7 +119,18 @@ func (u *Users) bulkActions(r *http.Request) []webtemplates.BulkAction {
 		}
 	}
 	plans, _ := paneldb.GetAllPlans(u.MySQL, allowed)
-	return UsersBulkActions(plans, serverPublicIPs())
+	return u.withImunifyScan(r, UsersBulkActions(plans, serverPublicIPs()))
+}
+
+// usersImunifyScanAction replays POST /security/imunify/{user}, which is admin only
+var usersImunifyScanAction = webtemplates.BulkAction{Key: "imunify", Icon: "scan-search", Label: "Scan with ImunifyAV", Confirm: "Queue an ImunifyAV malware scan of each selected user's files? Scans run in the background, results show on the Websites page."}
+
+// withImunifyScan adds the ImunifyAV scan for admins when the agent is installed
+func (u *Users) withImunifyScan(r *http.Request, actions []webtemplates.BulkAction) []webtemplates.BulkAction {
+	if u.resellerScope(r) != "" || !imunifyInstalled() {
+		return actions
+	}
+	return append(actions, usersImunifyScanAction)
 }
 
 // usersEditFields are the /user/edit form fields the one-value actions fill in
@@ -142,6 +153,8 @@ func usersBulkRoute(action, value, username string) (*BulkCall, BulkResult) {
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/user/edit/" + url.PathEscape(username), Form: url.Values{usersEditFields[action]: {value}}})
 	case "backup":
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/user/export/create/" + url.PathEscape(username)})
+	case "imunify":
+		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/security/imunify/" + url.PathEscape(username)})
 	case "twofa", "passkeys":
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/users/" + url.PathEscape(username) + "/account-setting/" + action})
 	}
