@@ -268,7 +268,7 @@ var helpDocs = map[string]string{
 	"/domains/dns-cluster":           "admin/domains/dns-cluster",
 	"/domains/zone-templates":        "admin/domains/dns_templates",
 	"/domains/file-templates":        "admin/domains/file_templates",
-	"/websites":                      "admin/websites/websites",
+	"/websites":                      "admin/websites",
 	"/emails/accounts":               "admin/emails/emails",
 	"/emails/queue":                  "admin/emails/queue",
 	"/emails/reports":                "admin/emails/summary",
