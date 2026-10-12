@@ -75,6 +75,29 @@ var imunifyWaitForPortRun = func(host string, port int) bool {
 	}
 }
 
+var (
+	// live output of the last install started from the gui
+	ImunifyInstallLogPath = "/tmp/openpanel_imunify_install.log"
+	ImunifyInstallPIDFile = "/tmp/openpanel_imunify_install.pid"
+)
+
+var imunifyInstallRun = func() error {
+	pid, err := startDetached("openpanel-imunify-install", ImunifyInstallLogPath, []string{"timeout", "1800s", "opencli", "imunify", "install"})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(ImunifyInstallPIDFile, []byte(strconv.Itoa(pid)), 0644)
+}
+
+func imunifyInstallRunning() bool {
+	raw, err := os.ReadFile(ImunifyInstallPIDFile)
+	if err != nil {
+		return false
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
+	return err == nil && processAlive(pid)
+}
+
 // imunifyGetTokenRun returns ("", false) for both a nonzero exit and a
 // failure to even start the binary.
 var imunifyGetTokenRun = func() (string, bool) {
@@ -110,7 +133,9 @@ func (im *Imunify) ServeImunifyStatic(w http.ResponseWriter, r *http.Request) {
 // ServeImunifyGUI handles GET /security/imunify/.
 func (im *Imunify) ServeImunifyGUI(w http.ResponseWriter, r *http.Request) {
 	if !imunifyCommandAvailableRun("imunify360-agent") {
-		webtemplates.Render(w, "security_imunify_not_installed.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Installed)"))
+		webtemplates.Render(w, "security_imunify_not_installed.html", mergeChrome(map[string]interface{}{
+			"Installing": imunifyInstallRunning(),
+		}, r, "ImunifyAV (Not Installed)"))
 		return
 	}
 
@@ -136,6 +161,38 @@ func (im *Imunify) ServeImunifyGUI(w http.ResponseWriter, r *http.Request) {
 		"Token":   token,
 		"Flashes": auth.PopFlashes(w, r, im.Sessions),
 	}, r, "ImunifyAV"))
+}
+
+// ServeImunifyInstall handles POST /security/imunify/install.
+func (im *Imunify) ServeImunifyInstall(w http.ResponseWriter, r *http.Request) {
+	if imunifyInstallRunning() {
+		writeJSONStatus(w, http.StatusConflict, map[string]interface{}{"success": false, "error": "ImunifyAV installation is already running."})
+		return
+	}
+	if imunifyCommandAvailableRun("imunify360-agent") {
+		writeJSONStatus(w, http.StatusConflict, map[string]interface{}{"success": false, "error": "ImunifyAV is already installed."})
+		return
+	}
+	if err := imunifyInstallRun(); err != nil {
+		writeJSONStatus(w, http.StatusInternalServerError, map[string]interface{}{"success": false, "error": "Failed to start the installation. Details: " + err.Error()})
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true})
+}
+
+// ServeImunifyInstallStatus handles GET /security/imunify/install/status.
+func (im *Imunify) ServeImunifyInstallStatus(w http.ResponseWriter, r *http.Request) {
+	output := ""
+	if raw, err := os.ReadFile(ImunifyInstallLogPath); err == nil {
+		output = string(raw)
+	}
+	status := "idle"
+	if imunifyInstallRunning() {
+		status = "running"
+	} else if _, err := os.Stat(ImunifyInstallPIDFile); err == nil {
+		status = "finished"
+	}
+	writeJSON(w, map[string]interface{}{"status": status, "output": output, "installed": imunifyCommandAvailableRun("imunify360-agent")})
 }
 
 // imunifyProxyRun performs the actual reverse-proxy call to the local PHP

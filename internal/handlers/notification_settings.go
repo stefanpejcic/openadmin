@@ -155,6 +155,7 @@ var notifUserActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"domains_status", "Domain suspended/unsuspended", "Triggered when a domain status changes."},
 	{"domains_ssl", "SSL type changed", "Fires when SSL type is changed to AutoSSL or Custom SSL is configured."},
 	{"domains_hsts", "HSTS enabled/disabled", "Triggered when HSTS is toggled for a domain name."},
+	{"imunify_scan", "ImunifyAV scan started/finished", "Fires when an ImunifyAV malware scan starts, finishes or finds malware."},
 }
 
 // ServeSettings handles GET /settings/notifications.

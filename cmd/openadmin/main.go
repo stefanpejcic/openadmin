@@ -846,6 +846,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
 	mux.HandleFunc("GET /security/imunify/", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyGUI))
 	mux.HandleFunc("GET /security/imunify/assets/static/{filename...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyStatic))
+	mux.HandleFunc("POST /security/imunify/install", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyInstall))
+	mux.HandleFunc("GET /security/imunify/install/status", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyInstallStatus))
 	// exempt from CSRF, proxies to a PHP app that handles its own CSRF
 	mux.HandleFunc("GET /imav/{path...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyPHP))
 	mux.HandleFunc("POST /imav/{path...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyPHP))

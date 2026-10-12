@@ -202,6 +202,8 @@ func userActionGroupName(key string) string {
 		return "FTP"
 	case strings.HasPrefix(key, "domains_"):
 		return "Domains"
+	case strings.HasPrefix(key, "imunify_"):
+		return "ImunifyAV"
 	}
 	return "Other"
 }

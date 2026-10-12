@@ -40,6 +40,8 @@ func newImunifyTestServer(t *testing.T, im *Imunify) (*httptest.Server, *http.Cl
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /security/imunify/", im.ServeImunifyGUI)
 	mux.HandleFunc("GET /security/imunify/assets/static/{filename...}", im.ServeImunifyStatic)
+	mux.HandleFunc("POST /security/imunify/install", im.ServeImunifyInstall)
+	mux.HandleFunc("GET /security/imunify/install/status", im.ServeImunifyInstallStatus)
 	mux.HandleFunc("GET /imav/{path...}", im.ServeImunifyPHP)
 	mux.HandleFunc("POST /imav/{path...}", im.ServeImunifyPHP)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
@@ -88,10 +90,71 @@ func TestServeImunifyGUINotInstalled(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"Not Configured", "</html>"} {
+	for _, want := range []string{"Not Installed", "Install ImunifyAV", "/security/imunify/install", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}
+	}
+}
+
+func withScratchImunifyInstall(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	origLog, origPID, origRun := ImunifyInstallLogPath, ImunifyInstallPIDFile, imunifyInstallRun
+	ImunifyInstallLogPath = filepath.Join(dir, "install.log")
+	ImunifyInstallPIDFile = filepath.Join(dir, "install.pid")
+	t.Cleanup(func() {
+		ImunifyInstallLogPath, ImunifyInstallPIDFile, imunifyInstallRun = origLog, origPID, origRun
+	})
+}
+
+func TestServeImunifyInstallStartsInBackground(t *testing.T) {
+	withStubbedImunifyRunners(t, false, false, "", false)
+	withScratchImunifyInstall(t)
+	started := false
+	imunifyInstallRun = func() error {
+		started = true
+		os.WriteFile(ImunifyInstallLogPath, []byte("Installing ImunifyAV..."), 0644)
+		return os.WriteFile(ImunifyInstallPIDFile, []byte("999999999"), 0644)
+	}
+	srv, client := newImunifyTestServer(t, &Imunify{})
+
+	resp, err := client.Post(srv.URL+"/security/imunify/install", "application/x-www-form-urlencoded", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !started || !strings.Contains(string(body), `"success":true`) {
+		t.Fatalf("expected install to start, got %d %s", resp.StatusCode, body)
+	}
+
+	resp, err = client.Get(srv.URL + "/security/imunify/install/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	for _, want := range []string{`"status":"finished"`, "Installing ImunifyAV...", `"installed":false`} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected status to contain %q, got %s", want, body)
+		}
+	}
+}
+
+func TestServeImunifyInstallRefusesWhenInstalled(t *testing.T) {
+	withStubbedImunifyRunners(t, true, false, "", false)
+	withScratchImunifyInstall(t)
+	imunifyInstallRun = func() error { t.Fatal("install should not run"); return nil }
+	srv, client := newImunifyTestServer(t, &Imunify{})
+
+	resp, err := client.Post(srv.URL+"/security/imunify/install", "application/x-www-form-urlencoded", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409, got %d", resp.StatusCode)
 	}
 }
 

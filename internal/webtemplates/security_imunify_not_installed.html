@@ -25,15 +25,72 @@
     </header>
 </div>
 
-<div id="tour-imunify-install" style="
-        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-        height: 90vh;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    "><div><style>.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}</style><h1 class="next-error-h1" style="display:inline-block;margin:0 20px 0 0;padding:0 23px 0 0;font-size:24px;font-weight:500;vertical-align:top;line-height:49px">Not Configured</h1><div style="display:inline-block"><h2 style="font-size:14px;font-weight:400;line-height:49px;margin:0">The ImunifyAV service is not yet installed, install it from terminal with the following command: <pre>opencli imunify install</pre></h2></div></div></div>
+<div id="tour-imunify-install" class="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center" x-data="imunifyInstall({{if .Installing}}true{{else}}false{{end}})" x-init="resume()">
+    <div class="w-full max-w-2xl">
+        <h1 class="text-2xl font-medium">Not Installed</h1>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="status === 'idle'">ImunifyAV scans websites for malware. Installing it takes a few minutes and runs in the background, so you can leave this page and come back later.</p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="status === 'running'" style="display: none;">Installing ImunifyAV in the background, you can leave this page and come back later.</p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="status === 'finished' && !installed" style="display: none;">Installation finished but ImunifyAV was not detected, check the output below.</p>
+        <form method="POST" action="/security/imunify/install" @submit.prevent="start($el)" class="mt-4" x-show="status !== 'running' && !installed">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 dark:bg-indigo-500 dark:text-gray-900 dark:hover:bg-indigo-600" x-text="status === 'finished' ? 'Retry install' : 'Install ImunifyAV'">Install ImunifyAV</button>
+        </form>
+        <div x-show="status === 'running'" class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400" style="display: none;">
+            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle><path fill="currentColor" class="opacity-75" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+            Installing...
+        </div>
+        <a href="/security/imunify/" x-show="installed" class="mt-4 inline-flex items-center justify-center rounded border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 dark:bg-indigo-500 dark:text-gray-900" style="display: none;">Open ImunifyAV</a>
+        <p x-show="error" x-text="error" class="mt-2 text-sm text-red-600 dark:text-red-400" style="display: none;"></p>
+        <pre x-show="status !== 'idle'" x-ref="out" x-text="output || 'Waiting for output...'" class="mt-4 overflow-auto whitespace-pre-wrap rounded border border-gray-200 p-3 text-left text-xs dark:border-gray-800" style="display: none; background: #111827; color: #e5e7eb; max-height: 24rem; overflow-wrap: anywhere;"></pre>
+    </div>
+</div>
+<script>
+function imunifyInstall(running) {
+    return {
+        status: running ? 'running' : 'idle',
+        installed: false,
+        output: '',
+        error: '',
+        timer: null,
+        // pick the output back up if the admin left and came back mid-install
+        async resume() {
+            if (this.status !== 'running') return;
+            await this.poll();
+            if (this.status === 'running') this.timer = setInterval(() => this.poll(), 2000);
+        },
+        async start(form) {
+            this.error = '';
+            try {
+                const res = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (!data.success) { this.error = data.error || 'Failed to start the installation.'; return; }
+            } catch (e) {
+                this.error = 'Failed to start the installation.';
+                return;
+            }
+            this.status = 'running';
+            this.output = '';
+            clearInterval(this.timer);
+            this.timer = setInterval(() => this.poll(), 2000);
+        },
+        async poll() {
+            try {
+                const res = await fetch('/security/imunify/install/status', { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                const out = this.$refs.out;
+                const atBottom = !out || out.scrollHeight - out.scrollTop - out.clientHeight < 40;
+                this.output = (data.output || '').replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
+                this.status = data.status;
+                this.installed = data.status !== 'running' && data.installed;
+                if (atBottom) this.$nextTick(() => { if (out) out.scrollTop = out.scrollHeight; });
+                if (data.status !== 'running') clearInterval(this.timer);
+            } catch (e) {
+                console.error('Failed to fetch install output', e);
+            }
+        }
+    }
+}
+</script>
 
     </main>
 
