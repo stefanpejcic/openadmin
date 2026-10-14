@@ -20,12 +20,14 @@ import (
 func withScratchFTPPaths(t *testing.T) (usersFile, confFile string) {
 	t.Helper()
 	dir := t.TempDir()
-	origUsers, origConf := FTPUsersFilePath, FTPConfPath
+	origUsers, origConf, origDir := FTPUsersFilePath, FTPConfPath, FTPUsersDir
 	FTPUsersFilePath = filepath.Join(dir, "all.users")
 	FTPConfPath = filepath.Join(dir, "vsftpd.conf")
+	FTPUsersDir = filepath.Join(dir, "users")
 	t.Cleanup(func() {
 		FTPUsersFilePath = origUsers
 		FTPConfPath = origConf
+		FTPUsersDir = origDir
 	})
 	return FTPUsersFilePath, FTPConfPath
 }
@@ -58,6 +60,7 @@ func newFTPTestServer(t *testing.T, f *FTP) (*httptest.Server, *http.Client) {
 	mux.HandleFunc("POST /services/ftp/refresh", f.ServeRefresh)
 	mux.HandleFunc("GET /services/ftp", f.ServeAccounts)
 	mux.HandleFunc("POST /services/ftp", f.ServeAccounts)
+	mux.HandleFunc("POST /services/ftp/quota", f.ServeQuota)
 	mux.HandleFunc("GET /services/ftp/settings", f.ServeSettings)
 	mux.HandleFunc("POST /services/ftp/settings", f.ServeSettings)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {

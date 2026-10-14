@@ -732,6 +732,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /services/ftp/refresh", auth.RequireAdmin(sessions, authOpts, ftp.ServeRefresh))
 	mux.HandleFunc("GET /services/ftp", auth.RequireAdmin(sessions, authOpts, ftp.ServeAccounts))
 	mux.HandleFunc("POST /services/ftp", auth.RequireAdmin(sessions, authOpts, ftp.ServeAccounts))
+	mux.HandleFunc("POST /services/ftp/quota", auth.RequireAdmin(sessions, authOpts, ftp.ServeQuota))
 	mux.HandleFunc("GET /services/ftp/settings", auth.RequireAdmin(sessions, authOpts, ftp.ServeSettings))
 	mux.HandleFunc("POST /services/ftp/settings", auth.RequireAdmin(sessions, authOpts, ftp.ServeSettings))
 	mux.HandleFunc("GET /services/podman", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodman))

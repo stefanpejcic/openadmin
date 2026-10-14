@@ -77,9 +77,11 @@
     <div class="">
         <div class="space-y-3">
             <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
-                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                {{template "bulk_open" (dict "Table" "#ftp_accounts_table" "Endpoint" "/services/ftp/bulk")}}
+                <table id="ftp_accounts_table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+{{template "bulk_head_checkbox" .}}
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span>Account</span>
@@ -140,6 +142,12 @@
 
 
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex items-center gap-2 rounded px-2 py-1">
+                                    <span>Quota</span>
+                                </div>
+                            </th>
+
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span>Actions</span>
                                 </div>
@@ -152,18 +160,41 @@
 
                         {{range .Accounts}}
                         <tr x-show="searchQuery === '' || '{{.User}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+{{template "bulk_row_checkbox" (dict "Key" .User "Label" .User)}}
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{.User}}</td>
 
 <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if .Owner}}<a href="/users/{{.Owner}}" class="text-indigo-600 dark:text-indigo-400">{{.Owner}}</a>{{else}}-{{end}}</td>
 
                             <td class="hidden p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"></td>
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{.Path}}</td>
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"></td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-left">
+                                {{if .QuotaMB}}
+                                <div class="w-48">
+                                    <div class="flex justify-between gap-1 text-xs mb-1">
+                                        <span>{{if .HasUsage}}{{.UsedLabel}}{{else}}-{{end}} / {{.QuotaLabel}}</span>
+                                        {{if .OverQuota}}<span class="font-medium text-red-600 dark:text-red-500">Over quota</span>{{end}}
+                                    </div>
+                                    <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                                        <div class="h-1.5 rounded-full {{if .OverQuota}}bg-red-500{{else if ge .UsedPercent 90}}bg-amber-500{{else}}bg-indigo-600{{end}}" style="width: {{.UsedPercent}}%"></div>
+                                    </div>
+                                </div>
+                                {{else}}Unlimited{{end}}
+                            </td>
+                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-left" x-data="{ editQuota: false }">
+                                <button type="button" x-show="!editQuota" @click="editQuota = true; $nextTick(() => $refs.quota.focus())" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Set quota</button>
+                                <form x-show="editQuota" x-cloak method="POST" action="/services/ftp/quota" class="flex items-center gap-1">
+                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                    <input type="hidden" name="user" value="{{.User}}">
+                                    <input x-ref="quota" type="text" name="quota" value="{{.QuotaValue}}" placeholder="500M, 2G or 0" pattern="[0-9]+[MmGg]?|unlimited" title="A number of MB, or with M or G, e.g. 500M or 2G. 0 removes the quota." class="w-32 rounded border border-gray-300 px-2 py-1 text-xs shadow-sm dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50" @keydown.escape="editQuota = false">
+                                    <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 cursor-pointer">Save</button>
+                                    <button type="button" @click="editQuota = false" class="px-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer">Cancel</button>
+                                </form>
+                            </td>
                         </tr>
                       {{end}}
 {{else}}
       <tr>
-          <td colspan="5" class="p-6 text-center">
+          <td colspan="7" class="p-6 text-center">
               FTP server is running but there are not FTP accounts created yet. <a href="/services/ftp/refresh" id="refresh_data"  class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Click to refresh data</a>
           </td>
       </tr>
@@ -206,6 +237,8 @@
       {{end}}
                     </tbody>
                 </table>
+{{template "bulk_bar" .}}
+</div>
             </div>
         </div>
     </div>

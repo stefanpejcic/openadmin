@@ -73,6 +73,7 @@ func BulkRoutes(mux *http.ServeMux, sessions *auth.Manager, opts auth.Options, u
 	mux.HandleFunc("POST /emails/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
 		ServeBulkDispatch(sessions, mux, w, r, EmailAccountsBulkActions(), emailAccountsBulkRoute)
 	}))
+	admin("POST /services/ftp/bulk", FTPBulkActions, ftpBulkRoute)
 	mux.HandleFunc("POST /resellers/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
 		ServeBulkDispatch(sessions, mux, w, r, AccountsBulkActions("resellers"), accountsBulkRoute("/resellers"))
 	}))
@@ -379,6 +380,25 @@ func EmailAccountsBulkActions() []webtemplates.BulkAction {
 		{Key: "allow_receive", Icon: "inbox", Label: "Allow receiving", Confirm: "Remove the receiving restriction from the selected email accounts?"},
 		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected email accounts and their mail? This cannot be undone.", Danger: true},
 	}
+}
+
+func FTPBulkActions() []webtemplates.BulkAction {
+	return []webtemplates.BulkAction{
+		{Key: "quota", Icon: "hard-drive", Label: "Set quota", Confirm: "Set the disk quota for the selected FTP accounts:",
+			Input: &webtemplates.BulkInput{Type: "text", Pattern: "[0-9]+[MmGg]?", Placeholder: "500M", Hint: "a number of MB, or with M or G, e.g. 500M or 2G"}},
+		{Key: "quota_remove", Icon: "infinity", Label: "Remove quota", Confirm: "Remove the disk quota from the selected FTP accounts?"},
+	}
+}
+
+// ftpBulkRoute replays the quota form on /services/ftp
+func ftpBulkRoute(action, value, user string) (*BulkCall, BulkResult) {
+	switch action {
+	case "quota":
+		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/services/ftp/quota", Form: url.Values{"user": {user}, "quota": {value}}})
+	case "quota_remove":
+		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/services/ftp/quota", Form: url.Values{"user": {user}, "quota": {"unlimited"}}})
+	}
+	return BulkSkip("Unknown bulk action.")
 }
 
 // emailAccountsBulkRoute replays the JSON calls the row menu on /emails/accounts makes
