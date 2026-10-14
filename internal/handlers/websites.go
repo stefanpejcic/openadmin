@@ -521,6 +521,14 @@ func latestWordPress() string {
 	return wpLatestVersion
 }
 
+// WarmWebsitesCaches does the slow first lookups of /websites at startup, so the first admin to open it doesn't wait on wordpress.org and the ImunifyAV agent
+func WarmWebsitesCaches() {
+	go latestWordPress()
+	if imunifyInstalled() {
+		go cachedImunifyUsers()
+	}
+}
+
 // refreshLatestWordPress expects wpLatestMu to be held
 func refreshLatestWordPress() {
 	if v, err := wpLatestFetch(); err == nil && v != "" {

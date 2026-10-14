@@ -103,9 +103,12 @@ func cachedImunifyUsers() map[string]imunifyUser {
 	}
 	imunifyUsersUntil = time.Now().Add(2 * time.Minute)
 	if imunifyUsersCache == nil {
-		if users, err := fetchImunifyUsers(); err == nil {
-			imunifyUsersCache = users
+		users, err := fetchImunifyUsers()
+		if err != nil {
+			// keep an empty list so a broken agent doesn't stall /websites for a second on every load, the background refresh retries it
+			users = map[string]imunifyUser{}
 		}
+		imunifyUsersCache = users
 		return imunifyUsersCache
 	}
 	go func() {

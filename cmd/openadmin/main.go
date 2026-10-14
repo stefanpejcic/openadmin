@@ -231,6 +231,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	users := &handlers.Users{MySQL: d.MySQL, Sessions: sessions, AdminDB: d.AdminDB}
 	domains := &handlers.Domains{MySQL: d.MySQL, Sessions: sessions}
 	websites := &handlers.Websites{MySQL: d.MySQL, Sessions: sessions}
+	handlers.WarmWebsitesCaches()
 	dnsZoneEditor := &handlers.DNSZoneEditor{MySQL: d.MySQL, Sessions: sessions}
 	caddyFileEditor := &handlers.CaddyFileEditor{MySQL: d.MySQL, Sessions: sessions}
 	vhostFileEditor := &handlers.VHostFileEditor{MySQL: d.MySQL, Sessions: sessions}
@@ -326,7 +327,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux := http.NewServeMux()
 
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static.Files)))
+	mux.Handle("GET /static/", http.StripPrefix("/static/", handlers.StaticHandler(static.Files)))
 
 	mux.HandleFunc("GET /login", login.ServeLoginPage)
 	mux.HandleFunc("GET /login/", login.ServeLoginPage)

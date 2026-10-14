@@ -194,9 +194,15 @@
         buildAndShow(idx);
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    // the layout loads this file on demand, so the page may already be past DOMContentLoaded
+    function resume() {
         if (isActive()) buildAndShow(getStoredIndex());
-    });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', resume);
+    } else {
+        resume();
+    }
 
     window.OPTour = { start: start, markComplete: markComplete };
 })();
