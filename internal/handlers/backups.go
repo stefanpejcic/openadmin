@@ -20,12 +20,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/csrf"
 
+	"openadmin/internal/activity"
 	"openadmin/internal/auth"
 	"openadmin/internal/config"
 	"openadmin/internal/webtemplates"
@@ -362,8 +364,23 @@ func (b *Backups) ServeUserBackupsConfiguration(w http.ResponseWriter, r *http.R
 
 	if err := os.WriteFile(BackupEnvPath, []byte(backupEnv), 0644); err != nil {
 		auth.AddFlash(w, r, b.Sessions, "Failed to save backup.env: "+err.Error(), "error")
+	} else if r.PostFormValue("apply_existing") == "1" {
+		contexts, err := backupAccountContexts(b.MySQL)
+		if err != nil {
+			activity.Fail(r.Context())
+			auth.AddFlash(w, r, b.Sessions, "Saved, but existing accounts could not be listed: "+err.Error(), "error")
+			http.Redirect(w, r, "/backups/user#configuration", http.StatusSeeOther)
+			return
+		}
+		applied, failed := applyBackupEnvToAccounts(contexts)
+		activity.Describe(r.Context(), "Saved the default backup.env and applied it to "+strconv.Itoa(applied)+" existing accounts")
+		if len(failed) > 0 {
+			auth.AddFlash(w, r, b.Sessions, "Saved and applied to "+strconv.Itoa(applied)+" accounts, failed for: "+strings.Join(failed, "; "), "warning")
+		} else {
+			auth.AddFlash(w, r, b.Sessions, "Saved and applied to all "+strconv.Itoa(applied)+" existing accounts. Their backup.env now follows this configuration, backups are admin-managed, and their backup containers are restarting.", "success")
+		}
 	} else {
-		auth.AddFlash(w, r, b.Sessions, "Saved. New users will be provisioned with this backup.env -- existing users' own settings are unaffected.", "success")
+		auth.AddFlash(w, r, b.Sessions, "Saved. New accounts get this backup.env, existing accounts keep their own.", "success")
 	}
 	http.Redirect(w, r, "/backups/user#configuration", http.StatusSeeOther)
 }

@@ -391,3 +391,35 @@ func TestWebsitesGit(t *testing.T) {
 		t.Errorf("ran %v", ran)
 	}
 }
+
+func TestWebsitesImunifyNeverScanned(t *testing.T) {
+	stubLatestWordPress(t, "6.8.1")
+	withWebsiteReportDirs(t)
+	origAvail := imunifyCommandAvailableRun
+	imunifyCommandAvailableRun = func(string) bool { return true }
+	setImunifyUsersCache(map[string]imunifyUser{
+		"alice":  {User: "alice"},
+		"bobctx": {User: "bobctx", ScanDate: time.Now().Add(-time.Hour).Unix(), ScanStatus: "done"},
+	})
+	t.Cleanup(func() { imunifyCommandAvailableRun = origAvail; setImunifyUsersCache(nil) })
+
+	db, m, _ := sqlmock.New()
+	defer db.Close()
+	m.ExpectQuery("FROM sites s").WillReturnRows(sqlmock.NewRows(websitesCols).
+		AddRow(1, "a.com", "nodejs", "20", "", "2026-01-01T08:30:00Z", "a.com", "/var/www/html/a.com", "alice", "alice").
+		AddRow(2, "b.com", "nodejs", "20", "", "2026-01-01T08:30:00Z", "b.com", "/var/www/html/b.com", "bob", "bobctx"))
+	srv, client := newWebsitesTestServer(t, &Websites{MySQL: db})
+	resp, err := client.Get(srv.URL + "/websites")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	page := string(body)
+	if strings.Count(page, "</svg>None</span>") != 1 || !strings.Contains(page, "text-gray-400 dark:text-gray-500\" title=\"ImunifyAV hasn't scanned") {
+		t.Error("a never scanned owner should show a gray None")
+	}
+	if strings.Count(page, "</svg>Clean</span>") != 1 {
+		t.Error("only the scanned owner should show Clean")
+	}
+}
