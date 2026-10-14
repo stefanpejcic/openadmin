@@ -669,9 +669,10 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /websites/vulnerabilities/{id}", auth.RequireAdmin(sessions, authOpts, websites.ServeVulnerabilities))
 	mux.HandleFunc("POST /websites/scan", auth.RequireAdmin(sessions, authOpts, websites.HandleScan))
 	mux.HandleFunc("POST /websites/detach", auth.RequireAdmin(sessions, authOpts, websites.HandleDetach))
+	mux.HandleFunc("POST /websites/git/{action}", auth.RequireAdmin(sessions, authOpts, websites.HandleGit))
 	mux.HandleFunc("POST /websites/{check}", auth.RequireAdmin(sessions, authOpts, websites.HandleCheck))
 	mux.HandleFunc("POST /websites/bulk", auth.RequireAdmin(sessions, authOpts, func(w http.ResponseWriter, r *http.Request) {
-		handlers.ServeBulkDispatch(sessions, mux, w, r, handlers.WebsitesBulkActions(handlers.ImunifyInstalled()), websites.BulkRoute)
+		handlers.ServeBulkDispatch(sessions, mux, w, r, handlers.WebsitesBulkActions(handlers.ImunifyInstalled(), handlers.GitModuleEnabled()), websites.BulkRoute)
 	}))
 
 	mux.HandleFunc("GET /domains", auth.RequireAdmin(sessions, authOpts, domains.ServeList))

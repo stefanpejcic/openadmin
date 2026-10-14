@@ -52,8 +52,18 @@
             <div class="grow">
                 <label for="scan_username" class="text-sm font-medium">Username</label>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Finds sites in users' files that aren't in Site Manager yet, leave empty to scan every user.</p>
+                <div class="relative" @click.outside="scanShow = false">
                 <input type="text" name="username" id="scan_username" placeholder="all users" autocomplete="off"
+                    x-model="scanQuery" @input.debounce.300ms="searchScanUsers" @focus="scanShow = scanUsers.length > 0" @keydown.escape="scanShow = false"
                     class="mt-2 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                <ul x-show="scanShow && scanUsers.length > 0" x-cloak class="absolute z-10 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 w-full mt-1 rounded shadow-lg max-h-60 overflow-auto">
+                    <template x-for="user in scanUsers" :key="user">
+                        <li @click="scanQuery = user; scanShow = false" class="px-3 py-2 cursor-pointer text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600">
+                            <span x-text="user"></span>
+                        </li>
+                    </template>
+                </ul>
+                </div>
             </div>
             <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white bg-blue-500 hover:bg-blue-600">Start Scan</button>
         </form>
@@ -102,6 +112,15 @@
                                         <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Version</span>
                                     </label>
                                 </li>
+{{if .GitEnabled}}
+                                <li>
+                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <input type="checkbox" x-model="columns.git" class="sr-only peer">
+                                        <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Git</span>
+                                    </label>
+                                </li>
+{{end}}
                                 <li>
                                     <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
                                         <input type="checkbox" x-model="columns.vulns" class="sr-only peer">
@@ -146,6 +165,7 @@
                         <th x-show="columns.type" class="border-b px-4 text-center font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Type" "Key" "type" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
                         <th x-show="columns.owner" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Owner" "Key" "owner" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
                         <th x-show="columns.version" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Version" "Key" "version" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        {{if .GitEnabled}}<th x-show="columns.git" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Git</th>{{end}}
                         <th x-show="columns.vulns" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Vulnerabilities" "Key" "vulns" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
                         {{if .Imunify}}<th x-show="columns.imunify" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "ImunifyAV" "Key" "imunify" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>{{end}}
                         <th x-show="columns.speed" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "PageSpeed" "Key" "speed" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
@@ -161,7 +181,7 @@
 {{$type := lower .Type}}
 {{$id := .ID}}
                     <tr x-show="(typeFilter === '' || typeFilter === {{toJSON $type}}) && (searchQuery === '' || {{toJSON (lower (printf "%s %s %s %s %s" .SiteName $owner .Domain .AdminEmail .Type))}}.includes(searchQuery.toLowerCase()))" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if $suspended}}bg-red-50 dark:bg-red-400/10{{end}}">
-{{template "bulk_row_checkbox" (dict "Key" (printf "%d" .ID) "Label" .SiteName "Skip" (or (and (not .IsWordPress) "vulnerability") ""))}}
+{{template "bulk_row_checkbox" (dict "Key" (printf "%d" .ID) "Label" .SiteName "Skip" .BulkSkip)}}
                         <td class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
                             <div class="flex items-center gap-3">
                                 {{/* light bg in both themes so dark favicons don't vanish in dark mode */}}
@@ -185,6 +205,18 @@
                                 {{.LatestVersion}} available
                             </span>{{end}}
                         </td>
+                        {{if $root.GitEnabled}}<td x-show="columns.git" class="p-4 text-sm whitespace-nowrap py-2 text-left">
+                            {{$row := .}}{{with .Git}}{{$g := index . 0}}
+                            <div class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="#f05032" class="size-4 shrink-0" aria-hidden="true"><path d="M15.698 7.287 8.712.302a1.03 1.03 0 0 0-1.457 0l-1.45 1.45 1.84 1.84a1.223 1.223 0 0 1 1.55 1.56l1.773 1.774a1.224 1.224 0 0 1 1.267 2.025 1.226 1.226 0 0 1-2.002-1.334L8.58 5.963v4.353a1.226 1.226 0 1 1-1.008-.036V5.887a1.226 1.226 0 0 1-.666-1.608L5.093 2.465l-4.79 4.79a1.03 1.03 0 0 0 0 1.457l6.986 6.986a1.03 1.03 0 0 0 1.457 0l6.953-6.953a1.03 1.03 0 0 0 0-1.457"/></svg>
+                                <span class="font-medium text-gray-900 dark:text-gray-50" title="{{$g.TargetDir}}">{{$g.Name}}</span>
+                                <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">{{$g.Branch}}</span>
+                                {{with $row.GitErrors}}<span class="rounded bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-400/10 dark:text-red-400 cursor-help" title="{{.}}">Error</span>{{end}}
+                                {{if gt (len .) 1}}<span class="text-xs text-gray-500 dark:text-gray-400 cursor-help" title="{{$row.GitOthers}}">+{{sub (len .) 1}} more</span>{{end}}
+                            </div>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{if eq $g.Source "remote"}}Remote{{else}}Local{{end}} &middot; {{$g.ModeLabel}}{{if $g.DeployedAgo}} &middot; <span title="{{$g.Deployed}}">deployed {{$g.DeployedAgo}}</span>{{if $g.Commit}} <code>{{$g.Commit}}</code>{{end}}{{else if ne $g.Mode "none"}} &middot; not deployed yet{{end}}</p>
+                            {{else}}<span class="text-xs text-gray-400" title="No Git repository deploys to this website">-</span>{{end}}
+                        </td>{{end}}
                         <td x-show="columns.vulns" class="p-4 text-sm whitespace-nowrap py-2 text-left">
                             {{if not .IsWordPress}}
                             <span class="text-xs text-gray-400" title="Only WordPress sites are scanned for vulnerabilities">-</span>
@@ -282,6 +314,11 @@
             <template x-if="menu.owner"><li class="flex"><a :href="'/login/token/' + menu.login + '?next=' + encodeURIComponent('/website?domain=' + menu.name)" target="_blank" :title="'Log in to OpenPanel as ' + menu.login + ' and open this site in Site Manager'" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Manage as owner</a></li></template>
             <template x-if="menu.owner"><li class="flex"><a :href="'/users/' + menu.owner" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Owner account</a></li></template>
             <template x-if="menu.owner && menu.domain"><li class="flex"><a :href="'/domains/vhost/' + menu.owner + '/' + menu.domain" target="_blank" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Virtual Host</a></li></template>
+            {{if .GitEnabled}}
+            <template x-if="menu.gitPull"><li class="flex"><button type="button" @click="post('/websites/git/pull')" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Git: pull updates</button></li></template>
+            <template x-if="menu.gitDeploy"><li class="flex"><button type="button" @click="post('/websites/git/deploy')" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Git: deploy</button></li></template>
+            <template x-if="menu.owner"><li class="flex"><a :href="'/login/token/' + menu.login + '?next=' + encodeURIComponent('/website?domain=' + menu.name + '&tab=git')" target="_blank" :title="'Log in to OpenPanel as ' + menu.login + ' and open the Git tab of this site'" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900" x-text="menu.git ? 'Git: manage repositories' : 'Git: set up a repository'"></a></li></template>
+            {{end}}
             <li class="flex"><button type="button" @click="post('/websites/pagespeed')" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Check PageSpeed</button></li>
             {{if .Imunify}}<template x-if="menu.owner"><li class="flex"><button type="button" @click="post('/security/imunify/' + menu.owner)" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Scan with ImunifyAV</button></li></template>{{end}}
             <template x-if="menu.wp"><li class="flex"><button type="button" @click="post('/websites/vulnerability')" class="w-full flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Scan for vulnerabilities</button></li></template>
@@ -330,7 +367,7 @@ document.addEventListener('alpine:init', () => {
         searchQuery: '',
         typeFilter: '',
         // every column on by default, saved per browser like on /domains
-        columns: { type: true, owner: true, version: true, vulns: true, imunify: true, speed: true, created: true },
+        columns: { type: true, owner: true, version: true, git: false, vulns: true, imunify: true, speed: true, created: true },
         init() {
             try {
                 const saved = JSON.parse(localStorage.getItem('websitescolumnsVisibility') || '{}');
@@ -341,6 +378,20 @@ document.addEventListener('alpine:init', () => {
             }, { deep: true });
         },
         showScan: false,
+        scanQuery: '',
+        scanUsers: [],
+        scanShow: false,
+        // same user search the add domain form on /domains uses
+        searchScanUsers() {
+            if (this.scanQuery.trim().length < 1) { this.scanUsers = []; this.scanShow = false; return; }
+            fetch('/search/users/' + encodeURIComponent(this.scanQuery.trim()))
+                .then(res => res.json())
+                .then(data => {
+                    this.scanUsers = (data || []).filter(u => !u.startsWith('SUSPENDED_'));
+                    this.scanShow = this.scanUsers.length > 0;
+                })
+                .catch(() => { this.scanUsers = []; this.scanShow = false; });
+        },
         vulnSite: 0,
         vulnName: '',
         vulnHTML: '',

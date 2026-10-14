@@ -137,5 +137,5 @@ func TestBulkActionIconsExist(t *testing.T) {
 	check("plans", PlansBulkActions(nil))
 	check("resellers", AccountsBulkActions("resellers"))
 	check("domains", DomainsBulkActions(nil))
-	check("websites", WebsitesBulkActions(true))
+	check("websites", WebsitesBulkActions(true, true))
 }

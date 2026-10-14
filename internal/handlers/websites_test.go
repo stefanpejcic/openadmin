@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"compress/gzip"
+	"html"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -28,6 +29,7 @@ func newWebsitesTestServer(t *testing.T, ws *Websites) (*httptest.Server, *http.
 		mux.HandleFunc("GET /websites/vulnerabilities/{id}", ws.ServeVulnerabilities)
 		mux.HandleFunc("POST /websites/scan", ws.HandleScan)
 		mux.HandleFunc("POST /websites/detach", ws.HandleDetach)
+		mux.HandleFunc("POST /websites/git/{action}", ws.HandleGit)
 		mux.HandleFunc("POST /websites/{check}", ws.HandleCheck)
 	})
 }
@@ -315,5 +317,77 @@ func TestWebsitesListGzip(t *testing.T) {
 	body, _ := io.ReadAll(zr)
 	if !strings.Contains(string(body), "No websites yet") {
 		t.Error("unexpected body")
+	}
+}
+
+func TestWebsitesGit(t *testing.T) {
+	stubLatestWordPress(t, "6.8.1")
+	withWebsiteReportDirs(t)
+	home := t.TempDir()
+	origHome, origCfg, origRun := WebsitesGitHome, ModulesConfigFilePath, websitesGitRun
+	WebsitesGitHome = home
+	ModulesConfigFilePath = filepath.Join(t.TempDir(), "openpanel.config")
+	t.Cleanup(func() { WebsitesGitHome, ModulesConfigFilePath, websitesGitRun = origHome, origCfg, origRun })
+	os.WriteFile(ModulesConfigFilePath, []byte(`enabled_modules="dns,git"`+"\n"), 0644)
+	os.MkdirAll(filepath.Join(home, "bobctx", "git"), 0700)
+	os.WriteFile(filepath.Join(home, "bobctx", "git", "repos.json"), []byte(`[
+		{"name":"blog-theme","source":"local","branch":"main","target_dir":"/var/www/html/b.com/blog/wp-content/themes/t","deploy_mode":"automatic","last_deploy":"2026-10-14 10:00:00 UTC","last_deployed_commit":"abcdef1234","push_pass_hash":"secret-hash"},
+		{"name":"blog-plugin","source":"remote","branch":"dev","target_dir":"/var/www/html/b.com/blog/wp-content/plugins/p","deploy_mode":"manual","last_error":"boom"},
+		{"name":"other-site","source":"remote","branch":"main","target_dir":"/var/www/html/c.com","deploy_mode":"automatic"}
+	]`), 0600)
+
+	mock := func() *Websites {
+		db, m, _ := sqlmock.New()
+		t.Cleanup(func() { db.Close() })
+		m.ExpectQuery("FROM sites s").WillReturnRows(sqlmock.NewRows(websitesCols).
+			AddRow(1, "a.com", "nodejs", "20", "", "2026-01-01T08:30:00Z", "a.com", "/var/www/html/a.com", "alice", "alice").
+			AddRow(2, "b.com/blog", "WordPress", "6.6", "admin@b.com", "2026-02-01T10:00:00Z", "b.com", "/var/www/html/b.com", "bob", "bobctx"))
+		return &Websites{MySQL: db}
+	}
+
+	srv, client := newWebsitesTestServer(t, mock())
+	resp, err := client.Get(srv.URL + "/websites")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	page := string(body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status %d: %s", resp.StatusCode, page)
+	}
+	for _, want := range []string{`x-show="columns.git"`, ">blog-theme<", "+1 more", "blog-plugin (dev)", `title="blog-plugin: boom"`, "deployed ", "<code>abcdef1</code>", `data-bulk-action="git_deploy"`} {
+		if !strings.Contains(page, want) && !strings.Contains(page, html.EscapeString(want)) {
+			t.Errorf("page missing %q", want)
+		}
+	}
+	if strings.Contains(page, "other-site") || strings.Contains(page, "secret-hash") {
+		t.Error("only repos inside the site's docroot should show, and never secrets")
+	}
+
+	// the menu flags drive which Git items the row menu offers
+	row := websiteRow{Git: []gitRepo{{Source: "local", Mode: "none"}}}
+	if m := row.Menu(); m["gitPull"] != false || m["gitDeploy"] != false || m["git"] != 1 {
+		t.Errorf("menu flags = %v", m)
+	}
+	if got := row.BulkSkip(); got != "vulnerability,git_pull,git_deploy" {
+		t.Errorf("BulkSkip = %q", got)
+	}
+
+	var ran []string
+	websitesGitRun = func(action, userContext, repo string) (string, error) {
+		ran = append(ran, action+" "+userContext+" "+repo)
+		return "ok", nil
+	}
+	db, m, _ := sqlmock.New()
+	m.ExpectQuery("WHERE s.id = ").WithArgs(2).WillReturnRows(sqlmock.NewRows([]string{"id", "site_name", "docroot", "server"}).AddRow(2, "b.com/blog", "/var/www/html/b.com", "bobctx"))
+	srv, client = newWebsitesTestServer(t, &Websites{MySQL: db})
+	resp, err = client.PostForm(srv.URL+"/websites/git/deploy", url.Values{"id": {"2"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if strings.Join(ran, "|") != "deploy bobctx blog-theme|deploy bobctx blog-plugin" {
+		t.Errorf("ran %v", ran)
 	}
 }

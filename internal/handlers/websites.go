@@ -63,7 +63,8 @@ type websiteRow struct {
 	Speed         *pageSpeed   `json:"pagespeed"`                // nil when there's no report yet
 	LatestVersion string       `json:"latest_version,omitempty"` // set on wordpress sites that are behind it
 	Vulns         *vulnReport  `json:"vulnerabilities"`
-	Imunify       *imunifyUser `json:"imunify,omitempty"` // the owner's last ImunifyAV scan, nil when imunify isn't installed or never scanned them          // nil when there's no report, opencli only writes one when something was found
+	Imunify       *imunifyUser `json:"imunify,omitempty"`
+	Git           []gitRepo    `json:"git"` // OpenPanel repositories deploying into this site // the owner's last ImunifyAV scan, nil when imunify isn't installed or never scanned them          // nil when there's no report, opencli only writes one when something was found
 }
 
 // hostDocroot maps a container docroot to the server path, unchanged when it's outside /var/www/html or the context is unknown
@@ -82,7 +83,8 @@ func (s websiteRow) Menu() map[string]any {
 	if i := strings.LastIndex(login, "_"); strings.Contains(login, "SUSPENDED_") && i >= 0 {
 		login = login[i+1:]
 	}
-	return map[string]any{"id": s.ID, "name": s.SiteName, "owner": s.Owner, "login": login, "domain": s.Domain, "wp": s.IsWordPress(), "scan": s.Imunify != nil}
+	return map[string]any{"id": s.ID, "name": s.SiteName, "owner": s.Owner, "login": login, "domain": s.Domain, "wp": s.IsWordPress(), "scan": s.Imunify != nil,
+		"git": len(s.Git), "gitPull": s.GitRemote(), "gitDeploy": s.GitDeployable()}
 }
 
 func (s websiteRow) IsWordPress() bool { return strings.EqualFold(s.Type, "wordpress") }
@@ -338,6 +340,8 @@ func (ws *Websites) loadSites() ([]websiteRow, error) {
 	defer rows.Close()
 
 	var sites []websiteRow
+	gitByContext := map[string][]gitRepoFile{}
+	now := time.Now()
 	for rows.Next() {
 		var s websiteRow
 		var name, typ, version, email, created, domain, docroot, owner, userContext sql.NullString
@@ -356,6 +360,10 @@ func (ws *Websites) loadSites() ([]websiteRow, error) {
 		}
 		s.Context = userContext.String
 		s.HostDocroot = hostDocroot(userContext.String, s.Docroot)
+		if _, seen := gitByContext[s.Context]; !seen {
+			gitByContext[s.Context] = readGitRepos(s.Context)
+		}
+		s.Git = gitReposForSite(gitByContext[s.Context], s.Docroot, now)
 		s.Speed = readPageSpeed(s.SiteName)
 		if s.IsWordPress() {
 			s.Vulns = readVulnerabilities(s.SiteName)
@@ -442,6 +450,7 @@ type websitesPageData struct {
 	webtemplates.Chrome
 	FaviconBase   string
 	Imunify       bool // imunify is installed, shows the ImunifyAV column
+	GitEnabled    bool // the OpenPanel git module is on, shows the Git column and actions
 	Sites         []websiteRow
 	Types         []websiteTypeCount
 	TypeNames     []string
@@ -598,11 +607,13 @@ func (ws *Websites) ServeList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chrome := buildChrome(r, "Websites")
-	chrome.BulkActions = WebsitesBulkActions(imunify)
+	gitEnabled := gitModuleEnabled()
+	chrome.BulkActions = WebsitesBulkActions(imunify, gitEnabled)
 	renderGzip(w, r, "websites.html", websitesPageData{
 		Chrome:        chrome,
 		FaviconBase:   faviconBase(),
 		Imunify:       imunify,
+		GitEnabled:    gitEnabled,
 		Sites:         sites,
 		Types:         types,
 		TypeNames:     typeNames,
@@ -707,13 +718,19 @@ func (ws *Websites) HandleCheck(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/websites", http.StatusSeeOther)
 }
 
-func WebsitesBulkActions(imunify bool) []webtemplates.BulkAction {
+func WebsitesBulkActions(imunify, git bool) []webtemplates.BulkAction {
 	actions := []webtemplates.BulkAction{
 		{Key: "pagespeed", Icon: "refresh-cw", Label: "Check PageSpeed", Confirm: "Run a Google PageSpeed check for the selected websites?"},
 		{Key: "vulnerability", Icon: "shield-check", Label: "Scan for vulnerabilities", Confirm: "Scan the selected WordPress sites for vulnerable plugins and themes?"},
 	}
 	if imunify {
 		actions = append(actions, webtemplates.BulkAction{Key: "imunify", Icon: "scan-search", Label: "Scan with ImunifyAV", Confirm: "Queue an ImunifyAV malware scan for the owners of the selected websites? Each owner is scanned once, even with several sites selected."})
+	}
+	if git {
+		actions = append(actions,
+			webtemplates.BulkAction{Key: "git_pull", Icon: "download", Label: "Git: pull", Confirm: "Pull updates for the remote Git repositories of the selected websites? Repositories in automatic mode are deployed too."},
+			webtemplates.BulkAction{Key: "git_deploy", Icon: "rocket", Label: "Git: deploy", Confirm: "Deploy the Git repositories of the selected websites now?"},
+		)
 	}
 	return append(actions, webtemplates.BulkAction{Key: "detach", Icon: "file-x", Label: "Detach", Confirm: "Detach the selected websites from Site Manager? Files and databases are kept.", Danger: true})
 }
@@ -742,6 +759,15 @@ func (ws *Websites) BulkRoute(action, _, item string) (*BulkCall, BulkResult) {
 		return BulkDo(BulkCall{Label: site.SiteName, Method: http.MethodPost, Path: "/security/imunify/" + url.PathEscape(site.Owner)})
 	case "detach":
 		return BulkDo(BulkCall{Label: site.SiteName, Method: http.MethodPost, Path: "/websites/detach", Form: form})
+	case "git_pull", "git_deploy":
+		withGit, _ := ws.siteGit(item)
+		if action == "git_pull" && !withGit.GitRemote() {
+			return BulkSkip("No remote Git repository.")
+		}
+		if action == "git_deploy" && !withGit.GitDeployable() {
+			return BulkSkip("No Git repository to deploy.")
+		}
+		return gitBulkRoute(withGit, action, item)
 	}
 	return BulkSkip("Unknown bulk action.")
 }
