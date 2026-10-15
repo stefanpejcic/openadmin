@@ -862,7 +862,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Locale:            userLocale(userData.Context),
 		CountryCode:       countryCodeForIP(serverIP),
 		EnvData:           envData,
-		WebserverOptions:  userWebserverOptions,
+		WebserverOptions:  userWebserverOptions(userData.Context),
 		DefaultPHPVersion: defaultPHPVersionFor(username),
 		InstalledLocales:  installedLocaleCodes(),
 		PlanID:            userData.PlanID,
@@ -1160,6 +1160,32 @@ func readUserCreateDefaultsEnv() (webServer, mysqlType string, varnish bool) {
 	return
 }
 
+// userCreateWebserverOptions is the add-user webserver cards, one per webserver service in the default compose template
+func userCreateWebserverOptions() []userCreateOption {
+	known := map[string]userCreateOption{}
+	for _, o := range userCreateWebservers {
+		known[o.Value] = o
+	}
+	var out []userCreateOption
+	for _, name := range availableWebservers(DefaultsComposeFilePath) {
+		if o, ok := known[name]; ok {
+			out = append(out, o)
+			continue
+		}
+		out = append(out, userCreateOption{Value: name, Label: name, Icon: genericWebserverIcon})
+	}
+	return out
+}
+
+func userCreateHasWebserver(options []userCreateOption, name string) bool {
+	for _, o := range options {
+		if o.Value == name {
+			return true
+		}
+	}
+	return false
+}
+
 // ServeCreateUser handles GET/POST /user/new.
 func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -1178,6 +1204,10 @@ func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 	mysqlIsDown := err != nil
 
 	webServer, mysqlType, varnish := readUserCreateDefaultsEnv()
+	webservers := userCreateWebserverOptions()
+	if !userCreateHasWebserver(webservers, webServer) && len(webservers) > 0 {
+		webServer = webservers[0].Value
+	}
 
 	webtemplates.Render(w, "user_add.html", userCreatePageData{
 		Chrome:           buildChrome(r, "Add User"),
@@ -1186,7 +1216,7 @@ func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 		WebServer:        webServer,
 		MySQLType:        mysqlType,
 		VarnishEnabled:   varnish,
-		Webservers:       userCreateWebservers,
+		Webservers:       webservers,
 		SQLOptions:       userCreateSQLOptions,
 		ResellersEnabled: resellersEnabled(),
 		CSRFToken:        csrf.Token(r),
@@ -1237,8 +1267,7 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 
 	if webserver != "" {
 		base := strings.TrimPrefix(strings.ToLower(webserver), "varnish+")
-		switch base {
-		case "apache", "nginx", "openresty", "openlitespeed":
+		if containsWebserver(availableWebservers(DefaultsComposeFilePath), base) {
 			command = append(command, "--webserver="+webserver)
 		}
 	}

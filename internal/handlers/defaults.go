@@ -444,11 +444,16 @@ func rewriteDefaultsComposeVarnishPort(content string, varnishEnabled bool) stri
 		replacement = "${PROXY_HTTP_PORT}"
 	}
 
+	webservers := defaultsComposeWebservers
+	if names, err := webserverServicesInComposeData([]byte(content)); err == nil && len(names) > 0 {
+		webservers = names
+	}
+
 	lines := strings.SplitAfter(content, "\n")
 	inBlock := false
 	for i, line := range lines {
 		trimmed := strings.TrimRight(line, " \t\r\n")
-		for _, webserver := range defaultsComposeWebservers {
+		for _, webserver := range webservers {
 			if strings.HasSuffix(trimmed, "container_name: "+webserver) {
 				inBlock = true
 				break
@@ -489,6 +494,12 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		raw, err := os.ReadFile(DefaultsEnvPath)
 		if err != nil {
 			auth.AddFlash(w, r, d.Sessions, "Environment file not found.", "error")
+			http.Redirect(w, r, r.URL.String(), http.StatusSeeOther)
+			return
+		}
+
+		if ws := strings.TrimSpace(r.PostFormValue("WEB_SERVER")); ws != "" && !containsWebserver(availableWebservers(DefaultsComposeFilePath), ws) {
+			auth.AddFlash(w, r, d.Sessions, "Webserver "+ws+" is not defined in the default docker-compose.yml template.", "error")
 			http.Redirect(w, r, r.URL.String(), http.StatusSeeOther)
 			return
 		}
@@ -610,20 +621,36 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		phpFPM = defaults["PHP_FPM"]
 	}
 
+	webservers := availableWebservers(DefaultsComposeFilePath)
+	if !containsWebserver(webservers, webServer) {
+		webServer = webservers[0]
+	}
+	webserverSet := map[string]bool{}
+	var extraWebservers []string
+	for _, ws := range webservers {
+		webserverSet[ws] = true
+		if !containsWebserver(fallbackWebservers, ws) {
+			extraWebservers = append(extraWebservers, ws)
+		}
+	}
+
 	activeJSON, _ := json.Marshal(activeServices)
 	siteTypes := defaultsSiteTypesRun(d.MySQL)
 	phpOptions := buildPHPVersionOptions(phpVersion, phpVersionsData)
 	planMins := defaultsPlanMinimumsRun(d.MySQL)
 
 	webtemplates.Render(w, "settings_defaults.html", mergeChrome(map[string]interface{}{
-		"WebServer":         webServer,
-		"WebserverAdvice":   adviseWebserver(siteTypes),
-		"WordPressSites":    countSitesOfType(siteTypes, "wordpress"),
-		"MySQLType":         mysqlType,
-		"VarnishEnabled":    varnishEnabled,
-		"PHPVersionOptions": phpOptions,
-		"LatestPHPVersion":  latestPHPOption(phpOptions, phpVersionsData),
-		"AvailableServices": availableServices,
+		"WebServer":            webServer,
+		"AvailableWebservers":  webserverSet,
+		"ExtraWebservers":      extraWebservers,
+		"GenericWebserverIcon": genericWebserverIcon,
+		"WebserverAdvice":      adviseWebserver(siteTypes),
+		"WordPressSites":       countSitesOfType(siteTypes, "wordpress"),
+		"MySQLType":            mysqlType,
+		"VarnishEnabled":       varnishEnabled,
+		"PHPVersionOptions":    phpOptions,
+		"LatestPHPVersion":     latestPHPOption(phpOptions, phpVersionsData),
+		"AvailableServices":    availableServices,
 		// template.JS tells html/template's contextual autoescaper this
 		// value is already valid JS/JSON, not a plain string to be
 		// re-encoded -- without it, the autoescaper wraps the array in an

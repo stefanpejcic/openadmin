@@ -56,6 +56,7 @@
 
     <div class="grid grid-cols-4 gap-4" role="radiogroup" aria-labelledby="webserver">
 
+      {{if index .AvailableWebservers "apache"}}
       <button
         type="button"
         role="radio"
@@ -74,6 +75,8 @@
           </div>
         </div>
       </button>
+      {{end}}
+      {{if index .AvailableWebservers "nginx"}}
       <button
         type="button"
         role="radio"
@@ -92,6 +95,8 @@
           </div>
         </div>
       </button>
+      {{end}}
+      {{if index .AvailableWebservers "openresty"}}
       <button
         type="button"
         role="radio"
@@ -110,6 +115,8 @@
           </div>
         </div>
       </button>
+      {{end}}
+      {{if index .AvailableWebservers "openlitespeed"}}
       <button
         type="button"
         role="radio"
@@ -158,6 +165,28 @@
           </div>
         </div>
       </button>
+      {{end}}
+
+      {{range .ExtraWebservers}}
+      <button
+        type="button"
+        role="radio"
+        :aria-checked="selectedWebserver === '{{.}}' ? 'true' : 'false'"
+        :data-state="selectedWebserver === '{{.}}' ? 'checked' : ''"
+        @click="selectedWebserver = '{{.}}'"
+        class="group relative w-full rounded border px-4 py-3 text-left shadow-sm transition focus:outline-none
+               bg-white dark:bg-gray-950 border-gray-300 dark:border-gray-800
+               data-[state=checked]:border-blue-500 data-[state=checked]:dark:border-blue-500
+               data-[state=checked]:ring-2 data-[state=checked]:ring-blue-200 data-[state=checked]:dark:ring-blue-700/30"
+      >
+        <div class="flex items-center justify-center text-sm text-gray-900 dark:text-gray-50">
+          <div class="flex items-center gap-2">
+            {{$.GenericWebserverIcon}}
+            <span class="font-medium text-center hidden sm:inline">{{.}}</span>
+          </div>
+        </div>
+      </button>
+      {{end}}
 
     {{with .WebserverAdvice}}<p x-show="!$el.dataset.ok.split(',').includes(selectedWebserver)" x-cloak data-ok="{{range $i, $v := .OK}}{{if $i}},{{end}}{{$v}}{{end}}" class="col-span-full mt-3 text-sm text-amber-600 dark:text-amber-500">{{.Text}}</p>{{end}}
     <input type="hidden" name="WEB_SERVER" :value="selectedWebserver">

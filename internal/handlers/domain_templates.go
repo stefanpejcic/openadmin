@@ -22,7 +22,7 @@ type DomainTemplates struct {
 var domainTemplateFilePaths = map[string]string{
 	"default_page":            "/etc/openpanel/nginx/default_page.html",
 	"suspended_user":          "/etc/openpanel/caddy/templates/suspended_user.html",
-	"suspended_website":       "/etc/openpanel/nginx/suspended_website.html",
+	"suspended_website":       "/etc/openpanel/caddy/templates/suspended_domain.html",
 	"docker_nginx_domain":     "/etc/openpanel/nginx/vhosts/1.1/docker_nginx_domain.conf",
 	"docker_openresty_domain": "/etc/openpanel/nginx/vhosts/1.1/docker_openresty_domain.conf",
 	"docker_apache_domain":    "/etc/openpanel/nginx/vhosts/1.1/docker_apache_domain.conf",
