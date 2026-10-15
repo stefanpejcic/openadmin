@@ -1343,13 +1343,27 @@ When enabled, a session cookie is rejected if the request's IP address doesn't m
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
     <div>
         <h2 id="ai_assistant" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">AI Assistant</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Chat assistant users open from the AI button in the OpenPanel top bar. It answers questions using the OpenPanel documentation.</p>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Chat assistant users open from the AI button in the OpenPanel top bar. It answers questions using the OpenPanel documentation and can look things up or make changes in the user's account.</p>
     </div>
     <div class="md:col-span-2" x-data="{ ai_provider: '{{.ConfigData.Get "AI" "ai_provider" "openrouter"}}' }">
         {{if not .AIModuleEnabled}}
         <p class="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-400">The AI Assistant module is disabled. Enable it on <a href="/settings/modules" class="underline">Settings &gt; Modules</a> and add it to the feature sets of the plans that should have it.</p>
         {{end}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+            <div class="col-span-full" x-data="{ ai_actions: '{{.ConfigData.Get "AI" "ai_actions" "read"}}' }">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_actions">What the assistant can do</label>
+                <div class="relative w-full mt-2">
+                    <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" id="ai_actions" name="ai_actions" x-model="ai_actions">
+                        <option value="off">Answer questions only</option>
+                        <option value="read">Answer questions and look up account data (read-only)</option>
+                        <option value="all">Answer questions, look up data and make changes</option>
+                    </select>
+                </div>
+                <p class="mt-1 text-xs text-gray-500" x-show="ai_actions === 'off'" x-cloak>It can't see the user's data, it only explains how to do things.</p>
+                <p class="mt-1 text-xs text-gray-500" x-show="ai_actions === 'read'" x-cloak>It can list domains, websites, emails, usage and similar, but can't change anything.</p>
+                <p class="mt-1 text-xs text-gray-500" x-show="ai_actions === 'all'" x-cloak>Every change is shown to the user for approval first. Users can choose to always allow an action, but actions that delete or overwrite data always ask. Everything it does is written to the user's activity log.</p>
+            </div>
 
             <div class="col-span-full sm:col-span-3">
                 <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_provider">Provider</label>
@@ -1404,6 +1418,49 @@ When enabled, a session cookie is rejected if the request's IP address doesn't m
                 <p class="mt-1 text-xs text-gray-500">Added to the assistant's instructions, for example your support contacts or policies. Saved as a single line.</p>
             </div>
 
+        </div>
+
+        <div class="mt-8" id="ai_usage">
+            <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">Usage this month ({{.AIUsage.Month}})</h3>
+            {{if .AIUsage.Rows}}
+            <div class="relative overflow-auto mt-2 rounded border border-gray-200 dark:border-gray-800">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">User</th>
+                            <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Questions</th>
+                            <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Actions</th>
+                            <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Input tokens</th>
+                            <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Output tokens</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Last used</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .AIUsage.Rows}}
+                        <tr class="hover:bg-gray-50 hover:dark:bg-gray-900">
+                            <td class="p-4 text-sm whitespace-nowrap py-2"><a href="/users/{{.Username}}" class="text-blue-600 dark:text-blue-500 hover:underline">{{.Username}}</a></td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">{{.Requests}}</td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">{{.Actions}}</td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">{{.InputTokens}}</td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">{{.OutputTokens}}</td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 tabular-nums">{{.LastUsed}}</td>
+                        </tr>
+                        {{end}}
+                        <tr class="font-semibold">
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-gray-900 dark:text-gray-50">Total</td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">{{.AIUsage.Totals.Requests}}</td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">{{.AIUsage.Totals.Actions}}</td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">{{.AIUsage.Totals.InputTokens}}</td>
+                            <td class="p-4 text-sm whitespace-nowrap py-2 text-right text-gray-600 dark:text-gray-400 tabular-nums">{{.AIUsage.Totals.OutputTokens}}</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-1 text-xs text-gray-500">Tokens are what your provider bills for, input tokens include the documentation sent with each question.</p>
+            {{else}}
+            <p class="mt-1 text-sm text-gray-500">No one has used the AI Assistant this month.</p>
+            {{end}}
         </div>
     </div>
 </div>

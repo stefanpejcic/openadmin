@@ -76,7 +76,7 @@ var openpanelStringFields = []string{
 	"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key",
 	"applications_dashboard_items",
 	"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_name", "ai_instructions",
-	"ai_monthly_limit", "ai_max_tokens",
+	"ai_monthly_limit", "ai_max_tokens", "ai_actions",
 }
 
 type openpanelValidationKind int
@@ -143,6 +143,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"captcha_provider":                {kind: openpanelEnum, options: []string{"google", "turnstile", "custom", "none"}},
 	"ai_provider":                     {kind: openpanelEnum, options: []string{"openrouter", "openai", "anthropic", "custom"}},
 	"ai_monthly_limit":                {kind: openpanelNonNegativeInt},
+	"ai_actions":                      {kind: openpanelEnum, options: []string{"off", "read", "all"}},
 	"ai_max_tokens":                   {kind: openpanelOneToMax, options: []string{"64000"}},
 	"ai_name":                         {kind: openpanelSingleLine},
 	"ai_instructions":                 {kind: openpanelSingleLine},
@@ -395,6 +396,7 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 	webtemplates.Render(w, "settings_openpanel.html", mergeChrome(map[string]interface{}{
 		"DNSModuleEnabled":   hasModule(modulesEnabledList(ModulesConfigFilePath), "dns"),
 		"AIModuleEnabled":    hasModule(modulesEnabledList(ModulesConfigFilePath), "ai_assistant"),
+		"AIUsage":            loadAIUsage(),
 		"SMTPConfigured":     strings.TrimSpace(config.Load(config.OpenpanelConfigPath).Get("SMTP", "mail_server", "")) != "",
 		"OpenpanelRAMMB":     int(openpanelRAMGB * 1024),
 		"OpenpanelRAM":       formatLimit(openpanelRAMGB) + " GB",

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"openadmin/internal/config"
 
@@ -497,6 +498,12 @@ func TestValidateOpenpanelValueAI(t *testing.T) {
 	if got, ok, _ := validateOpenpanelValue("ai_instructions", "line one\r\nline  two\n"); !ok || got != "line one line two" {
 		t.Errorf("ai_instructions = %q, want it flattened to one line", got)
 	}
+	if _, ok, _ := validateOpenpanelValue("ai_actions", "all"); !ok {
+		t.Error("ai_actions all should be valid")
+	}
+	if _, ok, _ := validateOpenpanelValue("ai_actions", "write"); ok {
+		t.Error("unknown ai_actions value accepted")
+	}
 	if openpanelSectionForKey("ai_api_key") != "AI" {
 		t.Error("ai_ keys should go to the [AI] section")
 	}
@@ -505,8 +512,15 @@ func TestValidateOpenpanelValueAI(t *testing.T) {
 func TestServeOpenpanelSettingsAISectionSavesAndRenders(t *testing.T) {
 	withScratchOpenpanelSettingsPaths(t)
 	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[DEFAULT]\nbrand_name=Old\n"), 0644)
+	AIUsageUsersDir = t.TempDir()
+	month := time.Now().UTC().Format("2006-01")
+	os.MkdirAll(filepath.Join(AIUsageUsersDir, "alice"), 0755)
+	os.WriteFile(filepath.Join(AIUsageUsersDir, "alice", "ai_usage.json"), []byte(`{"months":{"`+month+`":{"requests":7,"actions":3,"input_tokens":12000,"output_tokens":900}},"last_used":"2026-10-15T08:00:00Z"}`), 0600)
+	os.MkdirAll(filepath.Join(AIUsageUsersDir, "bob"), 0755)
+	os.WriteFile(filepath.Join(AIUsageUsersDir, "bob", "ai_usage.json"), []byte(`{"month":"`+month+`","requests":2}`), 0600)
 
 	form := validOpenpanelForm()
+	form.Set("ai_actions", "all")
 	form.Set("ai_provider", "anthropic")
 	form.Set("ai_api_key", "sk-test")
 	form.Set("ai_model", "claude-opus-5-5")
@@ -529,12 +543,12 @@ func TestServeOpenpanelSettingsAISectionSavesAndRenders(t *testing.T) {
 	}
 
 	saved, _ := os.ReadFile(OpenpanelSettingsConfigPath)
-	for _, want := range []string{"[AI]", "ai_provider=anthropic", "ai_api_key=sk-test", "ai_monthly_limit=50", "ai_max_tokens=4096", "ai_instructions=Support: help@example.com Be nice"} {
+	for _, want := range []string{"[AI]", "ai_provider=anthropic", "ai_api_key=sk-test", "ai_monthly_limit=50", "ai_max_tokens=4096", "ai_actions=all", "ai_instructions=Support: help@example.com Be nice"} {
 		if !strings.Contains(string(saved), want) {
 			t.Errorf("saved config missing %q:\n%s", want, saved)
 		}
 	}
-	for _, want := range []string{`id="ai_assistant"`, `name="ai_provider"`, `value="sk-test"`, "The AI Assistant module is disabled"} {
+	for _, want := range []string{`id="ai_assistant"`, `name="ai_provider"`, `name="ai_actions"`, `value="sk-test"`, "The AI Assistant module is disabled", `href="/users/alice"`, `href="/users/bob"`, ">12000<", ">9<"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("page missing %q", want)
 		}
