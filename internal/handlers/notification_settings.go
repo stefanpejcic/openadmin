@@ -46,6 +46,7 @@ var (
 		"user_ip", "user_password", "user_rename", "user_transfer",
 		"ftp_create", "ftp_delete", "ftp_password",
 		"domains_add", "domains_delete", "domains_status", "domains_ssl", "domains_hsts",
+		"imunify_scan", "docker_backup",
 	}
 )
 
@@ -156,6 +157,7 @@ var notifUserActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"domains_ssl", "SSL type changed", "Fires when SSL type is changed to AutoSSL or Custom SSL is configured."},
 	{"domains_hsts", "HSTS enabled/disabled", "Triggered when HSTS is toggled for a domain name."},
 	{"imunify_scan", "ImunifyAV scan started/finished", "Fires when an ImunifyAV malware scan starts, finishes or finds malware."},
+	{"docker_backup", "Backup failed", "Fires when the scheduled admin backup fails for one or more users."},
 }
 
 // ServeSettings handles GET /settings/notifications.

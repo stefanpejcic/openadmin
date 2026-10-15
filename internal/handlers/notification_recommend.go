@@ -204,6 +204,8 @@ func userActionGroupName(key string) string {
 		return "Domains"
 	case strings.HasPrefix(key, "imunify_"):
 		return "ImunifyAV"
+	case key == "docker_backup":
+		return "Backups"
 	}
 	return "Other"
 }
