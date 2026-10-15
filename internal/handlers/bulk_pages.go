@@ -177,7 +177,8 @@ func DomainsBulkActions(phpVersions []string) []webtemplates.BulkAction {
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
 		{Key: "cloudflare", Icon: "cloud", Label: "Cloudflare", Confirm: "Cloudflare-only access for the selected domains, restricted domains not proxied through Cloudflare return 403 to visitors:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Restrict to Cloudflare", "Unrestrict")}},
-		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected domains?"},
+		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected domains, users can't unsuspend them. Reason:",
+			Input: &webtemplates.BulkInput{Type: "select", Options: suspensionReasonOptions()}},
 		{Key: "unsuspend", Icon: "play", Label: "Unsuspend", Confirm: "Unsuspend the selected domains?"},
 		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected domains? Their files are kept, but DNS zones, SSL and web server config are removed.", Danger: true},
 	}
@@ -230,6 +231,14 @@ func phpVersionLess(a, b string) bool {
 	return ci < di
 }
 
+func suspensionReasonOptions() []webtemplates.BulkOption {
+	opts := []webtemplates.BulkOption{{Value: "default", Label: "Default suspended page"}}
+	for _, t := range listSuspensionTemplates() {
+		opts = append(opts, webtemplates.BulkOption{Value: t.Slug, Label: t.Name})
+	}
+	return opts
+}
+
 func onOffOptions(on, off string) []webtemplates.BulkOption {
 	return []webtemplates.BulkOption{{Value: "on", Label: on}, {Value: "off", Label: off}}
 }
@@ -269,7 +278,12 @@ func domainsBulkRoute(action, value, domain string) (*BulkCall, BulkResult) {
 		return toggle("hsts", url.Values{"hsts_action": {bulkOnOff(value, "On", "Off")}})
 	case "waf":
 		return toggle("waf", url.Values{"modsec_action": {bulkOnOff(value, "On", "Off")}})
-	case "suspend", "unsuspend", "delete":
+	case "suspend":
+		if value != "default" && !suspensionTemplateExists(value) {
+			return BulkSkip("Unknown suspension reason.")
+		}
+		return toggle(action, url.Values{"template": {value}})
+	case "unsuspend", "delete":
 		return toggle(action, url.Values{})
 	}
 	return BulkSkip("Unknown bulk action.")

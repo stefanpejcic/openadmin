@@ -109,7 +109,34 @@ func (a *APIDomains) HandleDomainAction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	stdout, stderr, returncode := apiRunCapture("opencli", cliCmd, domain)
+	args := []string{"opencli", cliCmd, domain}
+	switch cliCmd {
+	case "domains-suspend":
+		// body is optional, {"template": "dmca", "comment": "..."}
+		var body struct {
+			Template string `json:"template"`
+			Comment  string `json:"comment"`
+		}
+		if r.ContentLength != 0 && json.NewDecoder(r.Body).Decode(&body) != nil {
+			writeJSONError(w, http.StatusBadRequest, "Invalid JSON body")
+			return
+		}
+		args = append(args, "--by=admin")
+		if body.Template != "" && body.Template != "default" {
+			if !suspensionTemplateExists(body.Template) {
+				writeJSONError(w, http.StatusBadRequest, "Unknown suspension template: "+body.Template)
+				return
+			}
+			args = append(args, "--template="+body.Template)
+		}
+		if c := strings.TrimSpace(body.Comment); c != "" {
+			args = append(args, "--comment="+c)
+		}
+	case "domains-unsuspend":
+		args = append(args, "--by=admin")
+	}
+
+	stdout, stderr, returncode := apiRunCapture(args...)
 	writeAPIRunResult(w, stdout, stderr, returncode)
 }
 

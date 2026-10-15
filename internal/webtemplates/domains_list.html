@@ -454,6 +454,12 @@ function userSearch() {
         openDeleteModal(domain) {
             this.domainToDelete = domain
             this.showDeleteModal = true
+        },
+        showSuspendModal: false,
+        domainToSuspend: '',
+        openSuspendModal(domain) {
+            this.domainToSuspend = domain
+            this.showSuspendModal = true
         }
     }" class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500 h-screen" id="domains">
                 {{template "bulk_open" (dict "Table" "#domains_table" "Endpoint" "/domains/bulk")}}
@@ -589,7 +595,9 @@ function userSearch() {
                 {{if eq $status "active"}}
                 <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
                 {{else if eq $status "suspended"}}
-                <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Suspended</span>
+{{$by := index . "suspended_by"}}{{$reason := index . "suspend_reason"}}{{$comment := index . "suspend_comment"}}
+                <span title="{{if $reason}}Reason: {{$reason}}{{end}}{{if $comment}}{{if $reason}} | {{end}}Comment: {{$comment}}{{end}}" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 {{if eq $by "admin"}}bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20{{else}}bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20{{end}}">Suspended{{if eq $by "admin"}} by admin{{else if eq $by "user"}} by user{{end}}</span>{{if $reason}}
+                <span class="block text-xs font-normal text-gray-500 dark:text-gray-400">{{$reason}}</span>{{end}}
                 {{else}}
                 <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Unknown</span>
                 {{end}}
@@ -842,11 +850,15 @@ function userSearch() {
                     {{end}}
 
                     <li class="flex">
-                        <form method="POST" action="/domains/{{if eq $status "active"}}suspend{{else if eq $status "suspended"}}unsuspend{{end}}/toggle" class="flex items-center gap-2 w-full">
+                        {{if eq $status "suspended"}}
+                        <form method="POST" action="/domains/unsuspend/toggle" class="flex items-center gap-2 w-full">
                             <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
                             <input type="hidden" name="domain_name" value="{{$domainURL}}">
-                            <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">{{if eq $status "active"}}Suspend domain{{else if eq $status "suspended"}}Unsuspend domain{{end}}</button>
+                            <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Unsuspend domain</button>
                         </form>
+                        {{else if eq $status "active"}}
+                        <button type="button" @click="openSuspendModal('{{$domainURL}}')" class="text-left w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Suspend domain</button>
+                        {{end}}
                     </li>
 
                     <li class="flex">
@@ -920,6 +932,43 @@ function userSearch() {
 
                             <div x-cloak x-show="confirmationText === domainToDelete" x-transition class="flex gap-3 border-t px-6 py-4 border-gray-200 dark:border-gray-800">
                                 <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 text-white border-transparent bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 mt-4 w-full">Delete Permanently</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div x-show="showSuspendModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" @keydown.escape.window="showSuspendModal = false">
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showSuspendModal = false"></div>
+
+                    <div @click.stop class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#090E1A]">
+                        <div class="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Suspend Domain</h3>
+                            <p class="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">Visitors of <span class="font-semibold text-gray-900 dark:text-white" x-text="domainToSuspend"></span> will see the page for the selected reason. The user can't unsuspend, edit or delete the domain until you unsuspend it.</p>
+                        </div>
+
+                        <form method="POST" action="/domains/suspend/toggle">
+                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                            <input type="hidden" name="domain_name" :value="domainToSuspend">
+
+                            <div class="space-y-4 px-6 py-4">
+                                <div>
+                                    <label for="suspend_template" class="block text-sm font-medium text-gray-900 dark:text-white">Reason</label>
+                                    <select id="suspend_template" name="template" class="mt-1 block w-full rounded border px-2.5 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                                        <option value="default">Default suspended page</option>
+                                        {{range .Reasons}}<option value="{{.Slug}}">{{.Name}}</option>
+                                        {{end}}
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500">The reason name is shown to the user in their panel. <a href="/domains/file-templates#suspension-reasons" class="underline">Manage reasons</a></p>
+                                </div>
+                                <div>
+                                    <label for="suspend_comment" class="block text-sm font-medium text-gray-900 dark:text-white">Comment <span class="font-normal text-gray-500">(optional, visible to the user)</span></label>
+                                    <input id="suspend_comment" type="text" name="comment" maxlength="255" autocomplete="off" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+                                </div>
+                            </div>
+
+                            <div class="flex gap-3 border-t px-6 py-4 border-gray-200 dark:border-gray-800">
+                                <button type="button" @click="showSuspendModal = false" class="inline-flex w-full items-center justify-center rounded border px-3 py-2 text-sm font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900">Cancel</button>
+                                <button type="submit" class="inline-flex w-full items-center justify-center rounded border px-3 py-2 text-sm font-medium shadow-sm text-white border-transparent bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600">Suspend</button>
                             </div>
                         </form>
                     </div>

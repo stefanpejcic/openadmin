@@ -174,6 +174,7 @@ type domainsListPageData struct {
 	Domains       []paneldb.RowMap
 	PHPVersions   map[string]interface{}
 	MySQLIsDown   bool
+	Reasons       []suspensionTemplate
 	SortCol       string
 	SortDirection string
 	CSRFToken     string
@@ -197,6 +198,10 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 		dom["waf"] = waf
 		dom["hsts"] = hsts
 		dom["cloudflare"] = cloudflare
+		if status == "suspended" {
+			s := readDomainSuspension(domainURL)
+			dom["suspended_by"], dom["suspend_reason"], dom["suspend_comment"] = s.By, s.Reason, s.Comment
+		}
 
 		health := checkDomainSSLHealth(domainURL, ssl, tlsIndex)
 		dom["ssl_problem"] = health.Status
@@ -231,6 +236,7 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 		Domains:       domains,
 		PHPVersions:   phpVersionsEOL(),
 		MySQLIsDown:   mysqlIsDown,
+		Reasons:       listSuspensionTemplates(),
 		SortCol:       r.URL.Query().Get("sort"),
 		SortDirection: r.URL.Query().Get("direction"),
 		CSRFToken:     csrf.Token(r),
@@ -347,10 +353,21 @@ func (d *Domains) HandleToggleFeature(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "suspend":
-		cliArgs = []string{"opencli", "domains-suspend", domain}
+		cliArgs = []string{"opencli", "domains-suspend", domain, "--by=admin"}
+		if tpl := r.FormValue("template"); tpl != "" && tpl != "default" {
+			if !suspensionTemplateExists(tpl) {
+				auth.AddFlash(w, r, d.Sessions, "Error: suspension reason '"+tpl+"' does not exist", "error")
+				http.Redirect(w, r, "/domains", http.StatusSeeOther)
+				return
+			}
+			cliArgs = append(cliArgs, "--template="+tpl)
+		}
+		if comment := strings.TrimSpace(r.FormValue("comment")); comment != "" {
+			cliArgs = append(cliArgs, "--comment="+comment)
+		}
 		action = "executed"
 	case "unsuspend":
-		cliArgs = []string{"opencli", "domains-unsuspend", domain}
+		cliArgs = []string{"opencli", "domains-unsuspend", domain, "--by=admin"}
 		action = "executed"
 	case "delete":
 		cliArgs = []string{"opencli", "domains-delete", domain}

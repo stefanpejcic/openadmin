@@ -112,6 +112,52 @@
 
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+
+    <div>
+        <h2 id="suspension-reasons" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Suspension Reasons</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Pages admins can pick when suspending a domain, e.g. DMCA or overdue payment. The reason name is shown to the user in their panel and the page to visitors.</p>
+    </div>
+
+    <div class="md:col-span-2 space-y-3">
+        {{range .Reasons}}
+        <details x-data="{ html: {{toJSON .Content}} }" class="rounded border border-gray-200 dark:border-gray-800">
+            <summary class="cursor-pointer select-none px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-50">{{.Name}} <span class="font-normal text-gray-500">/suspended/{{.Slug}}.html</span></summary>
+            <div class="space-y-3 border-t border-gray-200 p-4 dark:border-gray-800">
+                <div class="flex items-end gap-2">
+                    <div class="grow">
+                        <label class="block text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                        <input type="text" name="reason_name__{{.Slug}}" value="{{.Name}}" maxlength="100" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+                    </div>
+                    <button type="submit" name="delete_reason" value="{{.Slug}}" onclick="return confirm('Delete this suspension reason?')" class="inline-flex items-center rounded border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-50 dark:border-red-800 dark:bg-gray-950 dark:hover:bg-red-950">Delete</button>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <textarea x-model="html" name="reason_content__{{.Slug}}" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="18">{{.Content}}</textarea>
+                    <iframe :srcdoc="html" sandbox style="height:100%; width:100%;"></iframe>
+                </div>
+            </div>
+        </details>
+        {{end}}
+
+        <details x-data="{ html: '' }" class="rounded border border-dashed border-gray-300 dark:border-gray-700" {{if not .Reasons}}open{{end}}>
+            <summary class="cursor-pointer select-none px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">+ Add suspension reason</summary>
+            <div class="space-y-3 border-t border-gray-200 p-4 dark:border-gray-800">
+                <div>
+                    <label class="block text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                    <input type="text" name="new_reason_name" maxlength="100" placeholder="Suspended for Copyright / DMCA Violation" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <textarea x-model="html" name="new_reason_content" placeholder="Leave empty to start from the Suspended Website page" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="12"></textarea>
+                    <iframe :srcdoc="html" sandbox style="height:100%; width:100%;"></iframe>
+                </div>
+                <p class="text-xs text-gray-500">Saved with the rest of the page when you click Save Files.</p>
+            </div>
+        </details>
+    </div>
+</div>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" x-data="restoreComponentFor('suspended_user', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/caddy/templates/suspended_user.html')">
 
     <div>
