@@ -1338,6 +1338,77 @@ When enabled, a session cookie is rejected if the request's IP address doesn't m
 </div>
 
 
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div>
+        <h2 id="ai_assistant" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">AI Assistant</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Chat assistant users open from the AI button in the OpenPanel top bar. It answers questions using the OpenPanel documentation.</p>
+    </div>
+    <div class="md:col-span-2" x-data="{ ai_provider: '{{.ConfigData.Get "AI" "ai_provider" "openrouter"}}' }">
+        {{if not .AIModuleEnabled}}
+        <p class="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-400">The AI Assistant module is disabled. Enable it on <a href="/settings/modules" class="underline">Settings &gt; Modules</a> and add it to the feature sets of the plans that should have it.</p>
+        {{end}}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_provider">Provider</label>
+                <div class="relative w-full mt-2">
+                    <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" id="ai_provider" name="ai_provider" x-model="ai_provider">
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="custom">Custom (OpenAI-compatible)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_api_key">API key</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500" id="ai_api_key" name="ai_api_key" placeholder="API key" value="{{.ConfigData.Get "AI" "ai_api_key" ""}}" type="password" autocomplete="off"></div>
+                <p class="mt-1 text-xs text-gray-500" x-show="ai_provider === 'custom'" x-cloak>Optional for local models such as Ollama.</p>
+            </div>
+
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_model">Model</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500" id="ai_model" name="ai_model" value="{{.ConfigData.Get "AI" "ai_model" ""}}" type="text"
+                    :placeholder="({openrouter: 'openrouter/auto', anthropic: 'claude-opus-5-5', openai: 'required', custom: 'required'})[ai_provider]"></div>
+                <p class="mt-1 text-xs text-gray-500" x-show="ai_provider === 'openrouter' || ai_provider === 'anthropic'" x-cloak>Leave empty to use the default shown.</p>
+            </div>
+
+            <div class="col-span-full sm:col-span-3" x-show="ai_provider === 'custom'" x-cloak>
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_base_url">API base URL</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500" id="ai_base_url" name="ai_base_url" placeholder="http://localhost:11434/v1" value="{{.ConfigData.Get "AI" "ai_base_url" ""}}" type="text"></div>
+                <p class="mt-1 text-xs text-gray-500">Must serve <code>/chat/completions</code>.</p>
+            </div>
+
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_name">Assistant name</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500" id="ai_name" name="ai_name" placeholder="AI Assistant" value="{{.ConfigData.Get "AI" "ai_name" ""}}" type="text" maxlength="60"></div>
+            </div>
+
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_monthly_limit">Requests per user per month</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500" id="ai_monthly_limit" name="ai_monthly_limit" placeholder="100" value="{{.ConfigData.Get "AI" "ai_monthly_limit" "100"}}" type="number" min="0" required></div>
+                <p class="mt-1 text-xs text-gray-500">0 for unlimited.</p>
+            </div>
+
+            <div class="col-span-full sm:col-span-3">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_max_tokens">Max tokens per answer</label>
+                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500" id="ai_max_tokens" name="ai_max_tokens" placeholder="2048" value="{{.ConfigData.Get "AI" "ai_max_tokens" "2048"}}" type="number" min="1" max="64000" required></div>
+            </div>
+
+            <div class="col-span-full">
+                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ai_instructions">Extra instructions</label>
+                <div class="relative w-full mt-2"><textarea class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 whitespace-normal" id="ai_instructions" name="ai_instructions" rows="3" placeholder="For billing questions, tell users to open a ticket at https://example.com/support">{{.ConfigData.Get "AI" "ai_instructions" ""}}</textarea></div>
+                <p class="mt-1 text-xs text-gray-500">Added to the assistant's instructions, for example your support contacts or policies. Saved as a single line.</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
 <script>
 function restoreComponentFor(id, githubFile) {
   return {

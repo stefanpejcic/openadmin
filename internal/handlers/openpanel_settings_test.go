@@ -480,3 +480,63 @@ func TestServeOpenpanelSettingsPagespeedHint(t *testing.T) {
 		t.Fatal("expected no PageSpeed hint with 10 sites or fewer")
 	}
 }
+
+func TestValidateOpenpanelValueAI(t *testing.T) {
+	if _, ok, _ := validateOpenpanelValue("ai_provider", "anthropic"); !ok {
+		t.Error("anthropic should be a valid provider")
+	}
+	if _, ok, _ := validateOpenpanelValue("ai_provider", "gemini"); ok {
+		t.Error("unknown provider accepted")
+	}
+	if _, ok, _ := validateOpenpanelValue("ai_max_tokens", "0"); ok {
+		t.Error("ai_max_tokens 0 accepted")
+	}
+	if _, ok, _ := validateOpenpanelValue("ai_max_tokens", "64001"); ok {
+		t.Error("ai_max_tokens over 64000 accepted")
+	}
+	if got, ok, _ := validateOpenpanelValue("ai_instructions", "line one\r\nline  two\n"); !ok || got != "line one line two" {
+		t.Errorf("ai_instructions = %q, want it flattened to one line", got)
+	}
+	if openpanelSectionForKey("ai_api_key") != "AI" {
+		t.Error("ai_ keys should go to the [AI] section")
+	}
+}
+
+func TestServeOpenpanelSettingsAISectionSavesAndRenders(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[DEFAULT]\nbrand_name=Old\n"), 0644)
+
+	form := validOpenpanelForm()
+	form.Set("ai_provider", "anthropic")
+	form.Set("ai_api_key", "sk-test")
+	form.Set("ai_model", "claude-opus-5-5")
+	form.Set("ai_monthly_limit", "50")
+	form.Set("ai_max_tokens", "4096")
+	form.Set("ai_instructions", "Support: help@example.com\nBe nice")
+
+	o := &OpenpanelSettings{}
+	srv, client := newOpenpanelSettingsTestServer(t, o)
+
+	resp, err := client.PostForm(srv.URL+"/settings/open-panel", form)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	if !strings.Contains(got, "Configuration saved successfully.") {
+		t.Fatalf("expected success flash, got %s", truncate(got))
+	}
+
+	saved, _ := os.ReadFile(OpenpanelSettingsConfigPath)
+	for _, want := range []string{"[AI]", "ai_provider=anthropic", "ai_api_key=sk-test", "ai_monthly_limit=50", "ai_max_tokens=4096", "ai_instructions=Support: help@example.com Be nice"} {
+		if !strings.Contains(string(saved), want) {
+			t.Errorf("saved config missing %q:\n%s", want, saved)
+		}
+	}
+	for _, want := range []string{`id="ai_assistant"`, `name="ai_provider"`, `value="sk-test"`, "The AI Assistant module is disabled"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("page missing %q", want)
+		}
+	}
+}
