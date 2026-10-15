@@ -14,7 +14,7 @@ import (
 	"openadmin/internal/webtemplates"
 )
 
-// DomainTemplates bundles the /domains/file-templates handler.
+// DomainTemplates bundles the /domains/file-templates and /domains/vhost-templates handlers.
 type DomainTemplates struct {
 	Sessions *auth.Manager
 }
@@ -32,25 +32,36 @@ var domainTemplateFilePaths = map[string]string{
 	"docker_caddy":            "/etc/openpanel/caddy/templates/domain.conf",
 }
 
-// domainTemplateFieldOrder fixes the field order since Go maps don't
-// preserve one -- used for deterministic JSON output.
-var domainTemplateFieldOrder = []string{
-	"default_page", "suspended_user", "suspended_website",
-	"docker_nginx_domain", "docker_openresty_domain", "docker_apache_domain",
-	"docker_varnish", "docker_caddy",
+// field order per page, Go maps don't keep one and the JSON output should be stable
+var (
+	domainTemplateFieldOrder = []string{"default_page", "suspended_user", "suspended_website"}
+	vhostTemplateFieldOrder  = []string{
+		"docker_nginx_domain", "docker_openresty_domain", "docker_apache_domain",
+		"docker_varnish", "docker_caddy",
+	}
+)
+
+func saveTemplateFiles(r *http.Request, keys []string) {
+	for _, key := range keys {
+		if formHasKey(r, key) {
+			os.WriteFile(domainTemplateFilePaths[key], []byte(r.PostFormValue(key)), 0644)
+		}
+	}
 }
 
-// ServeDomainTemplates handles GET/POST /domains/file-templates: it saves
-// posted template contents to disk and renders the current contents of each
-// template file.
+func readTemplateFiles(keys []string) map[string]string {
+	out := make(map[string]string, len(keys))
+	for _, key := range keys {
+		out[key], _ = readFileOrEmpty(domainTemplateFilePaths[key])
+	}
+	return out
+}
+
+// ServeDomainTemplates handles GET/POST /domains/file-templates: default page, suspended pages and suspension reasons.
 func (d *DomainTemplates) ServeDomainTemplates(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		for _, key := range domainTemplateFieldOrder {
-			if formHasKey(r, key) {
-				os.WriteFile(domainTemplateFilePaths[key], []byte(r.PostFormValue(key)), 0644)
-			}
-		}
+		saveTemplateFiles(r, domainTemplateFieldOrder)
 		if msg, kind := saveSuspensionTemplatesForm(r); msg != "" {
 			auth.AddFlash(w, r, d.Sessions, msg, kind)
 		} else {
@@ -58,30 +69,45 @@ func (d *DomainTemplates) ServeDomainTemplates(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	fileContents := make(map[string]string, len(domainTemplateFieldOrder))
-	for _, key := range domainTemplateFieldOrder {
-		content, _ := readFileOrEmpty(domainTemplateFilePaths[key])
-		fileContents[key] = content
-	}
-
+	fileContents := readTemplateFiles(domainTemplateFieldOrder)
 	if r.URL.Query().Get("output") == "json" {
 		writeJSON(w, fileContents)
 		return
 	}
 
 	webtemplates.Render(w, "domains_templates.html", mergeChrome(map[string]interface{}{
-		"DefaultPage":           fileContents["default_page"],
-		"SuspendedUser":         fileContents["suspended_user"],
-		"SuspendedWebsite":      fileContents["suspended_website"],
+		"DefaultPage":      fileContents["default_page"],
+		"SuspendedUser":    fileContents["suspended_user"],
+		"SuspendedWebsite": fileContents["suspended_website"],
+		"Reasons":          listSuspensionTemplates(),
+		"CSRFToken":        csrf.Token(r),
+		"Flashes":          auth.PopFlashes(w, r, d.Sessions),
+	}, r, "Domain Templates"))
+}
+
+// ServeVhostTemplates handles GET/POST /domains/vhost-templates: webserver, varnish and caddy templates for new domains.
+func (d *DomainTemplates) ServeVhostTemplates(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		r.ParseForm()
+		saveTemplateFiles(r, vhostTemplateFieldOrder)
+		auth.AddFlash(w, r, d.Sessions, "Templates updated successfully!", "success")
+	}
+
+	fileContents := readTemplateFiles(vhostTemplateFieldOrder)
+	if r.URL.Query().Get("output") == "json" {
+		writeJSON(w, fileContents)
+		return
+	}
+
+	webtemplates.Render(w, "vhost_templates.html", mergeChrome(map[string]interface{}{
 		"DockerNginxDomain":     fileContents["docker_nginx_domain"],
 		"DockerOpenrestyDomain": fileContents["docker_openresty_domain"],
 		"DockerApacheDomain":    fileContents["docker_apache_domain"],
 		"DockerVarnish":         fileContents["docker_varnish"],
 		"DockerCaddy":           fileContents["docker_caddy"],
-		"Reasons":               listSuspensionTemplates(),
 		"CSRFToken":             csrf.Token(r),
 		"Flashes":               auth.PopFlashes(w, r, d.Sessions),
-	}, r, "Domain Templates"))
+	}, r, "VirtualHost Templates"))
 }
 
 // saveSuspensionTemplatesForm handles the reason rows, returns a flash only when something needs saying

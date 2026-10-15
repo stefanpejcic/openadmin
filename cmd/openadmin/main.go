@@ -409,6 +409,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/domains/{domain_name}/stats/{username}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiDomainStats.ServeDomainStats)))
 	mux.HandleFunc("GET /api/domains/file-templates", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomainFiles.ServeDomainFileTemplates)))
 	mux.HandleFunc("POST /api/domains/file-templates", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomainFiles.ServeDomainFileTemplates)))
+	mux.HandleFunc("GET /api/domains/vhost-templates", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomainFiles.ServeVhostTemplates)))
+	mux.HandleFunc("POST /api/domains/vhost-templates", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomainFiles.ServeVhostTemplates)))
 
 	mux.HandleFunc("GET /api/plans", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeList)))
 	mux.HandleFunc("POST /api/plans", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeList)))
@@ -851,6 +853,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /login/sso/{token}", apiLogin.HandleSSOLogin)
 	mux.HandleFunc("GET /domains/file-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeDomainTemplates))
 	mux.HandleFunc("POST /domains/file-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeDomainTemplates))
+	mux.HandleFunc("GET /domains/vhost-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeVhostTemplates))
+	mux.HandleFunc("POST /domains/vhost-templates", auth.RequireAdmin(sessions, authOpts, domainTemplates.ServeVhostTemplates))
 	// no auth wrapper, checks its own one-time HMAC code against openpanel.config instead
 	mux.HandleFunc("POST /send_email", mailer.ServeSendEmail)
 	mux.HandleFunc("GET /server/processes", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcesses))

@@ -53,6 +53,8 @@ func newDomainTemplatesTestServer(t *testing.T, d *DomainTemplates) (*httptest.S
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /domains/file-templates", d.ServeDomainTemplates)
 	mux.HandleFunc("POST /domains/file-templates", d.ServeDomainTemplates)
+	mux.HandleFunc("GET /domains/vhost-templates", d.ServeVhostTemplates)
+	mux.HandleFunc("POST /domains/vhost-templates", d.ServeVhostTemplates)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
 		auth.LoginUser(w, r, sessions, caller, "203.0.113.1")
 	})
@@ -79,7 +81,7 @@ func TestServeDomainTemplatesGetJSON(t *testing.T) {
 	d := &DomainTemplates{}
 	srv, client := newDomainTemplatesTestServer(t, d)
 
-	resp, err := client.Get(srv.URL + "/domains/file-templates?output=json")
+	resp, err := client.Get(srv.URL + "/domains/vhost-templates?output=json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,8 +90,18 @@ func TestServeDomainTemplatesGetJSON(t *testing.T) {
 	if !strings.Contains(string(body), `"docker_caddy":"caddy content"`) {
 		t.Fatalf("expected docker_caddy content in JSON, got %s", body)
 	}
-	if !strings.Contains(string(body), `"default_page":""`) {
-		t.Fatalf("expected other fields present but empty, got %s", body)
+	if strings.Contains(string(body), "default_page") {
+		t.Fatalf("vhost templates shouldn't include page templates, got %s", body)
+	}
+
+	resp, err = client.Get(srv.URL + "/domains/file-templates?output=json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), `"default_page":""`) || strings.Contains(string(body), "docker_") {
+		t.Fatalf("expected only page templates, got %s", body)
 	}
 }
 
@@ -100,7 +112,7 @@ func TestServeDomainTemplatesRendersHTML(t *testing.T) {
 	d := &DomainTemplates{}
 	srv, client := newDomainTemplatesTestServer(t, d)
 
-	resp, err := client.Get(srv.URL + "/domains/file-templates")
+	resp, err := client.Get(srv.URL + "/domains/vhost-templates")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,10 +125,28 @@ func TestServeDomainTemplatesRendersHTML(t *testing.T) {
 	if n := strings.Count(got, "This file is changed from the default"); n != 5 {
 		t.Fatalf("expected the changed-from-default note on all 5 config editors, got %d", n)
 	}
-	for _, want := range []string{"caddy content", "Edit Domain Templates", "function restoreComponentFor", "</html>"} {
+	for _, want := range []string{"caddy content", "Edit VirtualHost Templates", "function restoreComponentFor", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
+	}
+
+	withScratchSuspensionTemplatesDir(t)
+	saveSuspensionTemplate("dmca", "Copyright / DMCA", "<h1>dmca</h1>")
+	resp, err = client.Get(srv.URL + "/domains/file-templates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got = string(body)
+	for _, want := range []string{"Edit Domain Templates", "Suspension Reasons", "reason_name__dmca", "Copyright / DMCA", "</html>"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
+		}
+	}
+	if strings.Contains(got, "docker_caddy") {
+		t.Fatal("domain templates page shouldn't have the vhost editors")
 	}
 }
 

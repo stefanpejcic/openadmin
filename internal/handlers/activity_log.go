@@ -274,9 +274,10 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 		}
 		return "POST " + r.URL.Path
 	},
-	"POST /domains/zone-templates": func(r *http.Request) string { return "Edited DNS zone templates" },
-	"POST /domains/file-templates": func(r *http.Request) string { return "Edited domain file templates" },
-	"POST /domains/dns-cluster":    func(r *http.Request) string { return "Changed DNS cluster settings" },
+	"POST /domains/zone-templates":  func(r *http.Request) string { return "Edited DNS zone templates" },
+	"POST /domains/file-templates":  func(r *http.Request) string { return "Edited domain file templates" },
+	"POST /domains/vhost-templates": func(r *http.Request) string { return "Edited VirtualHost templates" },
+	"POST /domains/dns-cluster":     func(r *http.Request) string { return "Changed DNS cluster settings" },
 
 	// emails
 	"POST /emails/settings":               func(r *http.Request) string { return "Changed email settings" },

@@ -117,12 +117,14 @@ var modernAreas = []navArea{
 			isCluster := hasAnyPrefix(path, "/domains/dns-cluster", "/dns/cluster")
 			isZone := hasAnyPrefix(path, "/domains/zone-templates", "/dns/zone-templates")
 			isFile := strings.HasPrefix(path, "/domains/file-templates")
+			isVhost := strings.HasPrefix(path, "/domains/vhost-templates")
 			return buildTabs(
-				tabSpec{true, "/domains", "Domains", !isDNS && !isCluster && !isZone && !isFile},
+				tabSpec{true, "/domains", "Domains", !isDNS && !isCluster && !isZone && !isFile && !isVhost},
 				tabSpec{dns, "/domains/dns", "DNS Zone Editor", isDNS},
 				tabSpec{dns && isEnterprise(c), "/domains/dns-cluster", "DNS Cluster", isCluster},
 				tabSpec{dns, "/domains/zone-templates", "Zone Templates", isZone},
 				tabSpec{true, "/domains/file-templates", "Domain Templates", isFile},
+				tabSpec{true, "/domains/vhost-templates", "VirtualHost Templates", isVhost},
 			)
 		}},
 	{label: "Websites", icon: websitesIcon, menuID: "websites-menu", show: adminOnly,
@@ -268,6 +270,7 @@ var helpDocs = map[string]string{
 	"/domains/dns-cluster":           "admin/domains/dns-cluster",
 	"/domains/zone-templates":        "admin/domains/dns_templates",
 	"/domains/file-templates":        "admin/domains/file_templates",
+	"/domains/vhost-templates":       "admin/domains/vhost_templates",
 	"/websites":                      "admin/websites",
 	"/emails/accounts":               "admin/emails/emails",
 	"/emails/queue":                  "admin/emails/queue",

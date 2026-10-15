@@ -23,6 +23,8 @@ func newAPIDomainFilesTestServer(t *testing.T, a *APIDomainFiles) (*httptest.Ser
 	mux.HandleFunc("POST /domains/{domain_name}/vhost/{username}", a.ServeDomainVHostConfig)
 	mux.HandleFunc("GET /domains/file-templates", a.ServeDomainFileTemplates)
 	mux.HandleFunc("POST /domains/file-templates", a.ServeDomainFileTemplates)
+	mux.HandleFunc("GET /domains/vhost-templates", a.ServeVhostTemplates)
+	mux.HandleFunc("POST /domains/vhost-templates", a.ServeVhostTemplates)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 	return srv, srv.Client()
@@ -317,7 +319,7 @@ func TestAPIDomainFileTemplatesGet(t *testing.T) {
 	a := &APIDomainFiles{}
 	srv, client := newAPIDomainFilesTestServer(t, a)
 
-	resp, err := client.Get(srv.URL + "/domains/file-templates")
+	resp, err := client.Get(srv.URL + "/domains/vhost-templates")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,8 +330,39 @@ func TestAPIDomainFileTemplatesGet(t *testing.T) {
 	}
 	var decoded map[string]string
 	json.Unmarshal(body, &decoded)
-	if decoded["docker_caddy"] != "caddy tmpl" || decoded["default_page"] != "" {
+	if decoded["docker_caddy"] != "caddy tmpl" || len(decoded) != 5 {
 		t.Fatalf("unexpected body: %s", body)
+	}
+
+	resp, err = client.Get(srv.URL + "/domains/file-templates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	decoded = nil
+	json.Unmarshal(body, &decoded)
+	if _, ok := decoded["default_page"]; !ok || len(decoded) != 3 {
+		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
+func TestAPIVhostTemplatesIgnoresPageKeys(t *testing.T) {
+	withScratchDomainTemplatePaths(t)
+	os.WriteFile(domainTemplateFilePaths["default_page"], []byte("old default"), 0644)
+
+	a := &APIDomainFiles{}
+	srv, client := newAPIDomainFilesTestServer(t, a)
+
+	resp, err := client.Post(srv.URL+"/domains/vhost-templates", "application/json", strings.NewReader(`{"default_page":"x","docker_varnish":"new varnish"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	saved, _ := os.ReadFile(domainTemplateFilePaths["default_page"])
+	varnish, _ := os.ReadFile(domainTemplateFilePaths["docker_varnish"])
+	if string(saved) != "old default" || string(varnish) != "new varnish" {
+		t.Fatalf("got default_page %q, varnish %q", saved, varnish)
 	}
 }
 

@@ -19,7 +19,7 @@ import (
 )
 
 // APIDomainFiles bundles the /api/domains/{domain}/caddy,
-// /api/domains/{domain}/vhost/{username} and /api/domains/file-templates
+// /api/domains/{domain}/vhost/{username}, /api/domains/file-templates and /api/domains/vhost-templates
 // handlers.
 type APIDomainFiles struct {
 	MySQL *sql.DB
@@ -207,23 +207,29 @@ func (a *APIDomainFiles) ServeDomainVHostConfig(w http.ResponseWriter, r *http.R
 
 // ServeDomainFileTemplates handles GET/POST /api/domains/file-templates.
 func (a *APIDomainFiles) ServeDomainFileTemplates(w http.ResponseWriter, r *http.Request) {
+	serveAPITemplateFiles(w, r, domainTemplateFieldOrder)
+}
+
+// ServeVhostTemplates handles GET/POST /api/domains/vhost-templates.
+func (a *APIDomainFiles) ServeVhostTemplates(w http.ResponseWriter, r *http.Request) {
+	serveAPITemplateFiles(w, r, vhostTemplateFieldOrder)
+}
+
+func serveAPITemplateFiles(w http.ResponseWriter, r *http.Request, keys []string) {
 	if r.Method == http.MethodPost {
 		var body map[string]interface{}
 		if !apiDecodeJSONBody(r, &body) {
 			writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
 			return
 		}
-		for _, key := range domainTemplateFieldOrder {
+		for _, key := range keys {
 			v, present := body[key]
 			if !present || v == nil {
 				continue
 			}
 			s, isString := v.(string)
 			if !isString {
-				// write_file()'s f.write(value) requires a str; a non-string
-				// value would raise a TypeError here that nothing in this
-				// route catches, so this crashes out the same way.
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				writeJSONError(w, http.StatusBadRequest, key+" must be a string")
 				return
 			}
 			os.WriteFile(domainTemplateFilePaths[key], []byte(s), 0644)
@@ -232,8 +238,8 @@ func (a *APIDomainFiles) ServeDomainFileTemplates(w http.ResponseWriter, r *http
 		return
 	}
 
-	fileContents := make(map[string]string, len(domainTemplateFieldOrder))
-	for _, key := range domainTemplateFieldOrder {
+	fileContents := make(map[string]string, len(keys))
+	for _, key := range keys {
 		content, err := readFileOrEmpty(domainTemplateFilePaths[key])
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)

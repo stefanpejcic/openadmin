@@ -41,7 +41,7 @@ func TestBuildModernNavAdmin(t *testing.T) {
 		}
 	}
 	got, active := tabLabels(tabs)
-	if got != "Domains,DNS Zone Editor,DNS Cluster,Zone Templates,Domain Templates" || active != "DNS Zone Editor" {
+	if got != "Domains,DNS Zone Editor,DNS Cluster,Zone Templates,Domain Templates,VirtualHost Templates" || active != "DNS Zone Editor" {
 		t.Errorf("unexpected domain tabs: %s (active %s)", got, active)
 	}
 }
@@ -52,7 +52,7 @@ func TestBuildModernNavGating(t *testing.T) {
 	if strings.Contains(labels(items), "Emails") {
 		t.Error("did not expect Emails without Enterprise")
 	}
-	if got, _ := tabLabels(tabs); got != "Domains,Domain Templates" {
+	if got, _ := tabLabels(tabs); got != "Domains,Domain Templates,VirtualHost Templates" {
 		t.Errorf("unexpected domain tabs without dns/Enterprise: %s", got)
 	}
 }
