@@ -138,4 +138,6 @@ func TestBulkActionIconsExist(t *testing.T) {
 	check("resellers", AccountsBulkActions("resellers"))
 	check("domains", DomainsBulkActions(nil))
 	check("websites", WebsitesBulkActions(true, true))
+	check("ratelimit", RateLimitBulkActions())
+	check("domain-limits", EmailDomainLimitsBulkActions())
 }

@@ -278,6 +278,12 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 	"POST /domains/file-templates":  func(r *http.Request) string { return "Edited domain file templates" },
 	"POST /domains/vhost-templates": func(r *http.Request) string { return "Edited VirtualHost templates" },
 	"POST /domains/dns-cluster":     func(r *http.Request) string { return "Changed DNS cluster settings" },
+	"POST /domains/ratelimit": func(r *http.Request) string {
+		if r.PostFormValue("action") == "default" {
+			return actJoin("Set the server default rate limit to", r.PostFormValue("per_ip")+"/min per IP and", r.PostFormValue("per_site")+"/min per domain")
+		}
+		return actJoin("Set rate limit", quoted(r.PostFormValue("mode")), "for domain", quoted(r.PostFormValue("domain")))
+	},
 
 	// emails
 	"POST /emails/settings":               func(r *http.Request) string { return "Changed email settings" },

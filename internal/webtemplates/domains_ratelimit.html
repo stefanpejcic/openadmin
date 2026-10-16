@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="rateLimitPage()" x-init="loadStats(false)">
+
+<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <header>
+        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="grow">
+                <h1 class="mb-1 text-xl font-bold">Rate Limiting</h1>
+                <h2 class="text-sm font-medium text-slate-500">
+                    Server default: {{if or .Status.Default.PerIP .Status.Default.PerSite}}<b>{{.Status.Default.PerIP}}</b>/min per IP, <b>{{.Status.Default.PerSite}}</b>/min per domain{{else}}<b>off</b>{{end}}. Visitors above a limit get HTTP 429.
+                </h2>
+            </div>
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <a @click="showDefault = !showDefault" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 sm:w-fit">Server Default</a>
+            </div>
+        </div>
+    </header>
+
+    <div x-show="showDefault" x-cloak class="mt-8 w-full">
+        <form method="POST" action="/domains/ratelimit">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="action" value="default">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div class="col-span-full sm:col-span-2">
+                    <label for="default_per_ip" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Per visitor IP <span class="font-normal text-gray-500">(requests/min)</span></label>
+                    <input id="default_per_ip" type="number" min="0" step="1" name="per_ip" value="{{.Status.Default.PerIP}}" class="mt-2 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                </div>
+                <div class="col-span-full sm:col-span-2">
+                    <label for="default_per_site" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Per domain <span class="font-normal text-gray-500">(requests/min)</span></label>
+                    <input id="default_per_site" type="number" min="0" step="1" name="per_site" value="{{.Status.Default.PerSite}}" class="mt-2 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                </div>
+                <div class="col-span-full flex items-end sm:col-span-2">
+                    <button type="submit" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 sm:w-fit border-black bg-black text-white hover:bg-gray-800">Save default</button>
+                </div>
+            </div>
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">Used by every domain set to <span class="font-medium">Default</span>. 0 turns a limit off, both 0 turns rate limiting off for those domains.</p>
+        </form>
+    </div>
+</div>
+
+{{if .StatusError}}
+<div class="mx-6 mt-4 rounded border border-yellow-500 bg-yellow-50 p-4 text-sm text-yellow-800 dark:bg-yellow-400/10 dark:text-yellow-500">
+    Couldn't read the rate limits, <code>opencli domains-ratelimit</code> is missing or failed. Update opencli and try again.
+</div>
+{{end}}
+
+<div x-data="{ q: '', user: '' }" class="space-y-3">
+    <div class="flex px-6 pt-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+        <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
+            <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
+                <input x-model="q" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8" placeholder="Search domains or users..." type="search" />
+                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                </div>
+            </div>
+            {{if .Users}}
+            <select x-model="user" aria-label="Filter by user" class="rounded border px-2.5 py-1.5 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                <option value="">All users</option>
+                {{range .Users}}<option value="{{.}}">{{.}}</option>{{end}}
+            </select>
+            {{end}}
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span x-show="loading">Reading access logs...</span>
+            <span x-show="!loading && statsError" x-text="statsError" class="text-red-600 dark:text-red-400"></span>
+            <span x-show="!loading && !statsError && updated">Usage over the last 24h, read <span x-text="updatedText()"></span></span>
+            <button type="button" @click="loadStats(true)" :disabled="loading" class="cursor-pointer text-blue-600 hover:underline dark:text-blue-400">Refresh</button>
+        </div>
+    </div>
+
+    {{template "bulk_open" (dict "Table" "#ratelimit_table" "Endpoint" "/domains/ratelimit/bulk")}}
+    <div class="relative overflow-x-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+        <table id="ratelimit_table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+            <thead>
+                <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                    {{template "bulk_head_checkbox" .}}
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Domain</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">User</th>
+                    <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Setting</th>
+                    <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs" title="Limit per visitor IP, requests per minute">Per IP</th>
+                    <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs" title="Limit for the whole domain, requests per minute">Per domain</th>
+                    <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs" title="Requests in the last 24h">Requests</th>
+                    <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs" title="Busiest minute from a single IP, compare it to the per IP limit">Peak/min per IP</th>
+                    <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs" title="Busiest minute for the whole domain, compare it to the per domain limit">Peak/min domain</th>
+                    <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs" title="Requests answered with 429 in the last 24h">Blocked (429)</th>
+                    <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Status.Domains}}
+                <tr x-show="(q === '' || '{{.Domain}} {{.Owner}}'.includes(q.toLowerCase())) && (user === '' || user === '{{.Owner}}')" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                    {{template "bulk_row_checkbox" (dict "Key" .Domain "Label" .Domain)}}
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-medium">{{.Domain}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">{{if .Owner}}{{.Owner}}{{else}}-{{end}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
+                        {{if eq .Mode "default"}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Default</span>
+                        {{else if eq .Mode "custom"}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Custom</span>
+                        {{else}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Off</span>{{end}}
+                    </td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-right tabular-nums text-gray-600 dark:text-gray-400">{{if .PerIP}}{{.PerIP}}{{else}}-{{end}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-right tabular-nums text-gray-600 dark:text-gray-400">{{if .PerSite}}{{.PerSite}}{{else}}-{{end}}</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-right tabular-nums text-gray-600 dark:text-gray-400" x-text="num('{{.Domain}}', 'requests')">...</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-right tabular-nums" :class="level('{{.Domain}}', 'peak_ip_minute', {{.PerIP}})" :title="hint('{{.Domain}}', 'peak_ip_minute', {{.PerIP}})" x-text="num('{{.Domain}}', 'peak_ip_minute')">...</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-right tabular-nums" :class="level('{{.Domain}}', 'peak_minute', {{.PerSite}})" :title="hint('{{.Domain}}', 'peak_minute', {{.PerSite}})" x-text="num('{{.Domain}}', 'peak_minute')">...</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-right tabular-nums" :class="(stat('{{.Domain}}').blocked || 0) > 0 ? 'font-semibold text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'" x-text="num('{{.Domain}}', 'blocked')">...</td>
+                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 space-x-2 text-right">
+                        <button type="button" @click="openEdit({{toJSON .}})" class="cursor-pointer inline-block px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition">Edit</button>
+                        <a href="/domains/log/{{.Domain}}" class="cursor-pointer inline-block px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition">Logs</a>
+                    </td>
+                </tr>
+                {{else}}
+                <tr><td colspan="11" class="p-6 text-center text-sm text-gray-500">No domains found.</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{template "bulk_bar" .}}
+    </div>
+</div>
+
+<div x-show="edit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" @keydown.escape.window="edit = null">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="edit = null"></div>
+    <div @click.stop class="relative w-full max-w-xl overflow-hidden rounded border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#090E1A]">
+        <template x-if="edit">
+        <form method="POST" action="/domains/ratelimit">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="action" value="domain">
+            <input type="hidden" name="domain" :value="edit.domain">
+            <div class="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Rate limit for <span x-text="edit.domain"></span></h3>
+                <p class="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">Requests per minute, visitors above the limit get HTTP 429 until the minute passes.</p>
+            </div>
+            <div class="space-y-4 px-6 py-4">
+                <div class="space-y-2 text-sm text-gray-900 dark:text-gray-50">
+                    <label class="flex cursor-pointer items-center gap-2"><input type="radio" name="mode" value="default" x-model="edit.mode"> Server default <span class="text-gray-500">({{.Status.Default.PerIP}}/min per IP, {{.Status.Default.PerSite}}/min per domain)</span></label>
+                    <label class="flex cursor-pointer items-center gap-2"><input type="radio" name="mode" value="custom" x-model="edit.mode"> Custom limits</label>
+                    <label class="flex cursor-pointer items-center gap-2"><input type="radio" name="mode" value="off" x-model="edit.mode"> No limits</label>
+                </div>
+                <div x-show="edit.mode === 'custom'" class="flex flex-col gap-3 sm:flex-row">
+                    <div>
+                        <label for="edit_per_ip" class="block text-sm font-medium text-gray-900 dark:text-white">Per visitor IP</label>
+                        <input id="edit_per_ip" type="number" min="0" step="1" name="per_ip" x-model="edit.per_ip" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                    </div>
+                    <div>
+                        <label for="edit_per_site" class="block text-sm font-medium text-gray-900 dark:text-white">Per domain</label>
+                        <input id="edit_per_site" type="number" min="0" step="1" name="per_site" x-model="edit.per_site" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                    </div>
+                </div>
+                <div class="rounded border border-gray-200 p-3 text-sm dark:border-gray-800">
+                    <p class="font-medium text-gray-900 dark:text-gray-50">Last 24h</p>
+                    <template x-if="stat(edit.domain).requests !== undefined">
+                        <div class="mt-1 text-gray-600 dark:text-gray-400">
+                            <p><span x-text="stat(edit.domain).requests"></span> requests, busiest minute <span x-text="stat(edit.domain).peak_minute"></span> for the domain and <span x-text="stat(edit.domain).peak_ip_minute"></span> from one IP, <span x-text="stat(edit.domain).blocked"></span> blocked.</p>
+                            <template x-if="(stat(edit.domain).top_blocked || []).length">
+                                <div class="mt-2">
+                                    <p class="text-xs font-medium text-gray-900 dark:text-gray-50">Most blocked IPs</p>
+                                    <ul class="mt-1 space-y-0.5 text-xs tabular-nums">
+                                        <template x-for="b in stat(edit.domain).top_blocked" :key="b.ip">
+                                            <li><span x-text="b.ip"></span>: <span x-text="b.count"></span> times</li>
+                                        </template>
+                                    </ul>
+                                    <p class="mt-1 text-xs text-gray-500">Scrapers or attackers can be blocked outright in the <a href="/security/firewall" class="cursor-pointer underline">firewall</a>.</p>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <p x-show="stat(edit.domain).requests === undefined" class="mt-1 text-gray-500">No usage data yet.</p>
+                </div>
+            </div>
+            <div class="flex gap-3 border-t px-6 py-4 border-gray-200 dark:border-gray-800">
+                <button type="button" @click="edit = null" class="cursor-pointer inline-flex w-full items-center justify-center rounded border px-3 py-2 text-sm font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900">Cancel</button>
+                <button type="submit" class="cursor-pointer inline-flex w-full items-center justify-center rounded border px-3 py-2 text-sm font-medium shadow-sm border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800">Save</button>
+            </div>
+        </form>
+        </template>
+    </div>
+</div>
+
+</div>
+
+<script>
+function rateLimitPage() {
+    return {
+        stats: {},
+        updated: 0,
+        loading: false,
+        statsError: '',
+        edit: null,
+        showDefault: window.location.hash === '#default',
+        loadStats(refresh) {
+            this.loading = true;
+            this.statsError = '';
+            fetch('/domains/ratelimit/stats' + (refresh ? '?refresh=1' : ''), { headers: { 'Accept': 'application/json' } })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.error) { this.statsError = d.error; return; }
+                    this.stats = d.stats || {};
+                    this.updated = d.updated || 0;
+                })
+                .catch(() => { this.statsError = 'Reading usage failed.'; })
+                .finally(() => { this.loading = false; });
+        },
+        stat(domain) { return this.stats[domain] || {}; },
+        num(domain, key) {
+            const v = this.stat(domain)[key];
+            if (v === undefined) return this.loading ? '...' : '-';
+            return Number(v).toLocaleString();
+        },
+        // amber when the busiest minute came close to the limit, red when it went over
+        level(domain, key, limit) {
+            const v = this.stat(domain)[key];
+            if (!limit || v === undefined) return 'text-gray-600 dark:text-gray-400';
+            if (v > limit) return 'font-semibold text-red-600 dark:text-red-400';
+            if (v >= limit * 0.8) return 'font-semibold text-yellow-600 dark:text-yellow-500';
+            return 'text-gray-600 dark:text-gray-400';
+        },
+        hint(domain, key, limit) {
+            const v = this.stat(domain)[key];
+            if (!limit || v === undefined) return '';
+            if (v > limit) return 'Went over the limit of ' + limit + '/min, visitors got 429s';
+            if (v >= limit * 0.8) return 'Within 20% of the limit of ' + limit + '/min';
+            return 'Limit ' + limit + '/min';
+        },
+        updatedText() {
+            const s = Math.max(0, Math.round(Date.now() / 1000 - this.updated));
+            if (s < 60) return 'just now';
+            return Math.round(s / 60) + ' min ago';
+        },
+        openEdit(row) {
+            this.edit = { domain: row.domain, mode: row.mode, per_ip: row.per_ip, per_site: row.per_site };
+        },
+    };
+}
+</script>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

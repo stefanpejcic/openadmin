@@ -123,6 +123,14 @@ func buildPostfwdRule(username string, limit int, domain string) string {
 // writeDomainRule replaces any existing rule block for this exact rule ID,
 // then appends the freshly built rule.
 func writeDomainRule(username string, limit int, domain string) (bool, string) {
+	ok, out := writeDomainRuleNoReload(username, limit, domain)
+	if ok {
+		hupPostfwdRun()
+	}
+	return ok, out
+}
+
+func writeDomainRuleNoReload(username string, limit int, domain string) (bool, string) {
 	key := strings.ReplaceAll(domain, ".", "_")
 	ruleID := "limit_" + username + "_" + key
 
@@ -141,7 +149,6 @@ func writeDomainRule(username string, limit int, domain string) (bool, string) {
 	if err := os.WriteFile(PostfwdConfigPath, []byte(final), 0644); err != nil {
 		return false, err.Error()
 	}
-	hupPostfwdRun()
 	return true, "OK: " + username + " limit=" + strconv.Itoa(limit) + "/hr domain=" + domain
 }
 
@@ -245,14 +252,111 @@ func (e *Emails) ServeDomainLimits(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	sortCol, sortDirection := readSort(r, domainLimitSortKeys)
+	sortDomainLimits(rules, sortCol, sortDirection)
+
 	webtemplates.Render(w, "emails_domain_limits.html", mergeChrome(map[string]interface{}{
-		"Mode":       mode,
-		"Rules":      rules,
-		"Usernames":  usernames,
-		"RawContent": rawContent,
-		"PostfwdCF":  PostfwdConfigPath,
-		"Flashes":    auth.PopFlashes(w, r, e.Sessions),
+		"Mode":          mode,
+		"Rules":         rules,
+		"Usernames":     usernames,
+		"RawContent":    rawContent,
+		"PostfwdCF":     PostfwdConfigPath,
+		"SortCol":       sortCol,
+		"SortDirection": sortDirection,
+		"BulkActions":   EmailDomainLimitsBulkActions(),
+		"Flashes":       auth.PopFlashes(w, r, e.Sessions),
 	}, r, "Email Rate Limits"))
+}
+
+var domainLimitSortKeys = map[string]bool{"domain": true, "owner": true, "usage": true, "limit": true, "id": true}
+
+// sortDomainLimits keeps the postfwd.cf order when no column is picked, rules without a counter sort as 0
+func sortDomainLimits(rules []postfwdRule, col, direction string) {
+	current := func(r postfwdRule) int {
+		if r.Current == nil {
+			return 0
+		}
+		return *r.Current
+	}
+	switch col {
+	case "domain":
+		sortBy(rules, direction, func(a, b postfwdRule) bool { return a.Domain < b.Domain })
+	case "owner":
+		sortBy(rules, direction, func(a, b postfwdRule) bool { return a.Username < b.Username })
+	case "usage":
+		sortBy(rules, direction, func(a, b postfwdRule) bool { return current(a) < current(b) })
+	case "limit":
+		sortBy(rules, direction, func(a, b postfwdRule) bool { return a.Limit < b.Limit })
+	case "id":
+		sortBy(rules, direction, func(a, b postfwdRule) bool { return a.ID < b.ID })
+	}
+}
+
+// EmailDomainLimitsBulkActions are the /emails/domain-limits bulk actions, the selected rows are domains
+func EmailDomainLimitsBulkActions() []webtemplates.BulkAction {
+	return []webtemplates.BulkAction{
+		{Key: "limit", Icon: "pencil", Label: "Set limit", Confirm: "Emails per hour for the selected domains:",
+			Input: &webtemplates.BulkInput{Type: "number", Min: "1", Max: "100000", Step: "1", Placeholder: "100"}},
+		{Key: "restore", Icon: "rotate-cw", Label: "Restore from plan", Confirm: "Set the limit of the selected domains from their owner's plan again?"},
+		{Key: "remove", Icon: "trash", Label: "Remove rules", Danger: true, Confirm: "Remove the rules of the selected domains? They can send any number of emails until the rules are restored."},
+	}
+}
+
+var domainLimitDomainRe = regexp.MustCompile(`^[A-Za-z0-9.-]+$`)
+
+// emailDomainLimitsBulkBatch changes every selected domain, then reloads postfwd once
+func emailDomainLimitsBulkBatch(action, value string, items []string) ([]BulkResult, bool) {
+	owners := map[string]string{}
+	for _, rule := range parsePostfwdRules(readPostfwdRaw()) {
+		owners[rule.Domain] = rule.Username
+	}
+	limit, _ := strconv.Atoi(value)
+
+	results := make([]BulkResult, len(items))
+	changed := false
+	for i, domain := range items {
+		results[i].Item = domain
+		if !domainLimitDomainRe.MatchString(domain) {
+			results[i].Message = "Invalid domain."
+			continue
+		}
+		var ok bool
+		var out string
+		switch action {
+		case "limit":
+			owner := owners[domain]
+			if owner == "" {
+				results[i].Message = "No rule for this domain, restore it from the plan first."
+				continue
+			}
+			if limit < 1 {
+				results[i].Message = "The limit has to be at least 1."
+				continue
+			}
+			ok, out = writeDomainRuleNoReload(owner, limit, domain)
+		case "restore":
+			ok, out = runRatelimitScriptRun(true, "--domain="+domain)
+		case "remove":
+			ok, out = runRatelimitScriptRun(true, "--delete-domain="+domain)
+		default:
+			return nil, false
+		}
+		results[i].OK = ok
+		if ok {
+			changed = true
+			results[i].Message = "Updated."
+		} else {
+			results[i].Message = firstLine(out)
+		}
+	}
+	if changed {
+		hupPostfwdRun()
+	}
+	return results, true
+}
+
+func emailDomainLimitsBulkRoute(action, value, domain string) (*BulkCall, BulkResult) {
+	return BulkSkip("Unknown bulk action.")
 }
 
 // ServeDomainLimitsSaveRaw handles POST /emails/domain-limits/save-raw.

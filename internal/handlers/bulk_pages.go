@@ -28,6 +28,14 @@ func BulkRoutes(mux *http.ServeMux, sessions *auth.Manager, opts auth.Options, u
 	mux.HandleFunc("POST /domains/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
 		serveBulkDispatchOrdered(sessions, mux, w, r, DomainsBulkActions(domains.ownerPHPVersions(nil)), domainsBulkRoute, nil, domainsBulkBatch)
 	}))
+	// postfwd reloads once for the whole selection
+	mux.HandleFunc("POST /emails/domain-limits/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		serveBulkDispatchOrdered(sessions, mux, w, r, EmailDomainLimitsBulkActions(), emailDomainLimitsBulkRoute, nil, emailDomainLimitsBulkBatch)
+	}))
+	// one opencli call for the whole selection, so caddy reloads once
+	mux.HandleFunc("POST /domains/ratelimit/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		serveBulkDispatchOrdered(sessions, mux, w, r, RateLimitBulkActions(), rateLimitBulkRoute, nil, rateLimitBulkBatch)
+	}))
 	admin("POST /services/bulk", ServicesBulkActions, servicesBulkRoute)
 	admin("POST /server/processes/bulk", ProcessesBulkActions, processesBulkRoute)
 	admin("POST /tasks/bulk", ProcessesBulkActions, processesBulkRoute)
@@ -175,6 +183,8 @@ func DomainsBulkActions(phpVersions []string) []webtemplates.BulkAction {
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
 		{Key: "waf", Icon: "shield-check", Label: "WAF", Confirm: "Set the WAF for the selected domains:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
+		{Key: "ratelimit", Icon: "clock", Label: "Rate limit", Confirm: "Rate limit for the selected domains, custom limits are set on the Rate Limiting page:",
+			Input: &webtemplates.BulkInput{Type: "select", Options: []webtemplates.BulkOption{{Value: "default", Label: "Server default"}, {Value: "off", Label: "No limits"}}}},
 		{Key: "cloudflare", Icon: "cloud", Label: "Cloudflare", Confirm: "Cloudflare-only access for the selected domains, restricted domains not proxied through Cloudflare return 403 to visitors:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Restrict to Cloudflare", "Unrestrict")}},
 		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected domains, users can't unsuspend them. Reason:",
@@ -245,10 +255,16 @@ func onOffOptions(on, off string) []webtemplates.BulkOption {
 
 // domainsBulkBatch sends every selected domain to one opencli call so caddy only reloads once
 func domainsBulkBatch(action, value string, items []string) ([]BulkResult, bool) {
-	if action != "cloudflare" {
-		return nil, false
+	switch action {
+	case "cloudflare":
+		return cloudflareBulk(bulkOnOff(value, "enable", "disable"), items), true
+	case "ratelimit":
+		if value != "default" && value != "off" {
+			return nil, false
+		}
+		return rateLimitApply(items, value, 0, 0), true
 	}
-	return cloudflareBulk(bulkOnOff(value, "enable", "disable"), items), true
+	return nil, false
 }
 
 func bulkOnOff(value, on, off string) string {

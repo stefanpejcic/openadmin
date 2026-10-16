@@ -53,7 +53,7 @@ type onboardingServiceItem struct {
 var quickStartDefaultModules = []string{
 	"services", "filemanager", "autoinstaller", "domains", "ssl", "php", "dns", "locale",
 	"account", "sessions", "mysql", "mysql_import", "remote_mysql", "process_manager",
-	"php_options", "favorites", "phpmyadmin", "crons", "domain_logs", "wordpress",
+	"php_options", "favorites", "phpmyadmin", "crons", "domain_logs", "error_logs", "summary", "wordpress",
 	"website_builder", "usage", "webserver_conf", "waf", "redis", "memcached",
 	"login_history", "activity", "twofa", "goaccess", "docroot",
 }
@@ -65,7 +65,7 @@ var quickStartDefaultModules = []string{
 var quickStartDefaultBasicFeatures = []string{
 	"services", "account", "locale", "mysql", "remote_mysql", "mysql_import", "php",
 	"php_options", "crons", "wordpress", "website_builder", "autoinstaller", "info", "waf",
-	"filemanager", "fix_permissions", "dns", "domains", "docroot", "goaccess", "redis",
+	"filemanager", "fix_permissions", "dns", "domains", "docroot", "goaccess", "error_logs", "summary", "redis",
 	"memcached", "temporary_links", "login_history", "twofa", "services",
 }
 
@@ -77,7 +77,7 @@ var quickStartDefaultDefaultFeatures = []string{
 	"website_builder", "pm2", "autoinstaller", "disk_usage", "inodes", "usage", "info",
 	"webserver_conf", "waf", "filemanager", "fix_permissions", "malware_scan", "dns",
 	"redirects", "ssl", "docroot", "domains", "capitalize_domains", "edit_vhost",
-	"domain_logs", "goaccess", "process_manager", "redis", "memcached", "elasticsearch",
+	"domain_logs", "goaccess", "error_logs", "summary", "process_manager", "redis", "memcached", "elasticsearch",
 	"opensearch", "temporary_links", "login_history", "twofa", "activity", "services",
 }
 

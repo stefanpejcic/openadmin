@@ -424,6 +424,15 @@ function userSearch() {
                                 <li>
                                     <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
                                         <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.ratelimit" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Rate limit</span>
+                                        </label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
                                             <input type="checkbox" x-model="columns.waf" x-on:change="saveColumns" class="sr-only peer">
                                             <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
                                             <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">WAF</span>
@@ -547,6 +556,8 @@ function userSearch() {
                                     </div>
                                 </div>
                             </th>
+
+                            <th x-show="columns.ratelimit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Rate limit</th>
 
                             <th x-show="columns.waf" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
@@ -770,6 +781,10 @@ function userSearch() {
 
                     <span class="text-xs text-gray-500 dark:text-gray-400" x-text="enabled ? 'On' : 'Off'"></span>
                 </form>
+            </td>
+
+            <td x-show="columns.ratelimit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                <a href="/domains/ratelimit" title="Manage rate limits">{{$rl := index . "ratelimit"}}{{if eq $rl "default"}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Default</span>{{else if eq $rl "custom"}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Custom</span>{{else}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Off</span>{{end}}</a>
             </td>
 
            <td x-show="columns.waf" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
@@ -1053,6 +1068,7 @@ function domainsTable() {
             webserver: true,
             ssl: true,
             hsts: false,
+            ratelimit: false,
             waf: true,
             owner: true
         },

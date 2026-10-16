@@ -37,7 +37,7 @@ var (
 var (
 	notifNumericKeys = []string{"load", "cpu", "ram", "du", "swap"}
 	httpNumericKeys  = []string{"max_total_conn", "max_conn_per_ip"}
-	defaultToggles   = []string{"update", "attack", "limit", "login", "ssh", "reboot", "dns"}
+	defaultToggles   = []string{"update", "attack", "ratelimit", "limit", "login", "ssh", "reboot", "dns"}
 	actionToggles    = []string{
 		"admin_status", "admin_api", "admin_create", "reseller_create",
 		"admin_password", "admin_rename", "admin_suspend", "admin_unsuspend",
@@ -122,6 +122,7 @@ var notifThresholdOrder = []struct{ Key, Label string }{
 var notifServerActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"reboot", "Server reboot", "Triggered when the server is restarted."},
 	{"attack", "Unusual traffic or SYN flood", "Fires when suspicious traffic or DDoS attacks are detected."},
+	{"ratelimit", "Visitors blocked by rate limit", "Checked every 6 hours: fires when visitors to a domain got 429 Too Many Requests from the rate limits. Users who turned on this alert in OpenPanel > Account > Notifications also get an email for their own domains."},
 	{"limit", "Out of Memory (OOM) errors", "Check journal logs for system services and user processes killed by OOM in the last 24 hours."},
 	{"dns", "DNS issue detected", "Triggered when the panel domain or nameservers are misconfigured or not resolving to this server. Disable if using external nameservers or Cloudflare proxy."},
 	{"login", "OpenAdmin login from new IP", `Triggered when the OpenAdmin panel is accessed from an unrecognized IP address. IP can be whitelisted in "Login Whitelist" below.`},

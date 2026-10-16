@@ -118,10 +118,12 @@ var modernAreas = []navArea{
 			isZone := hasAnyPrefix(path, "/domains/zone-templates", "/dns/zone-templates")
 			isFile := strings.HasPrefix(path, "/domains/file-templates")
 			isVhost := strings.HasPrefix(path, "/domains/vhost-templates")
+			isRateLimit := strings.HasPrefix(path, "/domains/ratelimit")
 			return buildTabs(
-				tabSpec{true, "/domains", "Domains", !isDNS && !isCluster && !isZone && !isFile && !isVhost},
+				tabSpec{true, "/domains", "Domains", !isDNS && !isCluster && !isZone && !isFile && !isVhost && !isRateLimit},
 				tabSpec{dns, "/domains/dns", "DNS Zone Editor", isDNS},
 				tabSpec{dns && isEnterprise(c), "/domains/dns-cluster", "DNS Cluster", isCluster},
+				tabSpec{true, "/domains/ratelimit", "Rate Limiting", isRateLimit},
 				tabSpec{dns, "/domains/zone-templates", "Zone Templates", isZone},
 				tabSpec{true, "/domains/file-templates", "Domain Templates", isFile},
 				tabSpec{true, "/domains/vhost-templates", "VirtualHost Templates", isVhost},
@@ -140,6 +142,7 @@ var modernAreas = []navArea{
 				tabSpec{true, "/emails/accounts", "Accounts", strings.HasPrefix(path, "/emails/accounts")},
 				tabSpec{true, "/emails/queue", "Queue", strings.HasPrefix(path, "/emails/queue")},
 				tabSpec{true, "/emails/reports", "Summary Reports", hasAnyPrefix(path, "/emails/reports", "/emails/data")},
+				tabSpec{true, "/emails/domain-limits", "Domain Limits", strings.HasPrefix(path, "/emails/domain-limits")},
 				tabSpec{true, "/emails/settings", "Settings", strings.HasPrefix(path, "/emails/settings")},
 			)
 		}},
@@ -271,10 +274,12 @@ var helpDocs = map[string]string{
 	"/domains/zone-templates":        "admin/domains/dns_templates",
 	"/domains/file-templates":        "admin/domains/file_templates",
 	"/domains/vhost-templates":       "admin/domains/vhost_templates",
+	"/domains/ratelimit":             "admin/domains/ratelimit",
 	"/websites":                      "admin/websites",
 	"/emails/accounts":               "admin/emails/emails",
 	"/emails/queue":                  "admin/emails/queue",
 	"/emails/reports":                "admin/emails/summary",
+	"/emails/domain-limits":          "admin/emails/domain-limits",
 	"/emails/settings":               "admin/emails/settings",
 	"/backups/user":                  "admin/backups/user",
 	"/backups/system":                "admin/backups/system",

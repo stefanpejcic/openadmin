@@ -198,6 +198,7 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 		dom["waf"] = waf
 		dom["hsts"] = hsts
 		dom["cloudflare"] = cloudflare
+		dom["ratelimit"] = rateLimitModeForDomain(domainURL)
 		if status == "suspended" {
 			s := readDomainSuspension(domainURL)
 			dom["suspended_by"], dom["suspend_reason"], dom["suspend_comment"] = s.By, s.Reason, s.Comment

@@ -343,3 +343,91 @@ func TestServeDomainLimitsAPIMissingDomainForResetDomain(t *testing.T) {
 		t.Fatalf("expected 400, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 }
+
+func TestSortDomainLimits(t *testing.T) {
+	two, nine := 2, 9
+	rules := []postfwdRule{
+		{ID: "b", Domain: "b.com", Username: "zed", Limit: 50, Current: &two},
+		{ID: "a", Domain: "a.com", Username: "amy", Limit: 200},
+		{ID: "c", Domain: "c.com", Username: "bob", Limit: 10, Current: &nine},
+	}
+	order := func() string {
+		var d []string
+		for _, r := range rules {
+			d = append(d, r.Domain)
+		}
+		return strings.Join(d, ",")
+	}
+	for _, tc := range []struct{ col, dir, want string }{
+		{"domain", "asc", "a.com,b.com,c.com"},
+		{"owner", "asc", "a.com,c.com,b.com"},
+		{"usage", "desc", "c.com,b.com,a.com"},
+		{"limit", "asc", "c.com,b.com,a.com"},
+	} {
+		sortDomainLimits(rules, tc.col, tc.dir)
+		if got := order(); got != tc.want {
+			t.Errorf("%s %s: %s, want %s", tc.col, tc.dir, got, tc.want)
+		}
+	}
+}
+
+func TestEmailDomainLimitsBulkSetLimitReloadsOnce(t *testing.T) {
+	withScratchPostfwd(t)
+	os.WriteFile(PostfwdConfigPath, []byte(buildPostfwdRule("john", 100, "a.com")+buildPostfwdRule("john", 100, "b.com")), 0644)
+	reloads := 0
+	origHup := hupPostfwdRun
+	hupPostfwdRun = func() { reloads++ }
+	t.Cleanup(func() { hupPostfwdRun = origHup })
+
+	results, ok := emailDomainLimitsBulkBatch("limit", "250", []string{"a.com", "b.com", "nope.com", "bad domain"})
+	if !ok {
+		t.Fatal("expected limit to be batched")
+	}
+	want := map[string]bool{"a.com": true, "b.com": true, "nope.com": false, "bad domain": false}
+	for _, res := range results {
+		if res.OK != want[res.Item] {
+			t.Errorf("%s: ok=%v (%s)", res.Item, res.OK, res.Message)
+		}
+	}
+	if reloads != 1 {
+		t.Errorf("expected one postfwd reload, got %d", reloads)
+	}
+	for _, rule := range parsePostfwdRules(readPostfwdRaw()) {
+		if rule.Limit != 250 {
+			t.Errorf("%s still has limit %d", rule.Domain, rule.Limit)
+		}
+	}
+}
+
+func TestEmailDomainLimitsBulkRestoreSkipsReloadPerDomain(t *testing.T) {
+	withScratchPostfwd(t)
+	var calls [][]string
+	origRun := runRatelimitScriptRun
+	runRatelimitScriptRun = func(skipReload bool, args ...string) (bool, string) {
+		if !skipReload {
+			t.Error("each domain should skip its own reload")
+		}
+		calls = append(calls, args)
+		return true, "ok"
+	}
+	t.Cleanup(func() { runRatelimitScriptRun = origRun })
+	reloads := 0
+	origHup := hupPostfwdRun
+	hupPostfwdRun = func() { reloads++ }
+	t.Cleanup(func() { hupPostfwdRun = origHup })
+
+	emailDomainLimitsBulkBatch("remove", "", []string{"a.com", "b.com"})
+	if len(calls) != 2 || calls[0][0] != "--delete-domain=a.com" || reloads != 1 {
+		t.Fatalf("calls=%v reloads=%d", calls, reloads)
+	}
+	if _, ok := emailDomainLimitsBulkBatch("weird", "", []string{"a.com"}); ok {
+		t.Fatal("unknown action should not be batched")
+	}
+}
+
+func withScratchPostfwd(t *testing.T) {
+	t.Helper()
+	orig := PostfwdConfigPath
+	PostfwdConfigPath = filepath.Join(t.TempDir(), "postfwd.cf")
+	t.Cleanup(func() { PostfwdConfigPath = orig })
+}
