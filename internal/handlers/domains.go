@@ -188,6 +188,11 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 	if mysqlIsDown {
 		domains = nil
 	}
+	scope := scopeFor(r, d.MySQL)
+	domains = filterRows(scope, domains, func(row paneldb.RowMap) bool {
+		u, _ := row["domain_url"].(string)
+		return scope.AllowsDomain(u)
+	})
 
 	tlsIndex := getCaddyTLSIndex()
 	for _, dom := range domains {
@@ -255,6 +260,12 @@ func (d *Domains) HandleAdd(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/domains", http.StatusSeeOther)
 		return
 	}
+	if !scopeFor(r, d.MySQL).AllowsUser(username) {
+		activity.Fail(r.Context())
+		auth.AddFlash(w, r, d.Sessions, "User \""+username+"\" is not one of your users.", "error")
+		http.Redirect(w, r, "/domains", http.StatusSeeOther)
+		return
+	}
 
 	args := []string{"opencli", "domains-add", domain, username}
 	// custom docroot is an Enterprise feature, Community always gets /var/www/html/<domain>
@@ -308,6 +319,12 @@ func (d *Domains) HandleToggleFeature(w http.ResponseWriter, r *http.Request) {
 	feature := strings.ToLower(r.PathValue("feature"))
 	domainName := r.FormValue("domain_name")
 	domain := strings.SplitN(domainName, "/", 2)[0]
+	if !scopeFor(r, d.MySQL).AllowsDomain(domain) {
+		activity.Fail(r.Context())
+		auth.AddFlash(w, r, d.Sessions, "Error: domain "+domain+" is not owned by one of your users.", "error")
+		http.Redirect(w, r, "/domains", http.StatusSeeOther)
+		return
+	}
 
 	var cliArgs []string
 	var action, fallbackErr string

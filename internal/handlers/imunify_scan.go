@@ -146,6 +146,9 @@ var imunifyScanRun = func(userContext string) error {
 // HandleScanUser handles POST /security/imunify/{user}, user is the panel username
 func (ir *ImunifyScan) HandleScanUser(w http.ResponseWriter, r *http.Request) {
 	back := "/websites"
+	if IsReseller(r) {
+		back = "/security/imunify/"
+	}
 	fail := func(msg string) {
 		activity.Fail(r.Context())
 		auth.AddFlash(w, r, ir.Sessions, msg, "error")
@@ -155,6 +158,10 @@ func (ir *ImunifyScan) HandleScanUser(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("user")
 	if !imunifyUserRE.MatchString(username) {
 		fail("Invalid username.")
+		return
+	}
+	if !scopeFor(r, ir.MySQL).AllowsUser(username) {
+		fail("User \"" + username + "\" is not one of your users.")
 		return
 	}
 	if !imunifyInstalled() {

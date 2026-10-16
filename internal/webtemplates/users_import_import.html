@@ -67,6 +67,14 @@
             ></div>
         </template>
     </div>
+
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input type="file" accept=".tar.gz,application/gzip" x-ref="upload" class="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:rounded file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium dark:file:border-gray-700 dark:file:bg-gray-900 dark:file:text-gray-200">
+        <button type="button" @click="upload()" :disabled="uploading" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:opacity-50 cursor-pointer">Upload</button>
+    </div>
+    <div x-show="uploading" x-cloak class="h-1.5 w-full bg-blue-100 dark:bg-blue-500/30"><div class="h-full bg-blue-500" :style="'width:' + progress + '%'"></div></div>
+    <p x-show="uploadError" x-cloak x-text="uploadError" class="text-xs text-red-600 dark:text-red-500"></p>
+    <p class="text-xs text-gray-500">{{if .IsReseller}}Upload an OpenPanel account backup (.tar.gz) to restore it as one of your users. The account counts toward your limits and its plan must be one of yours.{{else}}Or upload an OpenPanel backup (.tar.gz) from your computer.{{end}}</p>
 </div>
 
 
@@ -106,6 +114,7 @@
     </button>
 
     <input type="radio" name="backup_type" value="openpanel" :checked="selectedType === 'openpanel'" style="display: none;">
+{{if not .IsReseller}}
 
     <button
       type="button"
@@ -162,6 +171,7 @@
     </button>
 
     <input type="radio" name="backup_type" value="cyberpanel" :checked="selectedType === 'cyberpanel'" style="display: none;">
+{{end}}
   </div>
 </div>
 
@@ -345,6 +355,30 @@ function backupSelector() {
         selectFile(file) {
             this.selectedFile = file;
             this.dropdownOpen = false;
+        },
+        uploading: false,
+        progress: 0,
+        uploadError: '',
+        // the csrf token goes in a header so the server can stream the file instead of parsing the form
+        upload() {
+            const file = this.$refs.upload.files[0];
+            if (!file) { this.uploadError = 'Pick a .tar.gz backup first.'; return; }
+            const body = new FormData();
+            body.append('file', file);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/import/upload');
+            xhr.setRequestHeader('X-CSRFToken', document.querySelector('#userimportForm input[name=csrf_token]').value);
+            xhr.upload.onprogress = e => { if (e.lengthComputable) this.progress = Math.round(e.loaded / e.total * 100); };
+            xhr.onload = () => {
+                this.uploading = false;
+                let data = {};
+                try { data = JSON.parse(xhr.responseText); } catch (e) {}
+                if (xhr.status === 200 && data.path) { this.selectedFile = data.path; this.uploadError = ''; }
+                else { this.uploadError = data.error || 'Upload failed.'; }
+            };
+            xhr.onerror = () => { this.uploading = false; this.uploadError = 'Upload failed.'; };
+            this.uploading = true; this.progress = 0; this.uploadError = '';
+            xhr.send(body);
         }
     }
 }

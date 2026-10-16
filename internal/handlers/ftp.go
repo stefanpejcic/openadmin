@@ -292,6 +292,8 @@ func (f *FTP) ServeAccounts(w http.ResponseWriter, r *http.Request) {
 
 	accounts := getAllFTPAccounts()
 	setFTPOwnersFromDomains(f.MySQL, accounts)
+	scope := scopeFor(r, f.MySQL)
+	accounts = filterRows(scope, accounts, func(a ftpAccount) bool { return a.Owner != "" && scope.AllowsUser(a.Owner) })
 	setFTPQuotaUsage(accounts)
 	if jsonOut {
 		writeJSON(w, map[string]interface{}{"ftpserver_status": status, "ftp_accounts": accounts})
@@ -361,6 +363,10 @@ func (f *FTP) ServeQuota(w http.ResponseWriter, r *http.Request) {
 		back("FTP account "+user+" was not found or its domain has no owner.", "error")
 		return
 	}
+	if !scopeFor(r, f.MySQL).AllowsUser(owner) {
+		back("FTP account "+user+" is not on a domain of your users.", "error")
+		return
+	}
 
 	out, err := ftpQuotaRun(user, quota, owner)
 	if err != nil || !strings.Contains(out, "Success:") {
@@ -376,6 +382,9 @@ func (f *FTP) ServeQuota(w http.ResponseWriter, r *http.Request) {
 
 // ServeSettings handles GET/POST /services/ftp/settings.
 func (f *FTP) ServeSettings(w http.ResponseWriter, r *http.Request) {
+	if denyReseller(w, r) {
+		return
+	}
 	status := checkFTPServerStatus()
 
 	if r.Method == http.MethodPost {

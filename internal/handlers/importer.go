@@ -160,7 +160,8 @@ func listLogFilesWithStatus(logDir string) []importLogStatus {
 
 // ServeImportUser handles GET /user/import.
 func (im *Importer) ServeImportUser(w http.ResponseWriter, r *http.Request) {
-	plans, _ := paneldb.GetAllPlans(im.MySQL, nil)
+	reseller := actingReseller(r)
+	plans, _ := paneldb.GetAllPlans(im.MySQL, resellerPlanScope(reseller))
 	webtemplates.Render(w, "users_import_import.html", mergeChrome(map[string]interface{}{
 		"Plans":     plans,
 		"CSRFToken": csrf.Token(r),
@@ -177,9 +178,13 @@ var importerBackupPanelDisplayNames = map[string]string{
 // importerRestoreOpenPanelBackupRun starts a fire-and-forget background
 // restore for the openpanel backup type, in its own systemd unit so an
 // admin restart doesn't kill it halfway.
-var importerRestoreOpenPanelBackupRun = func(backupPath string) error {
-	_, err := startDetached("openpanel-user-restore", "", []string{"opencli", "user-restore", "--file", backupPath,
-		"--temp-dir=" + ImporterRestoreTempDir})
+var importerRestoreOpenPanelBackupRun = func(backupPath, reseller string) error {
+	args := []string{"opencli", "user-restore", "--file", backupPath, "--temp-dir=" + ImporterRestoreTempDir}
+	// opencli checks the reseller's limits and makes the restored account theirs
+	if reseller != "" {
+		args = append(args, "--reseller="+reseller)
+	}
+	_, err := startDetached("openpanel-user-restore", "", args)
 	return err
 }
 
@@ -231,6 +236,14 @@ func (im *Importer) ServeImportFromBackup(w http.ResponseWriter, r *http.Request
 		r.ParseForm()
 		backupPath := r.PostFormValue("path")
 		planName := r.PostFormValue("plan_name")
+		reseller := actingReseller(r)
+
+		// the cPanel and CyberPanel import scripts can't enforce reseller limits or ownership
+		if reseller != "" && panelType != "openpanel" {
+			auth.AddFlash(w, r, im.Sessions, "Resellers can only import OpenPanel backups.", "danger")
+			http.Redirect(w, r, "/user/import", http.StatusSeeOther)
+			return
+		}
 
 		if panelType == "openpanel" {
 			if backupPath == "" {
@@ -238,8 +251,17 @@ func (im *Importer) ServeImportFromBackup(w http.ResponseWriter, r *http.Request
 				http.Redirect(w, r, "/user/import", http.StatusSeeOther)
 				return
 			}
+			if reseller != "" {
+				resolved, err := resolveResellerBackup(reseller, backupPath)
+				if err != nil {
+					auth.AddFlash(w, r, im.Sessions, err.Error(), "danger")
+					http.Redirect(w, r, "/user/import", http.StatusSeeOther)
+					return
+				}
+				backupPath = resolved
+			}
 			before := snapshotLogFilenames(ImporterOpenPanelImportLogDir)
-			if err := importerRestoreOpenPanelBackupRun(backupPath); err != nil {
+			if err := importerRestoreOpenPanelBackupRun(backupPath, reseller); err != nil {
 				auth.AddFlash(w, r, im.Sessions, err.Error(), "danger")
 				http.Redirect(w, r, "/user/import", http.StatusSeeOther)
 				return
@@ -272,7 +294,7 @@ func (im *Importer) ServeImportFromBackup(w http.ResponseWriter, r *http.Request
 	}
 
 	webtemplates.Render(w, "users_import_list_import_logs.html", mergeChrome(map[string]interface{}{
-		"LogFiles": listLogFilesWithStatus(ImporterOpenPanelImportLogDir),
+		"LogFiles": importLogsFor(r),
 		"Flashes":  auth.PopFlashes(w, r, im.Sessions),
 	}, r, "Account Imports"))
 }
@@ -340,7 +362,30 @@ func (im *Importer) ServeViewTransferImportLog(w http.ResponseWriter, r *http.Re
 
 // ServeViewAccountImportLog handles GET /import/account/log/{log_filename}.
 func (im *Importer) ServeViewAccountImportLog(w http.ResponseWriter, r *http.Request) {
+	if !importLogAllowed(r, r.PathValue("log_filename")) {
+		http.Error(w, "Log file does not exist.", http.StatusNotFound)
+		return
+	}
 	serveImportLog(w, r, ImporterOpenPanelImportLogDir)
+}
+
+// ServeImportUpload handles POST /import/upload, the backup lands in the acting account's own upload folder
+func (im *Importer) ServeImportUpload(w http.ResponseWriter, r *http.Request) {
+	u := actingUsername(r)
+	if u == "" {
+		writeJSONError(w, http.StatusForbidden, "Forbidden")
+		return
+	}
+	// the server's 30s timeouts would cut off a multi GB backup
+	rc := http.NewResponseController(w)
+	_ = rc.SetReadDeadline(time.Time{})
+	_ = rc.SetWriteDeadline(time.Time{})
+	path, err := saveImportUpload(r, u)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, map[string]interface{}{"success": true, "path": path})
 }
 
 var importerBackupSearchDirs = []string{"/", "/home", "/root"}
@@ -350,6 +395,10 @@ var importerBackupPatterns = []string{`^backup-.*\.tar\.gz$`, `^.*_\d{4}-\d{2}-\
 // (non-recursive) scan of /, /home, and /root for cPanel/CyberPanel
 // (backup-*.tar.gz) or OpenPanel (<user>_<date>_<time>.tar.gz) backups.
 func (im *Importer) ServeListBackupFiles(w http.ResponseWriter, r *http.Request) {
+	if reseller := actingReseller(r); reseller != "" {
+		writeJSON(w, listUploadedBackups(reseller))
+		return
+	}
 	var backupRes []*regexp.Regexp
 	for _, p := range importerBackupPatterns {
 		backupRes = append(backupRes, regexp.MustCompile(p))
@@ -383,6 +432,9 @@ func (im *Importer) ServeListBackupFiles(w http.ResponseWriter, r *http.Request)
 				backups = append(backups, full)
 			}
 		}
+	}
+	if u := actingUsername(r); u != "" {
+		backups = append(backups, listUploadedBackups(u)...)
 	}
 	writeJSON(w, backups)
 }

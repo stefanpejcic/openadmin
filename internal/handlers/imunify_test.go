@@ -69,7 +69,7 @@ func withStubbedImunifyRunners(t *testing.T, available bool, portOpen bool, toke
 	imunifyCommandAvailableRun = func(string) bool { return available }
 	imunifyIsPortOpenRun = func(string, int) bool { return portOpen }
 	imunifyStartDetachedRun = func() {}
-	imunifyGetTokenRun = func() (string, bool) { return token, tokenOK }
+	imunifyGetTokenRun = func(string) (string, bool) { return token, tokenOK }
 	t.Cleanup(func() {
 		imunifyCommandAvailableRun = origAvailable
 		imunifyIsPortOpenRun = origPortOpen
@@ -175,7 +175,7 @@ func TestServeImunifyGUINotRunningStartsDetached(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"Not Running", "</html>"} {
+	for _, want := range []string{"Starting ImunifyAV", "/security/imunify/gui/status", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}
@@ -192,7 +192,7 @@ func TestServeImunifyGUIAutostartsAndServesGUIOnceRunning(t *testing.T) {
 	imunifyCommandAvailableRun = func(string) bool { return true }
 	imunifyIsPortOpenRun = func(string, int) bool { return portOpen }
 	imunifyStartDetachedRun = func() { started = true; portOpen = true }
-	imunifyGetTokenRun = func() (string, bool) { return "abc123", true }
+	imunifyGetTokenRun = func(string) (string, bool) { return "abc123", true }
 	t.Cleanup(func() {
 		imunifyCommandAvailableRun = origAvailable
 		imunifyIsPortOpenRun = origPortOpen
@@ -213,7 +213,7 @@ func TestServeImunifyGUIAutostartsAndServesGUIOnceRunning(t *testing.T) {
 	if !started {
 		t.Fatal("expected start_imunify_detached to be invoked")
 	}
-	if strings.Contains(got, "Not Running") {
+	if strings.Contains(got, "Starting ImunifyAV") {
 		t.Fatalf("expected the real GUI once the port comes up after autostart, got %s", truncate(got))
 	}
 	for _, want := range []string{"token=abc123", "</html>"} {
@@ -348,7 +348,7 @@ func TestServeImunifyPHPAutostartsAndProxiesOnceRunning(t *testing.T) {
 	imunifyCommandAvailableRun = func(string) bool { return true }
 	imunifyIsPortOpenRun = func(string, int) bool { return portOpen }
 	imunifyStartDetachedRun = func() { started = true; portOpen = true }
-	imunifyGetTokenRun = func() (string, bool) { return "", false }
+	imunifyGetTokenRun = func(string) (string, bool) { return "", false }
 	t.Cleanup(func() {
 		imunifyCommandAvailableRun = origAvailable
 		imunifyIsPortOpenRun = origPortOpen

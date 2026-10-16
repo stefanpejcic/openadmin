@@ -142,6 +142,10 @@ type cronsPageData struct {
 // ServeCrons handles GET/POST /server/crons.
 func (c *Cronjobs) ServeCrons(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
+		// resellers get the page read only
+		if denyReseller(w, r) {
+			return
+		}
 		c.handlePost(w, r)
 		return
 	}

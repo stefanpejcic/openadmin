@@ -603,7 +603,7 @@ func TestServeEmailsAccountsRendersHTMLNotInstalled(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Emails", "No emails yet.", "Not Configured", "opencli email-server install", "</html>"} {
+	for _, want := range []string{"Emails", "No emails yet.", "Not Installed", `action="/emails/install"`, "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -647,7 +647,7 @@ func TestServeEmailsQueueRendersHTMLNotInstalled(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Email Queue", "Not Configured", "</html>"} {
+	for _, want := range []string{"Email Queue", "Not Installed", `action="/emails/install"`, "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -904,5 +904,33 @@ func TestServeEmailsSettingsWarnsWhenEmailsModuleDisabled(t *testing.T) {
 	os.WriteFile(ModulesConfigFilePath, []byte("enabled_modules=\"domains,emails\"\n"), 0644)
 	if strings.Contains(get(), "the Emails module is disabled") {
 		t.Fatal("expected no warning with the Emails module enabled")
+	}
+}
+
+func TestServeEmailsInstallStatusIdle(t *testing.T) {
+	dir := t.TempDir()
+	origLog, origPID := EmailsInstallLogPath, EmailsInstallPIDFile
+	EmailsInstallLogPath, EmailsInstallPIDFile = dir+"/log", dir+"/pid"
+	t.Cleanup(func() { EmailsInstallLogPath, EmailsInstallPIDFile = origLog, origPID })
+
+	rec := httptest.NewRecorder()
+	(&Emails{}).ServeEmailsInstallStatus(rec, httptest.NewRequest(http.MethodGet, "/emails/install/status", nil))
+	if !strings.Contains(rec.Body.String(), `"status":"idle"`) {
+		t.Fatalf("expected idle status, got %s", rec.Body.String())
+	}
+}
+
+func TestServeEmailsInstallStartsOnce(t *testing.T) {
+	dir := t.TempDir()
+	origLog, origPID, origRun := EmailsInstallLogPath, EmailsInstallPIDFile, emailsInstallRun
+	EmailsInstallLogPath, EmailsInstallPIDFile = dir+"/log", dir+"/pid"
+	started := 0
+	emailsInstallRun = func() error { started++; return nil }
+	t.Cleanup(func() { EmailsInstallLogPath, EmailsInstallPIDFile, emailsInstallRun = origLog, origPID, origRun })
+
+	rec := httptest.NewRecorder()
+	(&Emails{}).ServeEmailsInstall(rec, httptest.NewRequest(http.MethodPost, "/emails/install", nil))
+	if started != 1 || !strings.Contains(rec.Body.String(), `"success":true`) {
+		t.Fatalf("expected the install to start, got %d %s", started, rec.Body.String())
 	}
 }

@@ -173,6 +173,18 @@ func (a *APIAuth) RequireAPIAdmin(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// RequireAPIAdminOrReseller lets resellers in too, the handler must scope what they see with scopeFor
+func (a *APIAuth) RequireAPIAdminOrReseller(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := a.actingAPIUser(r)
+		if user == nil {
+			writeJSONError(w, http.StatusNotFound, "User not found")
+			return
+		}
+		next(w, withAPIUser(withAPIUsername(r, user.Username), user))
+	}
+}
+
 // RequireAPISuperAdmin only allows role == "admin", for reboot/root-password/
 // impersonation-class actions.
 func (a *APIAuth) RequireAPISuperAdmin(next http.HandlerFunc) http.HandlerFunc {

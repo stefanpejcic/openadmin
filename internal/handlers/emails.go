@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	cryptorand "crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -30,6 +31,7 @@ type Emails struct {
 	Sessions   *auth.Manager
 	PublicIP   string
 	MasterPass string // dovecot master password, loaded once at startup
+	MySQL      *sql.DB
 }
 
 const emailsMailserverContainerName = "openadmin_mailserver"
@@ -449,6 +451,7 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 
 	webtemplates.Render(w, "emails_settings.html", mergeChrome(map[string]interface{}{
 		"MailserverStatus":     mailserverStatus,
+		"Installing":           emailsInstallRunning(),
 		"EmailsModuleEnabled":  hasModule(modulesEnabledList(ModulesConfigFilePath), "emails"),
 		"WebmailStatus":        webmailStatus,
 		"WebmailServices":      webmailServices,
@@ -504,6 +507,10 @@ func (e *Emails) ServeUpdatePassword(w http.ResponseWriter, r *http.Request) {
 		writeJSONMessage(w, http.StatusBadRequest, "Email and password are required.")
 		return
 	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
+		return
+	}
 	ok, out := runEmailsCmd([]string{"opencli", "email-setup", "email", "update", email, password})
 	if ok {
 		writeJSON(w, map[string]string{"message": "Password updated."})
@@ -521,6 +528,10 @@ func (e *Emails) ServeQuotaSet(w http.ResponseWriter, r *http.Request) {
 		writeJSONMessage(w, http.StatusBadRequest, "Email and quota are required.")
 		return
 	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
+		return
+	}
 	ok, out := runEmailsCmd([]string{"opencli", "email-setup", "quota", "set", email, quota})
 	if ok {
 		writeJSON(w, map[string]string{"message": "Quota updated."})
@@ -535,6 +546,10 @@ func (e *Emails) ServeQuotaDel(w http.ResponseWriter, r *http.Request) {
 	email := strings.TrimSpace(body.Email)
 	if email == "" {
 		writeJSONMessage(w, http.StatusBadRequest, "Email is required.")
+		return
+	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
 		return
 	}
 	ok, out := runEmailsCmd([]string{"opencli", "email-setup", "quota", "del", email})
@@ -555,6 +570,10 @@ func (e *Emails) ServeRestrict(w http.ResponseWriter, r *http.Request) {
 		writeJSONMessage(w, http.StatusBadRequest, "Invalid parameters.")
 		return
 	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
+		return
+	}
 	ok, out := runEmailsCmd([]string{"opencli", "email-setup", "email", "restrict", action, rtype, email})
 	if ok {
 		writeJSON(w, map[string]string{"message": "Restriction updated."})
@@ -568,6 +587,10 @@ func (e *Emails) ServeDeleteEmails(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&body)
 	if len(body.Emails) == 0 {
 		writeJSONMessage(w, http.StatusBadRequest, "No emails provided.")
+		return
+	}
+	if !scopeFor(r, e.MySQL).AllowsEmails(body.Emails) {
+		writeJSONMessage(w, http.StatusForbidden, "Some of these emails are not on a domain of your users.")
 		return
 	}
 	args := append([]string{"opencli", "email-setup", "email", "del"}, body.Emails...)
@@ -593,6 +616,7 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 		}
 		webtemplates.Render(w, "emails_accounts.html", mergeChrome(map[string]interface{}{
 			"MailserverStatus": mailserverStatus,
+			"Installing":       emailsInstallRunning(),
 			"Emails":           nil,
 			"EmailPairs":       [][2]string{},
 			"Flashes":          auth.PopFlashes(w, r, e.Sessions),
@@ -601,6 +625,8 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	accounts := emailsListAccountsRun()
+	scope := scopeFor(r, e.MySQL)
+	accounts = filterRows(scope, accounts, func(a emailQuota) bool { return scope.AllowsEmail(a.Email) })
 	if outputJSON {
 		writeJSON(w, map[string]interface{}{"emails": accounts})
 		return
@@ -611,6 +637,7 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 	webtemplates.Render(w, "emails_accounts.html", mergeChrome(map[string]interface{}{
 		"MailserverStatus": mailserverStatus,
+		"Installing":       emailsInstallRunning(),
 		"Emails":           accounts,
 		"EmailPairs":       pairs,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
@@ -644,7 +671,7 @@ func getEmailQueue() []map[string]interface{} {
 // POST is accepted but never actually distinguished from GET.
 func (e *Emails) ServeEmailsQueue(w http.ResponseWriter, r *http.Request) {
 	mailserverStatus := checkMailserverStatus()
-	queue := getEmailQueue()
+	queue := scopeFor(r, e.MySQL).filterQueue(getEmailQueue())
 
 	if r.URL.Query().Get("output") == "json" {
 		writeJSON(w, map[string]interface{}{"queue": queue, "mailserver_status": mailserverStatus})
@@ -658,6 +685,7 @@ func (e *Emails) ServeEmailsQueue(w http.ResponseWriter, r *http.Request) {
 	}
 	webtemplates.Render(w, "emails_queue.html", mergeChrome(map[string]interface{}{
 		"MailserverStatus": mailserverStatus,
+		"Installing":       emailsInstallRunning(),
 		"Queue":            queue,
 		"QueueIDs":         queueIDs,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
@@ -677,6 +705,20 @@ func (e *Emails) ServeEmailsQueueAction(w http.ResponseWriter, r *http.Request) 
 			return err
 		}
 		return cmd.Run()
+	}
+
+	// a reseller never gets the whole-queue commands, only their own message ids
+	if rs := scopeFor(r, e.MySQL); rs != nil {
+		if (action != "retry" && action != "delete") || (scope != "all" && scope != "selected") {
+			writeJSONError2(w, http.StatusBadRequest, "Invalid action.")
+			return
+		}
+		targets, ok := rs.queueTargets(getEmailQueue(), scope, queueIDs)
+		if !ok {
+			writeJSONError2(w, http.StatusForbidden, "Some of these messages are not from or to your users.")
+			return
+		}
+		scope, queueIDs = "selected", targets
 	}
 
 	var err error
@@ -730,7 +772,8 @@ func (e *Emails) ServeEmailsReports(w http.ResponseWriter, r *http.Request) {
 	switch status {
 	case "not_installed":
 		webtemplates.Render(w, "emails_mailserver_not_installed_with_header.html", mergeChrome(map[string]interface{}{
-			"Flashes": flashes,
+			"Flashes":    flashes,
+			"Installing": emailsInstallRunning(),
 		}, r, "Email Reports"))
 	case "stopped":
 		webtemplates.Render(w, "emails_mailserver_stopped_with_header.html", mergeChrome(map[string]interface{}{
@@ -922,6 +965,10 @@ func (e *Emails) ServeEmailsWebmailLink(w http.ResponseWriter, r *http.Request) 
 
 	if !emailsRegex.MatchString(email) {
 		http.Error(w, "Invalid email format", http.StatusInternalServerError)
+		return
+	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 

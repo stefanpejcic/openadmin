@@ -25,16 +25,19 @@ func BulkRoutes(mux *http.ServeMux, sessions *auth.Manager, opts auth.Options, u
 			ServeBulkDispatch(sessions, mux, w, r, actions(), route)
 		}))
 	}
-	mux.HandleFunc("POST /domains/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
-		serveBulkDispatchOrdered(sessions, mux, w, r, DomainsBulkActions(domains.ownerPHPVersions(nil)), domainsBulkRoute, nil, domainsBulkBatch)
+	// resellers too, the replayed row routes check ownership and the batch is filtered here
+	mux.HandleFunc("POST /domains/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		s := scopeFor(r, domains.MySQL)
+		serveBulkDispatchOrdered(sessions, mux, w, r, DomainsBulkActions(domains.ownerPHPVersions(nil)), domainsBulkRoute, nil, scopedBatch(s, s.AllowsDomain, domainsBulkBatch))
 	}))
 	// postfwd reloads once for the whole selection
 	mux.HandleFunc("POST /emails/domain-limits/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
 		serveBulkDispatchOrdered(sessions, mux, w, r, EmailDomainLimitsBulkActions(), emailDomainLimitsBulkRoute, nil, emailDomainLimitsBulkBatch)
 	}))
 	// one opencli call for the whole selection, so caddy reloads once
-	mux.HandleFunc("POST /domains/ratelimit/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
-		serveBulkDispatchOrdered(sessions, mux, w, r, RateLimitBulkActions(), rateLimitBulkRoute, nil, rateLimitBulkBatch)
+	mux.HandleFunc("POST /domains/ratelimit/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		s := scopeFor(r, domains.MySQL)
+		serveBulkDispatchOrdered(sessions, mux, w, r, RateLimitBulkActions(), rateLimitBulkRoute, nil, scopedBatch(s, s.AllowsDomain, rateLimitBulkBatch))
 	}))
 	admin("POST /services/bulk", ServicesBulkActions, servicesBulkRoute)
 	admin("POST /server/processes/bulk", ProcessesBulkActions, processesBulkRoute)
@@ -81,7 +84,10 @@ func BulkRoutes(mux *http.ServeMux, sessions *auth.Manager, opts auth.Options, u
 	mux.HandleFunc("POST /emails/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
 		ServeBulkDispatch(sessions, mux, w, r, EmailAccountsBulkActions(), emailAccountsBulkRoute)
 	}))
-	admin("POST /services/ftp/bulk", FTPBulkActions, ftpBulkRoute)
+	// the replayed quota route checks the account is on one of the reseller's domains
+	mux.HandleFunc("POST /services/ftp/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		ServeBulkDispatch(sessions, mux, w, r, FTPBulkActions(), ftpBulkRoute)
+	}))
 	mux.HandleFunc("POST /resellers/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
 		ServeBulkDispatch(sessions, mux, w, r, AccountsBulkActions("resellers"), accountsBulkRoute("/resellers"))
 	}))

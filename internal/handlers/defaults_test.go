@@ -558,9 +558,8 @@ func TestServeDefaultsFilesDeletePartialFailure(t *testing.T) {
 	}
 }
 
-func TestServeUserFilesGetAndPost(t *testing.T) {
-	// query_context_by_username needs a MySQL connection; with nil MySQL it
-	// returns an error and an empty context, so files resolve under "/home/".
+// an unknown user used to resolve to /home/.env, now it's a 404
+func TestServeUserFilesUnknownUser(t *testing.T) {
 	d := &Defaults{}
 	srv, client := newDefaultsTestServer(t, d)
 
@@ -570,8 +569,8 @@ func TestServeUserFilesGetAndPost(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), `"env"`) || !strings.Contains(string(body), `"compose"`) {
-		t.Fatalf("expected env/compose JSON keys, got %s", body)
+	if resp.StatusCode != http.StatusNotFound || !strings.Contains(string(body), "User not found") {
+		t.Fatalf("expected 404 User not found, got %d %s", resp.StatusCode, body)
 	}
 }
 

@@ -268,7 +268,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	processManager := &handlers.ProcessManager{Sessions: sessions}
 	tasks := &handlers.Tasks{Sessions: sessions}
 	slave := &handlers.Slave{Sessions: sessions}
-	imunify := &handlers.Imunify{Sessions: sessions}
+	imunify := &handlers.Imunify{Sessions: sessions, MySQL: d.MySQL}
 	imunifyScan := &handlers.ImunifyScan{MySQL: d.MySQL, Sessions: sessions}
 	waf := &handlers.WAF{Sessions: sessions, MySQL: d.MySQL}
 	sshHandlers := &handlers.SSH{Sessions: sessions}
@@ -276,7 +276,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	backupsHandlers := &handlers.Backups{Sessions: sessions, MySQL: d.MySQL}
 	search := &handlers.Search{MySQL: d.MySQL, Sessions: sessions, JSONFilePath: d.SearchJSONPath}
 	dnsCluster := &handlers.DNSCluster{Sessions: sessions, PublicIP: d.PublicIP}
-	emails := &handlers.Emails{Sessions: sessions, PublicIP: d.PublicIP, MasterPass: d.DovecotMasterPass}
+	emails := &handlers.Emails{Sessions: sessions, PublicIP: d.PublicIP, MasterPass: d.DovecotMasterPass, MySQL: d.MySQL}
 	terminal := &handlers.Terminal{Sessions: sessions, MySQL: d.MySQL}
 	importer := &handlers.Importer{Sessions: sessions, MySQL: d.MySQL}
 
@@ -288,13 +288,13 @@ func newHandler(d appDeps) (http.Handler, error) {
 	apiDomains := &handlers.APIDomains{MySQL: d.MySQL}
 	apiPlans := &handlers.APIPlans{MySQL: d.MySQL, LicenseChecker: d.LicenseChecker}
 	apiContainers := &handlers.APIContainers{MySQL: d.MySQL}
-	apiDNS := &handlers.APIDNS{PublicIP: d.PublicIP}
+	apiDNS := &handlers.APIDNS{PublicIP: d.PublicIP, MySQL: d.MySQL}
 	apiServices := &handlers.APIServices{}
 	apiSystem := &handlers.APISystem{MySQL: d.MySQL}
 	apiNotifications := &handlers.APINotifications{}
 	apiDomainFiles := &handlers.APIDomainFiles{MySQL: d.MySQL}
 	apiDomainStats := &handlers.APIDomainStats{}
-	apiEmails := &handlers.APIEmails{PublicIP: d.PublicIP}
+	apiEmails := &handlers.APIEmails{PublicIP: d.PublicIP, MySQL: d.MySQL}
 	apiSecurity := &handlers.APISecurity{}
 	apiSecurity2FA := &handlers.APISecurity2FA{Auth: apiAuth}
 	apiServerCrons := &handlers.APIServerCrons{}
@@ -360,11 +360,15 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/users/{username}/export/download/{filename...}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUserExport.ServeDownload)))
 	mux.HandleFunc("POST /api/users/{username}/export/delete", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiUserExport.ServeDelete)))
 
-	mux.HandleFunc("GET /api/domains", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomains.ServeDomains)))
-	mux.HandleFunc("POST /api/domains/new", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomains.HandleAddDomain)))
+	mux.HandleFunc("GET /api/domains", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiDomains.ServeDomains)))
+	mux.HandleFunc("POST /api/domains/new", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiDomains.HandleAddDomain)))
 	// these routes overlap at URLs like /api/domains/docroot/dns so ServeMux can't register them separately, dispatch manually like the HTML /domains/{seg2}/{seg3} routes above
-	mux.HandleFunc("GET /api/domains/{seg2}/{seg3}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/domains/{seg2}/{seg3}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(func(w http.ResponseWriter, r *http.Request) {
 		seg2, seg3 := r.PathValue("seg2"), r.PathValue("seg3")
+		// resellers only get docroot, dns and the row actions, each checks domain ownership
+		if (seg3 == "caddy" || seg3 == "ssl" || seg3 == "log") && handlers.DenyReseller(w, r) {
+			return
+		}
 		switch {
 		case seg2 == "docroot":
 			r.SetPathValue("domain", seg3)
@@ -385,8 +389,12 @@ func newHandler(d appDeps) (http.Handler, error) {
 			http.NotFound(w, r)
 		}
 	})))
-	mux.HandleFunc("POST /api/domains/{seg2}/{seg3}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/domains/{seg2}/{seg3}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(func(w http.ResponseWriter, r *http.Request) {
 		seg2, seg3 := r.PathValue("seg2"), r.PathValue("seg3")
+		// resellers only get docroot, dns and the row actions, each checks domain ownership
+		if (seg3 == "caddy" || seg3 == "ssl" || seg3 == "log") && handlers.DenyReseller(w, r) {
+			return
+		}
 		switch {
 		case seg2 == "docroot":
 			r.SetPathValue("domain", seg3)
@@ -434,11 +442,11 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux.HandleFunc("GET /api/emails/settings", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeSettings)))
 	mux.HandleFunc("POST /api/emails/settings", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeSettings)))
-	mux.HandleFunc("GET /api/emails/accounts", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeAccounts)))
-	mux.HandleFunc("POST /api/emails/accounts", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeAccounts)))
-	mux.HandleFunc("DELETE /api/emails/accounts", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeAccounts)))
-	mux.HandleFunc("GET /api/emails/queue", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeQueue)))
-	mux.HandleFunc("POST /api/emails/queue", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeQueue)))
+	mux.HandleFunc("GET /api/emails/accounts", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiEmails.ServeAccounts)))
+	mux.HandleFunc("POST /api/emails/accounts", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiEmails.ServeAccounts)))
+	mux.HandleFunc("DELETE /api/emails/accounts", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiEmails.ServeAccounts)))
+	mux.HandleFunc("GET /api/emails/queue", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiEmails.ServeQueue)))
+	mux.HandleFunc("POST /api/emails/queue", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiEmails.ServeQueue)))
 	mux.HandleFunc("GET /api/emails/domain-limits", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeDomainLimits)))
 	mux.HandleFunc("POST /api/emails/domain-limits", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiEmails.ServeDomainLimits)))
 
@@ -480,7 +488,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /api/notifications/resume", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.HandleResume)))
 	mux.HandleFunc("GET /api/usage/disk", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.ServeDiskUsage)))
 
-	mux.HandleFunc("GET /api/server/crons", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerCrons.ServeCrons)))
+	mux.HandleFunc("GET /api/server/crons", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiServerCrons.ServeCrons)))
 	mux.HandleFunc("POST /api/server/crons", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerCrons.ServeCrons)))
 	mux.HandleFunc("GET /api/server/ssh", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerSSH.ServeSSH)))
 	mux.HandleFunc("POST /api/server/ssh", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerSSH.ServeSSH)))
@@ -549,8 +557,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/settings/features/{plan}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiSettingsFeatures.ServeSettingsFeatures)))
 	mux.HandleFunc("POST /api/settings/features/{plan}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiSettingsFeatures.ServeSettingsFeatures)))
 
-	mux.HandleFunc("GET /api/settings/locales", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsLocales.Serve)))
-	mux.HandleFunc("POST /api/settings/locales", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsLocales.Serve)))
+	mux.HandleFunc("GET /api/settings/locales", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiSettingsLocales.Serve)))
+	mux.HandleFunc("POST /api/settings/locales", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiSettingsLocales.Serve)))
 	mux.HandleFunc("GET /api/settings/modules", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsModules.Serve)))
 	mux.HandleFunc("POST /api/settings/modules", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsModules.Serve)))
 	mux.HandleFunc("GET /api/settings/custom-code", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsCustomCode.Serve)))
@@ -572,10 +580,11 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/license/info", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(licensePage.ServeLicenseInfo)))
 	mux.HandleFunc("POST /api/license/verify", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(licensePage.ServeLicenseVerify)))
 	mux.HandleFunc("GET /api/support/report", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSupport.ServeSupportReport)))
-	mux.HandleFunc("GET /api/import/{panel_type}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiImport.ServeImportFromBackup)))
-	mux.HandleFunc("POST /api/import/{panel_type}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiImport.ServeImportFromBackup)))
-	mux.HandleFunc("GET /api/import/logs/account/{log_filename...}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiImport.ServeAccountImportLog)))
-	mux.HandleFunc("GET /api/import/backup-files", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiImport.ServeListBackupFiles)))
+	mux.HandleFunc("GET /api/import/{panel_type}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiImport.ServeImportFromBackup)))
+	mux.HandleFunc("POST /api/import/{panel_type}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiImport.ServeImportFromBackup)))
+	mux.HandleFunc("GET /api/import/logs/account/{log_filename...}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiImport.ServeAccountImportLog)))
+	mux.HandleFunc("POST /api/import/upload", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiImport.ServeUpload)))
+	mux.HandleFunc("GET /api/import/backup-files", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiImport.ServeListBackupFiles)))
 	mux.HandleFunc("GET /api/import/transfers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiImport.ServeTransfers)))
 	mux.HandleFunc("POST /api/import/transfers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiImport.ServeTransfers)))
 	mux.HandleFunc("GET /api/import/transfers/{username}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiImport.ServeTransfersForUser)))
@@ -587,7 +596,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /onboarding", auth.RequireLogin(sessions, authOpts, dash.ServeOnboardingPage))
 	mux.HandleFunc("GET /json/system", auth.RequireLogin(sessions, authOpts, dash.ServeSystemInfo))
 	mux.HandleFunc("GET /json/{resource}", auth.RequireLogin(sessions, authOpts, dash.ServeResourceUsage))
-	mux.HandleFunc("GET /json/user_activity_status", auth.RequireAdmin(sessions, authOpts, dash.ServeUserActivityStatus))
+	mux.HandleFunc("GET /json/user_activity_status", auth.RequireLogin(sessions, authOpts, dash.ServeUserActivityStatus))
 	mux.HandleFunc("GET /json/combined_activity", auth.RequireLogin(sessions, authOpts, dash.ServeCombinedActivity))
 	mux.HandleFunc("GET /server/resource-usage", auth.RequireLogin(sessions, authOpts, dash.ServeResourceUsagePage))
 	mux.HandleFunc("GET /server/resource-usage/history", auth.RequireLogin(sessions, authOpts, dash.ServeResourceUsageHistory))
@@ -643,7 +652,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /server/memory_usage/drop", auth.RequireAdmin(sessions, authOpts, serverUtils.HandleDropMemoryCache))
 	mux.HandleFunc("POST /server/memory_usage/drop-swap", auth.RequireAdmin(sessions, authOpts, serverUtils.HandleDropSwapCache))
 
-	mux.HandleFunc("GET /server/crons", auth.RequireAdmin(sessions, authOpts, cronjobs.ServeCrons))
+	mux.HandleFunc("GET /server/crons", auth.RequireLogin(sessions, authOpts, cronjobs.ServeCrons))
 	mux.HandleFunc("POST /server/crons", auth.RequireAdmin(sessions, authOpts, cronjobs.ServeCrons))
 
 	mux.HandleFunc("GET /security/disable-admin", auth.RequireAdmin(sessions, authOpts, securityToggles.ServeDisableAdmin))
@@ -663,7 +672,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /user/{action}/{username}", auth.RequireLogin(sessions, authOpts, users.HandleManage))
 	mux.HandleFunc("GET /get_user_notes/{username}", auth.RequireLogin(sessions, authOpts, users.HandleNotes))
 	mux.HandleFunc("POST /get_user_notes/{username}", auth.RequireLogin(sessions, authOpts, users.HandleNotes))
-	mux.HandleFunc("GET /json/ips", auth.RequireAdmin(sessions, authOpts, users.ServeIPs))
+	mux.HandleFunc("GET /json/ips", auth.RequireLogin(sessions, authOpts, users.ServeIPs))
 	mux.HandleFunc("GET /get_resource_usage_history/{username}", auth.RequireLogin(sessions, authOpts, users.ServeResourceUsageHistory))
 	mux.HandleFunc("GET /client/disk/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserDiskInfo))
 	// wildcard segment instead of a literal "user-" prefix, see ServeUserLog's comment; one more path segment than /json/{resource} above so they don't collide
@@ -685,13 +694,13 @@ func newHandler(d appDeps) (http.Handler, error) {
 		handlers.ServeBulkDispatch(sessions, mux, w, r, handlers.WebsitesBulkActions(handlers.ImunifyInstalled(), handlers.GitModuleEnabled()), websites.BulkRoute)
 	}))
 
-	mux.HandleFunc("GET /domains", auth.RequireAdmin(sessions, authOpts, domains.ServeList))
-	mux.HandleFunc("GET /domains/", auth.RequireAdmin(sessions, authOpts, domains.ServeList))
-	mux.HandleFunc("POST /domains/add", auth.RequireAdmin(sessions, authOpts, domains.HandleAdd))
+	mux.HandleFunc("GET /domains", auth.RequireLogin(sessions, authOpts, domains.ServeList))
+	mux.HandleFunc("GET /domains/", auth.RequireLogin(sessions, authOpts, domains.ServeList))
+	mux.HandleFunc("POST /domains/add", auth.RequireLogin(sessions, authOpts, domains.HandleAdd))
 	mux.HandleFunc("POST /domains/bulk-add", auth.RequireAdmin(sessions, authOpts, domains.HandleBulkAdd))
 	mux.HandleFunc("GET /domains/bulk-add-status", auth.RequireAdmin(sessions, authOpts, domains.ServeBulkAddStatus))
-	mux.HandleFunc("GET /domains/dns", auth.RequireAdmin(sessions, authOpts, dnsZoneEditor.ServeEditDNSZone))
-	mux.HandleFunc("GET /domains/dns/{domain_name}", auth.RequireAdmin(sessions, authOpts, dnsZoneEditor.ServeEditDNSZone))
+	mux.HandleFunc("GET /domains/dns", auth.RequireLogin(sessions, authOpts, dnsZoneEditor.ServeEditDNSZone))
+	mux.HandleFunc("GET /domains/dns/{domain_name}", auth.RequireLogin(sessions, authOpts, dnsZoneEditor.ServeEditDNSZone))
 	mux.HandleFunc("GET /domains/caddy", auth.RequireAdmin(sessions, authOpts, caddyFileEditor.ServeEditCaddyFile))
 	mux.HandleFunc("GET /domains/caddy/{domain_name}", auth.RequireAdmin(sessions, authOpts, caddyFileEditor.ServeEditCaddyFile))
 	mux.HandleFunc("GET /domains/vhost", auth.RequireAdmin(sessions, authOpts, vhostFileEditor.ServeEditVHostFile))
@@ -704,12 +713,16 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /domains/log/", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/log/{domain_name}", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/stats/{current_username}/{domain_name}", auth.RequireAdmin(sessions, authOpts, goAccessStats.ServeStats))
-	mux.HandleFunc("GET /domains/ratelimit", auth.RequireAdmin(sessions, authOpts, rateLimit.ServeRateLimit))
-	mux.HandleFunc("POST /domains/ratelimit", auth.RequireAdmin(sessions, authOpts, rateLimit.ServeRateLimit))
-	mux.HandleFunc("GET /domains/ratelimit/stats", auth.RequireAdmin(sessions, authOpts, rateLimit.ServeRateLimitStats))
+	mux.HandleFunc("GET /domains/ratelimit", auth.RequireLogin(sessions, authOpts, rateLimit.ServeRateLimit))
+	mux.HandleFunc("POST /domains/ratelimit", auth.RequireLogin(sessions, authOpts, rateLimit.ServeRateLimit))
+	mux.HandleFunc("GET /domains/ratelimit/stats", auth.RequireLogin(sessions, authOpts, rateLimit.ServeRateLimitStats))
 	// these overlap at URLs like /domains/dns/toggle since dns/caddy/config/ssl are also valid {feature} values, so dispatch manually instead of five conflicting patterns
-	mux.HandleFunc("POST /domains/{seg2}/{seg3}", auth.RequireAdmin(sessions, authOpts, func(w http.ResponseWriter, r *http.Request) {
+	// resellers get toggle and dns for their own domains, the handlers check ownership, the raw config editors stay admin only
+	mux.HandleFunc("POST /domains/{seg2}/{seg3}", auth.RequireLogin(sessions, authOpts, func(w http.ResponseWriter, r *http.Request) {
 		seg2, seg3 := r.PathValue("seg2"), r.PathValue("seg3")
+		if seg3 != "toggle" && seg2 != "dns" && handlers.DenyReseller(w, r) {
+			return
+		}
 		switch {
 		case seg3 == "toggle":
 			r.SetPathValue("feature", seg2)
@@ -740,11 +753,11 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /services/edit", auth.RequireAdmin(sessions, authOpts, services.ServeEdit))
 	mux.HandleFunc("POST /services/edit", auth.RequireAdmin(sessions, authOpts, services.ServeEdit))
 	mux.HandleFunc("POST /service/{action}/{service_name}", auth.RequireAdmin(sessions, authOpts, services.HandleManageService))
-	mux.HandleFunc("GET /services/ftp/refresh", auth.RequireAdmin(sessions, authOpts, ftp.ServeRefresh))
-	mux.HandleFunc("POST /services/ftp/refresh", auth.RequireAdmin(sessions, authOpts, ftp.ServeRefresh))
-	mux.HandleFunc("GET /services/ftp", auth.RequireAdmin(sessions, authOpts, ftp.ServeAccounts))
-	mux.HandleFunc("POST /services/ftp", auth.RequireAdmin(sessions, authOpts, ftp.ServeAccounts))
-	mux.HandleFunc("POST /services/ftp/quota", auth.RequireAdmin(sessions, authOpts, ftp.ServeQuota))
+	mux.HandleFunc("GET /services/ftp/refresh", auth.RequireLogin(sessions, authOpts, ftp.ServeRefresh))
+	mux.HandleFunc("POST /services/ftp/refresh", auth.RequireLogin(sessions, authOpts, ftp.ServeRefresh))
+	mux.HandleFunc("GET /services/ftp", auth.RequireLogin(sessions, authOpts, ftp.ServeAccounts))
+	mux.HandleFunc("POST /services/ftp", auth.RequireLogin(sessions, authOpts, ftp.ServeAccounts))
+	mux.HandleFunc("POST /services/ftp/quota", auth.RequireLogin(sessions, authOpts, ftp.ServeQuota))
 	mux.HandleFunc("GET /services/ftp/settings", auth.RequireAdmin(sessions, authOpts, ftp.ServeSettings))
 	mux.HandleFunc("POST /services/ftp/settings", auth.RequireAdmin(sessions, authOpts, ftp.ServeSettings))
 	mux.HandleFunc("GET /services/podman", auth.RequireAdmin(sessions, authOpts, podmanHandlers.ServePodman))
@@ -798,9 +811,9 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /json/php/default_version/{username}", auth.RequireLogin(sessions, authOpts, phpSettings.ServePHPDefaultVersion))
 	mux.HandleFunc("POST /json/php/default_version/{username}", auth.RequireLogin(sessions, authOpts, phpSettings.ServePHPDefaultVersion))
 	mux.HandleFunc("POST /settings/php", auth.RequireAdmin(sessions, authOpts, phpSettings.ServePHP))
-	mux.HandleFunc("GET /php/{username}/available", auth.RequireAdmin(sessions, authOpts, phpSettings.ServePHPAvailableVersions))
-	mux.HandleFunc("GET /php/{value}", auth.RequireAdmin(sessions, authOpts, phpSettings.ServePHPVersion))
-	mux.HandleFunc("POST /php/{value}", auth.RequireAdmin(sessions, authOpts, phpSettings.ServePHPVersion))
+	mux.HandleFunc("GET /php/{username}/available", auth.RequireLogin(sessions, authOpts, phpSettings.ServePHPAvailableVersions))
+	mux.HandleFunc("GET /php/{value}", auth.RequireLogin(sessions, authOpts, phpSettings.ServePHPVersion))
+	mux.HandleFunc("POST /php/{value}", auth.RequireLogin(sessions, authOpts, phpSettings.ServePHPVersion))
 	mux.HandleFunc("GET /server/migrate", auth.RequireAdmin(sessions, authOpts, migrate.ServeMigrate))
 	mux.HandleFunc("POST /server/migrate", auth.RequireAdmin(sessions, authOpts, migrate.ServeMigrate))
 	mux.HandleFunc("GET /server/migrate/status", auth.RequireAdmin(sessions, authOpts, migrate.ServeMigrateStatus))
@@ -810,8 +823,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /settings/custom-code", auth.RequireAdmin(sessions, authOpts, customCode.ServeCustomCode))
 	mux.HandleFunc("GET /settings/general", auth.RequireAdmin(sessions, authOpts, general.ServeGeneral))
 	mux.HandleFunc("POST /settings/general", auth.RequireAdmin(sessions, authOpts, general.ServeGeneral))
-	mux.HandleFunc("GET /settings/locales", auth.RequireAdmin(sessions, authOpts, locales.ServeLocales))
-	mux.HandleFunc("POST /settings/locales", auth.RequireAdmin(sessions, authOpts, locales.ServeLocales))
+	mux.HandleFunc("GET /settings/locales", auth.RequireLogin(sessions, authOpts, locales.ServeLocales))
+	mux.HandleFunc("POST /settings/locales", auth.RequireLogin(sessions, authOpts, locales.ServeLocales))
 	mux.HandleFunc("GET /settings/modules", auth.RequireAdmin(sessions, authOpts, modules.ServeModules))
 	mux.HandleFunc("POST /settings/modules", auth.RequireAdmin(sessions, authOpts, modules.ServeModules))
 	mux.HandleFunc("GET /api/docker-tags", auth.RequireAdmin(sessions, authOpts, updates.ServeDockerTags))
@@ -838,8 +851,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /settings/defaults/files", auth.RequireAdmin(sessions, authOpts, defaultsSettings.ServeDefaultsFiles))
 	mux.HandleFunc("PUT /settings/defaults/files", auth.RequireAdmin(sessions, authOpts, defaultsSettings.ServeDefaultsFiles))
 	mux.HandleFunc("DELETE /settings/defaults/files", auth.RequireAdmin(sessions, authOpts, defaultsSettings.ServeDefaultsFiles))
-	mux.HandleFunc("GET /settings/defaults/files/{username}", auth.RequireAdmin(sessions, authOpts, defaultsSettings.ServeUserFiles))
-	mux.HandleFunc("POST /settings/defaults/files/{username}", auth.RequireAdmin(sessions, authOpts, defaultsSettings.ServeUserFiles))
+	mux.HandleFunc("GET /settings/defaults/files/{username}", auth.RequireLogin(sessions, authOpts, defaultsSettings.ServeUserFiles))
+	mux.HandleFunc("POST /settings/defaults/files/{username}", auth.RequireLogin(sessions, authOpts, defaultsSettings.ServeUserFiles))
 	mux.HandleFunc("GET /settings/api/endpoints", auth.RequireAdmin(sessions, authOpts, apiSettings.ServeAPIEndpointsList))
 	mux.HandleFunc("GET /settings/api", auth.RequireAdmin(sessions, authOpts, apiSettings.ServeAPISettings))
 	mux.HandleFunc("POST /settings/api", auth.RequireAdmin(sessions, authOpts, apiSettings.ServeAPISettings))
@@ -873,25 +886,26 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /tasks", auth.RequireAdmin(sessions, authOpts, tasks.ServeTasks))
 	mux.HandleFunc("GET /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
 	mux.HandleFunc("POST /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
-	mux.HandleFunc("GET /security/imunify/", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyGUI))
-	mux.HandleFunc("GET /security/imunify/assets/static/{filename...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyStatic))
+	mux.HandleFunc("GET /security/imunify/", auth.RequireLogin(sessions, authOpts, imunify.ServeImunifyGUI))
+	mux.HandleFunc("GET /security/imunify/assets/static/{filename...}", auth.RequireLogin(sessions, authOpts, imunify.ServeImunifyStatic))
 	mux.HandleFunc("POST /security/imunify/install", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyInstall))
-	mux.HandleFunc("POST /security/imunify/{user}", auth.RequireAdmin(sessions, authOpts, imunifyScan.HandleScanUser))
+	mux.HandleFunc("POST /security/imunify/{user}", auth.RequireLogin(sessions, authOpts, imunifyScan.HandleScanUser))
+	mux.HandleFunc("GET /security/imunify/gui/status", auth.RequireLogin(sessions, authOpts, imunify.ServeImunifyGUIStatus))
 	mux.HandleFunc("GET /security/imunify/install/status", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyInstallStatus))
 	// exempt from CSRF, proxies to a PHP app that handles its own CSRF
-	mux.HandleFunc("GET /imav/{path...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyPHP))
-	mux.HandleFunc("POST /imav/{path...}", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyPHP))
+	mux.HandleFunc("GET /imav/{path...}", auth.RequireLogin(sessions, authOpts, imunify.ServeImunifyPHP))
+	mux.HandleFunc("POST /imav/{path...}", auth.RequireLogin(sessions, authOpts, imunify.ServeImunifyPHP))
 	mux.HandleFunc("GET /security/waf", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFStatus))
 	mux.HandleFunc("POST /security/waf", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFStatus))
 	mux.HandleFunc("GET /security/waf/rules", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFRules))
 	mux.HandleFunc("POST /security/waf/rules", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFRules))
 	mux.HandleFunc("GET /security/waf/view-rules", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFViewRules))
-	mux.HandleFunc("GET /security/waf/domains", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFDomains))
-	mux.HandleFunc("GET /security/waf/rules/{target}", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFTargetRules))
-	mux.HandleFunc("POST /security/waf/rules/{target}", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFTargetRules))
-	mux.HandleFunc("GET /security/waf/logs", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFLogs))
-	mux.HandleFunc("GET /security/waf/logs/{target}", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFLogs))
-	mux.HandleFunc("POST /security/waf/logs/{target}", auth.RequireAdmin(sessions, authOpts, waf.ServeWAFLogs))
+	mux.HandleFunc("GET /security/waf/domains", auth.RequireLogin(sessions, authOpts, waf.ServeWAFDomains))
+	mux.HandleFunc("GET /security/waf/rules/{target}", auth.RequireLogin(sessions, authOpts, waf.ServeWAFTargetRules))
+	mux.HandleFunc("POST /security/waf/rules/{target}", auth.RequireLogin(sessions, authOpts, waf.ServeWAFTargetRules))
+	mux.HandleFunc("GET /security/waf/logs", auth.RequireLogin(sessions, authOpts, waf.ServeWAFLogs))
+	mux.HandleFunc("GET /security/waf/logs/{target}", auth.RequireLogin(sessions, authOpts, waf.ServeWAFLogs))
+	mux.HandleFunc("POST /security/waf/logs/{target}", auth.RequireLogin(sessions, authOpts, waf.ServeWAFLogs))
 	mux.HandleFunc("GET /server/ssh", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSH))
 	mux.HandleFunc("POST /server/ssh", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSH))
 	mux.HandleFunc("GET /server/ssh/config", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSHFullConfig))
@@ -906,23 +920,25 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /domains/dns-cluster", auth.RequireAdmin(sessions, authOpts, dnsCluster.ServeDNSCluster))
 	mux.HandleFunc("POST /domains/dns-cluster", auth.RequireAdmin(sessions, authOpts, dnsCluster.ServeDNSCluster))
 	mux.HandleFunc("GET /domains/dns-cluster/{ip}", auth.RequireAdmin(sessions, authOpts, dnsCluster.ServeDNSClusterInfo))
+	mux.HandleFunc("POST /emails/install", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsInstall))
+	mux.HandleFunc("GET /emails/install/status", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsInstallStatus))
 	mux.HandleFunc("GET /emails/settings", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsSettings))
 	mux.HandleFunc("POST /emails/settings", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsSettings))
 	// SECURITY: these 5 routes had no auth decorator before, see the comment above ServeUpdatePassword in emails.go, RequireLogin closes that gap
-	mux.HandleFunc("POST /emails/api/update-password", auth.RequireAdmin(sessions, authOpts, emails.ServeUpdatePassword))
-	mux.HandleFunc("POST /emails/api/quota-set", auth.RequireAdmin(sessions, authOpts, emails.ServeQuotaSet))
-	mux.HandleFunc("POST /emails/api/quota-del", auth.RequireAdmin(sessions, authOpts, emails.ServeQuotaDel))
-	mux.HandleFunc("POST /emails/api/restrict", auth.RequireAdmin(sessions, authOpts, emails.ServeRestrict))
-	mux.HandleFunc("POST /emails/api/delete", auth.RequireAdmin(sessions, authOpts, emails.ServeDeleteEmails))
-	mux.HandleFunc("GET /emails/accounts", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsAccounts))
-	mux.HandleFunc("POST /emails/accounts", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsAccounts))
-	mux.HandleFunc("GET /emails/queue", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsQueue))
-	mux.HandleFunc("POST /emails/queue", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsQueue))
-	mux.HandleFunc("POST /emails/queue/action", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsQueueAction))
+	mux.HandleFunc("POST /emails/api/update-password", auth.RequireLogin(sessions, authOpts, emails.ServeUpdatePassword))
+	mux.HandleFunc("POST /emails/api/quota-set", auth.RequireLogin(sessions, authOpts, emails.ServeQuotaSet))
+	mux.HandleFunc("POST /emails/api/quota-del", auth.RequireLogin(sessions, authOpts, emails.ServeQuotaDel))
+	mux.HandleFunc("POST /emails/api/restrict", auth.RequireLogin(sessions, authOpts, emails.ServeRestrict))
+	mux.HandleFunc("POST /emails/api/delete", auth.RequireLogin(sessions, authOpts, emails.ServeDeleteEmails))
+	mux.HandleFunc("GET /emails/accounts", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsAccounts))
+	mux.HandleFunc("POST /emails/accounts", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsAccounts))
+	mux.HandleFunc("GET /emails/queue", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsQueue))
+	mux.HandleFunc("POST /emails/queue", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsQueue))
+	mux.HandleFunc("POST /emails/queue/action", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsQueueAction))
 	mux.HandleFunc("GET /emails/reports", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsReports))
 	mux.HandleFunc("GET /emails/reports/view", auth.RequireAdmin(sessions, authOpts, emails.ServeReportsIndex))
 	mux.HandleFunc("GET /emails/data/{filename}", auth.RequireAdmin(sessions, authOpts, emails.ServeShowReport))
-	mux.HandleFunc("GET /emails/webmail/{email}", auth.RequireAdmin(sessions, authOpts, emails.ServeEmailsWebmailLink))
+	mux.HandleFunc("GET /emails/webmail/{email}", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsWebmailLink))
 	mux.HandleFunc("GET /emails/domain-limits", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimits))
 	mux.HandleFunc("POST /emails/domain-limits/save-raw", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimitsSaveRaw))
 	mux.HandleFunc("GET /emails/domain-limits/hits", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimitsHits))
@@ -931,12 +947,13 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /terminal/{username}/{container_name}", auth.RequireAdmin(sessions, authOpts, terminal.ServeUserTerminalPage))
 	mux.HandleFunc("GET /ws/terminal", auth.RequireAdmin(sessions, authOpts, terminal.ServeHostTerminalWS))
 	mux.HandleFunc("GET /ws/terminal/{username}/{container_name}", auth.RequireAdmin(sessions, authOpts, terminal.ServeUserTerminalWS))
-	mux.HandleFunc("GET /user/import", auth.RequireAdmin(sessions, authOpts, importer.ServeImportUser))
-	mux.HandleFunc("GET /import/{panel_type}", auth.RequireAdmin(sessions, authOpts, importer.ServeImportFromBackup))
-	mux.HandleFunc("POST /import/{panel_type}", auth.RequireAdmin(sessions, authOpts, importer.ServeImportFromBackup))
+	mux.HandleFunc("GET /user/import", auth.RequireLogin(sessions, authOpts, importer.ServeImportUser))
+	mux.HandleFunc("GET /import/{panel_type}", auth.RequireLogin(sessions, authOpts, importer.ServeImportFromBackup))
+	mux.HandleFunc("POST /import/{panel_type}", auth.RequireLogin(sessions, authOpts, importer.ServeImportFromBackup))
 	mux.HandleFunc("GET /import/user/log/{log_filename...}", auth.RequireAdmin(sessions, authOpts, importer.ServeViewTransferImportLog))
-	mux.HandleFunc("GET /import/account/log/{log_filename...}", auth.RequireAdmin(sessions, authOpts, importer.ServeViewAccountImportLog))
-	mux.HandleFunc("GET /json/backup-files", auth.RequireAdmin(sessions, authOpts, importer.ServeListBackupFiles))
+	mux.HandleFunc("GET /import/account/log/{log_filename...}", auth.RequireLogin(sessions, authOpts, importer.ServeViewAccountImportLog))
+	mux.HandleFunc("POST /import/upload", auth.RequireLogin(sessions, authOpts, importer.ServeImportUpload))
+	mux.HandleFunc("GET /json/backup-files", auth.RequireLogin(sessions, authOpts, importer.ServeListBackupFiles))
 	mux.HandleFunc("GET /json/transfers", auth.RequireAdmin(sessions, authOpts, importer.ServeListTransfers))
 	mux.HandleFunc("GET /json/transfers/{username}", auth.RequireLogin(sessions, authOpts, importer.ServeListTransfersFor))
 

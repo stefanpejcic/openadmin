@@ -8,6 +8,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -22,6 +23,7 @@ import (
 // /api/dns/zone-templates handlers.
 type APIDNS struct {
 	PublicIP string
+	MySQL    *sql.DB
 }
 
 // apiDecodeJSONBody checks the Content-Type and decodes the body in one
@@ -40,6 +42,10 @@ func (a *APIDNS) ServeDomainDNSZone(w http.ResponseWriter, r *http.Request) {
 	domainName := r.PathValue("domain_name")
 	if !isDomain(domainName) {
 		writeJSONError(w, http.StatusBadRequest, "Invalid domain name.")
+		return
+	}
+	if !scopeFor(r, a.MySQL).AllowsDomain(domainName) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: domain is not owned by one of your users")
 		return
 	}
 	bindFilePath := filepath.Join(BindZonesDir, domainName+".zone")

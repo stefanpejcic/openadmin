@@ -20,13 +20,11 @@ import (
 // handlers.
 type APIImport struct{}
 
-// apiImportPanelDisplayNames lists the backup panel types the JSON API
-// accepts for /api/import/{panel_type} -- narrower than the HTML
-// /import/{panel_type} route, which also accepts "openpanel" (a restore
-// from an OpenPanel-native backup, exposed instead via /user/import).
+// apiImportPanelDisplayNames lists the backup panel types /api/import/{panel_type} accepts, resellers only get openpanel
 var apiImportPanelDisplayNames = map[string]string{
 	"cpanel":     "cPanel",
 	"cyberpanel": "CyberPanel",
+	"openpanel":  "OpenPanel",
 }
 
 // ServeImportFromBackup handles GET/POST /api/import/{panel_type}.
@@ -45,6 +43,31 @@ func (a *APIImport) ServeImportFromBackup(w http.ResponseWriter, r *http.Request
 		}
 		if !apiDecodeJSONBody(r, &body) {
 			writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
+			return
+		}
+		reseller := actingReseller(r)
+		if reseller != "" && panelType != "openpanel" {
+			writeJSONError(w, http.StatusForbidden, "Resellers can only import OpenPanel backups.")
+			return
+		}
+		if panelType == "openpanel" {
+			if body.Path == "" {
+				writeJSONError(w, http.StatusBadRequest, "Backup path is required.")
+				return
+			}
+			if reseller != "" {
+				resolved, err := resolveResellerBackup(reseller, body.Path)
+				if err != nil {
+					writeJSONError(w, http.StatusForbidden, err.Error())
+					return
+				}
+				body.Path = resolved
+			}
+			if err := importerRestoreOpenPanelBackupRun(body.Path, reseller); err != nil {
+				writeJSONFailure(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			writeJSON(w, map[string]interface{}{"success": true, "message": fmt.Sprintf("Import process from %s (OpenPanel backup) has started.", body.Path)})
 			return
 		}
 		if body.Path == "" || body.PlanName == "" {
@@ -68,7 +91,7 @@ func (a *APIImport) ServeImportFromBackup(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, listLogFilesWithStatus(ImporterOpenPanelImportLogDir))
+	writeJSON(w, importLogsFor(r))
 }
 
 // writeJSONFailure writes the {"success": false, "error": message} shape
@@ -113,7 +136,16 @@ func apiServeImportLog(w http.ResponseWriter, r *http.Request, logDir string) {
 
 // ServeAccountImportLog handles GET /api/import/logs/account/{log_filename...}.
 func (a *APIImport) ServeAccountImportLog(w http.ResponseWriter, r *http.Request) {
+	if !importLogAllowed(r, r.PathValue("log_filename")) {
+		writeJSONStatus(w, http.StatusNotFound, map[string]string{"status": "error", "message": "Log file does not exist."})
+		return
+	}
 	apiServeImportLog(w, r, ImporterOpenPanelImportLogDir)
+}
+
+// ServeUpload handles POST /api/import/upload, same as the GUI upload
+func (a *APIImport) ServeUpload(w http.ResponseWriter, r *http.Request) {
+	(&Importer{}).ServeImportUpload(w, r)
 }
 
 // ServeTransferImportLog handles GET /api/import/logs/transfer/{log_filename...}.

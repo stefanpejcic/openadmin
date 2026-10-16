@@ -8,6 +8,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 // APIEmails bundles the /api/emails/* handlers.
 type APIEmails struct {
 	PublicIP string
+	MySQL    *sql.DB
 }
 
 // emailsAPIOpencliRun invokes opencli for the webmail domain/software
@@ -219,7 +221,9 @@ func (a *APIEmails) ServeAccounts(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, map[string]interface{}{"status": mailserverStatus, "emails": []interface{}{}})
 			return
 		}
-		writeJSON(w, map[string]interface{}{"status": mailserverStatus, "emails": emailsListAccountsRun()})
+		scope := scopeFor(r, a.MySQL)
+		accounts := filterRows(scope, emailsListAccountsRun(), func(e emailQuota) bool { return scope.AllowsEmail(e.Email) })
+		writeJSON(w, map[string]interface{}{"status": mailserverStatus, "emails": accounts})
 		return
 	}
 
@@ -244,6 +248,10 @@ func (a *APIEmails) ServeAccounts(w http.ResponseWriter, r *http.Request) {
 				args = append(args, apiJSONValueToString(e))
 			}
 		}
+		if !scopeFor(r, a.MySQL).AllowsEmails(args[4:]) {
+			writeJSONMessage(w, http.StatusForbidden, "Some of these emails are not on a domain of your users.")
+			return
+		}
 		success, output := runEmailsCmd(args)
 		if success {
 			writeJSON(w, map[string]string{"message": fmt.Sprintf("Deleted %d account(s).", len(emailsList))})
@@ -255,6 +263,10 @@ func (a *APIEmails) ServeAccounts(w http.ResponseWriter, r *http.Request) {
 
 	action := strings.TrimSpace(apiEmailsStringField(data, "action"))
 	email := strings.TrimSpace(apiEmailsStringField(data, "email"))
+	if email != "" && !scopeFor(r, a.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
+		return
+	}
 
 	switch action {
 	case "password":
@@ -318,7 +330,7 @@ func (a *APIEmails) ServeAccounts(w http.ResponseWriter, r *http.Request) {
 func (a *APIEmails) ServeQueue(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		mailserverStatus := checkMailserverStatus()
-		queue := getEmailQueue()
+		queue := scopeFor(r, a.MySQL).filterQueue(getEmailQueue())
 		if queue == nil {
 			queue = []map[string]interface{}{}
 		}
@@ -336,6 +348,16 @@ func (a *APIEmails) ServeQueue(w http.ResponseWriter, r *http.Request) {
 		QueueIDs []string `json:"queue_ids"`
 	}
 	json.NewDecoder(r.Body).Decode(&body)
+
+	// a reseller never gets the whole-queue commands, only their own message ids
+	if rs := scopeFor(r, a.MySQL); rs != nil && (body.Scope == "all" || body.Scope == "selected") {
+		targets, ok := rs.queueTargets(getEmailQueue(), body.Scope, body.QueueIDs)
+		if !ok {
+			writeJSONError(w, http.StatusForbidden, "Some of these messages are not from or to your users.")
+			return
+		}
+		body.Scope, body.QueueIDs = "selected", targets
+	}
 
 	var err error
 	switch {

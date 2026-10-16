@@ -88,13 +88,13 @@
                 </div>
             </div>
             <div class="border-t border-gray-200 dark:border-gray-800 relative">
-                {{template "bulk_open" (dict "Table" "#tour-locales-table" "Endpoint" "/settings/locales/bulk")}}
+                {{if not .IsReseller}}{{template "bulk_open" (dict "Table" "#tour-locales-table" "Endpoint" "/settings/locales/bulk")}}{{end}}
                 <table id="tour-locales-table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead class="">
                             <!-- There's no opening <tr> here, only the closing </tr> below -- a
                                  genuine markup quirk preserved as-is (browsers auto-recover the
                                  missing start tag). -->
-{{template "bulk_head_checkbox" .}}
+{{if not .IsReseller}}{{template "bulk_head_checkbox" .}}{{end}}
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="">Locale</div></th>
                             <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums"><div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>Code</span><div class="-space-y-2"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 text-gray-900 dark:text-gray-50"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></div></div></th>
 
@@ -133,7 +133,7 @@
 {{range .Translations}}
                         <tr x-show="searchQuery === '' || '{{.Locale}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
 {{$skip := "update,delete"}}{{if .Installed}}{{$skip = "locale"}}{{if not .UpdateAvailable}}{{$skip = printf "%s,update" $skip}}{{end}}{{if .IsDefault}}{{$skip = printf "%s,delete" $skip}}{{end}}{{end}}
-{{template "bulk_row_checkbox" (dict "Key" .Locale "Label" .Locale "Skip" $skip)}}
+{{if not $.IsReseller}}{{template "bulk_row_checkbox" (dict "Key" .Locale "Label" .Locale "Skip" $skip)}}{{end}}
 
 <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left"><img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{.FlagCode}}.svg"></td>
 
@@ -164,7 +164,7 @@
 <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
     {{if .IsDefault}}
 <span class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800"><span class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM17.4571 9.45711L11 15.9142L6.79289 11.7071L8.20711 10.2929L11 13.0858L16.0429 8.04289L17.4571 9.45711Z"></path></svg>Default</span><span class="h-4 w-px bg-gray-200 dark:bg-gray-800"></span><a href="https://openpanel.com/docs/articles/accounts/default-user-locales/" target="_blank" class="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-500">Docs</a></span>
-    {{else if .Installed}}
+    {{else if and .Installed (not $.IsReseller)}}
 <form method="POST">
     <input type="hidden" name="default" value="{{.Locale}}">
     <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
@@ -219,7 +219,7 @@
     </button>
 </form>
     {{end}}
-    {{if not .IsDefault}}
+    {{if and (not .IsDefault) (not $.IsReseller)}}
 <form method="POST" onsubmit="return confirm('Delete locale {{.Locale}}?');">
     <input type="hidden" name="delete" value="{{.Locale}}">
     <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
@@ -271,7 +271,7 @@
 
                     </tbody>
                 </table>
-{{template "bulk_bar" .}}
+{{if not .IsReseller}}{{template "bulk_bar" .}}{{end}}
 </div>
             </div>
 </div>

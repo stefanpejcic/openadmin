@@ -205,6 +205,8 @@ func (h *DomainsRateLimit) ServeRateLimit(w http.ResponseWriter, r *http.Request
 	}
 
 	st, err := readRateLimitStatus()
+	scope := scopeFor(r, h.MySQL)
+	st.Domains = filterRows(scope, st.Domains, func(d rateLimitRow) bool { return scope.AllowsDomain(d.Domain) })
 	owners := wafDomainOwners(h.MySQL)
 	users := []string{}
 	seen := map[string]bool{}
@@ -241,6 +243,11 @@ func (h *DomainsRateLimit) ServeRateLimit(w http.ResponseWriter, r *http.Request
 func (h *DomainsRateLimit) handlePOST(w http.ResponseWriter, r *http.Request) {
 	switch r.PostFormValue("action") {
 	case "default":
+		// the server default applies to every domain, so it's admin only
+		if IsReseller(r) {
+			auth.AddFlash(w, r, h.Sessions, "Only administrators can change the server default.", "error")
+			return
+		}
 		perIP, ok1 := parseLimit(r.PostFormValue("per_ip"))
 		perSite, ok2 := parseLimit(r.PostFormValue("per_site"))
 		if !ok1 || !ok2 {
@@ -260,6 +267,10 @@ func (h *DomainsRateLimit) handlePOST(w http.ResponseWriter, r *http.Request) {
 
 	case "domain":
 		domain := r.PostFormValue("domain")
+		if !scopeFor(r, h.MySQL).AllowsDomain(domain) {
+			auth.AddFlash(w, r, h.Sessions, "Domain "+domain+" is not owned by one of your users.", "error")
+			return
+		}
 		mode := r.PostFormValue("mode")
 		perIP, ok1 := parseLimit(r.PostFormValue("per_ip"))
 		perSite, ok2 := parseLimit(r.PostFormValue("per_site"))
@@ -290,9 +301,12 @@ func (h *DomainsRateLimit) ServeRateLimitStats(w http.ResponseWriter, r *http.Re
 		writeJSONStatus(w, http.StatusInternalServerError, map[string]string{"error": "Reading usage failed: " + err.Error()})
 		return
 	}
+	scope := scopeFor(r, h.MySQL)
 	byDomain := make(map[string]rateLimitStats, len(stats))
 	for _, s := range stats {
-		byDomain[s.Domain] = s
+		if scope.AllowsDomain(s.Domain) {
+			byDomain[s.Domain] = s
+		}
 	}
 	writeJSON(w, map[string]interface{}{"updated": at.Unix(), "stats": byDomain})
 }

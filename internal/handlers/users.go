@@ -928,11 +928,19 @@ func (u *Users) HandleNotes(w http.ResponseWriter, r *http.Request) {
 
 // ServeIPs handles GET /json/ips: a map of usernames with a dedicated IP
 // address on file to that address.
+// UserIPFilesGlob is a var so tests can point it at a temp dir
+var UserIPFilesGlob = "/etc/openpanel/openpanel/core/users/*/ip.json"
+
 func (u *Users) ServeIPs(w http.ResponseWriter, r *http.Request) {
 	out := map[string]interface{}{}
-	matches, _ := filepath.Glob("/etc/openpanel/openpanel/core/users/*/ip.json")
+	scope := scopeFor(r, u.MySQL)
+	matches, _ := filepath.Glob(UserIPFilesGlob)
 	for _, ipFile := range matches {
 		username := filepath.Base(filepath.Dir(ipFile))
+		// resellers only get the IPs of their own users
+		if !scope.AllowsUser(username) {
+			continue
+		}
 		raw, err := os.ReadFile(ipFile)
 		if err != nil {
 			continue

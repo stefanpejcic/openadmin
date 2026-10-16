@@ -55,6 +55,11 @@ func (a *APIDomains) ServeDomains(w http.ResponseWriter, r *http.Request) {
 	if err != nil || domains == nil {
 		domains = []paneldb.RowMap{}
 	}
+	scope := scopeFor(r, a.MySQL)
+	domains = filterRows(scope, domains, func(row paneldb.RowMap) bool {
+		u, _ := row["domain_url"].(string)
+		return scope.AllowsDomain(u)
+	})
 	writeJSON(w, map[string]interface{}{"domains": domains})
 }
 
@@ -76,6 +81,10 @@ func (a *APIDomains) HandleAddDomain(w http.ResponseWriter, r *http.Request) {
 
 	if body.Username == "" || body.Domain == "" {
 		writeJSONError(w, http.StatusBadRequest, "username and domain are required")
+		return
+	}
+	if !scopeFor(r, a.MySQL).AllowsUser(body.Username) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: you do not own this account")
 		return
 	}
 	if errMsg := validateDocroot(body.Docroot); errMsg != "" {
@@ -100,6 +109,10 @@ func (a *APIDomains) HandleDomainAction(w http.ResponseWriter, r *http.Request) 
 
 	if domain == "" {
 		writeJSONError(w, http.StatusBadRequest, "domain is required")
+		return
+	}
+	if !scopeFor(r, a.MySQL).AllowsDomain(domain) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: domain is not owned by one of your users")
 		return
 	}
 
@@ -145,6 +158,10 @@ func (a *APIDomains) ServeDomainDocroot(w http.ResponseWriter, r *http.Request) 
 	domain := r.PathValue("domain")
 	if domain == "" {
 		writeJSONError(w, http.StatusBadRequest, "domain is required")
+		return
+	}
+	if !scopeFor(r, a.MySQL).AllowsDomain(domain) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: domain is not owned by one of your users")
 		return
 	}
 

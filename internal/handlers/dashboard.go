@@ -495,6 +495,14 @@ func (d *Dashboard) ServeUserActivityStatus(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		status = map[string]string{}
 	}
+	// resellers only see who of their own users is online
+	if scope := scopeFor(r, d.MySQL); scope != nil {
+		for u := range status {
+			if !scope.AllowsUser(u) {
+				delete(status, u)
+			}
+		}
+	}
 	writeJSON(w, status)
 }
 

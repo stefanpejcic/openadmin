@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"bytes"
+	"database/sql"
 	"io"
 	"mime"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +24,7 @@ import (
 // Imunify bundles the /security/imunify and /imav handlers.
 type Imunify struct {
 	Sessions *auth.Manager
+	MySQL    *sql.DB
 }
 
 var (
@@ -100,8 +103,8 @@ func imunifyInstallRunning() bool {
 
 // imunifyGetTokenRun returns ("", false) for both a nonzero exit and a
 // failure to even start the binary.
-var imunifyGetTokenRun = func() (string, bool) {
-	out, err := exec.Command("imunify360-agent", "login", "get", "--username", "root").Output()
+var imunifyGetTokenRun = func(username string) (string, bool) {
+	out, err := exec.Command("imunify360-agent", "login", "get", "--username", username).Output()
 	if err != nil {
 		return "", false
 	}
@@ -142,12 +145,16 @@ func (im *Imunify) ServeImunifyGUI(w http.ResponseWriter, r *http.Request) {
 	if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
 		imunifyStartDetachedRun()
 		if !imunifyWaitForPortRun("127.0.0.1", 9000) {
-			webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Running)"))
+			webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Starting)"))
 			return
 		}
 	}
 
-	token, ok := imunifyGetTokenRun()
+	if scope := scopeFor(r, im.MySQL); scope != nil {
+		im.serveResellerImunify(w, r, scope)
+		return
+	}
+	token, ok := imunifyGetTokenRun("root")
 	if !ok {
 		auth.AddFlash(w, r, im.Sessions, "Failed to generate token for auto-login to ImunifyAV. Please use SSH user and password to login.", "warning")
 		webtemplates.Render(w, "security_imunify.html", mergeChrome(map[string]interface{}{
@@ -161,6 +168,70 @@ func (im *Imunify) ServeImunifyGUI(w http.ResponseWriter, r *http.Request) {
 		"Token":   token,
 		"Flashes": auth.PopFlashes(w, r, im.Sessions),
 	}, r, "ImunifyAV"))
+}
+
+// serveResellerImunify never hands a reseller the root token, they pick one of their users and get a token for that user only
+func (im *Imunify) serveResellerImunify(w http.ResponseWriter, r *http.Request, scope *resellerScope) {
+	username := r.URL.Query().Get("user")
+	if username == "" {
+		scans := cachedImunifyUsers()
+		type row struct {
+			Username string
+			Scan     imunifyUser
+			HasScan  bool
+		}
+		users := scope.Users()
+		sort.Strings(users)
+		rows := []row{}
+		for _, u := range users {
+			ctx, _ := queryContextByUsername(im.MySQL, u)
+			sc, ok := scans[ctx]
+			rows = append(rows, row{Username: u, Scan: sc, HasScan: ok})
+		}
+		webtemplates.Render(w, "security_imunify_reseller.html", mergeChrome(map[string]interface{}{
+			"Users":   rows,
+			"Flashes": auth.PopFlashes(w, r, im.Sessions),
+		}, r, "ImunifyAV"))
+		return
+	}
+	userContext, err := queryContextByUsername(im.MySQL, username)
+	if !scope.AllowsUser(username) || err != nil || !imunifyUserRE.MatchString(userContext) {
+		auth.AddFlash(w, r, im.Sessions, "User \""+username+"\" is not one of your users.", "error")
+		http.Redirect(w, r, "/security/imunify/", http.StatusSeeOther)
+		return
+	}
+	token, ok := imunifyGetTokenRun(userContext)
+	if !ok {
+		auth.AddFlash(w, r, im.Sessions, "Failed to open ImunifyAV for "+username+".", "error")
+		http.Redirect(w, r, "/security/imunify/", http.StatusSeeOther)
+		return
+	}
+	webtemplates.Render(w, "security_imunify.html", mergeChrome(map[string]interface{}{
+		"Token":   token,
+		"ForUser": username,
+		"Flashes": auth.PopFlashes(w, r, im.Sessions),
+	}, r, "ImunifyAV: "+username))
+}
+
+// ImunifyGUILogPath is where opencli imunify start sends the php server output
+var ImunifyGUILogPath = "/var/log/imunify-php-server.log"
+
+// ServeImunifyGUIStatus handles GET /security/imunify/gui/status, start=1 starts the gui again if it went down
+func (im *Imunify) ServeImunifyGUIStatus(w http.ResponseWriter, r *http.Request) {
+	running := imunifyIsPortOpenRun("127.0.0.1", 9000)
+	if !running && r.URL.Query().Get("start") == "1" {
+		imunifyStartDetachedRun()
+		running = imunifyIsPortOpenRun("127.0.0.1", 9000)
+	}
+	log := ""
+	if raw, err := os.ReadFile(ImunifyGUILogPath); err == nil {
+		lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+		if len(lines) > 20 {
+			lines = lines[len(lines)-20:]
+		}
+		log = strings.Join(lines, "\n")
+	}
+	writeJSON(w, map[string]interface{}{"running": running, "log": log})
 }
 
 // ServeImunifyInstall handles POST /security/imunify/install.
@@ -246,7 +317,7 @@ func (im *Imunify) ServeImunifyPHP(w http.ResponseWriter, r *http.Request) {
 	if !imunifyIsPortOpenRun("127.0.0.1", 9000) {
 		imunifyStartDetachedRun()
 		if !imunifyWaitForPortRun("127.0.0.1", 9000) {
-			webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Not Running)"))
+			webtemplates.Render(w, "security_imunify_not_running.html", mergeChrome(map[string]interface{}{}, r, "ImunifyAV (Starting)"))
 			return
 		}
 	}

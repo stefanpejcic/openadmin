@@ -44,10 +44,7 @@ func TestAPIImportFromBackupUnsupportedPanelType(t *testing.T) {
 	a := &APIImport{}
 	srv, client := newAPIImportTestServer(t, a)
 
-	// "openpanel" is intentionally rejected here even though the HTML
-	// admin route accepts it -- the JSON API only ever drives cPanel and
-	// CyberPanel migrations through this route.
-	for _, panelType := range []string{"openpanel", "plesk"} {
+	for _, panelType := range []string{"plesk", "directadmin"} {
 		resp, err := client.Get(srv.URL + "/api/import/" + panelType)
 		if err != nil {
 			t.Fatal(err)

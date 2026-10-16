@@ -30,6 +30,10 @@ func (a *APISettingsLocales) handlePost(w http.ResponseWriter, r *http.Request) 
 	}
 	field := func(k string) string { v, _ := data[k].(string); return v }
 
+	if (field("delete") != "" || field("default") != "") && IsReseller(r) {
+		writeJSONError(w, http.StatusForbidden, "Only administrators can set the default locale or delete locales.")
+		return
+	}
 	res := runLocaleAction(field("locale"), field("update"), field("delete"), field("default"))
 	if res.Batch {
 		// partial failures still return 200 so callers get the installed/failed lists

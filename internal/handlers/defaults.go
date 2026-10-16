@@ -863,7 +863,16 @@ func queryContextByUsername(db *sql.DB, username string) (string, error) {
 // ServeUserFiles handles GET/POST /settings/defaults/files/{username}.
 func (d *Defaults) ServeUserFiles(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
+	// resellers can edit the files of their own users, cgroup plan limits still cap the containers
+	if !scopeFor(r, d.MySQL).AllowsUser(username) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: you do not own this account")
+		return
+	}
 	context, _ := queryContextByUsername(d.MySQL, username)
+	if context == "" || strings.ContainsAny(context, "/.") {
+		writeJSONError(w, http.StatusNotFound, "User not found")
+		return
+	}
 
 	envPath := "/home/" + context + "/.env"
 	composePath := "/home/" + context + "/docker-compose.yml"

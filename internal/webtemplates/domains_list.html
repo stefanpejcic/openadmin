@@ -87,7 +87,7 @@
 
                             <div class="col-span-full {{if eq .LicenseType "Enterprise"}}{{else}}sm:col-span-2 h-full{{end}} flex items-end justify-end">
                                 <div class="relative mt-2 flex items-center gap-3">
-                                    <a href="#add" @click.prevent="bulkMode = true" class="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">Adding more than one domain?</a>
+{{if not .IsReseller}}                                    <a href="#add" @click.prevent="bulkMode = true" class="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">Adding more than one domain?</a>{{end}}
                                     <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">
                                         Add Domain
                                     </button>
@@ -736,7 +736,7 @@ function userSearch() {
                 {{$sslType := index . "ssl"}}
                 {{$sslProblem := index . "ssl_problem"}}
                 {{$sslExpires := index . "ssl_expires"}}
-                <a href="/domains/ssl/{{$domainURL}}" class="flex select-none items-center gap-2" title="{{if eq $sslProblem "expired"}}Certificate expired{{if $sslExpires}} on {{$sslExpires}}{{end}}{{else if eq $sslProblem "expiring"}}Certificate expires soon{{if $sslExpires}} on {{$sslExpires}}{{end}}{{else if eq $sslProblem "missing"}}SSL is configured but no certificate file was found on disk{{else if eq $sslProblem "unreadable"}}Certificate file could not be parsed{{else if $sslExpires}}Certificate valid until {{$sslExpires}}{{else if eq $sslType "automatic"}}Automatic SSL{{else if eq $sslType "custom"}}Custom SSL{{else}}No SSL{{end}} &mdash; click to view and manage">
+                <a href="{{if $root.IsReseller}}#{{else}}/domains/ssl/{{$domainURL}}{{end}}" class="flex select-none items-center gap-2" title="{{if eq $sslProblem "expired"}}Certificate expired{{if $sslExpires}} on {{$sslExpires}}{{end}}{{else if eq $sslProblem "expiring"}}Certificate expires soon{{if $sslExpires}} on {{$sslExpires}}{{end}}{{else if eq $sslProblem "missing"}}SSL is configured but no certificate file was found on disk{{else if eq $sslProblem "unreadable"}}Certificate file could not be parsed{{else if $sslExpires}}Certificate valid until {{$sslExpires}}{{else if eq $sslType "automatic"}}Automatic SSL{{else if eq $sslType "custom"}}Custom SSL{{else}}No SSL{{end}} &mdash; click to view and manage">
                     {{if or (eq $sslType "automatic") (eq $sslType "custom")}}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-check"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 21h-4.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v.5"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/>{{if or (eq $sslProblem "expired") (eq $sslProblem "missing")}}<path class="text-red-500 dark:text-red-500" d="M15 15l6 6"/><path class="text-red-500 dark:text-red-500" d="M21 15l-6 6"/>{{else if or (eq $sslProblem "expiring") (eq $sslProblem "unreadable")}}<path class="text-orange-500 dark:text-orange-500" d="M18 15v3"/><path class="text-orange-500 dark:text-orange-500" d="M18 21v.01"/>{{else}}<path class="text-emerald-500 dark:text-emerald-500" d="M15 19l2 2l4 -4"/>{{end}}</svg>
                     {{else}}
@@ -835,6 +835,7 @@ function userSearch() {
                     </li>
                     {{end}}
 
+                    {{if not $root.IsReseller}}
                     {{if ne $status "suspended"}}
                     <li class="flex">
                         <a href="/domains/ssl/{{$domainURL}}" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Manage SSL</a>
@@ -852,6 +853,7 @@ function userSearch() {
                     <li class="flex">
                         <a href="/domains/caddy/{{$domainURL}}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Caddyfile</a>
                     </li>
+                    {{end}}
 
                     {{if ne $status "suspended"}}
                     <li class="flex">
@@ -973,7 +975,7 @@ function userSearch() {
                                         {{range .Reasons}}<option value="{{.Slug}}">{{.Name}}</option>
                                         {{end}}
                                     </select>
-                                    <p class="mt-1 text-xs text-gray-500">The reason name is shown to the user in their panel. <a href="/domains/file-templates#suspension-reasons" class="underline">Manage reasons</a></p>
+                                    <p class="mt-1 text-xs text-gray-500">The reason name is shown to the user in their panel.{{if not .IsReseller}} <a href="/domains/file-templates#suspension-reasons" class="underline">Manage reasons</a>{{end}}</p>
                                 </div>
                                 <div>
                                     <label for="suspend_comment" class="block text-sm font-medium text-gray-900 dark:text-white">Comment <span class="font-normal text-gray-500">(optional, visible to the user)</span></label>
