@@ -71,6 +71,14 @@ Examples:
 
 --------------------------------------------------------------------------------
 
+Endpoint: /api/plans/resellers
+Description: list reseller plans, or create/update/delete one (updating reapplies it to resellers on the plan)
+Type: GET POST
+Examples:
+  curl -X GET http://localhost:2087/api/plans/resellers -H "Authorization: Bearer TOKEN_HERE"
+  curl -X POST http://localhost:2087/api/plans/resellers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"create","name":"reseller_basic","description":"10 accounts, 50 GB","max_accounts":10,"max_disk_blocks":51200000,"allowed_plans":[1,2]}'
+  curl -X POST http://localhost:2087/api/plans/resellers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"delete","name":"reseller_basic"}'
+
 Endpoint: /api/plans/<plan_id>
 Description: view, edit, or delete a specific plan by ID
 Type: GET PUT PATCH DELETE
@@ -558,11 +566,13 @@ Examples:
 --------------------------------------------------------------------------------
 
 Endpoint: /api/settings/resellers
-Description: list reseller accounts, or create/update/suspend/unsuspend/delete/rename/reset-password/disable-2fa/disable-passkeys
+Description: list reseller accounts, or create/update/change_plan/suspend/unsuspend/delete/rename/reset-password/disable-2fa/disable-passkeys
 Type: GET POST
 Examples:
   curl -X GET http://localhost:2087/api/settings/resellers -H "Authorization: Bearer TOKEN_HERE"
   curl -X POST http://localhost:2087/api/settings/resellers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"create","username":"reseller1","password":"secret123"}'
+  curl -X POST http://localhost:2087/api/settings/resellers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"create","username":"reseller1","password":"secret123","plan":"reseller_basic"}'
+  curl -X POST http://localhost:2087/api/settings/resellers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"change_plan","username":"reseller1","plan":"reseller_pro"}'
   curl -X POST http://localhost:2087/api/settings/resellers -H "Authorization: Bearer TOKEN_HERE" -H "Content-Type: application/json" -d '{"action":"update","username":"reseller1","allowed_plans":"1,2","max_accounts":"10","max_disk_blocks":"1000"}'
 
 --------------------------------------------------------------------------------

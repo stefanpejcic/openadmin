@@ -121,13 +121,7 @@ func UsersBulkActions(plans []paneldb.RowMap, ips []string) []webtemplates.BulkA
 
 // bulkActions lists the plans the admin or reseller behind r may assign, same as the /users page
 func (u *Users) bulkActions(r *http.Request) []webtemplates.BulkAction {
-	var allowed []int
-	if owner := u.resellerScope(r); owner != "" {
-		if ids, ok := paneldb.AllowedPlansForReseller(owner); ok {
-			allowed = ids
-		}
-	}
-	plans, _ := paneldb.GetAllPlans(u.MySQL, allowed)
+	plans, _ := paneldb.GetAllPlans(u.MySQL, resellerPlanScope(u.resellerScope(r)))
 	return u.withImunifyScan(r, UsersBulkActions(plans, serverPublicIPs()))
 }
 

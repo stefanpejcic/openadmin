@@ -507,6 +507,17 @@ func notesMapFor(users []paneldb.RowMap) map[string]string {
 	return out
 }
 
+// resellerPlanScope is the plan filter for GetAllPlans, nil for admins and an empty list for a reseller with no plans so they don't see every plan
+func resellerPlanScope(reseller string) []int {
+	if reseller == "" {
+		return nil
+	}
+	if ids, ok := paneldb.AllowedPlansForReseller(reseller); ok {
+		return ids
+	}
+	return []int{}
+}
+
 func (u *Users) resellerScope(r *http.Request) string {
 	currentUser := auth.CurrentUser(r)
 	if currentUser.Role == "reseller" {
@@ -599,14 +610,7 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 			row["passkeys"] = passkeys[fmt.Sprint(row["id"])]
 		}
 
-		var allowed []int
-		if resellerOwner != "" {
-			ids, ok := paneldb.AllowedPlansForReseller(resellerOwner)
-			if ok {
-				allowed = ids
-			}
-		}
-		plans, _ = paneldb.GetAllPlans(u.MySQL, allowed)
+		plans, _ = paneldb.GetAllPlans(u.MySQL, resellerPlanScope(resellerOwner))
 
 		if key, ok := usersSortKeys[sortCol]; ok {
 			sortRowMaps(users, key, strings.EqualFold(direction, "desc"))
@@ -1193,14 +1197,7 @@ func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resellerOwner := u.resellerScope(r)
-	var allowed []int
-	if resellerOwner != "" {
-		if ids, ok := paneldb.AllowedPlansForReseller(resellerOwner); ok {
-			allowed = ids
-		}
-	}
-	plans, err := paneldb.GetAllPlans(u.MySQL, allowed)
+	plans, err := paneldb.GetAllPlans(u.MySQL, resellerPlanScope(u.resellerScope(r)))
 	mysqlIsDown := err != nil
 
 	webServer, mysqlType, varnish := readUserCreateDefaultsEnv()

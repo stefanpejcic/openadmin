@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="{ showSection: {{if .ResellerPlans}}false{{else}}true{{end}}, searchQuery: '' }">
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Reseller Packages</h1>
+                    <h2 class="text-sm font-medium text-slate-500">Limit templates for reseller accounts, pick one when creating a reseller or from a billing system.</h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 sm:w-fit border-black bg-black text-white hover:bg-gray-800">Create New</a>
+                </div>
+            </div>
+
+            <div x-show="showSection" x-cloak class="mt-8 sm:mx-auto sm:max-w-3xl">
+                {{template "reseller_plan_form" .}}
+            </div>
+        </header>
+    </div>
+
+    <div class="space-y-3">
+        <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+                <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::-webkit-search-cancel-button]:hidden pl-8" placeholder="Search by package name..." type="search">
+                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" class="size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                </div>
+            </div>
+        </div>
+        <div class="relative overflow-auto min-h-[90vh]">
+            <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                <thead>
+                    <tr class="[&_th:first-child]:pl-4 [&_th:last-child]:pr-4 border-y border-gray-200 dark:border-gray-800">
+{{template "plan_sort_th" (dict "Show" "true" "Col" "name" "Label" "Name" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans/resellers")}}
+{{template "plan_sort_th" (dict "Show" "true" "Col" "max_accounts" "Label" "Max Accounts" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans/resellers")}}
+{{template "plan_sort_th" (dict "Show" "true" "Col" "max_disk" "Label" "Max Disk" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans/resellers")}}
+{{template "plan_sort_th" (dict "Show" "true" "Col" "user_packages" "Label" "User Packages" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans/resellers")}}
+{{template "plan_sort_th" (dict "Show" "true" "Col" "resellers" "Label" "Resellers" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans/resellers")}}
+                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Edit</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    {{$root := .}}
+                    {{range .ResellerPlans}}
+                    <tr x-show="searchQuery === '' || {{toJSON .Name}}.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:first-child]:pl-4 [&_td:last-child]:pr-4 hover:bg-gray-50 hover:dark:bg-gray-900">
+                        <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
+                            <a href="/plans/resellers/{{.Name}}" class="font-medium text-gray-900 dark:text-gray-50 hover:underline">{{.Name}}</a>
+                            {{if .Description}}<div class="text-xs text-gray-500 truncate" style="max-width: 20rem" title="{{.Description}}">{{.Description}}</div>{{end}}
+                        </td>
+                        <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 tabular-nums">{{if eq .MaxAccounts 0}}&infin;{{else}}{{.MaxAccounts}}{{end}}</td>
+                        <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 tabular-nums">{{if eq .MaxDiskBlocks 0}}&infin;{{else}}{{.MaxDiskGB}} GB{{end}}</td>
+                        <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 tabular-nums">{{len .AllowedPlans}}</td>
+                        <td class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">{{if .Resellers}}<span title="{{join .Resellers ", "}}">{{len .Resellers}}</span>{{else}}0{{end}}</td>
+                        <td class="px-4 py-2 text-sm text-right whitespace-nowrap text-gray-600 dark:text-gray-400">
+                            <button id="rp-{{.Name}}" data-dropdown-toggle="dropdown-rp-{{.Name}}" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 aspect-square p-1.5 hover:border hover:border-gray-300 hover:dark:border-gray-700 cursor-pointer" type="button">
+                                <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3"><path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></svg>
+                            </button>
+                            <div id="dropdown-rp-{{.Name}}" class="relative z-50 hidden rounded border p-1 shadow-xl shadow-black/[2.5%] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 min-w-40 text-left cursor-pointer">
+                                <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="rp-{{.Name}}">
+                                    <li class="flex"><a href="/plans/resellers/{{.Name}}" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900 text-gray-900 dark:text-gray-50">Edit</a></li>
+                                    {{if not .Resellers}}
+                                    <li class="flex">
+                                        <form method="POST" action="/plans/resellers" class="w-full" onsubmit="return confirm('Delete reseller package {{.Name}}?')">
+                                            <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="name" value="{{.Name}}">
+                                            <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900 text-red-600 dark:text-red-500">Delete</button>
+                                        </form>
+                                    </li>
+                                    {{end}}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr><td colspan="6" class="p-6 text-center text-sm text-gray-500">No reseller packages yet. New resellers get the limits from <code>reseller_template.json</code> until you create one.</td></tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

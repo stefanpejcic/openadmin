@@ -105,7 +105,8 @@ var modernAreas = []navArea{
 		match: func(c *Chrome, path string) bool { return hasAnyPrefix(path, "/plans", "/plan/", "/features") },
 		tabs: func(c *Chrome, path string) []NavLink {
 			return buildTabs(
-				tabSpec{true, "/plans", "User Packages", hasAnyPrefix(path, "/plans", "/plan/")},
+				tabSpec{true, "/plans", "User Packages", hasAnyPrefix(path, "/plans", "/plan/") && !strings.HasPrefix(path, "/plans/resellers")},
+				tabSpec{isEnterprise(c) && !c.IsReseller, "/plans/resellers", "Reseller Packages", strings.HasPrefix(path, "/plans/resellers")},
 				tabSpec{true, "/features", "Feature Manager", strings.HasPrefix(path, "/features")},
 			)
 		}},
@@ -267,6 +268,7 @@ var helpDocs = map[string]string{
 	"/resellers":                     "admin/accounts/resellers",
 	"/administrators":                "admin/accounts/administrators",
 	"/plans":                         "admin/plans/hosting_plans",
+	"/plans/resellers":               "admin/plans/reseller_packages",
 	"/features":                      "admin/plans/feature-manager",
 	"/domains":                       "admin/domains/domains",
 	"/domains/dns":                   "admin/domains/dns",

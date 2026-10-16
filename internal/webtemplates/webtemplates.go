@@ -23,6 +23,7 @@ var files embed.FS
 
 var funcMap = template.FuncMap{
 	"contains": strings.Contains,
+	"join":     strings.Join,
 	// jsStr escapes a value for embedding inside a single-quoted JS string
 	// literal within an HTML attribute (e.g. Alpine's x-show="'...'"). Go's
 	// html/template only applies JS escaping in contexts it recognizes as

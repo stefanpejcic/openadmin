@@ -213,11 +213,11 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 
 	if raw, err := os.ReadFile(resellerFile); err == nil {
 		var parsed struct {
-			MaxAccounts       interface{} `json:"max_accounts"`
-			CurrentAccounts   interface{} `json:"current_accounts"`
-			AllowedPlans      []string    `json:"allowed_plans"`
-			CurrentDiskBlocks interface{} `json:"current_disk_blocks"`
-			MaxDiskBlocks     interface{} `json:"max_disk_blocks"`
+			MaxAccounts       interface{}     `json:"max_accounts"`
+			CurrentAccounts   interface{}     `json:"current_accounts"`
+			AllowedPlans      paneldb.PlanIDs `json:"allowed_plans"`
+			CurrentDiskBlocks interface{}     `json:"current_disk_blocks"`
+			MaxDiskBlocks     interface{}     `json:"max_disk_blocks"`
 		}
 		if json.Unmarshal(raw, &parsed) == nil {
 			if parsed.MaxAccounts != nil {
@@ -226,8 +226,8 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 			if parsed.CurrentAccounts != nil {
 				currentAccounts = toDisplayString(parsed.CurrentAccounts)
 			}
-			if parsed.AllowedPlans != nil {
-				allowedPlans = parsed.AllowedPlans
+			for _, id := range parsed.AllowedPlans {
+				allowedPlans = append(allowedPlans, strconv.Itoa(id))
 			}
 			if parsed.CurrentDiskBlocks != nil {
 				currentDiskBlocks = parsed.CurrentDiskBlocks

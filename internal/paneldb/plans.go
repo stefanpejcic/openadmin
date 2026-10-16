@@ -5,12 +5,39 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
 // ResellerConfigDir is a var (not const) so tests can point it at a scratch
 // fixture instead of the real /etc path.
 var ResellerConfigDir = "/etc/openpanel/openadmin/resellers"
+
+// ResellerTemplatePath is copied for new resellers
+var ResellerTemplatePath = "/etc/openpanel/openadmin/config/reseller_template.json"
+
+// PlanIDs is a reseller's allowed_plans list, older opencli wrote the ids as strings so both forms are accepted
+type PlanIDs []int
+
+func (p *PlanIDs) UnmarshalJSON(b []byte) error {
+	var raw []interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	ids := PlanIDs{}
+	for _, v := range raw {
+		switch t := v.(type) {
+		case float64:
+			ids = append(ids, int(t))
+		case string:
+			if n, err := strconv.Atoi(strings.TrimSpace(t)); err == nil {
+				ids = append(ids, n)
+			}
+		}
+	}
+	*p = ids
+	return nil
+}
 
 // AllowedPlansForReseller reads <ResellerConfigDir>/<reseller>.json's
 // "allowed_plans" list. Returns (nil, false) if the reseller has no
@@ -23,12 +50,12 @@ func AllowedPlansForReseller(reseller string) ([]int, bool) {
 		return nil, false
 	}
 	var parsed struct {
-		AllowedPlans []int `json:"allowed_plans"`
+		AllowedPlans PlanIDs `json:"allowed_plans"`
 	}
 	if err := json.Unmarshal(raw, &parsed); err != nil || len(parsed.AllowedPlans) == 0 {
 		return nil, false
 	}
-	return parsed.AllowedPlans, true
+	return []int(parsed.AllowedPlans), true
 }
 
 // EnsurePlansSchema adds the plans.upsell_plan_id / plans.upsell_url
@@ -80,6 +107,9 @@ func plansColumns(db *sql.DB) (map[string]bool, error) {
 // COUNT(users.id) user_count, optionally restricted to allowedPlanIDs
 // (pass nil for an unrestricted/admin query).
 func GetAllPlansAndUserCount(db *sql.DB, allowedPlanIDs []int) ([]RowMap, error) {
+	if allowedPlanIDs != nil && len(allowedPlanIDs) == 0 {
+		return []RowMap{}, nil
+	}
 	query := `
 		SELECT
 			plans.*,
@@ -111,6 +141,9 @@ func GetAllPlansAndUserCount(db *sql.DB, allowedPlanIDs []int) ([]RowMap, error)
 // GetAllPlans returns plain plan rows (no user_count join), optionally
 // restricted to allowedPlanIDs.
 func GetAllPlans(db *sql.DB, allowedPlanIDs []int) ([]RowMap, error) {
+	if allowedPlanIDs != nil && len(allowedPlanIDs) == 0 {
+		return []RowMap{}, nil
+	}
 	query := "SELECT * FROM plans"
 	var args []interface{}
 	if allowedPlanIDs != nil {

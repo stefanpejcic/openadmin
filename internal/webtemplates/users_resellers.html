@@ -47,7 +47,7 @@
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <input type="hidden" name="action" value="create">
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+        <div class="grid grid-cols-1 gap-4 {{if .ResellerPlans}}sm:grid-cols-8{{else}}sm:grid-cols-6{{end}}">
             <div class="col-span-full sm:col-span-2"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="username">Username<span class="text-red-500 dark:text-red-500">*</span></label>
                 <div class="relative w-full mt-2"><input type="text" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="username" id="username" required="" autofocus="" placeholder="emma" minlength="6" maxlength="30" pattern="[\S]{6,30}" title="Password must be 6–30 characters long and can't contain spaces"></div>
             </div>
@@ -60,6 +60,16 @@
                 </div>
             </div>
 
+            {{if .ResellerPlans}}
+            <div class="col-span-full sm:col-span-2"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="reseller_plan">Reseller Package</label>
+                <div class="relative w-full mt-2">
+                    <select name="reseller_plan" id="reseller_plan" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <option value="">None (default limits)</option>
+                        {{range .ResellerPlans}}<option value="{{.Name}}">{{.Name}}</option>{{end}}
+                    </select>
+                </div>
+            </div>
+            {{end}}
 
             <div class="col-span-full sm:col-span-2 flex flex-col justify-end h-full">
             <div class="relative w-full mt-2">
@@ -155,6 +165,7 @@ document.getElementById("togglePassword").addEventListener("click", function() {
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 select-text">
                             {{.Username}}
+                            {{if .ResellerPlan}}<a href="/plans/resellers/{{.ResellerPlan}}" class="block text-xs text-gray-500 hover:underline" title="Reseller package">{{.ResellerPlan}}</a>{{end}}
                             </td>
 
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">

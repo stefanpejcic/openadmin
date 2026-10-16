@@ -170,17 +170,27 @@ func (u *Users) updateUserReseller(username, newReseller string) (ok bool, errMs
 			return false, "User '" + newReseller + "' is not a reseller or is not allowed to manage users."
 		}
 
-		if limits, limitsPath, ok := readResellerLimits(newReseller); ok {
-			var currentAccounts int
-			if err := u.MySQL.QueryRow(`SELECT COUNT(*) FROM users WHERE owner = ?`, newReseller).Scan(&currentAccounts); err != nil {
-				return false, "Failed to verify reseller account limit."
-			}
-			if maxAccounts, capped := resellerMaxAccounts(limits); capped && currentAccounts >= maxAccounts {
-				return false, fmt.Sprintf("Reseller '%s' has reached the maximum account limit (%d).", newReseller, maxAccounts)
-			}
-			limits["current_accounts"] = currentAccounts
-			writeResellerLimits(limitsPath, limits)
+		ensureResellerLimitsFile(newReseller)
+		limits, limitsPath, ok := readResellerLimits(newReseller)
+		if !ok {
+			return false, "Failed to read limits for reseller '" + newReseller + "'."
 		}
+		var currentAccounts int
+		if err := u.MySQL.QueryRow(`SELECT COUNT(*) FROM users WHERE owner = ?`, newReseller).Scan(&currentAccounts); err != nil {
+			return false, "Failed to verify reseller account limit."
+		}
+		if maxAccounts, capped := resellerMaxAccounts(limits); capped && currentAccounts >= maxAccounts {
+			return false, fmt.Sprintf("Reseller '%s' has reached the maximum account limit (%d).", newReseller, maxAccounts)
+		}
+		var planID int
+		if err := u.MySQL.QueryRow(`SELECT plan_id FROM users WHERE username = ?`, username).Scan(&planID); err == nil && !resellerPlanAllowed(newReseller, planID) {
+			return false, fmt.Sprintf("The user's plan is not assigned to reseller '%s'.", newReseller)
+		}
+		if resellerOverDisk(limits) {
+			return false, fmt.Sprintf("Reseller '%s' has reached the maximum disk usage limit.", newReseller)
+		}
+		limits["current_accounts"] = currentAccounts
+		writeResellerLimits(limitsPath, limits)
 	}
 
 	var err error
@@ -203,6 +213,47 @@ func (u *Users) updateUserReseller(username, newReseller string) (ok bool, errMs
 		}
 	}
 	return true, ""
+}
+
+// ensureResellerLimitsFile creates a missing limits file from the template, same as opencli does
+func ensureResellerLimitsFile(reseller string) {
+	path := paneldb.ResellerConfigDir + "/" + reseller + ".json"
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
+	raw, err := os.ReadFile(paneldb.ResellerTemplatePath)
+	if err != nil {
+		raw = []byte(`{"max_accounts":0,"current_accounts":0,"allowed_plans":[],"max_disk_blocks":0,"current_disk_blocks":0}`)
+	}
+	os.MkdirAll(paneldb.ResellerConfigDir, 0755)
+	os.WriteFile(path, raw, 0644)
+}
+
+func resellerPlanAllowed(reseller string, planID int) bool {
+	ids, _ := paneldb.AllowedPlansForReseller(reseller)
+	for _, id := range ids {
+		if id == planID {
+			return true
+		}
+	}
+	return false
+}
+
+// resellerOverDisk is the soft disk limit, 0 or missing max_disk_blocks means unlimited
+func resellerOverDisk(limits map[string]interface{}) bool {
+	limit := limitNumber(limits["max_disk_blocks"])
+	return limit > 0 && limitNumber(limits["current_disk_blocks"]) >= limit
+}
+
+func limitNumber(v interface{}) float64 {
+	switch t := v.(type) {
+	case float64:
+		return t
+	case string:
+		n, _ := strconv.ParseFloat(strings.TrimSpace(t), 64)
+		return n
+	}
+	return 0
 }
 
 func readResellerLimits(reseller string) (limits map[string]interface{}, path string, ok bool) {

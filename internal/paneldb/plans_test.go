@@ -112,3 +112,16 @@ func TestAllowedPlansForReseller(t *testing.T) {
 		t.Fatal("expected empty allowed_plans to be treated as 'no plans allowed'")
 	}
 }
+
+func TestAllowedPlansForResellerAcceptsStringIDs(t *testing.T) {
+	dir := t.TempDir()
+	origDir := ResellerConfigDir
+	ResellerConfigDir = dir
+	defer func() { ResellerConfigDir = origDir }()
+
+	os.WriteFile(dir+"/res1.json", []byte(`{"allowed_plans":["1", 2, "x"]}`), 0644)
+	ids, ok := AllowedPlansForReseller("res1")
+	if !ok || len(ids) != 2 || ids[0] != 1 || ids[1] != 2 {
+		t.Fatalf("expected [1 2], got %v ok=%v", ids, ok)
+	}
+}

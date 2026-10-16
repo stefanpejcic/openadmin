@@ -256,6 +256,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	updates := &handlers.Updates{Sessions: sessions, PanelVersion: d.PanelVersion}
 	features := &handlers.Features{MySQL: d.MySQL, Sessions: sessions}
 	resellers := &handlers.Resellers{DB: d.AdminDB, MySQL: d.MySQL, Sessions: sessions}
+	resellerPlans := &handlers.ResellerPlans{Resellers: resellers}
 	openpanelSettings := &handlers.OpenpanelSettings{Sessions: sessions, LicenseChecker: d.LicenseChecker, MySQL: d.MySQL}
 	defaultsSettings := &handlers.Defaults{MySQL: d.MySQL, Sessions: sessions}
 	generalStatic := &handlers.GeneralStatic{Static: static.Files}
@@ -413,6 +414,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/domains/vhost-templates", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomainFiles.ServeVhostTemplates)))
 	mux.HandleFunc("POST /api/domains/vhost-templates", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiDomainFiles.ServeVhostTemplates)))
 
+	mux.HandleFunc("GET /api/plans/resellers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(handlers.ServeAPIResellerPlans)))
+	mux.HandleFunc("POST /api/plans/resellers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(handlers.ServeAPIResellerPlans)))
 	mux.HandleFunc("GET /api/plans", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeList)))
 	mux.HandleFunc("POST /api/plans", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeList)))
 	mux.HandleFunc("GET /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeDetail)))
@@ -599,6 +602,9 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux.HandleFunc("GET /plans", auth.RequireLogin(sessions, authOpts, plans.ServeList))
 	mux.HandleFunc("POST /plans", auth.RequireLogin(sessions, authOpts, plans.ServeList))
+	mux.HandleFunc("GET /plans/resellers", auth.RequireAdmin(sessions, authOpts, resellerPlans.ServeList))
+	mux.HandleFunc("POST /plans/resellers", auth.RequireAdmin(sessions, authOpts, resellerPlans.ServeList))
+	mux.HandleFunc("GET /plans/resellers/{name}", auth.RequireAdmin(sessions, authOpts, resellerPlans.ServeEdit))
 	mux.HandleFunc("GET /plans/new", auth.RequireLogin(sessions, authOpts, plans.ServeNewForm))
 	mux.HandleFunc("POST /plans/new", auth.RequireLogin(sessions, authOpts, plans.HandleCreate))
 	mux.HandleFunc("GET /plans/{plan_id}", auth.RequireLogin(sessions, authOpts, plans.ServeEdit))

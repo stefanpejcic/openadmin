@@ -23,7 +23,7 @@ type APISettingsResellers struct {
 var apiResellerActions = map[string]bool{
 	"create": true, "reset_password": true, "rename_user": true, "update": true,
 	"suspend": true, "unsuspend": true, "delete": true, "disable_2fa": true, "disable_passkeys": true,
-	"update_branding": true,
+	"update_branding": true, "change_plan": true,
 }
 
 type apiResellerActionBody struct {
@@ -36,6 +36,7 @@ type apiResellerActionBody struct {
 	MaxAccounts   string `json:"max_accounts"`
 	MaxDiskBlocks string `json:"max_disk_blocks"`
 	LogoURL       string `json:"logo_url"`
+	Plan          string `json:"plan"`
 }
 
 // ServeSettingsResellers handles GET/POST /api/settings/resellers. Wrap
@@ -87,6 +88,7 @@ func (a *APISettingsResellers) ServeSettingsResellers(w http.ResponseWriter, r *
 			MaxDiskBlocks:     rd.MaxDiskBlocks,
 			AllowedPlans:      rd.AllowedPlans,
 			LogoURL:           rd.LogoURL,
+			ResellerPlan:      rd.ResellerPlan,
 		})
 	}
 	writeJSON(w, rows)
@@ -154,9 +156,20 @@ func (a *APISettingsResellers) handlePost(w http.ResponseWriter, r *http.Request
 			message = "Resellers are disabled. Enable them first via POST /api/settings/resellers/enabled."
 			break
 		}
+		args := []string{"opencli", "admin", "new", username, body.Password, "--reseller"}
+		if body.Plan != "" {
+			if _, exists := readResellerPlan(body.Plan); !exists {
+				message = "Reseller package '" + body.Plan + "' does not exist."
+				break
+			}
+			args = append(args, "--plan="+body.Plan)
+		}
 		var out string
-		ok, out = runOpenCLI(adminCommandError, "opencli", "admin", "new", username, body.Password, "--reseller")
+		ok, out = runOpenCLI(adminCommandError, args...)
 		message = opencliResultMessage(ok, out)
+
+	case "change_plan":
+		ok, message = applyResellerPlan(username, body.Plan)
 
 	case "rename_user":
 		var out string
