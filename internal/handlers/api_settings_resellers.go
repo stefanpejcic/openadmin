@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"openadmin/internal/admindb"
-	"openadmin/internal/auth"
 	"openadmin/internal/config"
 )
 
@@ -150,16 +149,14 @@ func (a *APISettingsResellers) handlePost(w http.ResponseWriter, r *http.Request
 		}
 
 	case "create":
-		// Unlike administrators' "create" action, reseller account
-		// creation isn't gated by license tier.
-		if hash, err := auth.GeneratePasswordHash(body.Password); err != nil {
-			message = "Failed creating a new reseller user: " + username
-		} else if err := a.DB.CreateUser(username, hash, "reseller"); err != nil {
-			message = "Failed creating a new reseller user: " + username
-		} else {
-			ok = true
-			message = "Successfully created a new reseller user: " + username
+		// same path as the GUI so the reseller gets its limits file from the template
+		if !resellersEnabled() {
+			message = "Resellers are disabled. Enable them first via POST /api/settings/resellers/enabled."
+			break
 		}
+		var out string
+		ok, out = runOpenCLI(adminCommandError, "opencli", "admin", "new", username, body.Password, "--reseller")
+		message = opencliResultMessage(ok, out)
 
 	case "rename_user":
 		var out string
