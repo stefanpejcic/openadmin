@@ -62,3 +62,95 @@ fetch('/json/user_activity_status')
     });
   })
   .catch(error => console.error('Error fetching user activity status:', error));
+
+
+
+// ROW TOOLTIPS, one delegated listener instead of a flowbite tooltip per row element
+(function () {
+  const tip = document.getElementById('row-tooltip');
+  if (!tip) return;
+  let current = null;
+  function show(el) {
+    current = el;
+    tip.textContent = el.dataset.tip;
+    tip.classList.remove('invisible', 'opacity-0');
+    const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    let x, y;
+    switch (el.dataset.tipPlacement) {
+      case 'left': x = r.left - w - 8; y = r.top + (r.height - h) / 2; break;
+      case 'right': x = r.right + 8; y = r.top + (r.height - h) / 2; break;
+      default: x = r.left + (r.width - w) / 2; y = r.top - h - 8;
+    }
+    tip.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px';
+    tip.style.top = Math.max(8, y) + 'px';
+  }
+  function hide() {
+    current = null;
+    tip.classList.add('invisible', 'opacity-0');
+  }
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest && e.target.closest('[data-tip]');
+    if (el !== current) el ? show(el) : hide();
+  });
+  document.addEventListener('focusin', e => {
+    const el = e.target.closest && e.target.closest('[data-tip]');
+    if (el) show(el);
+  });
+  document.addEventListener('focusout', hide);
+  addEventListener('scroll', hide, true);
+})();
+
+
+
+// PRIVATE NOTES, the editor is only built when a row's edit button is clicked
+(function () {
+  const tpl = document.getElementById('note-editor-tpl');
+  if (!tpl) return;
+
+  function close(cell) {
+    cell.querySelector('.note-editor')?.remove();
+    cell.querySelector('.note-view').classList.remove('hidden');
+  }
+
+  function open(cell) {
+    const view = cell.querySelector('.note-view');
+    const text = cell.querySelector('.note-text');
+    const editor = tpl.content.firstElementChild.cloneNode(true);
+    const input = editor.querySelector('.note-input');
+    const save = editor.querySelector('.note-save');
+    input.value = text.title;
+    view.classList.add('hidden');
+    cell.appendChild(editor);
+    input.focus();
+
+    save.addEventListener('click', () => {
+      const note = input.value;
+      save.disabled = true;
+      fetch('/get_user_notes/' + cell.dataset.noteUser, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+        body: JSON.stringify({ notes: note })
+      }).then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+          save.disabled = false;
+          if (ok) {
+            text.textContent = text.title = note;
+            close(cell);
+          }
+          const message = ok ? (note.trim() === '' ? 'Note deleted successfully.' : (data.message || 'Saved successfully.')) : (data.error || 'Save failed.');
+          showToast(message, ok ? 'success' : 'error');
+        })
+        .catch(() => { save.disabled = false; showToast('Error saving private note.', 'error'); });
+    });
+    editor.querySelector('.note-cancel').addEventListener('click', () => close(cell));
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') save.click();
+      else if (e.key === 'Escape') close(cell);
+    });
+  }
+
+  document.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('.note-edit');
+    if (btn) open(btn.closest('td[data-note-user]'));
+  });
+})();

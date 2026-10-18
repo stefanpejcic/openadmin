@@ -9,10 +9,12 @@ package handlers
 
 import (
 	"bufio"
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -424,19 +426,41 @@ func readDiskUsageFor(username string) (diskUsage, bool) {
 	return d, ok
 }
 
+// lastLineOf reads backwards from the end of path, resource_usage.txt keeps every snapshot so reading it whole gets slow
+func lastLineOf(path string) []byte {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil
+	}
+	size := info.Size()
+	for chunk := int64(8 << 10); ; chunk *= 4 {
+		if chunk > size {
+			chunk = size
+		}
+		buf := make([]byte, chunk)
+		if _, err := f.ReadAt(buf, size-chunk); err != nil && err != io.EOF {
+			return nil
+		}
+		buf = bytes.TrimRight(buf, "\n")
+		if i := bytes.LastIndexByte(buf, '\n'); i >= 0 {
+			return buf[i+1:]
+		}
+		if chunk == size {
+			return buf
+		}
+	}
+}
+
 // readUsageStatsFor reads the last JSON line of a single user's
 // resource_usage.txt.
 func readUsageStatsFor(context string) (json.RawMessage, bool) {
-	raw, err := os.ReadFile("/home/" + context + "/resource_usage.txt")
-	if err != nil {
-		return nil, false
-	}
-	lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
-	if len(lines) == 0 || lines[len(lines)-1] == "" {
-		return nil, false
-	}
-	last := lines[len(lines)-1]
-	if !json.Valid([]byte(last)) {
+	last := lastLineOf("/home/" + context + "/resource_usage.txt")
+	if len(last) == 0 || !json.Valid(last) {
 		return nil, false
 	}
 	return json.RawMessage(last), true
@@ -456,16 +480,12 @@ func readUsageStatsAll() map[string]map[string]interface{} {
 		if !e.IsDir() {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join("/home", e.Name(), "resource_usage.txt"))
-		if err != nil {
-			continue
-		}
-		lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
-		if len(lines) == 0 || lines[len(lines)-1] == "" {
+		last := lastLineOf(filepath.Join("/home", e.Name(), "resource_usage.txt"))
+		if len(last) == 0 {
 			continue
 		}
 		var parsed map[string]interface{}
-		if json.Unmarshal([]byte(lines[len(lines)-1]), &parsed) != nil {
+		if json.Unmarshal(last, &parsed) != nil {
 			continue
 		}
 		if user, ok := parsed["user"].(string); ok && user != "" {
