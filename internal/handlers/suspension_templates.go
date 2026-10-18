@@ -114,13 +114,20 @@ type domainSuspension struct {
 
 // readDomainSuspension reads the header lines opencli domains-suspend writes above the caddy block
 func readDomainSuspension(domainURL string) domainSuspension {
-	var s domainSuspension
 	f, err := os.Open(filepath.Join(CaddyDomainsConfDir, domainURL+".conf"))
 	if err != nil {
-		return s
+		return domainSuspension{}
 	}
 	defer f.Close()
-	sc := bufio.NewScanner(f)
+	return scanDomainSuspension(bufio.NewScanner(f))
+}
+
+func parseDomainSuspension(content string) domainSuspension {
+	return scanDomainSuspension(bufio.NewScanner(strings.NewReader(content)))
+}
+
+func scanDomainSuspension(sc *bufio.Scanner) domainSuspension {
+	var s domainSuspension
 	for sc.Scan() {
 		line := sc.Text()
 		if !strings.HasPrefix(line, "# ") {

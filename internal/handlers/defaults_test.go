@@ -198,6 +198,8 @@ func TestServeDefaultsGetJSON(t *testing.T) {
 
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -223,6 +225,8 @@ func TestServeDefaultsGetPropagatesNonTimeoutPHPWatchError(t *testing.T) {
 
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return nil, &ftpStubError{"connection refused"} }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -245,6 +249,8 @@ func TestServeDefaultsPostRewritesEnvAndTogglesVarnish(t *testing.T) {
 
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -325,6 +331,8 @@ NGINX_ENABLED="true"
 			"8.2": {StatusLabel: "Latest", IsLatestVersion: true, ActiveSupportEndDate: "2026-12-31"},
 		}, nil
 	}
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -374,6 +382,8 @@ MYSQL_TYPE="mariadb"
 
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return nil, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -602,6 +612,8 @@ func TestServeDefaultsRendersRecommendations(t *testing.T) {
 	os.WriteFile(DefaultsEnvPath, []byte("WEB_SERVER=\"nginx\"\nMYSQL_TYPE=\"mysql\"\nNGINX_CPU=\"0.5\"\nNGINX_RAM=\"0.5G\"\n"), 0644)
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	origSites := defaultsSiteTypesRun
 	defaultsSiteTypesRun = func(_ *sql.DB) map[string]int { return map[string]int{"WordPress": 5} }
 	origPlans := defaultsPlanMinimumsRun
@@ -645,5 +657,34 @@ func TestLatestPHPOption(t *testing.T) {
 	}
 	if got := latestPHPOption(opts[2:], data); got != "" {
 		t.Fatalf("expected empty when the latest version isn't installed, got %q", got)
+	}
+}
+
+func TestPHPWatchStatusesCachesAndKeepsLastGoodList(t *testing.T) {
+	origPHP := defaultsPHPWatchRun
+	calls := 0
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) {
+		calls++
+		return map[string]phpVersionStatus{"8.4": {IsLatestVersion: true}}, nil
+	}
+	resetPHPWatchCache()
+	t.Cleanup(func() { defaultsPHPWatchRun = origPHP; resetPHPWatchCache() })
+
+	for i := 0; i < 3; i++ {
+		if got, err := phpWatchStatuses(); err != nil || !got["8.4"].IsLatestVersion {
+			t.Fatalf("got %v, %v", got, err)
+		}
+	}
+	if calls != 1 {
+		t.Fatalf("expected one fetch while fresh, got %d", calls)
+	}
+
+	// a failed refresh keeps serving the list it already had
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return nil, &ftpStubError{"down"} }
+	if got, err := refreshPHPWatch(); err != nil || !got["8.4"].IsLatestVersion {
+		t.Fatalf("expected the last good list, got %v, %v", got, err)
+	}
+	if got, err := phpWatchStatuses(); err != nil || !got["8.4"].IsLatestVersion {
+		t.Fatalf("expected the last good list, got %v, %v", got, err)
 	}
 }

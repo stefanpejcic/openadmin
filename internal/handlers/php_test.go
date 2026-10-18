@@ -37,6 +37,8 @@ func withScratchPHPPaths(t *testing.T) {
 	// keeps the missing-version check off the network
 	origWatch := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() {
 		phpOptionsPath = origOptions
 		phpIniDir = origIniDir
@@ -467,6 +469,8 @@ func TestMissingPHPVersions(t *testing.T) {
 			"8.6": {IsFutureVersion: true},
 		}, nil
 	}
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	if got := strings.Join(missingPHPVersions([]string{"8.3", "7.4"}), ","); got != "8.5,8.4" {
 		t.Fatalf("missingPHPVersions = %s, want 8.5,8.4", got)
 	}

@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/csrf"
@@ -204,6 +205,63 @@ var defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) {
 	}
 	return out, nil
 }
+
+var (
+	phpWatchMu       sync.Mutex
+	phpWatchData     map[string]phpVersionStatus
+	phpWatchErr      error
+	phpWatchFetched  time.Time
+	phpWatchFetching bool
+)
+
+const (
+	phpWatchTTL      = 6 * time.Hour
+	phpWatchRetryTTL = 5 * time.Minute
+)
+
+// phpWatchStatuses serves the cached php.watch list and refreshes it in the background once stale, only the very first call waits on the fetch
+func phpWatchStatuses() (map[string]phpVersionStatus, error) {
+	phpWatchMu.Lock()
+	if phpWatchFetched.IsZero() {
+		phpWatchMu.Unlock()
+		return refreshPHPWatch()
+	}
+	ttl := phpWatchTTL
+	if phpWatchErr != nil || len(phpWatchData) == 0 {
+		ttl = phpWatchRetryTTL
+	}
+	if time.Since(phpWatchFetched) > ttl && !phpWatchFetching {
+		phpWatchFetching = true
+		go refreshPHPWatch()
+	}
+	data, err := phpWatchData, phpWatchErr
+	phpWatchMu.Unlock()
+	return data, err
+}
+
+// refreshPHPWatch keeps the last good list when a refetch fails
+func refreshPHPWatch() (map[string]phpVersionStatus, error) {
+	data, err := defaultsPHPWatchRun()
+	phpWatchMu.Lock()
+	defer phpWatchMu.Unlock()
+	phpWatchFetching = false
+	phpWatchFetched = time.Now()
+	if (err != nil || len(data) == 0) && len(phpWatchData) > 0 {
+		return phpWatchData, nil
+	}
+	phpWatchData, phpWatchErr = data, err
+	return data, err
+}
+
+// resetPHPWatchCache is for tests that swap defaultsPHPWatchRun
+func resetPHPWatchCache() {
+	phpWatchMu.Lock()
+	defer phpWatchMu.Unlock()
+	phpWatchData, phpWatchErr, phpWatchFetched, phpWatchFetching = nil, nil, time.Time{}, false
+}
+
+// WarmPHPWatch fetches the php.watch list at startup so no page waits on it
+func WarmPHPWatch() { go phpWatchStatuses() }
 
 // --- normalize_ram ---
 
@@ -591,7 +649,7 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defaults := readDefaultsEnvGroups()
-	phpVersionsData, err := defaultsPHPWatchRun()
+	phpVersionsData, err := phpWatchStatuses()
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

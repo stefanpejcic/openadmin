@@ -18,13 +18,10 @@ import (
 	"openadmin/internal/paneldb"
 )
 
-// phpVersionsEOLFetch is protected by a package-level sync.Once, so it can
-// only be meaningfully stubbed once for the whole test binary. Setting it
-// here in init() guarantees no test in this package ever makes a real
-// network call to api.openpanel.com, regardless of test run order.
+// no test in this package should hit api.openpanel.com, the php.watch cache is preloaded with a stub
 func init() {
-	phpVersionsEOLFetch = func() map[string]interface{} {
-		return map[string]interface{}{"8.2": map[string]interface{}{"statusLabel": "stub"}}
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) {
+		return map[string]phpVersionStatus{"8.2": {StatusLabel: "stub"}}, nil
 	}
 }
 
@@ -137,27 +134,25 @@ func TestReadCaddyFileForDomainDefaultsWhenMissing(t *testing.T) {
 	}
 }
 
-func TestAnnotateDomainsWithWebserverInfoQueriesContextOncePerOwner(t *testing.T) {
+func TestAnnotateDomainsWithWebserverInfoQueriesContextsOnce(t *testing.T) {
 	mysqlDB, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer mysqlDB.Close()
-	// Two domains owned by the same "alice" -- the context lookup should
-	// only run once and be reused for the second domain, since the
-	// webserver config is per user, not per domain.
-	mock.ExpectQuery(`SELECT server FROM users WHERE username = \?`).
-		WithArgs("alice").
-		WillReturnRows(sqlmock.NewRows([]string{"server"}).AddRow("alice-ctx"))
+	// every owner's context comes from one query, not one per owner
+	mock.ExpectQuery(`SELECT username, server FROM users`).
+		WillReturnRows(sqlmock.NewRows([]string{"username", "server"}).AddRow("alice", "alice-ctx").AddRow("bob", "bob-ctx"))
 
 	domains := []paneldb.RowMap{
 		{"domain_url": "one.example.com", "username": "alice"},
 		{"domain_url": "two.example.com", "username": "alice"},
+		{"domain_url": "three.example.com", "username": "bob"},
 	}
 	annotateDomainsWithWebserverInfo(mysqlDB, domains)
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatalf("expected exactly one context lookup for the shared owner, got: %v", err)
+		t.Fatalf("expected a single contexts query, got: %v", err)
 	}
 	for _, dom := range domains {
 		if _, ok := dom["webserver"]; !ok {
@@ -365,5 +360,37 @@ func TestValidateDocroot(t *testing.T) {
 		if validateDocroot(d) == "" {
 			t.Errorf("expected %q to be rejected", d)
 		}
+	}
+}
+
+func TestReadDomainConfMatchesTheSingleFileHelpers(t *testing.T) {
+	dir := withScratchCaddyDomainsDir(t)
+	os.WriteFile(dir+"/example.com.conf", []byte(`# suspended_by: admin
+# reason: abuse
+# comment: spam
+http://example.com {
+  tls { on_demand }
+  import cloudflare-only
+  import ratelimit_ip 10
+  SecRuleEngine On
+  file_server
+}
+`), 0644)
+
+	c := readDomainConf("example.com")
+	ssl, status, waf, hsts, cf := readCaddyFileForDomain("example.com")
+	if c.SSL != ssl || c.Status != status || c.WAF != waf || c.HSTS != hsts || c.Cloudflare != cf {
+		t.Fatalf("flags differ: %+v vs %s %s %s %s %v", c, ssl, status, waf, hsts, cf)
+	}
+	if c.RateLimit != rateLimitModeForDomain("example.com") || c.RateLimit != "custom" {
+		t.Fatalf("ratelimit = %q", c.RateLimit)
+	}
+	if c.Suspension != readDomainSuspension("example.com") || c.Suspension.Reason != "abuse" {
+		t.Fatalf("suspension = %+v", c.Suspension)
+	}
+
+	missing := readDomainConf("nope.com")
+	if missing.SSL != "none" || missing.Status != "suspended" || missing.RateLimit != "off" {
+		t.Fatalf("unexpected defaults %+v", missing)
 	}
 }

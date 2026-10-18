@@ -233,6 +233,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	rateLimit := &handlers.DomainsRateLimit{MySQL: d.MySQL, Sessions: sessions}
 	websites := &handlers.Websites{MySQL: d.MySQL, Sessions: sessions}
 	handlers.WarmWebsitesCaches()
+	handlers.WarmPHPWatch()
 	dnsZoneEditor := &handlers.DNSZoneEditor{MySQL: d.MySQL, Sessions: sessions}
 	caddyFileEditor := &handlers.CaddyFileEditor{MySQL: d.MySQL, Sessions: sessions}
 	vhostFileEditor := &handlers.VHostFileEditor{MySQL: d.MySQL, Sessions: sessions}

@@ -231,27 +231,61 @@ func checkDomainSSLHealth(domain, sslType string, idx caddyTLSIndex) domainSSLHe
 		return domainSSLHealth{}
 	}
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return domainSSLHealth{Status: "missing"}
-	}
-
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return domainSSLHealth{Status: "unreadable"}
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return domainSSLHealth{Status: "unreadable"}
+	notAfter, status := certNotAfter(path)
+	if status != "" {
+		return domainSSLHealth{Status: status}
 	}
 
 	switch {
-	case time.Now().After(cert.NotAfter):
-		return domainSSLHealth{Status: "expired", NotAfter: cert.NotAfter}
-	case time.Until(cert.NotAfter) <= sslExpiringSoonWindow:
-		return domainSSLHealth{Status: "expiring", NotAfter: cert.NotAfter}
+	case time.Now().After(notAfter):
+		return domainSSLHealth{Status: "expired", NotAfter: notAfter}
+	case time.Until(notAfter) <= sslExpiringSoonWindow:
+		return domainSSLHealth{Status: "expiring", NotAfter: notAfter}
 	default:
-		return domainSSLHealth{NotAfter: cert.NotAfter}
+		return domainSSLHealth{NotAfter: notAfter}
 	}
+}
+
+type certCacheEntry struct {
+	modTime  time.Time
+	size     int64
+	notAfter time.Time
+	status   string
+}
+
+var (
+	certCacheMu sync.Mutex
+	certCache   = map[string]certCacheEntry{}
+)
+
+// certNotAfter parses the leaf cert's expiry, cached until the file's mtime or size changes; status is "missing" or "unreadable" on failure
+func certNotAfter(path string) (time.Time, string) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, "missing"
+	}
+	certCacheMu.Lock()
+	e, ok := certCache[path]
+	certCacheMu.Unlock()
+	if ok && e.modTime.Equal(info.ModTime()) && e.size == info.Size() {
+		return e.notAfter, e.status
+	}
+
+	e = certCacheEntry{modTime: info.ModTime(), size: info.Size()}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return time.Time{}, "missing"
+	}
+	if block, _ := pem.Decode(data); block == nil {
+		e.status = "unreadable"
+	} else if cert, err := x509.ParseCertificate(block.Bytes); err != nil {
+		e.status = "unreadable"
+	} else {
+		e.notAfter = cert.NotAfter
+	}
+
+	certCacheMu.Lock()
+	certCache[path] = e
+	certCacheMu.Unlock()
+	return e.notAfter, e.status
 }

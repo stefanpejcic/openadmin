@@ -170,7 +170,11 @@ func rateLimitModeForDomain(domain string) string {
 	if err != nil {
 		return "off"
 	}
-	for _, line := range strings.Split(string(content), "\n") {
+	return parseRateLimitMode(string(content))
+}
+
+func parseRateLimitMode(content string) string {
+	for _, line := range strings.Split(content, "\n") {
 		f := strings.Fields(line)
 		if len(f) < 2 || f[0] != "import" {
 			continue

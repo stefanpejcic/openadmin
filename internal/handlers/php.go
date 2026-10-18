@@ -247,7 +247,7 @@ func writeJSONStatus(w http.ResponseWriter, status int, v interface{}) {
 
 // missingPHPVersions lists released, still supported PHP versions with no ini file here, newest first
 func missingPHPVersions(installed []string) []string {
-	statuses, err := defaultsPHPWatchRun()
+	statuses, err := phpWatchStatuses()
 	if err != nil {
 		return nil
 	}

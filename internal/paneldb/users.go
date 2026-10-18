@@ -103,3 +103,24 @@ func DeleteUserPasskeys(db *sql.DB, username string) (int64, error) {
 	}
 	return res.RowsAffected()
 }
+
+// UserContexts maps every username to its server/context column in one query
+func UserContexts(db *sql.DB) map[string]string {
+	out := map[string]string{}
+	if db == nil {
+		return out
+	}
+	rows, err := db.Query(`SELECT username, server FROM users`)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var u string
+		var ctx sql.NullString
+		if rows.Scan(&u, &ctx) == nil {
+			out[u] = ctx.String
+		}
+	}
+	return out
+}

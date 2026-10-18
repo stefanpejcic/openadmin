@@ -29,7 +29,7 @@ func (d *APISettingsDefaults) ServeSettingsDefaults(w http.ResponseWriter, r *ht
 		return
 	}
 
-	phpVersionsData, err := defaultsPHPWatchRun()
+	phpVersionsData, err := phpWatchStatuses()
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Internal Server Error")
 		return

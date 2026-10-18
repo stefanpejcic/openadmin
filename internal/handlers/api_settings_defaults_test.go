@@ -16,6 +16,8 @@ func TestAPISettingsDefaultsGetReturnsGroupsAndServices(t *testing.T) {
 	withScratchDefaultsPaths(t)
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	os.WriteFile(DefaultsEnvPath, []byte("VARNISH=\"0\"\n"), 0644)
@@ -41,6 +43,8 @@ func TestAPISettingsDefaultsGetPHPWatchErrorReturns500(t *testing.T) {
 	withScratchDefaultsPaths(t)
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return nil, &ftpStubError{"boom"} }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &APISettingsDefaults{}

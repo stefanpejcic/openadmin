@@ -276,3 +276,24 @@ func TestDomainCertPathNoneReturnsEmpty(t *testing.T) {
 		t.Fatalf("expected empty path for ssl type none, got %q", got)
 	}
 }
+
+func TestCheckDomainSSLHealthReparsesWhenCertChanges(t *testing.T) {
+	dir := withScratchSSLBaseDir(t)
+	path := filepath.Join(dir, "acme-v02.api.letsencrypt.org-directory", "example.com", "example.com.crt")
+	writeTestCert(t, path, time.Now().Add(-24*time.Hour))
+	if got := checkDomainSSLHealth("example.com", "automatic", caddyTLSIndex{}).Status; got != "expired" {
+		t.Fatalf("expected expired, got %q", got)
+	}
+
+	// a renewed cert must not be served from the cache
+	writeTestCert(t, path, time.Now().Add(90*24*time.Hour))
+	os.Chtimes(path, time.Now(), time.Now().Add(time.Minute))
+	if got := checkDomainSSLHealth("example.com", "automatic", caddyTLSIndex{}).Status; got != "" {
+		t.Fatalf("expected a fresh cert after renewal, got %q", got)
+	}
+
+	os.Remove(path)
+	if got := checkDomainSSLHealth("example.com", "automatic", caddyTLSIndex{}).Status; got != "missing" {
+		t.Fatalf("expected missing after removal, got %q", got)
+	}
+}

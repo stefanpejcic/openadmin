@@ -202,17 +202,17 @@ func (d *Domains) ownerPHPVersions(rows []paneldb.RowMap) []string {
 			return nil
 		}
 	}
+	contexts := paneldb.UserContexts(d.MySQL)
 	seenOwner, seen := map[string]bool{}, map[string]bool{}
 	var versions []string
 	for _, row := range rows {
 		owner, _ := row["username"].(string)
-		owner = stripSuspendedPrefix(owner)
 		if owner == "" || seenOwner[owner] {
 			continue
 		}
 		seenOwner[owner] = true
-		context, err := queryContextByUsername(d.MySQL, owner)
-		if err != nil || context == "" {
+		context := contexts[owner]
+		if context == "" {
 			continue
 		}
 		list, _ := cachedAvailablePHPVersions(context)

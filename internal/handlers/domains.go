@@ -9,14 +9,11 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -39,13 +36,34 @@ var CaddyDomainsConfDir = "/etc/openpanel/caddy/domains"
 // readCaddyFileForDomain does a substring-sniffing read of a domain's
 // Caddy config, not a real parse.
 func readCaddyFileForDomain(domainURL string) (ssl, status, waf, hsts string, cloudflare bool) {
-	ssl, status, waf, hsts = "none", "suspended", "none", "off"
-
 	content, err := os.ReadFile(CaddyDomainsConfDir + "/" + domainURL + ".conf")
 	if err != nil {
-		return ssl, status, waf, hsts, false
+		return "none", "suspended", "none", "off", false
+	}
+	return parseCaddyFlags(string(content))
+}
+
+// domainConf is everything the /domains list reads from a domain's caddy conf, from a single read
+type domainConf struct {
+	SSL, Status, WAF, HSTS string
+	Cloudflare             bool
+	RateLimit              string
+	Suspension             domainSuspension
+}
+
+func readDomainConf(domainURL string) domainConf {
+	content, err := os.ReadFile(CaddyDomainsConfDir + "/" + domainURL + ".conf")
+	if err != nil {
+		return domainConf{SSL: "none", Status: "suspended", WAF: "none", HSTS: "off", RateLimit: "off"}
 	}
 	s := string(content)
+	c := domainConf{RateLimit: parseRateLimitMode(s), Suspension: parseDomainSuspension(s)}
+	c.SSL, c.Status, c.WAF, c.HSTS, c.Cloudflare = parseCaddyFlags(s)
+	return c
+}
+
+func parseCaddyFlags(s string) (ssl, status, waf, hsts string, cloudflare bool) {
+	ssl, status, waf, hsts = "none", "suspended", "none", "off"
 
 	switch {
 	case strings.Contains(s, "on_demand"):
@@ -149,12 +167,16 @@ func annotateDomainsWithWebserverInfo(db *sql.DB, domains []paneldb.RowMap) {
 		varnish   string
 	}
 	cache := map[string]webserverInfo{}
+	var contexts map[string]string
 
 	for _, dom := range domains {
 		username, _ := dom["username"].(string)
 		info, ok := cache[username]
 		if !ok {
-			context, _ := queryContextByUsername(db, username)
+			if contexts == nil {
+				contexts = paneldb.UserContexts(db)
+			}
+			context := contexts[username]
 			env := readEnvFile(context)
 			info.webserver = env["WEB_SERVER"]
 			if _, hasVarnish := env["PROXY_HTTP_PORT"]; hasVarnish {
@@ -197,19 +219,19 @@ func (d *Domains) ServeList(w http.ResponseWriter, r *http.Request) {
 	tlsIndex := getCaddyTLSIndex()
 	for _, dom := range domains {
 		domainURL, _ := dom["domain_url"].(string)
-		ssl, status, waf, hsts, cloudflare := readCaddyFileForDomain(domainURL)
-		dom["ssl"] = ssl
-		dom["status"] = status
-		dom["waf"] = waf
-		dom["hsts"] = hsts
-		dom["cloudflare"] = cloudflare
-		dom["ratelimit"] = rateLimitModeForDomain(domainURL)
-		if status == "suspended" {
-			s := readDomainSuspension(domainURL)
+		conf := readDomainConf(domainURL)
+		dom["ssl"] = conf.SSL
+		dom["status"] = conf.Status
+		dom["waf"] = conf.WAF
+		dom["hsts"] = conf.HSTS
+		dom["cloudflare"] = conf.Cloudflare
+		dom["ratelimit"] = conf.RateLimit
+		if conf.Status == "suspended" {
+			s := conf.Suspension
 			dom["suspended_by"], dom["suspend_reason"], dom["suspend_comment"] = s.By, s.Reason, s.Comment
 		}
 
-		health := checkDomainSSLHealth(domainURL, ssl, tlsIndex)
+		health := checkDomainSSLHealth(domainURL, conf.SSL, tlsIndex)
 		dom["ssl_problem"] = health.Status
 		if !health.NotAfter.IsZero() {
 			dom["ssl_expires"] = health.NotAfter.Format("2006-01-02")
@@ -406,59 +428,12 @@ func (d *Domains) HandleToggleFeature(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/domains", http.StatusSeeOther)
 }
 
-// --- PHP version EOL info (cached, matches @lru_cache(maxsize=1)) ---
-
-var (
-	phpVersionsOnce sync.Once
-	phpVersionsData map[string]interface{}
-)
-
-// PHPVersionsEOLURL is the upstream endpoint for PHP version end-of-life data.
-var PHPVersionsEOLURL = "https://api.openpanel.com/php-versions/"
-
-// phpVersionsEOLFetch is a var (not a direct call) so tests can stub out
-// the real network call -- consistent with the other external-command vars
-// in this package (dropCacheRun, timedatectlRun, etc.).
-var phpVersionsEOLFetch = fetchPHPVersionsEOL
-
-// phpVersionsEOL fetches once per process lifetime and never expires within
-// that lifetime, keyed by PHP version name.
+// phpVersionsEOL is the shared php.watch cache keyed by version, in the shape domains_list.html indexes
 func phpVersionsEOL() map[string]interface{} {
-	phpVersionsOnce.Do(func() {
-		phpVersionsData = phpVersionsEOLFetch()
-	})
-	return phpVersionsData
-}
-
-func fetchPHPVersionsEOL() map[string]interface{} {
-	client := &http.Client{Timeout: 3 * time.Second}
-	resp, err := client.Get(PHPVersionsEOLURL)
-	if err != nil {
-		return map[string]interface{}{}
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return map[string]interface{}{}
-	}
-
-	var parsed struct {
-		Data map[string]struct {
-			Name            string `json:"name"`
-			StatusLabel     string `json:"statusLabel"`
-			IsEOLVersion    bool   `json:"isEOLVersion"`
-			IsSecureVersion bool   `json:"isSecureVersion"`
-			IsLatestVersion bool   `json:"isLatestVersion"`
-			IsFutureVersion bool   `json:"isFutureVersion"`
-			IsNextVersion   bool   `json:"isNextVersion"`
-		} `json:"data"`
-	}
-	if json.NewDecoder(resp.Body).Decode(&parsed) != nil {
-		return map[string]interface{}{}
-	}
-
-	out := make(map[string]interface{}, len(parsed.Data))
-	for _, v := range parsed.Data {
-		out[v.Name] = map[string]interface{}{
+	statuses, _ := phpWatchStatuses()
+	out := make(map[string]interface{}, len(statuses))
+	for name, v := range statuses {
+		out[name] = map[string]interface{}{
 			"statusLabel":     v.StatusLabel,
 			"isEOLVersion":    v.IsEOLVersion,
 			"isSecureVersion": v.IsSecureVersion,
