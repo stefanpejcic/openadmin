@@ -137,3 +137,17 @@ func TestUnreadNotificationSummary(t *testing.T) {
 		t.Errorf("expected the newest unread critical service alert, got %q", down)
 	}
 }
+
+func TestReadNotificationsPicksUpLogChanges(t *testing.T) {
+	withScratchNotificationsLogForChrome(t, `{"id":"1","status":"unread","severity":"info","title":"a"}`)
+	if entries, _ := readNotifications(); len(entries) != 1 || !entries[0].Unread() {
+		t.Fatalf("got %+v", entries)
+	}
+
+	// marking it read rewrites the log, the cached parse must not hide that
+	os.WriteFile(NotificationsLogPath, []byte(`{"id":"1","status":"read","severity":"info","title":"a"}`+"\n"+`{"id":"2","status":"unread","severity":"info","title":"b"}`+"\n"), 0644)
+	entries, _ := readNotifications()
+	if len(entries) != 2 || entries[0].ID != "2" || entries[1].Unread() {
+		t.Fatalf("expected the rewritten log, got %+v", entries)
+	}
+}

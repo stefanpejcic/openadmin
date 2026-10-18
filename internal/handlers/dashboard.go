@@ -131,6 +131,10 @@ func (d *Dashboard) ServeDashboard(w http.ResponseWriter, r *http.Request) {
 func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, wantJSON bool) {
 	forceDomain := config.Openpanel().Get("DEFAULT", "force_domain", "")
 
+	// podman can take a few seconds, so it runs alongside the database counts
+	containers := make(chan int, 1)
+	go func() { containers <- localContainerCount() }()
+
 	counts, err := paneldb.GetCounts(d.MySQL)
 	if err != nil {
 		d.serveAdminDashboardError(w, r, wantJSON)
@@ -142,7 +146,7 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		PlanCount:         counts.PlanCount,
 		SiteCount:         counts.SiteCount,
 		DomainCount:       counts.DomainCount,
-		RunningContainers: localContainerCount(),
+		RunningContainers: <-containers,
 		MailCount:         emailCount(),
 	}
 
@@ -318,22 +322,9 @@ func localContainerCount() int {
 	return len(lines)
 }
 
-// emailCount uses opencli's email list, without the postfix-accounts.cf
-// fallback file parsing (see backlog).
+// emailCount counts postfix-accounts.cf, the opencli list asks the mailserver for every account's quota which is far too slow for a counter
 func emailCount() int {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, "opencli", "email-setup", "email", "list").Output()
-	if err != nil {
-		return 0
-	}
-	count := 0
-	for _, line := range strings.Split(string(out), "\n") {
-		if strings.HasPrefix(line, "*") {
-			count++
-		}
-	}
-	return count
+	return emailAccountsCount()
 }
 
 // HandleQuickStartDismiss handles POST /api/quickstart/dismiss: creates

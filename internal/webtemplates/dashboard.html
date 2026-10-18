@@ -557,6 +557,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function refreshTasks() {
+        if (document.hidden) return;
         fetch('/tasks?output=json')
             .then(function (res) { return res.json(); })
             .then(function (data) {
@@ -582,6 +583,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     refreshTasks();
     setInterval(refreshTasks, 5000);
+    // polls are skipped while the tab is in the background, refresh as soon as it's back
+    document.addEventListener('visibilitychange', refreshTasks);
 });
 </script>
 {{end}}

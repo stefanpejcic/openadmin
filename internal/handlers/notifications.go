@@ -208,7 +208,27 @@ func newNotificationRow(n Notification, index int) notificationRow {
 }
 
 // readNotifications returns the parsed entries newest first, the same order the 1-indexed line numbers count in
+type parsedNotifications struct {
+	entries []Notification
+	err     error
+}
+
+var notificationsCache fileCache[parsedNotifications]
+
+// readNotifications is newest first, every page's unread badge calls it so the parse is reused until the log changes; callers must not modify the slice
 func readNotifications() ([]Notification, error) {
+	p, ok := notificationsCache.get(NotificationsLogPath, func(string) parsedNotifications {
+		entries, err := parseNotificationLines()
+		return parsedNotifications{entries, err}
+	})
+	if !ok {
+		// missing log, readNotificationLines creates it
+		return parseNotificationLines()
+	}
+	return p.entries, p.err
+}
+
+func parseNotificationLines() ([]Notification, error) {
 	lines, err := readNotificationLines()
 	if err != nil {
 		return nil, err

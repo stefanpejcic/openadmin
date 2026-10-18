@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
@@ -407,5 +410,39 @@ func TestServeImunifyPHPForbidsEscapingRoot(t *testing.T) {
 	}
 	if called {
 		t.Fatal("expected the proxy to never be reached for a forbidden path")
+	}
+}
+
+func TestServeResellerImunifyLooksUpContextsOnce(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.ExpectQuery(`SELECT username, server FROM users`).
+		WillReturnRows(sqlmock.NewRows([]string{"username", "server"}).AddRow("bob", "bobctx").AddRow("carol", "carolctx"))
+
+	imunifyUsersMu.Lock()
+	origCache, origUntil := imunifyUsersCache, imunifyUsersUntil
+	imunifyUsersCache, imunifyUsersUntil = map[string]imunifyUser{"bobctx": {User: "bobctx", Infected: 3, ScanDate: 1}}, time.Now().Add(time.Hour)
+	imunifyUsersMu.Unlock()
+	t.Cleanup(func() {
+		imunifyUsersMu.Lock()
+		imunifyUsersCache, imunifyUsersUntil = origCache, origUntil
+		imunifyUsersMu.Unlock()
+	})
+
+	im := &Imunify{MySQL: db, Sessions: auth.NewManager("test-secret", false)}
+	scope := &resellerScope{Reseller: "res", users: map[string]bool{"bob": true, "carol": true}, domains: map[string]string{}}
+	rec := httptest.NewRecorder()
+	im.serveResellerImunify(rec, httptest.NewRequest(http.MethodGet, "/security/imunify/", nil), scope)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("expected a single contexts query: %v", err)
+	}
+	body := rec.Body.String()
+	// only bob's context has a scan with infected files
+	if n := strings.Count(body, "text-red-600 dark:text-red-500 font-medium"); n != 1 {
+		t.Fatalf("expected one infected row, got %d", n)
 	}
 }

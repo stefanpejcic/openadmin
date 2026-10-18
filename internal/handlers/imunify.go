@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"openadmin/internal/auth"
+	"openadmin/internal/paneldb"
 	"openadmin/internal/webtemplates"
 )
 
@@ -183,9 +184,9 @@ func (im *Imunify) serveResellerImunify(w http.ResponseWriter, r *http.Request, 
 		users := scope.Users()
 		sort.Strings(users)
 		rows := []row{}
+		contexts := paneldb.UserContexts(im.MySQL)
 		for _, u := range users {
-			ctx, _ := queryContextByUsername(im.MySQL, u)
-			sc, ok := scans[ctx]
+			sc, ok := scans[contexts[u]]
 			rows = append(rows, row{Username: u, Scan: sc, HasScan: ok})
 		}
 		webtemplates.Render(w, "security_imunify_reseller.html", mergeChrome(map[string]interface{}{
@@ -224,8 +225,9 @@ func (im *Imunify) ServeImunifyGUIStatus(w http.ResponseWriter, r *http.Request)
 		running = imunifyIsPortOpenRun("127.0.0.1", 9000)
 	}
 	log := ""
-	if raw, err := os.ReadFile(ImunifyGUILogPath); err == nil {
-		lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	// a few spare lines covers trailing blank ones that TrimSpace drops
+	if raw, err := tailFileLines(ImunifyGUILogPath, 40); err == nil {
+		lines := strings.Split(strings.TrimSpace(raw), "\n")
 		if len(lines) > 20 {
 			lines = lines[len(lines)-20:]
 		}

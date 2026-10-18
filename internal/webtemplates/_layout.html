@@ -1221,8 +1221,12 @@ if (Object.keys(cachedData).length) {
     updateSSEUI(cachedData);
 }
 
+const resourceIntervals = { cpu: 15 * 1000, memory: 30 * 1000, load: 15 * 60 * 1000, disk: 5 * 60 * 1000 };
+const resourceFetchedAt = {};
+
 function fetchResource(resource) {
     if (document.hidden) return;
+    resourceFetchedAt[resource] = Date.now();
     fetch(`/json/${resource}`)
         .then(res => res.json())
         .then(data => {
@@ -1234,15 +1238,18 @@ function fetchResource(resource) {
 }
 
 window.addEventListener("load", () => {
-    setInterval(() => fetchResource('cpu'), 15 * 1000);
-    setInterval(() => fetchResource('memory'), 30 * 1000);
-    setInterval(() => fetchResource('load'), 15 * 60 * 1000);
-    setInterval(() => fetchResource('disk'), 5 * 60 * 1000);
+    for (const [resource, ms] of Object.entries(resourceIntervals)) {
+        setInterval(() => fetchResource(resource), ms);
+        fetchResource(resource);
+    }
+});
 
-    fetchResource('cpu');
-    fetchResource('memory');
-    fetchResource('load');
-    fetchResource('disk');
+// background tabs skip the polls, so catch up on whatever went stale once the tab is active again
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    for (const [resource, ms] of Object.entries(resourceIntervals)) {
+        if (Date.now() - (resourceFetchedAt[resource] || 0) >= ms) fetchResource(resource);
+    }
 });
 </script>
 {{end}}

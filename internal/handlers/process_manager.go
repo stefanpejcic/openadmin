@@ -78,7 +78,10 @@ const processManagerUserHZ = 100.0
 
 // listAllProcesses enumerates /proc/[pid], computing cpu_percent via the
 // delta-since-last-sample cache above.
-func listAllProcesses() []processInfo {
+func listAllProcesses() []processInfo { return listProcesses(nil) }
+
+// listProcesses reads only /proc/<pid>/cmdline for processes keep rejects, the full stat and status read is for the kept ones
+func listProcesses(keep func(command string) bool) []processInfo {
 	entries, err := os.ReadDir("/proc")
 	if err != nil {
 		return nil
@@ -95,6 +98,12 @@ func listAllProcesses() []processInfo {
 		pid, err := strconv.Atoi(e.Name())
 		if err != nil {
 			continue
+		}
+		if keep != nil {
+			cmdline, _ := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+			if !keep(strings.ReplaceAll(string(cmdline), "\x00", " ")) {
+				continue
+			}
 		}
 		info, ok := readProcessInfo(pid, totalMemKB)
 		if !ok {

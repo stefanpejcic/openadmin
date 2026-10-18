@@ -298,3 +298,33 @@ func TestNotificationsViewShowsLastCheck(t *testing.T) {
 		t.Fatalf("expected the last check line in the page, got:\n%s", body)
 	}
 }
+
+func TestNotificationsViewDetailTogglesNeedNoAlpinePerRow(t *testing.T) {
+	path := withScratchNotificationsLog(t)
+	os.WriteFile(path, []byte(
+		`{"time":"2026-01-01 10:00:00","status":"unread","title":"ram","details":{"kind":"ram","percent":91,"processes":"PID 1 bash"}}`+"\n"+
+			`{"time":"2026-01-01 10:01:00","status":"unread","title":"disk","details":{"kind":"disk","percent":95,"partitions":"/dev/sda1 95%"}}`+"\n"+
+			`{"time":"2026-01-01 10:02:00","status":"unread","title":"oom","message":"killed","details":{"kind":"oom","system":["mysqld"]}}`+"\n"+
+			`{"time":"2026-01-01 10:03:00","status":"unread","title":"plain","message":"summary line\nmore text"}`+"\n"), 0644)
+
+	srv := httptest.NewServer(newNotificationsMux(&Notifications{Sessions: auth.NewManager("test-secret", false)}))
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	page := string(body)
+	if n := strings.Count(page, `class="nt-switch`); n != 4 {
+		t.Fatalf("expected a toggle for each of the 4 notifications, got %d", n)
+	}
+	for _, want := range []string{"Display Processes", "Show Partitions", "Show details", "PID 1 bash", "/dev/sda1 95%", "mysqld", "more text"} {
+		if !strings.Contains(page, want) {
+			t.Fatalf("expected %q on the page", want)
+		}
+	}
+	if strings.Contains(page, `x-text="open ?`) {
+		t.Fatal("a detail toggle still goes through Alpine")
+	}
+}
