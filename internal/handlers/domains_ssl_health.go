@@ -246,46 +246,34 @@ func checkDomainSSLHealth(domain, sslType string, idx caddyTLSIndex) domainSSLHe
 	}
 }
 
-type certCacheEntry struct {
-	modTime  time.Time
-	size     int64
+type certExpiry struct {
 	notAfter time.Time
 	status   string
 }
 
-var (
-	certCacheMu sync.Mutex
-	certCache   = map[string]certCacheEntry{}
-)
+var certCache fileCache[certExpiry]
 
-// certNotAfter parses the leaf cert's expiry, cached until the file's mtime or size changes; status is "missing" or "unreadable" on failure
+// certNotAfter parses the leaf cert's expiry, cached until the file changes; status is "missing" or "unreadable" on failure
 func certNotAfter(path string) (time.Time, string) {
-	info, err := os.Stat(path)
-	if err != nil {
+	e, ok := certCache.get(path, parseCertExpiry)
+	if !ok {
 		return time.Time{}, "missing"
 	}
-	certCacheMu.Lock()
-	e, ok := certCache[path]
-	certCacheMu.Unlock()
-	if ok && e.modTime.Equal(info.ModTime()) && e.size == info.Size() {
-		return e.notAfter, e.status
-	}
+	return e.notAfter, e.status
+}
 
-	e = certCacheEntry{modTime: info.ModTime(), size: info.Size()}
+func parseCertExpiry(path string) certExpiry {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return time.Time{}, "missing"
+		return certExpiry{status: "missing"}
 	}
-	if block, _ := pem.Decode(data); block == nil {
-		e.status = "unreadable"
-	} else if cert, err := x509.ParseCertificate(block.Bytes); err != nil {
-		e.status = "unreadable"
-	} else {
-		e.notAfter = cert.NotAfter
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return certExpiry{status: "unreadable"}
 	}
-
-	certCacheMu.Lock()
-	certCache[path] = e
-	certCacheMu.Unlock()
-	return e.notAfter, e.status
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return certExpiry{status: "unreadable"}
+	}
+	return certExpiry{notAfter: cert.NotAfter}
 }

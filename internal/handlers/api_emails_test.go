@@ -42,9 +42,14 @@ func newAPIEmailsTestServer(t *testing.T, a *APIEmails) (*httptest.Server, *http
 	emailsRestartMailserverRun = func() {}
 	t.Cleanup(func() { emailsRestartMailserverRun = origRestart })
 
-	origAccounts := emailsListAccountsRun
+	origAccounts, origAccountsFile, origQuotasFile := emailsListAccountsRun, EmailsAccountsFile, EmailsQuotasFile
 	emailsListAccountsRun = func() []emailQuota { return nil }
-	t.Cleanup(func() { emailsListAccountsRun = origAccounts })
+	EmailsAccountsFile, EmailsQuotasFile = filepath.Join(dir, "postfix-accounts.cf"), filepath.Join(dir, "dovecot-quotas.cf")
+	resetEmailAccountsCache()
+	t.Cleanup(func() {
+		emailsListAccountsRun, EmailsAccountsFile, EmailsQuotasFile = origAccounts, origAccountsFile, origQuotasFile
+		resetEmailAccountsCache()
+	})
 
 	origPs := emailsPodmanPsRun
 	emailsPodmanPsRun = func(args ...string) (string, error) { return "", nil }
@@ -133,7 +138,7 @@ func TestAPIServeSettingsPOSTNonJSONReturns400(t *testing.T) {
 func TestAPIServeSettingsPOSTStorageLocationRejectedWithExistingAccounts(t *testing.T) {
 	a := &APIEmails{}
 	srv, client := newAPIEmailsTestServer(t, a)
-	emailsListAccountsRun = func() []emailQuota { return []emailQuota{{Email: "a@b.com"}} }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|{SHA512-CRYPT}x|5000\n"), 0644)
 
 	resp, err := client.Post(srv.URL+"/emails/settings", "application/json",
 		strings.NewReader(`{"storage_type":"user_dir","email_storage_location":"user_dir"}`))

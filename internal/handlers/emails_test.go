@@ -36,9 +36,14 @@ func newEmailsTestServer(t *testing.T, e *Emails) (*httptest.Server, *http.Clien
 	emailsRestartMailserverRun = func() {}
 	t.Cleanup(func() { emailsRestartMailserverRun = origRestart })
 
-	origAccounts := emailsListAccountsRun
+	origAccounts, origAccountsFile, origQuotasFile := emailsListAccountsRun, EmailsAccountsFile, EmailsQuotasFile
 	emailsListAccountsRun = func() []emailQuota { return nil }
-	t.Cleanup(func() { emailsListAccountsRun = origAccounts })
+	EmailsAccountsFile, EmailsQuotasFile = filepath.Join(dir, "postfix-accounts.cf"), filepath.Join(dir, "dovecot-quotas.cf")
+	resetEmailAccountsCache()
+	t.Cleanup(func() {
+		emailsListAccountsRun, EmailsAccountsFile, EmailsQuotasFile = origAccounts, origAccountsFile, origQuotasFile
+		resetEmailAccountsCache()
+	})
 
 	origPs := emailsPodmanPsRun
 	emailsPodmanPsRun = func(args ...string) (string, error) { return "", nil }
@@ -511,7 +516,7 @@ func TestServeEmailsWebmailLinkTokenSuccessRedirectsWithToken(t *testing.T) {
 func TestServeEmailsSettingsPOSTStorageLocationRejectedWithExistingAccounts(t *testing.T) {
 	e := &Emails{}
 	srv, client := newEmailsTestServer(t, e)
-	emailsListAccountsRun = func() []emailQuota { return []emailQuota{{Email: "a@b.com"}} }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|{SHA512-CRYPT}x|5000\n"), 0644)
 
 	resp, err := client.PostForm(srv.URL+"/emails/settings", url.Values{
 		"storage_type": {"user_dir"}, "email_storage_location": {"user_dir"},
@@ -626,7 +631,7 @@ func TestServeEmailsAccountsRendersHTMLRunning(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"emailsApp()", `"a@b.com","512M [10%]"`, "email hosted on this server", "</html>"} {
+	for _, want := range []string{"emailsApp()", `"a@b.com","512M [10%]",10`, "email hosted on this server", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -932,5 +937,69 @@ func TestServeEmailsInstallStartsOnce(t *testing.T) {
 	(&Emails{}).ServeEmailsInstall(rec, httptest.NewRequest(http.MethodPost, "/emails/install", nil))
 	if started != 1 || !strings.Contains(rec.Body.String(), `"success":true`) {
 		t.Fatalf("expected the install to start, got %d %s", started, rec.Body.String())
+	}
+}
+
+func TestCachedEmailAccountsReusesUntilTheAccountFilesChange(t *testing.T) {
+	e := &Emails{}
+	newEmailsTestServer(t, e)
+	calls := 0
+	emailsListAccountsRun = func() []emailQuota { calls++; return []emailQuota{{Email: "a@b.com"}} }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|x|1\n"), 0644)
+
+	cachedEmailAccounts()
+	cachedEmailAccounts()
+	if calls != 1 {
+		t.Fatalf("expected one container call while nothing changed, got %d", calls)
+	}
+
+	// an account added from the user panel shows up straight away
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|x|1\nc@d.com|y|2\n"), 0644)
+	cachedEmailAccounts()
+	if calls != 2 {
+		t.Fatalf("expected a refetch after the account file changed, got %d", calls)
+	}
+
+	os.WriteFile(EmailsQuotasFile, []byte("a@b.com:1G\n"), 0644)
+	cachedEmailAccounts()
+	if calls != 3 {
+		t.Fatalf("expected a refetch after the quota file changed, got %d", calls)
+	}
+}
+
+func TestServeEmailsAccountsFallsBackToTheAccountFileWhenStopped(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "", nil }
+	emailsListAccountsRun = func() []emailQuota { t.Fatal("the container must not be asked while it's down"); return nil }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|{SHA512-CRYPT}x|5000\n"), 0644)
+
+	resp, err := client.Get(srv.URL + "/emails/accounts?output=json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	for _, want := range []string{`"email":"a@b.com"`, `"from_file":true`, `"status":"stopped"`} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected %s in %s", want, body)
+		}
+	}
+}
+
+func TestChangesEmailAccounts(t *testing.T) {
+	for args, want := range map[string]bool{
+		"opencli email-setup email add a@b.com pw": true,
+		"opencli email-setup email del a@b.com":    true,
+		"opencli email-setup quota set a@b.com 1G": true,
+		"opencli email-setup quota del a@b.com":    true,
+		"opencli email-setup email update a@b.com": false,
+		"opencli email-setup email restrict add":   false,
+		"opencli email-setup email list":           false,
+	} {
+		if got := changesEmailAccounts(strings.Fields(args)); got != want {
+			t.Errorf("%s: got %v, want %v", args, got, want)
+		}
 	}
 }

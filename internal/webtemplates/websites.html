@@ -156,19 +156,21 @@
         </div>
 
         <div class="relative overflow-x-auto">
-            <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="websites_table">
+                        <!-- column toggles are one class on the table instead of an x-show per cell -->
+            <style>#websites_table.hide-type [data-col="type"],#websites_table.hide-owner [data-col="owner"],#websites_table.hide-version [data-col="version"],#websites_table.hide-git [data-col="git"],#websites_table.hide-vulns [data-col="vulns"],#websites_table.hide-imunify [data-col="imunify"],#websites_table.hide-speed [data-col="speed"],#websites_table.hide-created [data-col="created"]{display:none}</style>
+            <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="websites_table" :class="hiddenColumns">
                 <thead>
                     <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
 {{template "bulk_head_checkbox" .}}
                         <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Site" "Key" "name" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
-                        <th x-show="columns.type" class="border-b px-4 text-center font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Type" "Key" "type" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
-                        <th x-show="columns.owner" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Owner" "Key" "owner" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
-                        <th x-show="columns.version" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Version" "Key" "version" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
-                        {{if .GitEnabled}}<th x-show="columns.git" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Git</th>{{end}}
-                        <th x-show="columns.vulns" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Vulnerabilities" "Key" "vulns" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
-                        {{if .Imunify}}<th x-show="columns.imunify" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "ImunifyAV" "Key" "imunify" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>{{end}}
-                        <th x-show="columns.speed" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "PageSpeed" "Key" "speed" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
-                        <th x-show="columns.created" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Created" "Key" "created" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th data-col="type" class="border-b px-4 text-center font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Type" "Key" "type" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th data-col="owner" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Owner" "Key" "owner" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th data-col="version" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Version" "Key" "version" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        {{if .GitEnabled}}<th data-col="git" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Git</th>{{end}}
+                        <th data-col="vulns" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Vulnerabilities" "Key" "vulns" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        {{if .Imunify}}<th data-col="imunify" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "ImunifyAV" "Key" "imunify" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>{{end}}
+                        <th data-col="speed" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "PageSpeed" "Key" "speed" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                        <th data-col="created" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Created" "Key" "created" "Base" "/websites" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
                         <th class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">Actions</th>
                     </tr>
                 </thead>
@@ -193,18 +195,18 @@
                                 </div>
                             </div>
                         </td>
-                        <td x-show="columns.type" class="p-4 text-sm whitespace-nowrap py-2 text-gray-700 dark:text-gray-300 text-center"><span class="inline-flex" title="{{siteTypeLabel .Type}}" aria-label="{{siteTypeLabel .Type}}">{{siteTypeUse .Type}}</span></td>
-                        <td x-show="columns.owner" class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
+                        <td data-col="type" class="p-4 text-sm whitespace-nowrap py-2 text-gray-700 dark:text-gray-300 text-center"><span class="inline-flex" title="{{siteTypeLabel .Type}}" aria-label="{{siteTypeLabel .Type}}">{{siteTypeUse .Type}}</span></td>
+                        <td data-col="owner" class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
                             {{if $owner}}<a href="/users/{{$owner}}" class="hover:underline">{{lastSegment $owner "_"}}</a> {{if $suspended}}<span class="badge bg-red-lt">SUSPENDED</span>{{end}}{{else}}<span class="text-gray-400">no owner</span>{{end}}
                         </td>
-                        <td x-show="columns.version" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left tabular-nums">
+                        <td data-col="version" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left tabular-nums">
                             <div>{{or .Version "-"}}</div>
                             {{if .LatestVersion}}<span class="mt-1 inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-400/10 dark:text-amber-400" title="WordPress {{.LatestVersion}} is available">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-3.5" aria-hidden="true"><path d="M13 7.82843V20H11V7.82843L5.63604 13.1924L4.22183 11.7782L12 4L19.7782 11.7782L18.364 13.1924L13 7.82843Z"></path></svg>
                                 {{.LatestVersion}} available
                             </span>{{end}}
                         </td>
-                        {{if $root.GitEnabled}}<td x-show="columns.git" class="p-4 text-sm whitespace-nowrap py-2 text-left">
+                        {{if $root.GitEnabled}}<td data-col="git" class="p-4 text-sm whitespace-nowrap py-2 text-left">
                             {{$row := .}}{{with .Git}}{{$g := index . 0}}
                             <div class="flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="#f05032" class="size-4 shrink-0" aria-hidden="true"><path d="M15.698 7.287 8.712.302a1.03 1.03 0 0 0-1.457 0l-1.45 1.45 1.84 1.84a1.223 1.223 0 0 1 1.55 1.56l1.773 1.774a1.224 1.224 0 0 1 1.267 2.025 1.226 1.226 0 0 1-2.002-1.334L8.58 5.963v4.353a1.226 1.226 0 1 1-1.008-.036V5.887a1.226 1.226 0 0 1-.666-1.608L5.093 2.465l-4.79 4.79a1.03 1.03 0 0 0 0 1.457l6.986 6.986a1.03 1.03 0 0 0 1.457 0l6.953-6.953a1.03 1.03 0 0 0 0-1.457"/></svg>
@@ -216,7 +218,7 @@
                             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{if eq $g.Source "remote"}}Remote{{else}}Local{{end}} &middot; {{$g.ModeLabel}}{{if $g.DeployedAgo}} &middot; <span title="{{$g.Deployed}}">deployed {{$g.DeployedAgo}}</span>{{if $g.Commit}} <code>{{$g.Commit}}</code>{{end}}{{else if ne $g.Mode "none"}} &middot; not deployed yet{{end}}</p>
                             {{else}}<span class="text-xs text-gray-400" title="No Git repository deploys to this website">-</span>{{end}}
                         </td>{{end}}
-                        <td x-show="columns.vulns" class="p-4 text-sm whitespace-nowrap py-2 text-left">
+                        <td data-col="vulns" class="p-4 text-sm whitespace-nowrap py-2 text-left">
                             {{if not .IsWordPress}}
                             <span class="text-xs text-gray-400" title="Only WordPress sites are scanned for vulnerabilities">-</span>
                             {{else if .Vulns}}
@@ -232,7 +234,7 @@
                             {{end}}
                         </td>
                         {{if $root.Imunify}}
-                        <td x-show="columns.imunify" class="p-4 text-sm whitespace-nowrap py-2 text-left">
+                        <td data-col="imunify" class="p-4 text-sm whitespace-nowrap py-2 text-left">
                             {{/* button always last so it lines up on every row */}}
                             <div class="flex items-center justify-between gap-3">
                                 <div>
@@ -260,7 +262,7 @@
                             </div>
                         </td>
                         {{end}}
-                        <td x-show="columns.speed" class="p-4 text-sm whitespace-nowrap py-2 text-left">
+                        <td data-col="speed" class="p-4 text-sm whitespace-nowrap py-2 text-left">
                             {{with .Speed}}
                             <div class="flex cursor-pointer gap-2" @mouseenter="showSpeed($el, {{$id}}, {{toJSON .}})" @mouseleave="hideSpeed()">
                                 <div class="flex items-center gap-x-2.5">
@@ -281,7 +283,7 @@
                             <a href="https://pagespeed.web.dev/report?url={{printf "https://%s" .SiteName | urlquery}}" target="_blank" rel="noopener" title="No speed data yet, check on Google PageSpeed Insights" class="inline-flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"><svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#ws-speed"></use></svg></a>
                             {{end}}
                         </td>
-                        <td x-show="columns.created" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left">{{if .CreatedAgo}}<span title="{{.Created}}" class="cursor-help">{{.CreatedAgo}}</span>{{else}}{{or .Created "-"}}{{end}}</td>
+                        <td data-col="created" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left">{{if .CreatedAgo}}<span title="{{.Created}}" class="cursor-help">{{.CreatedAgo}}</span>{{else}}{{or .Created "-"}}{{end}}</td>
                         <td class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-right">
                             <div class="inline-flex items-center gap-1">
                             {{if and .IsWordPress $owner}}
@@ -370,6 +372,7 @@ document.addEventListener('alpine:init', () => {
         typeFilter: '',
         // every column on by default, saved per browser like on /domains
         columns: { type: true, owner: true, version: true, git: true, vulns: true, imunify: true, speed: true, created: true },
+        get hiddenColumns() { return Object.keys(this.columns).filter(k => !this.columns[k]).map(k => 'hide-' + k).join(' '); },
         init() {
             try {
                 const saved = JSON.parse(localStorage.getItem('websitescolumnsVisibility') || '{}');

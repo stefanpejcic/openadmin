@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"compress/gzip"
+	"fmt"
 	"html"
 	"io"
 	"net/http"
@@ -356,7 +357,7 @@ func TestWebsitesGit(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status %d: %s", resp.StatusCode, page)
 	}
-	for _, want := range []string{`x-show="columns.git"`, ">blog-theme<", "+1 more", "blog-plugin (dev)", `title="blog-plugin: boom"`, "deployed ", "<code>abcdef1</code>", `data-bulk-action="git_deploy"`} {
+	for _, want := range []string{`data-col="git"`, ">blog-theme<", "+1 more", "blog-plugin (dev)", `title="blog-plugin: boom"`, "deployed ", "<code>abcdef1</code>", `data-bulk-action="git_deploy"`} {
 		if !strings.Contains(page, want) && !strings.Contains(page, html.EscapeString(want)) {
 			t.Errorf("page missing %q", want)
 		}
@@ -421,5 +422,61 @@ func TestWebsitesImunifyNeverScanned(t *testing.T) {
 	}
 	if strings.Count(page, "</svg>Clean</span>") != 1 {
 		t.Error("only the scanned owner should show Clean")
+	}
+}
+
+func TestReadPageSpeedReparsesWhenReportChanges(t *testing.T) {
+	speed, _ := withWebsiteReportDirs(t)
+	path := filepath.Join(speed, "a.com.json")
+	os.WriteFile(path, []byte(`{"desktop_speed":{"performance_score":0.5},"mobile_speed":{"performance_score":0.4}}`), 0644)
+	if p := readPageSpeed("a.com"); p == nil || p.Desktop.Score != 50 {
+		t.Fatalf("got %+v", p)
+	}
+
+	os.WriteFile(path, []byte(`{"desktop_speed":{"performance_score":0.91},"mobile_speed":{"performance_score":0.8}}`), 0644)
+	os.Chtimes(path, time.Now(), time.Now().Add(time.Minute))
+	if p := readPageSpeed("a.com"); p == nil || p.Desktop.Score != 91 {
+		t.Fatalf("expected the new report, got %+v", p)
+	}
+
+	os.Remove(path)
+	if p := readPageSpeed("a.com"); p != nil {
+		t.Fatalf("expected nil once the report is gone, got %+v", p)
+	}
+}
+
+func TestLatestWordPressRetriesInTheBackground(t *testing.T) {
+	stubLatestWordPress(t, "")
+	release := make(chan struct{})
+	wpLatestFetch = func() (string, error) { return "", fmt.Errorf("down") }
+	if v := latestWordPress(); v != "" {
+		t.Fatalf("got %q", v)
+	}
+
+	// a retry after the failed first check must not hold up the page, nor later loads while it runs
+	fetched := make(chan struct{})
+	wpLatestFetch = func() (string, error) { <-release; defer close(fetched); return "6.9", nil }
+	wpLatestMu.Lock()
+	wpLatestUntil = time.Now().Add(-time.Second)
+	wpLatestMu.Unlock()
+	done := make(chan string)
+	go func() { done <- latestWordPress(); done <- latestWordPress() }()
+	for i := 0; i < 2; i++ {
+		select {
+		case v := <-done:
+			if v != "" {
+				t.Fatalf("got %q", v)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("latestWordPress blocked on the retry")
+		}
+	}
+	close(release)
+	<-fetched
+	for deadline := time.Now().Add(time.Second); latestWordPress() != "6.9"; {
+		if time.Now().After(deadline) {
+			t.Fatal("the background refresh never landed")
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 }

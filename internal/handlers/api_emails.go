@@ -80,8 +80,7 @@ func webmailDomainAlreadyConfigured(domain string) bool {
 
 // ServeSettings handles GET/POST /api/emails/settings.
 func (a *APIEmails) ServeSettings(w http.ResponseWriter, r *http.Request) {
-	accounts := emailsListAccountsRun()
-	totalCount := len(accounts)
+	totalCount := emailAccountsCount()
 
 	if r.Method == http.MethodPost {
 		if !apiIsJSONContentType(r) {
@@ -217,13 +216,17 @@ func (a *APIEmails) ServeSettings(w http.ResponseWriter, r *http.Request) {
 func (a *APIEmails) ServeAccounts(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		mailserverStatus := checkMailserverStatus()
-		if mailserverStatus != "running" {
+		if mailserverStatus == "not_installed" {
 			writeJSON(w, map[string]interface{}{"status": mailserverStatus, "emails": []interface{}{}})
 			return
 		}
+		all, fromFile := emailAccountsFor(mailserverStatus)
 		scope := scopeFor(r, a.MySQL)
-		accounts := filterRows(scope, emailsListAccountsRun(), func(e emailQuota) bool { return scope.AllowsEmail(e.Email) })
-		writeJSON(w, map[string]interface{}{"status": mailserverStatus, "emails": accounts})
+		accounts := filterRows(scope, all, func(e emailQuota) bool { return scope.AllowsEmail(e.Email) })
+		if accounts == nil {
+			accounts = []emailQuota{}
+		}
+		writeJSON(w, map[string]interface{}{"status": mailserverStatus, "emails": accounts, "from_file": fromFile})
 		return
 	}
 

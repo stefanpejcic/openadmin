@@ -166,9 +166,16 @@ func (p *pageSpeed) RingColor() string {
 	return "stroke-green-500"
 }
 
+var pageSpeedCache fileCache[*pageSpeed]
+
 // readPageSpeed reads the opencli websites-pagespeed report, nil when it's missing or the check failed
 func readPageSpeed(siteName string) *pageSpeed {
-	b, err := os.ReadFile(reportFile(WebsitesPageSpeedDir, siteName))
+	p, _ := pageSpeedCache.get(reportFile(WebsitesPageSpeedDir, siteName), parsePageSpeed)
+	return p
+}
+
+func parsePageSpeed(path string) *pageSpeed {
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil
 	}
@@ -223,38 +230,12 @@ type vulnReport struct {
 	Components []vulnComponent `json:"components"`
 }
 
-type cachedVulnReport struct {
-	mod    time.Time
-	size   int64
-	report *vulnReport
-}
-
-var (
-	vulnCacheMu sync.Mutex
-	vulnCache   = map[string]cachedVulnReport{}
-)
+var vulnCache fileCache[*vulnReport]
 
 // readVulnerabilities returns the parsed report, reparsing only when a new scan changed the file
 func readVulnerabilities(siteName string) *vulnReport {
-	path := reportFile(WebsitesVulnerabilityDir, siteName)
-	info, err := os.Stat(path)
-	if err != nil {
-		vulnCacheMu.Lock()
-		delete(vulnCache, path)
-		vulnCacheMu.Unlock()
-		return nil
-	}
-	vulnCacheMu.Lock()
-	c, ok := vulnCache[path]
-	vulnCacheMu.Unlock()
-	if ok && c.mod.Equal(info.ModTime()) && c.size == info.Size() {
-		return c.report
-	}
-	report := parseVulnerabilities(path)
-	vulnCacheMu.Lock()
-	vulnCache[path] = cachedVulnReport{mod: info.ModTime(), size: info.Size(), report: report}
-	vulnCacheMu.Unlock()
-	return report
+	r, _ := vulnCache.get(reportFile(WebsitesVulnerabilityDir, siteName), parseVulnerabilities)
+	return r
 }
 
 // parseVulnerabilities reads the opencli websites-vulnerability report, keys are core_<version>, plugin_<slug>, theme_<slug> or mu-plugin_<slug>
@@ -350,7 +331,7 @@ func (ws *Websites) loadSites() ([]websiteRow, error) {
 		}
 		s.SiteName, s.Type, s.Version, s.AdminEmail, s.Created = name.String, typ.String, version.String, email.String, created.String
 		s.Domain, s.Docroot, s.Owner = domain.String, docroot.String, owner.String
-		s.CreatedAgo = timeSince(s.Created, time.Now())
+		s.CreatedAgo = timeSince(s.Created, now)
 		if t, ok := parsePanelTime(s.Created); ok {
 			s.Created = t.Format("2006-01-02 15:04:05")
 		}
@@ -462,8 +443,12 @@ type websitesPageData struct {
 }
 
 // faviconBase is the favicons url from openpanel.config that the site name gets appended to, same as the user panel's /sites
+var faviconBaseCache fileCache[string]
+
 func faviconBase() string {
-	base := strings.TrimSpace(config.Load(config.OpenpanelConfigPath).Get("PANEL", "favicons", ""))
+	base, _ := faviconBaseCache.get(config.OpenpanelConfigPath, func(path string) string {
+		return strings.TrimSpace(config.Load(path).Get("PANEL", "favicons", ""))
+	})
 	if base == "" || base == "local" {
 		return "https://www.google.com/s2/favicons?domain="
 	}
@@ -503,22 +488,20 @@ var wpLatestFetch = func() (string, error) {
 // latestWordPress caches the answer for 6 hours like the user panel does, only the very first lookup waits on wordpress.org, later refreshes run in the background
 func latestWordPress() string {
 	wpLatestMu.Lock()
-	defer wpLatestMu.Unlock()
 	if time.Now().Before(wpLatestUntil) {
+		defer wpLatestMu.Unlock()
 		return wpLatestVersion
 	}
 	// a failed or in-flight check is retried after 10 minutes
+	first := wpLatestUntil.IsZero()
 	wpLatestUntil = time.Now().Add(10 * time.Minute)
-	if wpLatestVersion == "" {
-		refreshLatestWordPress()
-		return wpLatestVersion
+	current := wpLatestVersion
+	wpLatestMu.Unlock()
+	if first {
+		return refreshLatestWordPress()
 	}
-	go func() {
-		wpLatestMu.Lock()
-		defer wpLatestMu.Unlock()
-		refreshLatestWordPress()
-	}()
-	return wpLatestVersion
+	go refreshLatestWordPress()
+	return current
 }
 
 // WarmWebsitesCaches does the slow first lookups of /websites at startup, so the first admin to open it doesn't wait on wordpress.org and the ImunifyAV agent
@@ -529,11 +512,15 @@ func WarmWebsitesCaches() {
 	}
 }
 
-// refreshLatestWordPress expects wpLatestMu to be held
-func refreshLatestWordPress() {
-	if v, err := wpLatestFetch(); err == nil && v != "" {
+// refreshLatestWordPress fetches without holding wpLatestMu so page loads never wait on wordpress.org
+func refreshLatestWordPress() string {
+	v, err := wpLatestFetch()
+	wpLatestMu.Lock()
+	defer wpLatestMu.Unlock()
+	if err == nil && v != "" {
 		wpLatestVersion, wpLatestUntil = v, time.Now().Add(6*time.Hour)
 	}
+	return wpLatestVersion
 }
 
 // renderGzip renders a template gzipped when the browser accepts it, openadmin doesn't compress responses and this page is mostly repeated markup
