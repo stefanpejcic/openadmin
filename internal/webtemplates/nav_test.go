@@ -29,7 +29,7 @@ func TestBuildModernNavAdmin(t *testing.T) {
 	c := &Chrome{CurrentPath: "/domains/dns", IsAdmin: true, LicenseType: "Enterprise", EnabledModules: []string{"dns"}}
 	items, tabs := BuildModernNav(c)
 
-	if got := labels(items); got != "Accounts,Hosting Plans,Domains,Websites,Emails,Backups,Services,Security,Server,System,Settings,License & Support" {
+	if got := labels(items); got != "Accounts,Hosting Plans,Domains,Websites,Databases,Emails,Backups,Services,Security,Server,System,Settings,License & Support" {
 		t.Errorf("unexpected sidebar: %s", got)
 	}
 	for _, i := range items {
@@ -59,7 +59,7 @@ func TestBuildModernNavGating(t *testing.T) {
 
 func TestBuildModernNavReseller(t *testing.T) {
 	items, tabs := BuildModernNav(&Chrome{CurrentPath: "/security/2fa", IsReseller: true, LicenseType: "Enterprise"})
-	if got := labels(items); got != "Accounts,Hosting Plans,Domains,Emails,Backups,Services,Security,Server,Settings" {
+	if got := labels(items); got != "Accounts,Hosting Plans,Domains,Databases,Emails,Backups,Services,Security,Server,Settings" {
 		t.Errorf("unexpected reseller sidebar: %s", got)
 	}
 	got, active := tabLabels(tabs)
@@ -77,7 +77,8 @@ func TestBuildModernNavReseller(t *testing.T) {
 func TestBuildModernNavResellerTabs(t *testing.T) {
 	cases := map[string]string{
 		"/domains":              "Domains,DNS Zone Editor,Rate Limiting",
-		"/emails/queue":         "Accounts,Queue",
+		"/emails/queue":         "Accounts,Queue,Email Deliverability",
+		"/databases/mongodb":    "MySQL,PostgreSQL,MongoDB",
 		"/user/import":          "Import Account",
 		"/security/waf/domains": "Web Firewall (Coraza),ImunifyAV",
 		"/server/crons":         "Resource Usage,Scheduled Actions",

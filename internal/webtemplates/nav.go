@@ -136,6 +136,17 @@ var modernAreas = []navArea{
 		tabs: func(c *Chrome, path string) []NavLink {
 			return buildTabs(tabSpec{true, "/websites", "Websites", true})
 		}},
+	{label: "Databases", icon: databaseIcon, menuID: "databases-menu", show: func(c *Chrome) bool { return true },
+		match: func(c *Chrome, path string) bool { return strings.HasPrefix(path, "/databases") },
+		tabs: func(c *Chrome, path string) []NavLink {
+			isPG := strings.HasPrefix(path, "/databases/postgresql")
+			isMongo := strings.HasPrefix(path, "/databases/mongodb")
+			return buildTabs(
+				tabSpec{true, "/databases", "MySQL", !isPG && !isMongo},
+				tabSpec{true, "/databases/postgresql", "PostgreSQL", isPG},
+				tabSpec{true, "/databases/mongodb", "MongoDB", isMongo},
+			)
+		}},
 	{label: "Emails", icon: emailsIcon, menuID: "emails-menu",
 		show:  func(c *Chrome) bool { return isEnterprise(c) },
 		match: func(c *Chrome, path string) bool { return strings.HasPrefix(path, "/emails") },
@@ -146,6 +157,7 @@ var modernAreas = []navArea{
 				tabSpec{true, "/emails/queue", "Queue", strings.HasPrefix(path, "/emails/queue")},
 				tabSpec{admin, "/emails/reports", "Summary Reports", hasAnyPrefix(path, "/emails/reports", "/emails/data")},
 				tabSpec{admin, "/emails/domain-limits", "Domain Limits", strings.HasPrefix(path, "/emails/domain-limits")},
+				tabSpec{true, "/emails/deliverability", "Email Deliverability", strings.HasPrefix(path, "/emails/deliverability")},
 				tabSpec{admin, "/emails/settings", "Settings", strings.HasPrefix(path, "/emails/settings")},
 			)
 		}},
@@ -286,10 +298,14 @@ var helpDocs = map[string]string{
 	"/domains/vhost-templates":       "admin/domains/vhost_templates",
 	"/domains/ratelimit":             "admin/domains/ratelimit",
 	"/websites":                      "admin/websites",
+	"/databases":                     "admin/databases/mysql",
+	"/databases/postgresql":          "admin/databases/postgresql",
+	"/databases/mongodb":             "admin/databases/mongodb",
 	"/emails/accounts":               "admin/emails/emails",
 	"/emails/queue":                  "admin/emails/queue",
 	"/emails/reports":                "admin/emails/summary",
 	"/emails/domain-limits":          "admin/emails/domain-limits",
+	"/emails/deliverability":         "admin/emails/deliverability",
 	"/emails/settings":               "admin/emails/settings",
 	"/backups/user":                  "admin/backups/user",
 	"/backups/system":                "admin/backups/system",

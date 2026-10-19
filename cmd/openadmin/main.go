@@ -232,6 +232,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	domains := &handlers.Domains{MySQL: d.MySQL, Sessions: sessions}
 	rateLimit := &handlers.DomainsRateLimit{MySQL: d.MySQL, Sessions: sessions}
 	websites := &handlers.Websites{MySQL: d.MySQL, Sessions: sessions}
+	databases := &handlers.Databases{MySQL: d.MySQL, Sessions: sessions}
 	handlers.WarmWebsitesCaches()
 	handlers.WarmPHPWatch()
 	dnsZoneEditor := &handlers.DNSZoneEditor{MySQL: d.MySQL, Sessions: sessions}
@@ -684,6 +685,11 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /users/{username}/account-setting/{field}", auth.RequireLogin(sessions, authOpts, users.ServeUserAccountSetting))
 	mux.HandleFunc("GET /containers/stats/{username}", auth.RequireLogin(sessions, authOpts, users.ServeContainersStats))
 
+	mux.HandleFunc("GET /databases", auth.RequireLogin(sessions, authOpts, databases.ServeMySQL))
+	mux.HandleFunc("GET /databases/postgresql", auth.RequireLogin(sessions, authOpts, databases.ServePostgreSQL))
+	mux.HandleFunc("GET /databases/mongodb", auth.RequireLogin(sessions, authOpts, databases.ServeMongoDB))
+	mux.HandleFunc("POST /databases/export", auth.RequireLogin(sessions, authOpts, databases.ServeExport))
+	mux.HandleFunc("POST /databases/import", auth.RequireLogin(sessions, authOpts, databases.ServeImport))
 	mux.HandleFunc("GET /websites", auth.RequireAdmin(sessions, authOpts, websites.ServeList))
 	mux.HandleFunc("GET /websites/login/{id}", auth.RequireAdmin(sessions, authOpts, websites.ServeLogin))
 	mux.HandleFunc("GET /websites/vulnerabilities/{id}", auth.RequireAdmin(sessions, authOpts, websites.ServeVulnerabilities))
@@ -933,6 +939,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /emails/api/delete", auth.RequireLogin(sessions, authOpts, emails.ServeDeleteEmails))
 	mux.HandleFunc("GET /emails/accounts", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsAccounts))
 	mux.HandleFunc("POST /emails/accounts", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsAccounts))
+	mux.HandleFunc("POST /emails/new", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsNew))
 	mux.HandleFunc("GET /emails/queue", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsQueue))
 	mux.HandleFunc("POST /emails/queue", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsQueue))
 	mux.HandleFunc("POST /emails/queue/action", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsQueueAction))
@@ -941,6 +948,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /emails/data/{filename}", auth.RequireAdmin(sessions, authOpts, emails.ServeShowReport))
 	mux.HandleFunc("GET /emails/webmail/{email}", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsWebmailLink))
 	mux.HandleFunc("GET /emails/domain-limits", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimits))
+	mux.HandleFunc("GET /emails/deliverability", auth.RequireLogin(sessions, authOpts, emails.ServeDeliverability))
 	mux.HandleFunc("POST /emails/domain-limits/save-raw", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimitsSaveRaw))
 	mux.HandleFunc("GET /emails/domain-limits/hits", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimitsHits))
 	mux.HandleFunc("POST /emails/domain-limits/api", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimitsAPI))

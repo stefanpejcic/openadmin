@@ -12,7 +12,7 @@
 <style>[x-cloak] { display: none !important; }</style>
 
 <!-- Page header -->
-<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div x-data="{ showSection: window.location.hash === '#add' }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
     <header>
         <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
             <div class="grow">
@@ -25,8 +25,81 @@
                     {{end}}
                 </h2>
             </div>
+            {{if eq .MailserverStatus "running"}}
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Add Email</a>
+            </div>
+            {{end}}
         </div>
     </header>
+
+    {{if eq .MailserverStatus "running"}}
+    <!-- same fields as the user panel's /emails/new -->
+    <div x-show="showSection" x-cloak class="mt-8 w-full">
+        <form method="POST" action="/emails/new" x-data="newEmailForm()" class="sm:mx-auto">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm font-medium" for="new_email_username">Email<span class="text-red-500">*</span></label>
+                    <div class="mt-2 flex">
+                        <input type="text" name="username" id="new_email_username" required maxlength="64" pattern="[A-Za-z0-9._%+\-]+" title="Letters, numbers, and . _ % + -" placeholder="info" autocomplete="off" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <span class="inline-flex items-center border-y border-gray-300 bg-gray-100 px-2 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">@</span>
+                        <select name="domain" required x-model="domain" class="relative block w-full appearance-none rounded-r border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                            <option value="" disabled>Select a domain</option>
+                            {{range .EmailDomains}}<option value="{{.Domain}}">{{.Domain}}</option>{{end}}
+                        </select>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="ownerOf(domain) ? 'Owner: ' + ownerOf(domain) : '{{if .EmailDomains}}Pick one of the domains on this server.{{else}}No domains yet, add one on the Domains page first.{{end}}'"></p>
+                </div>
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm font-medium" for="new_email_password">Password<span class="text-red-500">*</span></label>
+                    <div class="mt-2 flex">
+                        <input :type="showPassword ? 'text' : 'password'" name="password" id="new_email_password" x-model="password" required minlength="8" maxlength="128" pattern="\S+" title="8 or more characters, no spaces" autocomplete="new-password" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <button type="button" @click="generate()" tabindex="-1" class="border px-3 text-sm font-medium border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 cursor-pointer">Generate</button>
+                        <button type="button" @click="showPassword = !showPassword" tabindex="-1" class="rounded-r border px-3 text-sm font-medium border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 cursor-pointer" x-text="showPassword ? 'Hide' : 'Show'"></button>
+                    </div>
+                </div>
+                <div class="col-span-full sm:col-span-2">
+                    <label class="text-sm font-medium" for="new_email_quota">Storage quota</label>
+                    <div class="mt-2 flex">
+                        <input type="number" min="0" step="any" name="quota" id="new_email_quota" value="0" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <select name="unit" class="rounded-r border px-2 text-sm border-gray-300 bg-white text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
+                            <option value="k">KiB</option>
+                            <option value="M">MiB</option>
+                            <option value="G" selected>GiB</option>
+                            <option value="T">TiB</option>
+                        </select>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">0 for unlimited.</p>
+                </div>
+                <div class="col-span-full sm:col-span-2 flex items-center pt-6">
+                    <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="send_welcome" value="1" class="rounded border-gray-300 dark:border-gray-700"> Send welcome email</label>
+                </div>
+                <div class="col-span-full sm:col-span-2 flex items-end justify-end">
+                    <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white bg-blue-500 hover:bg-blue-600 cursor-pointer">Add Email</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+    const EMAIL_DOMAINS = {{toJSON .EmailDomains}} || [];
+    function newEmailForm() {
+        const owners = Object.fromEntries(EMAIL_DOMAINS.map(d => [d.domain, d.owner]));
+        return {
+            domain: '',
+            password: '',
+            showPassword: false,
+            ownerOf(domain) { return owners[(domain || '').trim().toLowerCase()] || ''; },
+            generate() {
+                const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                const bytes = crypto.getRandomValues(new Uint32Array(16));
+                this.password = Array.from(bytes, b => chars[b % chars.length]).join('');
+                this.showPassword = true;
+            },
+        };
+    }
+    </script>
+    {{end}}
 </div>
 
 {{if or (eq .MailserverStatus "running") .FromFile}}

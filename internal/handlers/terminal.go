@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -53,6 +54,8 @@ func (t *Terminal) ServeHostTerminalPage(w http.ResponseWriter, r *http.Request)
 	webtemplates.Render(w, "settings_terminal.html", mergeChrome(map[string]interface{}{
 		"TerminalType":    "root",
 		"TerminalTimeout": int(terminalCommandTimeout.Seconds()),
+		"InitialCommand":  terminalInitialCommand(r),
+		"AutoRun":         sameOriginNavigation(r),
 		"WebSessions":     openWebTerminals("host"),
 		"SSHPeers":        openSSHPeers(sshSessionsRun()),
 	}, r, "Web Terminal"))
@@ -65,10 +68,35 @@ func (t *Terminal) ServeUserTerminalPage(w http.ResponseWriter, r *http.Request)
 	webtemplates.Render(w, "settings_terminal.html", mergeChrome(map[string]interface{}{
 		"TerminalType":    "users",
 		"TerminalTimeout": int(terminalCommandTimeout.Seconds()),
+		"InitialCommand":  terminalInitialCommand(r),
+		"AutoRun":         sameOriginNavigation(r),
 		"Username":        r.PathValue("username"),
 		"ContainerName":   r.PathValue("container_name"),
 		"WebSessions":     openWebTerminals(r.PathValue("username") + "/" + r.PathValue("container_name")),
 	}, r, "Docker Terminal"))
+}
+
+// terminalInitialCommand is the ?cmd= the page types into the shell once it's up, one line only
+func terminalInitialCommand(r *http.Request) string {
+	cmd := strings.Map(func(c rune) rune {
+		if c < 0x20 || c == 0x7f {
+			return -1
+		}
+		return c
+	}, r.URL.Query().Get("cmd"))
+	if len(cmd) > 2000 {
+		return ""
+	}
+	return strings.TrimSpace(cmd)
+}
+
+// sameOriginNavigation tells if the admin got here by a link inside OpenAdmin, a ?cmd= from anywhere else is only typed, not run
+func sameOriginNavigation(r *http.Request) bool {
+	if site := r.Header.Get("Sec-Fetch-Site"); site != "" {
+		return site == "same-origin"
+	}
+	ref, err := url.Parse(r.Referer())
+	return err == nil && ref.Host != "" && ref.Host == r.Host
 }
 
 var terminalUpgrader = websocket.Upgrader{

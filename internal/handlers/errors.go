@@ -88,6 +88,10 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
+				// a handler aborting a half sent response wants the connection dropped, not an error page appended
+				if rec == http.ErrAbortHandler {
+					panic(rec)
+				}
 				logError("Unhandled exception: %v\n%s", rec, debug.Stack())
 				message := fmt.Sprintf("%v", rec)
 				if message == "" {

@@ -744,6 +744,9 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 		"EmailPairs":       pairs,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
 	}
+	if mailserverStatus == "running" {
+		data["EmailDomains"] = e.emailDomainOptions(r)
+	}
 	// every bulk action goes through the container, so there's none to offer while it's down
 	if !fromFile {
 		data["BulkActions"] = EmailAccountsBulkActions()
