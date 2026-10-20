@@ -133,7 +133,7 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 
 	// podman can take a few seconds, so it runs alongside the database counts
 	containers := make(chan int, 1)
-	go func() { containers <- localContainerCount() }()
+	go func() { containers <- containerCountCache.get(localContainerCount) }()
 
 	counts, err := paneldb.GetCounts(d.MySQL)
 	if err != nil {
@@ -307,6 +307,36 @@ func toDisplayString(v interface{}) string {
 	}
 }
 
+// these shell out to slow commands, the dashboard asks for them on every load
+var (
+	containerCountCache = &ttlCache[int]{ttl: time.Minute}
+	cpuModelCache       = &ttlCache[string]{ttl: 24 * time.Hour}
+	packageUpdatesCache = &ttlCache[string]{ttl: time.Hour}
+)
+
+// WarmSystemInfo fills the slow system info caches in the background at startup so the first dashboard isn't kept waiting on apt
+func WarmSystemInfo() {
+	go func() {
+		cpuModelCache.get(cpuModelName)
+		packageUpdatesCache.get(packageUpdatesCount)
+	}()
+}
+
+// processCount counts the numeric dirs in /proc, same number ps -e lists without forking it
+func processCount() string {
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return "Unavailable"
+	}
+	n := 0
+	for _, e := range entries {
+		if name := e.Name(); e.IsDir() && name[0] >= '0' && name[0] <= '9' {
+			n++
+		}
+	}
+	return strconv.Itoa(n)
+}
+
 // localContainerCount counts containers in the local (root/"default")
 // podman context only. Per-user remote podman contexts are not yet
 // handled here -- see the backlog -- so this undercounts on installs with
@@ -452,7 +482,7 @@ func (d *Dashboard) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 	info := systemInfo{
 		CPU: "Unavailable", Uptime: "Unavailable", RunningProcesses: "Unavailable",
 		OS: osPrettyName(), Time: time.Now().Format("2006-01-02 15:04:05"),
-		OpenpanelVersion: chromeSite.PanelVersion, PackageUpdates: packageUpdatesCount(),
+		OpenpanelVersion: chromeSite.PanelVersion, PackageUpdates: packageUpdatesCache.get(packageUpdatesCount),
 	}
 
 	if hostname, err := os.Hostname(); err == nil {
@@ -461,7 +491,7 @@ func (d *Dashboard) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 	if release, err := os.ReadFile("/proc/sys/kernel/osrelease"); err == nil {
 		info.Kernel = strings.TrimSpace(string(release))
 	}
-	info.CPU = cpuModelName()
+	info.CPU = cpuModelCache.get(cpuModelName)
 	if uptime, err := os.ReadFile("/proc/uptime"); err == nil {
 		fields := strings.Fields(string(uptime))
 		if len(fields) > 0 {
@@ -470,9 +500,7 @@ func (d *Dashboard) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if out, err := exec.Command("ps", "-e").Output(); err == nil {
-		info.RunningProcesses = strconv.Itoa(strings.Count(string(out), "\n"))
-	}
+	info.RunningProcesses = processCount()
 
 	writeJSON(w, info)
 }

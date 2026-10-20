@@ -37,7 +37,7 @@ function installerWidget(running, statusURL) {
         async resume() {
             if (this.status !== 'running') return;
             await this.poll();
-            if (this.status === 'running') this.timer = setInterval(() => this.poll(), 2000);
+            if (this.status === 'running') this.timer = opPoll(() => this.poll(), 2000);
         },
         async start(form) {
             this.error = '';
@@ -51,8 +51,8 @@ function installerWidget(running, statusURL) {
             }
             this.status = 'running';
             this.output = '';
-            clearInterval(this.timer);
-            this.timer = setInterval(() => this.poll(), 2000);
+            opStop(this.timer);
+            this.timer = opPoll(() => this.poll(), 2000);
         },
         async poll() {
             try {
@@ -64,7 +64,7 @@ function installerWidget(running, statusURL) {
                 this.status = data.status;
                 this.installed = data.status !== 'running' && data.installed;
                 if (atBottom) this.$nextTick(() => { if (out) out.scrollTop = out.scrollHeight; });
-                if (data.status !== 'running') clearInterval(this.timer);
+                if (data.status !== 'running') opStop(this.timer);
             } catch (e) {
                 console.error('Failed to fetch install output', e);
             }

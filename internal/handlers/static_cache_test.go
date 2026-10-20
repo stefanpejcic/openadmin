@@ -65,3 +65,12 @@ func TestStaticHandler(t *testing.T) {
 		t.Errorf("missing file got %d", code)
 	}
 }
+
+func TestStaticCacheControlHashedURL(t *testing.T) {
+	if got := staticCacheControl("dist/output.css", true); got != "public, max-age=31536000, immutable" {
+		t.Errorf("a ?v= content hash url should be cached for good, got %q", got)
+	}
+	if got := staticCacheControl("dist/output.css", false); got != "no-cache" {
+		t.Errorf("without ?v= it must still revalidate, got %q", got)
+	}
+}

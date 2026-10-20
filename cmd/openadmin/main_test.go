@@ -364,12 +364,12 @@ func TestTerminalWebsocketOverRealTLSServer(t *testing.T) {
 		t.Fatalf("login failed, still on /login. status=%d body=%s", resp.StatusCode, truncateBody(string(loginBody)))
 	}
 
-	// the actual regression check: a real TLS WebSocket client offering h2/http1.1 via ALPN, hitting the real authenticated /ws/terminal route
+	// a real TLS websocket handshake on the authenticated /ws/terminal route, over HTTP/1.1 like Chrome and Firefox open it while the server doesn't offer websockets over HTTP/2 (see TestRunTLSHTTP2WithoutWebsocketsOverIt)
 	dialer := websocket.Dialer{
 		Jar: jar,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
-			NextProtos:         []string{"h2", "http/1.1"},
+			NextProtos:         []string{"http/1.1"},
 		},
 	}
 	conn, httpResp, err := dialer.Dial("wss://127.0.0.1:18202/ws/terminal", nil)

@@ -27,8 +27,11 @@ var staticVersionedRE = regexp.MustCompile(`(?:\d{3}|\dxx)\.min\.(?:js|css)$`)
 var staticCompressible = map[string]bool{".js": true, ".css": true, ".svg": true, ".json": true, ".html": true, ".txt": true, ".map": true, ".xml": true}
 
 // staticCacheControl keeps versioned libraries for a week, everything else is revalidated with its etag so a new build shows up right away
-func staticCacheControl(name string) string {
+func staticCacheControl(name string, hashed bool) string {
 	switch {
+	case hashed:
+		// ?v= is the file's content hash from the asset template func, a new build gets a new url
+		return "public, max-age=31536000, immutable"
 	case staticVersionedRE.MatchString(name):
 		return "public, max-age=604800, immutable"
 	case strings.HasPrefix(name, "images/") || strings.HasSuffix(name, ".woff2") || strings.HasSuffix(name, ".png") || strings.HasSuffix(name, ".ico"):
@@ -81,7 +84,7 @@ func StaticHandler(fsys fs.FS) http.Handler {
 			return
 		}
 		h := w.Header()
-		h.Set("Cache-Control", staticCacheControl(name))
+		h.Set("Cache-Control", staticCacheControl(name, r.URL.Query().Get("v") != ""))
 		body, etag := f.raw, f.etag
 		if f.gz != nil {
 			h.Set("Vary", "Accept-Encoding")

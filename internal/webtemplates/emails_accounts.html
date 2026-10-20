@@ -111,6 +111,8 @@
 
 <script>
     const EMAIL_DATA = {{toJSON .EmailPairs}};
+    // the list comes from the mailserver's files, usage that isn't known yet is fetched from opencli after the page is up
+    const EMAIL_USAGE_PENDING = {{if .UsagePending}}true{{else}}false{{end}};
 </script>
 
 <div x-data="emailsApp()">
@@ -431,6 +433,22 @@ function emailsApp() {
             return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
         },
         emails: EMAIL_DATA,
+        init() {
+            if (!EMAIL_USAGE_PENDING) return;
+            fetch('/emails/accounts?output=json')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data || !Array.isArray(data.emails)) return;
+                    const usage = Object.fromEntries(data.emails.map(e => [e.email, e.quota]));
+                    this.emails = this.emails.map(([email, quota, pct]) => {
+                        const q = usage[email];
+                        if (q === undefined) return [email, quota, pct];
+                        const m = q.match(/\[(\d+)%\]/);
+                        return [email, q, m ? parseInt(m[1], 10) : 0];
+                    });
+                })
+                .catch(() => {});
+        },
 
         sortBy: 'email',
         sortDir: 'asc',

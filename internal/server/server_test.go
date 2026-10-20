@@ -122,21 +122,10 @@ func TestRunTLS(t *testing.T) {
 	}
 }
 
-// TestRunTLSDoesNotNegotiateHTTP2 guards against a real bug: TLS servers
-// auto-negotiate HTTP/2 whenever TLSNextProto is nil, and any real browser
-// (which offers "h2" via ALPN on every HTTPS connection, including for
-// wss:// -- confirmed via Firefox's dev tools) would then get promoted to
-// HTTP/2 on this port. gorilla/websocket's Upgrade() needs to hijack the
-// underlying net.Conn, which HTTP/2's multiplexed ResponseWriter can't do
-// (the http.Hijacker type assertion fails), so every /ws/* route 500'd with
-// "response does not implement http.Hijacker" until Run() disabled HTTP/2.
-//
-// A gorilla/websocket client can't reproduce this directly -- its own
-// Dialer never offers "h2" via ALPN in the first place, unlike a real
-// browser -- so this asserts on the actual mechanism instead: a raw TLS
-// client that does offer "h2"/"http/1.1" (like a browser) must not have
-// "h2" selected.
-func TestRunTLSDoesNotNegotiateHTTP2(t *testing.T) {
+// TestRunTLSHTTP2WithoutWebsocketsOverIt keeps HTTP/2 for page loads but makes sure the server never advertises
+// websockets over HTTP/2 (RFC 8441 SETTINGS_ENABLE_CONNECT_PROTOCOL). Browsers only send wss:// over h2 when the
+// server offers that, and gorilla/websocket can't hijack an h2 stream, so offering it would 500 every /ws/* route.
+func TestRunTLSHTTP2WithoutWebsocketsOverIt(t *testing.T) {
 	dir := t.TempDir()
 	certFile, keyFile := generateSelfSignedCert(t, dir)
 
@@ -159,10 +148,25 @@ func TestRunTLSDoesNotNegotiateHTTP2(t *testing.T) {
 		t.Fatalf("raw TLS dial failed: %v", err)
 	}
 	negotiated := conn.ConnectionState().NegotiatedProtocol
+	if negotiated != "h2" {
+		conn.Close()
+		t.Fatalf("expected h2 for page loads, got %q", negotiated)
+	}
+	// the server's first frame is its SETTINGS, 9 byte header then 6 bytes per setting
+	conn.Write([]byte("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n\x00\x00\x00\x04\x00\x00\x00\x00\x00"))
+	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	head := make([]byte, 9)
+	if _, err := io.ReadFull(conn, head); err != nil || head[3] != 0x4 {
+		conn.Close()
+		t.Fatalf("expected a SETTINGS frame first: %v %x", err, head)
+	}
+	payload := make([]byte, int(head[0])<<16|int(head[1])<<8|int(head[2]))
+	io.ReadFull(conn, payload)
 	conn.Close()
-
-	if negotiated == "h2" {
-		t.Fatalf("expected the server to never negotiate h2 (breaks websocket hijacking), got %q", negotiated)
+	for i := 0; i+6 <= len(payload); i += 6 {
+		if id := int(payload[i])<<8 | int(payload[i+1]); id == 0x8 {
+			t.Fatal("server offers websockets over HTTP/2 (ENABLE_CONNECT_PROTOCOL), browsers would stop using HTTP/1.1 for /ws/*")
+		}
 	}
 
 	if err := syscall.Kill(os.Getpid(), syscall.SIGTERM); err != nil {

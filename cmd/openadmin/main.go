@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -27,7 +28,13 @@ import (
 	"openadmin/static"
 )
 
+// defaultMemoryLimit makes the GC give memory back after a heavy page instead of keeping it, GOMEMLIMIT in the service overrides it
+const defaultMemoryLimit = 64 << 20
+
 func main() {
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(defaultMemoryLimit)
+	}
 	handlers.EnsureErrorLogDirs()
 
 	devMode := bootstrap.IsDevMode()
@@ -152,6 +159,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to build request handler: %v\n", err)
 		os.Exit(1)
 	}
+
+	handlers.WarmSystemInfo()
 
 	accessLog, err := server.NewAccessLogger()
 	if err != nil {
@@ -1018,6 +1027,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 			next.ServeHTTP(w, csrf.PlaintextHTTPRequest(r))
 		})
 	}
+
+	handler = handlers.GzipMiddleware(handler)
 
 	// outermost: optional network-level Basic Auth gate, checked before sessions, CSRF, or routing
 	handler = auth.BasicAuthMiddleware(d.BasicAuthEnabled, d.BasicAuthUsername, d.BasicAuthPassword)(handler)

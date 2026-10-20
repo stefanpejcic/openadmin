@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -18,9 +21,6 @@ import (
 
 	"github.com/gorilla/csrf"
 	_ "github.com/lib/pq"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"openadmin/internal/auth"
 	"openadmin/internal/webtemplates"
@@ -204,45 +204,68 @@ func pqQuote(s string) string {
 	return strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace(s)
 }
 
-// mongoDatabases lists one user's databases and their collection counts over their mongod socket
+// mongoScript lists the databases with their size and collection count, printed as one marked JSON line so other mongosh output is ignored
+const mongoScript = `const c = connect(%s);
+const out = c.adminCommand({ listDatabases: 1 }).databases
+  .filter(d => !["admin", "local", "config"].includes(d.name))
+  .map(d => ({ name: d.name, size: d.sizeOnDisk, collections: c.getSiblingDB(d.name).getCollectionNames().length }));
+print("OAJSON:" + JSON.stringify(out));
+`
+
+// mongoDatabases runs mongosh inside the user's mongodb container, the credentials go in on stdin so they never show up in ps
 func mongoDatabases(ctx context.Context, uc string) ([]databaseRow, error) {
 	env := userEnv(uc)
-	socket := filepath.Join(UserHomeDir, uc, "sockets", "mongodb", "mongodb-27017.sock")
 	uri := fmt.Sprintf("mongodb://%s:%s@%s/?authSource=admin",
 		url.QueryEscape(envOr(env, "MONGODB_ROOT_USER", "admin")), url.QueryEscape(envOr(env, "MONGODB_ROOT_PASSWORD", "rootpassword")),
-		url.QueryEscape(socket))
-	client, err := mongo.Connect(options.Client().ApplyURI(uri).SetServerSelectionTimeout(liveDBTimeout))
+		url.QueryEscape("/var/run/mongodb/mongodb-27017.sock"))
+	quoted, _ := json.Marshal(uri)
+	cmd, err := podmanExec(ctx, uc, "-i", "mongodb", "mongosh", "--quiet", "--norc", "--nodb")
 	if err != nil {
 		return nil, err
 	}
-	defer client.Disconnect(context.Background())
-	res, err := client.ListDatabases(ctx, bson.D{})
+	cmd.Stdin = strings.NewReader(fmt.Sprintf(mongoScript, quoted))
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
 	if err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return nil, errors.New(msg)
+		}
 		return nil, err
 	}
-	var out []databaseRow
-	for _, spec := range res.Databases {
-		if systemMongoDatabases[spec.Name] {
+	for _, line := range strings.Split(string(out), "\n") {
+		_, payload, ok := strings.Cut(line, "OAJSON:")
+		if !ok {
 			continue
 		}
-		row := databaseRow{Name: spec.Name, Context: uc, SizeBytes: spec.SizeOnDisk}
-		if names, err := client.Database(spec.Name).ListCollectionNames(ctx, bson.D{}); err == nil {
-			row.Tables = len(names)
+		var list []struct {
+			Name        string `json:"name"`
+			Size        int64  `json:"size"`
+			Collections int    `json:"collections"`
 		}
-		out = append(out, row)
+		if err := json.Unmarshal([]byte(strings.TrimSpace(payload)), &list); err != nil {
+			return nil, err
+		}
+		rows := make([]databaseRow, 0, len(list))
+		for _, d := range list {
+			rows = append(rows, databaseRow{Name: d.Name, Context: uc, SizeBytes: d.Size, Tables: d.Collections})
+		}
+		return rows, nil
 	}
-	return out, nil
+	return nil, errors.New("no answer from mongosh: " + strings.TrimSpace(string(out)))
 }
 
 type liveEngine struct {
-	volume string
-	socket []string // path under the user's home
-	fetch  func(ctx context.Context, uc string) ([]databaseRow, error)
+	volume  string
+	socket  []string // path under the user's home
+	timeout time.Duration
+	fetch   func(ctx context.Context, uc string) ([]databaseRow, error)
 }
 
 var liveEngines = map[string]liveEngine{
-	"postgresql": {volume: "pg_data", socket: []string{"sockets", "postgres", ".s.PGSQL.5432"}, fetch: postgresDatabases},
-	"mongodb":    {volume: "mongodb_data", socket: []string{"sockets", "mongodb", "mongodb-27017.sock"}, fetch: mongoDatabases},
+	"postgresql": {volume: "pg_data", socket: []string{"sockets", "postgres", ".s.PGSQL.5432"}, timeout: liveDBTimeout, fetch: postgresDatabases},
+	// mongosh is a node app and takes a couple of seconds just to start
+	"mongodb": {volume: "mongodb_data", socket: []string{"sockets", "mongodb", "mongodb-27017.sock"}, timeout: 20 * time.Second, fetch: mongoDatabases},
 }
 
 type liveResult struct {
@@ -278,7 +301,7 @@ func collectLive(engine string, users []panelUser) liveResult {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			ctx, cancel := context.WithTimeout(context.Background(), liveDBTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), e.timeout)
 			defer cancel()
 			rows, err := e.fetch(ctx, u.Context)
 			mu.Lock()

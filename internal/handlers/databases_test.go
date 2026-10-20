@@ -184,3 +184,33 @@ func TestTerminalInitialCommand(t *testing.T) {
 		t.Error("link from OpenAdmin should auto run")
 	}
 }
+
+func TestMongoDatabasesViaMongosh(t *testing.T) {
+	home := t.TempDir()
+	orig, origExec := UserHomeDir, podmanExec
+	UserHomeDir = home
+	t.Cleanup(func() { UserHomeDir, podmanExec = orig, origExec })
+	os.MkdirAll(filepath.Join(home, "ctx1"), 0o755)
+	os.WriteFile(filepath.Join(home, "ctx1", ".env"), []byte(`MONGODB_ROOT_USER="admin"`+"\n"+`MONGODB_ROOT_PASSWORD="p@ss w'rd"`+"\n"), 0o644)
+
+	stdinFile := filepath.Join(t.TempDir(), "stdin.js")
+	var gotArgs []string
+	podmanExec = func(ctx context.Context, userContext string, args ...string) (*exec.Cmd, error) {
+		gotArgs = args
+		return exec.CommandContext(ctx, "sh", "-c", "cat > "+stdinFile+`; echo 'Current Mongosh Log ID: 1'; echo 'OAJSON:[{"name":"shop","size":40960,"collections":3}]'`), nil
+	}
+	rows, err := mongoDatabases(context.Background(), "ctx1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Name != "shop" || rows[0].SizeBytes != 40960 || rows[0].Tables != 3 {
+		t.Fatalf("got %+v", rows)
+	}
+	if strings.Contains(strings.Join(gotArgs, " "), "w'rd") {
+		t.Error("the password must not be on the command line")
+	}
+	script, _ := os.ReadFile(stdinFile)
+	if !strings.Contains(string(script), "p%40ss+w%27rd") || !strings.Contains(string(script), "%2Fvar%2Frun%2Fmongodb%2Fmongodb-27017.sock") {
+		t.Errorf("script should connect with the escaped credentials over the container socket:\n%s", script)
+	}
+}

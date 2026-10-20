@@ -155,10 +155,8 @@ func (s websiteRow) BulkSkip() string {
 // GitModuleEnabled is gitModuleEnabled for main.go's bulk route
 func GitModuleEnabled() bool { return gitModuleEnabled() }
 
-var enabledModulesCache fileCache[[]string]
-
 func gitModuleEnabled() bool {
-	modules, _ := enabledModulesCache.get(ModulesConfigFilePath, modulesEnabledList)
+	modules := modulesEnabledList(ModulesConfigFilePath)
 	for _, m := range modules {
 		if strings.TrimSpace(m) == "git" {
 			return true

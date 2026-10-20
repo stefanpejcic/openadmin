@@ -99,7 +99,19 @@ func updateServiceInDockerCompose(serviceName string, enable bool) {
 	os.WriteFile(ModulesDockerComposePath, []byte(newContent), 0644)
 }
 
+// enabledModulesCache keeps the parsed enabled_modules until openpanel.config changes, every page's menu needs it
+var enabledModulesCache fileCache[[]string]
+
 func modulesEnabledList(configPath string) []string {
+	mods, ok := enabledModulesCache.get(configPath, parseEnabledModules)
+	if !ok || mods == nil {
+		return nil
+	}
+	// a copy, callers are free to change theirs
+	return append([]string(nil), mods...)
+}
+
+func parseEnabledModules(configPath string) []string {
 	raw, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil

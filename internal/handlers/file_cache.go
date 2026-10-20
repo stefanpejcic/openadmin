@@ -41,3 +41,42 @@ func (c *fileCache[T]) get(path string, parse func(path string) T) (val T, ok bo
 	c.mu.Unlock()
 	return val, true
 }
+
+// ttlCache keeps one value for ttl, once it has a value a stale read returns it right away and refreshes in the background
+type ttlCache[T any] struct {
+	ttl        time.Duration
+	mu         sync.Mutex
+	at         time.Time
+	val        T
+	refreshing bool
+}
+
+func (c *ttlCache[T]) get(load func() T) T {
+	c.mu.Lock()
+	if c.at.IsZero() {
+		c.mu.Unlock()
+		v := load()
+		c.set(v)
+		return v
+	}
+	v := c.val
+	if time.Since(c.at) >= c.ttl && !c.refreshing {
+		c.refreshing = true
+		go func() { c.set(load()) }()
+	}
+	c.mu.Unlock()
+	return v
+}
+
+func (c *ttlCache[T]) set(v T) {
+	c.mu.Lock()
+	c.val, c.at, c.refreshing = v, time.Now(), false
+	c.mu.Unlock()
+}
+
+// reset forgets the value so the next get loads it again
+func (c *ttlCache[T]) reset() {
+	c.mu.Lock()
+	c.at = time.Time{}
+	c.mu.Unlock()
+}

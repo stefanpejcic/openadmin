@@ -55,12 +55,12 @@ function swapAction(action, body, loadingMessage, confirmMessage) {
                 if (!data.done) {
                     attempts++;
                     if (attempts >= 300) {
-                        clearInterval(timer);
+                        opStop(timer);
                         showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
                     }
                     return;
                 }
-                clearInterval(timer);
+                opStop(timer);
                 showToast(data.message, data.success ? 'success' : 'error');
                 if (data.success) {
                     setTimeout(function () { window.location.reload(); }, 1500);
@@ -69,13 +69,13 @@ function swapAction(action, body, loadingMessage, confirmMessage) {
             .catch(function () {
                 attempts++;
                 if (attempts >= 300) {
-                    clearInterval(timer);
+                    opStop(timer);
                 }
             });
     }
 
     setTimeout(function () {
-        timer = setInterval(poll, 1500);
+        timer = opPoll(poll, 1500);
         poll();
     }, 300);
 }

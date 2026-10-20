@@ -24,7 +24,7 @@
     </header>
 </div>
 
-<div class="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center" x-data="imunifyStarting()" x-init="poll(); timer = setInterval(() => poll(), 2000)">
+<div class="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center" x-data="imunifyStarting()" x-init="poll(); timer = opPoll(() => poll(), 2000)">
     <div class="w-full max-w-2xl">
         <h1 class="text-2xl font-medium" x-text="failed ? 'ImunifyAV did not start' : 'Starting ImunifyAV...'">Starting ImunifyAV...</h1>
         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="!failed">The page opens by itself once the ImunifyAV GUI is up, this usually takes a few seconds.</p>
@@ -48,14 +48,14 @@ function imunifyStarting() {
                 const res = await fetch('/security/imunify/gui/status' + (this.tries % 5 === 1 ? '?start=1' : ''), { headers: { 'Accept': 'application/json' } });
                 const data = await res.json();
                 this.log = data.log || '';
-                if (data.running) { clearInterval(this.timer); window.location.reload(); return; }
+                if (data.running) { opStop(this.timer); window.location.reload(); return; }
             } catch (e) {}
-            if (this.tries >= 30) { this.failed = true; clearInterval(this.timer); }
+            if (this.tries >= 30) { this.failed = true; opStop(this.timer); }
         },
         retry() {
             this.tries = 0; this.failed = false;
             this.poll();
-            this.timer = setInterval(() => this.poll(), 2000);
+            this.timer = opPoll(() => this.poll(), 2000);
         }
     }
 }

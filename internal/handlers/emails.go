@@ -138,7 +138,33 @@ var emailsRestartMailserverRun = func() {
 		"cd /usr/local/mail/openmail/ && podman-compose down mailserver && podman-compose up -d mailserver").Start()
 }
 
+// mailserver status is asked for on every email page, podman ps is ~50ms so it's reused for a few seconds
+var (
+	mailserverStatusMu  sync.Mutex
+	mailserverStatusAt  time.Time
+	mailserverStatusVal string
+)
+
+var mailserverStatusTTL = 5 * time.Second
+
 func checkMailserverStatus() string {
+	mailserverStatusMu.Lock()
+	defer mailserverStatusMu.Unlock()
+	if time.Since(mailserverStatusAt) < mailserverStatusTTL {
+		return mailserverStatusVal
+	}
+	mailserverStatusVal, mailserverStatusAt = readMailserverStatus(), time.Now()
+	return mailserverStatusVal
+}
+
+// resetMailserverStatus is for anything that starts or stops the mailserver
+func resetMailserverStatus() {
+	mailserverStatusMu.Lock()
+	mailserverStatusAt = time.Time{}
+	mailserverStatusMu.Unlock()
+}
+
+func readMailserverStatus() string {
 	if _, err := os.Stat(EmailsMailComposeFile); err != nil {
 		return "not_installed"
 	}
@@ -360,13 +386,76 @@ func emailAccountsCacheKey() string {
 func cachedEmailAccounts() []emailQuota {
 	key := emailAccountsCacheKey()
 	emailAccountsMu.Lock()
-	defer emailAccountsMu.Unlock()
 	if key == emailAccountsKey && time.Since(emailAccountsFetched) < emailAccountsTTL {
+		defer emailAccountsMu.Unlock()
 		return emailAccountsCache
 	}
-	emailAccountsCache = emailsListAccountsRun()
-	emailAccountsKey, emailAccountsFetched = key, time.Now()
-	return emailAccountsCache
+	emailAccountsMu.Unlock()
+	// not under the lock, a page asking for the last known usage must never wait on the container
+	accounts := emailsListAccountsRun()
+	emailAccountsMu.Lock()
+	emailAccountsCache, emailAccountsKey, emailAccountsFetched = accounts, key, time.Now()
+	emailAccountsMu.Unlock()
+	return accounts
+}
+
+var emailAccountsRefreshing bool
+
+// emailUsageNow returns the last known quota usage per account right away, fresh is false when it's outdated and a refresh was started in the background
+func emailUsageNow() (usage map[string]string, fresh bool) {
+	key := emailAccountsCacheKey()
+	emailAccountsMu.Lock()
+	fresh = key == emailAccountsKey && time.Since(emailAccountsFetched) < emailAccountsTTL
+	usage = make(map[string]string, len(emailAccountsCache))
+	for _, a := range emailAccountsCache {
+		usage[a.Email] = a.Quota
+	}
+	if !fresh && !emailAccountsRefreshing {
+		emailAccountsRefreshing = true
+		go func() {
+			cachedEmailAccounts()
+			emailAccountsMu.Lock()
+			emailAccountsRefreshing = false
+			emailAccountsMu.Unlock()
+		}()
+	}
+	emailAccountsMu.Unlock()
+	return usage, fresh
+}
+
+// emailQuotaLimits reads dovecot-quotas.cf, email:limit per line, accounts without a line are unlimited
+func emailQuotaLimits() map[string]string {
+	limits := map[string]string{}
+	raw, err := os.ReadFile(EmailsQuotasFile)
+	if err != nil {
+		return limits
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if email, limit, ok := strings.Cut(strings.TrimSpace(line), ":"); ok && email != "" {
+			limits[email] = strings.TrimSpace(limit)
+		}
+	}
+	return limits
+}
+
+// emailAccountsQuick lists the accounts from the mailserver's own files with the last known usage, the same shape as the opencli list
+func emailAccountsQuick() (accounts []emailQuota, fresh bool) {
+	usage, fresh := emailUsageNow()
+	limits := emailQuotaLimits()
+	for _, a := range emailAccountsFromFile() {
+		if q, ok := usage[a.Email]; ok {
+			a.Quota = q
+		} else {
+			limit := limits[a.Email]
+			if limit == "" {
+				limit = "~"
+			}
+			a.Quota = "( - / " + limit + " ) [0%]"
+			fresh = false
+		}
+		accounts = append(accounts, a)
+	}
+	return accounts, fresh
 }
 
 // resetEmailAccountsCache drops the cached list, after our own changes and in tests that swap emailsListAccountsRun
@@ -509,6 +598,7 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 			}
 
 			emailsRestartMailserverRun()
+			resetMailserverStatus()
 
 			if len(triggeredServices) > 0 {
 				auth.AddFlash(w, r, e.Sessions, fmt.Sprintf("Configuration updated! %s require Mailserver to be recreated. Make sure to stop&start the service.", strings.Join(triggeredServices, " and ")), "info")
@@ -702,8 +792,13 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 
 	var accounts []emailQuota
 	fromFile := false
+	usageFresh := true
 	if mailserverStatus != "not_installed" {
-		accounts, fromFile = emailAccountsFor(mailserverStatus)
+		if mailserverStatus == "running" && !outputJSON {
+			accounts, usageFresh = emailAccountsQuick()
+		} else {
+			accounts, fromFile = emailAccountsFor(mailserverStatus)
+		}
 		scope := scopeFor(r, e.MySQL)
 		accounts = filterRows(scope, accounts, func(a emailQuota) bool { return scope.AllowsEmail(a.Email) })
 	}
@@ -742,6 +837,7 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 		"Installing":       emailsInstallRunning(),
 		"Emails":           accounts,
 		"EmailPairs":       pairs,
+		"UsagePending":     !usageFresh,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
 	}
 	if mailserverStatus == "running" {

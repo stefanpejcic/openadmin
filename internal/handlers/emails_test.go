@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
@@ -47,7 +48,8 @@ func newEmailsTestServer(t *testing.T, e *Emails) (*httptest.Server, *http.Clien
 
 	origPs := emailsPodmanPsRun
 	emailsPodmanPsRun = func(args ...string) (string, error) { return "", nil }
-	t.Cleanup(func() { emailsPodmanPsRun = origPs })
+	resetMailserverStatus()
+	t.Cleanup(func() { emailsPodmanPsRun = origPs; resetMailserverStatus() })
 
 	db, err := admindb.Open()
 	if err != nil {
@@ -621,6 +623,9 @@ func TestServeEmailsAccountsRendersHTMLRunning(t *testing.T) {
 	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
 	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
 	emailsListAccountsRun = func() []emailQuota { return []emailQuota{{Email: "a@b.com", Quota: "512M [10%]"}} }
+	// the page lists accounts from the mailserver's file and takes the usage from the last opencli run
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|{SHA512-CRYPT}x\n"), 0644)
+	cachedEmailAccounts()
 
 	resp, err := client.Get(srv.URL + "/emails/accounts")
 	if err != nil {
@@ -635,6 +640,25 @@ func TestServeEmailsAccountsRendersHTMLRunning(t *testing.T) {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
+	}
+}
+
+func TestEmailAccountsQuickWithoutUsageYet(t *testing.T) {
+	e := &Emails{}
+	newEmailsTestServer(t, e)
+	ran := make(chan struct{}, 1)
+	emailsListAccountsRun = func() []emailQuota { ran <- struct{}{}; return nil }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|x\nc@d.com|x\n"), 0644)
+	os.WriteFile(EmailsQuotasFile, []byte("a@b.com:2G\n"), 0644)
+
+	accounts, fresh := emailAccountsQuick()
+	if fresh || len(accounts) != 2 || accounts[0].Quota != "( - / 2G ) [0%]" || accounts[1].Quota != "( - / ~ ) [0%]" {
+		t.Fatalf("got %+v fresh=%v", accounts, fresh)
+	}
+	select {
+	case <-ran:
+	case <-time.After(2 * time.Second):
+		t.Fatal("usage should be refreshed in the background")
 	}
 }
 

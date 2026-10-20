@@ -64,12 +64,12 @@ function backupsUserRunNow() {
                 if (!data.done) {
                     attempts++;
                     if (attempts >= 600) {
-                        clearInterval(timer);
+                        opStop(timer);
                         showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
                     }
                     return;
                 }
-                clearInterval(timer);
+                opStop(timer);
                 showToast(data.message, data.success ? 'success' : 'error');
                 if (data.success) {
                     setTimeout(function () { window.location.reload(); }, 1500);
@@ -78,13 +78,13 @@ function backupsUserRunNow() {
             .catch(function () {
                 attempts++;
                 if (attempts >= 600) {
-                    clearInterval(timer);
+                    opStop(timer);
                 }
             });
     }
 
     setTimeout(function () {
-        timer = setInterval(poll, 1500);
+        timer = opPoll(poll, 1500);
     }, 1000);
 }
 </script>

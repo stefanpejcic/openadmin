@@ -109,6 +109,9 @@ func InitChromeSiteInfo(publicIP, serverHostname, forceDomainValue, panelVersion
 
 // buildChrome computes the per-request chrome fields from the current
 // session/role plus the startup globals recorded above.
+// restartFlagCache only rereads the restart flag when it changes, it's checked on every page
+var restartFlagCache fileCache[bool]
+
 func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 	user := auth.CurrentUser(r)
 	role := ""
@@ -135,12 +138,10 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 		entries, _ := readNotifications()
 		unread, serviceDown = unreadNotificationSummary(entries)
 
-		openpanelRestart := false
-		if raw, err := os.ReadFile(ChromeOpenpanelRestartFlagPath); err == nil {
-			if strings.TrimSpace(string(raw)) != "" {
-				openpanelRestart = true
-			}
-		}
+		openpanelRestart, _ := restartFlagCache.get(ChromeOpenpanelRestartFlagPath, func(p string) bool {
+			raw, err := os.ReadFile(p)
+			return err == nil && strings.TrimSpace(string(raw)) != ""
+		})
 		openadminRestart := false
 		if _, err := os.Stat(ChromeOpenadminRestartFlagPath); err == nil {
 			openadminRestart = true
