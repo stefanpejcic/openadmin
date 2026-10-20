@@ -63,6 +63,8 @@ type dashboardPageData struct {
 	dashboardAdminData
 	dashboardResellerData
 	Flashes []auth.Flash
+	// nil when the summary module is off or no account has a saved summary yet
+	Summary *serverSummary
 }
 
 // onboardingPageData is the shape webtemplates/onboarding.html renders
@@ -158,7 +160,16 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		Chrome:             buildChrome(r, "Dashboard"),
 		dashboardAdminData: data,
 		Flashes:            auth.PopFlashes(w, r, d.Sessions),
+		Summary:            d.summary(""),
 	})
+}
+
+// summary is the combined daily summary for the widget, owner scopes it to a reseller's accounts
+func (d *Dashboard) summary(owner string) *serverSummary {
+	if !summaryEnabled() {
+		return nil
+	}
+	return cachedServerSummary(d.MySQL, owner)
 }
 
 func (d *Dashboard) serveAdminDashboardError(w http.ResponseWriter, r *http.Request, wantJSON bool) {
@@ -271,6 +282,7 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 		Chrome:                buildChrome(r, "Reseller Dashboard"),
 		dashboardResellerData: data,
 		Flashes:               auth.PopFlashes(w, r, d.Sessions),
+		Summary:               d.summary(user.Username),
 	})
 }
 
