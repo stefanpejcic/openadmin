@@ -27,7 +27,7 @@ func TestBuildServerSummary(t *testing.T) {
 
 	now := time.Date(2026, 10, 20, 9, 0, 0, 0, time.Local)
 	writeUserSummary(t, dir, "alice", "2026-10-19", `{"username":"alice","prev_requests":100,
-		"attention":[{"title":"SSL expired","detail":"a.com"}],"look":[{"title":"disk"}],
+		"attention":[{"title":"SSL expired","detail":"Yoast SEO &#8211; Q&amp;A"}],"look":[{"title":"disk"}],
 		"websites":[{"name":"a.com","requests":1500,"unique_ips":40,"bytes":2048,"server_errors":3,"waf_blocked":2}]}`)
 	writeUserSummary(t, dir, "bob", "2026-10-19", `{"username":"bob","prev_requests":100,
 		"websites":[{"name":"b.com","requests":500,"unique_ips":10,"bytes":1024}]}`)
@@ -49,6 +49,9 @@ func TestBuildServerSummary(t *testing.T) {
 	}
 	if len(s.Attention) != 1 || s.Attention[0].Username != "alice" || s.LookCount != 1 || s.LookAccounts != 1 {
 		t.Fatalf("findings %+v", s)
+	}
+	if s.Attention[0].Detail != "Yoast SEO – Q&A" {
+		t.Fatalf("detail not unescaped %q", s.Attention[0].Detail)
 	}
 	if len(s.Sites) != 2 || s.Sites[0].Name != "a.com" || s.Sites[0].Share != 100 || s.Sites[1].Share != 33 {
 		t.Fatalf("sites %+v", s.Sites)

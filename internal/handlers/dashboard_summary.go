@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html"
 	"os"
 	"path/filepath"
 	"slices"
@@ -165,7 +166,8 @@ func buildServerSummary(users []string, now time.Time) *serverSummary {
 			prev += s.PrevRequests
 		}
 		for _, it := range s.Attention {
-			out.Attention = append(out.Attention, summaryFinding{Username: s.Username, Title: it.Title, Detail: it.Detail})
+			// plugin names come from WordPress already entity encoded, the template escapes them again
+			out.Attention = append(out.Attention, summaryFinding{Username: s.Username, Title: html.UnescapeString(it.Title), Detail: html.UnescapeString(it.Detail)})
 		}
 		if len(s.Look) > 0 {
 			out.LookCount += len(s.Look)
