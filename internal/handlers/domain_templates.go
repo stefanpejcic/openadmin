@@ -44,7 +44,8 @@ var (
 func saveTemplateFiles(r *http.Request, keys []string) {
 	for _, key := range keys {
 		if formHasKey(r, key) {
-			os.WriteFile(domainTemplateFilePaths[key], []byte(r.PostFormValue(key)), 0644)
+			// browsers submit textareas with CRLF, which breaks every $-anchored sed/awk run over the vhosts made from these
+			os.WriteFile(domainTemplateFilePaths[key], []byte(strings.ReplaceAll(r.PostFormValue(key), "\r\n", "\n")), 0644)
 		}
 	}
 }
