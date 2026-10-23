@@ -38,7 +38,7 @@ var FTPConfPath = "/etc/openpanel/ftp/vsftpd.conf"
 // FTPUsersDir holds a users.list and quota.usage per OpenPanel account.
 var FTPUsersDir = "/etc/openpanel/ftp/users"
 
-// ftpPsRun/ftpRefreshRun/ftpRestartRun are injectable so tests never shell
+// ftpPsRun/ftpRefreshRun/ftpReloadRun are injectable so tests never shell
 // out to a real podman/opencli binary, matching the pattern used throughout
 // this package (controlServiceRun, dropCacheRun, ...).
 var (
@@ -58,7 +58,11 @@ var (
 		out, err := exec.Command("opencli", "ftp-quota", user, quota, owner).CombinedOutput()
 		return string(out), err
 	}
-	ftpRestartRun = func() error {
+	// vsftpd's standalone listener rereads its config on SIGHUP, open sessions keep going; a restart only when that fails
+	ftpReloadRun = func() error {
+		if cmd, err := podman.Command("default", "exec", "openadmin_ftp", "pkill", "-HUP", "-f", "^vsftpd: LISTENER"); err == nil && cmd.Run() == nil {
+			return nil
+		}
 		cmd, err := podman.Command("default", "restart", "openadmin_ftp")
 		if err != nil {
 			return err
@@ -398,8 +402,9 @@ func (f *FTP) ServeSettings(w http.ResponseWriter, r *http.Request) {
 		newContent = strings.ReplaceAll(newContent, "\r\n", "\n")
 		newContent = strings.ReplaceAll(newContent, "\r", "\n")
 
-		if _, err := os.Stat(FTPConfPath); err == nil {
-			_ = os.Rename(FTPConfPath, FTPConfPath+".bak")
+		// copied and overwritten in place, not renamed, the ftp container sees this file through a single-file bind mount
+		if previous, err := os.ReadFile(FTPConfPath); err == nil {
+			_ = os.WriteFile(FTPConfPath+".bak", previous, 0644)
 		}
 		if err := os.WriteFile(FTPConfPath, []byte(newContent), 0644); err != nil {
 			auth.AddFlash(w, r, f.Sessions, "Error reading or updating config file. - Check openadmin error log", "error")
@@ -407,10 +412,10 @@ func (f *FTP) ServeSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := ftpRestartRun(); err != nil {
-			auth.AddFlash(w, r, f.Sessions, "Config updated, but failed to restart FTP container.", "error")
+		if err := ftpReloadRun(); err != nil {
+			auth.AddFlash(w, r, f.Sessions, "Config updated, but failed to reload the FTP server.", "error")
 		} else {
-			auth.AddFlash(w, r, f.Sessions, "Config updated successfully. FTP container restarted to apply changes.", "success")
+			auth.AddFlash(w, r, f.Sessions, "Config updated successfully. FTP server reloaded to apply changes.", "success")
 		}
 		f.renderSettings(w, r, status, newContent)
 		return

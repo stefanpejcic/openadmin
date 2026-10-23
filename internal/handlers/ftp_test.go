@@ -315,9 +315,9 @@ func TestServeSettingsPostSavesAndRestarts(t *testing.T) {
 	os.WriteFile(confFile, []byte("old content\n"), 0644)
 
 	restarted := false
-	origRun := ftpRestartRun
-	ftpRestartRun = func() error { restarted = true; return nil }
-	t.Cleanup(func() { ftpRestartRun = origRun })
+	origRun := ftpReloadRun
+	ftpReloadRun = func() error { restarted = true; return nil }
+	t.Cleanup(func() { ftpReloadRun = origRun })
 
 	f := &FTP{}
 	srv, client := newFTPTestServer(t, f)
@@ -330,9 +330,9 @@ func TestServeSettingsPostSavesAndRestarts(t *testing.T) {
 	resp.Body.Close()
 
 	if !restarted {
-		t.Fatal("expected ftpRestartRun to be called after a successful save")
+		t.Fatal("expected ftpReloadRun to be called after a successful save")
 	}
-	if !strings.Contains(string(body), "Config updated successfully. FTP container restarted to apply changes.") {
+	if !strings.Contains(string(body), "Config updated successfully. FTP server reloaded to apply changes.") {
 		t.Fatalf("expected success flash, got %s", truncate(string(body)))
 	}
 
@@ -359,9 +359,9 @@ func TestServeSettingsPostSavesAndRestarts(t *testing.T) {
 func TestServeSettingsPostRestartFailureStillSaves(t *testing.T) {
 	_, confFile := withScratchFTPPaths(t)
 
-	origRun := ftpRestartRun
-	ftpRestartRun = func() error { return errFTPRefreshStub }
-	t.Cleanup(func() { ftpRestartRun = origRun })
+	origRun := ftpReloadRun
+	ftpReloadRun = func() error { return errFTPRefreshStub }
+	t.Cleanup(func() { ftpReloadRun = origRun })
 
 	f := &FTP{}
 	srv, client := newFTPTestServer(t, f)
@@ -372,7 +372,7 @@ func TestServeSettingsPostRestartFailureStillSaves(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "Config updated, but failed to restart FTP container.") {
+	if !strings.Contains(string(body), "Config updated, but failed to reload the FTP server.") {
 		t.Fatalf("expected restart-failure flash, got %s", truncate(string(body)))
 	}
 
