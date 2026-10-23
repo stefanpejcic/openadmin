@@ -207,6 +207,7 @@ func (p *Passkeys) HandleRegisterComplete(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusInternalServerError, "Could not save passkey.")
 		return
 	}
+	_ = p.DB.SetCredentialBackupEligible(credentialID, cred.Flags.BackupEligible)
 
 	auth.AddFlash(w, r, p.Sessions, "Passkey added.", "success")
 	w.Header().Set("Content-Type", "application/json")

@@ -36,6 +36,8 @@ type WebauthnCredential struct {
 	SignCount    uint32
 	Name         sql.NullString
 	CreatedAt    time.Time
+	// null for passkeys added before we stored it
+	BackupEligible sql.NullBool
 }
 
 // Open opens Path, ensures the schema exists, and runs idempotent migrations if needed
@@ -70,7 +72,7 @@ func (db *DB) migrate() error {
 		return err
 	}
 
-	columns, err := db.userColumns()
+	columns, err := db.tableColumns("user")
 	if err != nil {
 		return err
 	}
@@ -99,11 +101,21 @@ func (db *DB) migrate() error {
 		return err
 	}
 
+	credColumns, err := db.tableColumns("webauthn_credential")
+	if err != nil {
+		return err
+	}
+	if !credColumns["backup_eligible"] {
+		if _, err := db.sql.Exec(`ALTER TABLE webauthn_credential ADD COLUMN backup_eligible BOOLEAN`); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func (db *DB) userColumns() (map[string]bool, error) {
-	rows, err := db.sql.Query(`PRAGMA table_info(user)`)
+func (db *DB) tableColumns(table string) (map[string]bool, error) {
+	rows, err := db.sql.Query(`PRAGMA table_info(` + table + `)`)
 	if err != nil {
 		return nil, err
 	}
@@ -155,9 +167,9 @@ func (db *DB) CredentialByCredentialID(credentialID string) (*WebauthnCredential
 	var c WebauthnCredential
 	var createdAt sql.NullString
 	err := db.sql.QueryRow(
-		`SELECT id, user_id, credential_id, public_key, sign_count, name, created_at FROM webauthn_credential WHERE credential_id = ?`,
+		`SELECT id, user_id, credential_id, public_key, sign_count, name, created_at, backup_eligible FROM webauthn_credential WHERE credential_id = ?`,
 		credentialID,
-	).Scan(&c.ID, &c.UserID, &c.CredentialID, &c.PublicKey, &c.SignCount, &c.Name, &createdAt)
+	).Scan(&c.ID, &c.UserID, &c.CredentialID, &c.PublicKey, &c.SignCount, &c.Name, &createdAt, &c.BackupEligible)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -202,6 +214,12 @@ func (db *DB) CredentialsByUserID(userID int64) ([]WebauthnCredential, error) {
 
 func (db *DB) UpdateCredentialSignCount(credentialID string, signCount uint32) error {
 	_, err := db.sql.Exec(`UPDATE webauthn_credential SET sign_count = ? WHERE credential_id = ?`, signCount, credentialID)
+	return err
+}
+
+// SetCredentialBackupEligible stores the passkey's BE flag, synced passkeys (iCloud, Google, 1Password) have it set
+func (db *DB) SetCredentialBackupEligible(credentialID string, eligible bool) error {
+	_, err := db.sql.Exec(`UPDATE webauthn_credential SET backup_eligible = ? WHERE credential_id = ?`, eligible, credentialID)
 	return err
 }
 
