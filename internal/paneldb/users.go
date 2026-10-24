@@ -57,18 +57,15 @@ type UserData struct {
 	Context        string         `json:"context"` // the `server` column, aliased "context"
 }
 
-// GetUserDataByUsername matches either the exact username or a
-// "SUSPENDED_<id>_<username>" variant. The underscores in the LIKE pattern
-// are deliberately NOT backslash-escaped -- in SQL LIKE, unescaped "_"
-// matches any single character, so this is technically a slightly looser
-// match than "literal underscore", but that's intentional here.
+// GetUserDataByUsername matches the exact username or opencli's "SUSPENDED_<YYYYmmddHHMMSS>_<username>", exact name first
 func GetUserDataByUsername(db *sql.DB, username string) (*UserData, error) {
-	suspendedPattern := "SUSPENDED_%_" + username
 	row := db.QueryRow(`
 		SELECT u.username, u.id, u.email, u.owner, u.twofa_enabled, u.registered_date, u.plan_id, u.server
 		FROM users u
-		WHERE u.username = ? OR u.username LIKE ?
-	`, username, suspendedPattern)
+		WHERE u.username = ? OR (u.username REGEXP '^SUSPENDED_[0-9]{14}_' AND SUBSTRING(u.username, 26) = ?)
+		ORDER BY u.username = ? DESC
+		LIMIT 1
+	`, username, username, username)
 
 	var d UserData
 	if err := row.Scan(&d.Username, &d.ID, &d.Email, &d.Owner, &d.TwoFAEnabled, &d.RegisteredDate, &d.PlanID, &d.Context); err != nil {

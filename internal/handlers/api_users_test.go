@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -97,6 +98,26 @@ func TestServeUsersGetDetailNotFound(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+}
+
+// a LIKE 'SUSPENDED_%_john' here also matched SUSPENDED_<ts>_bjohn, so pin the exact form
+func TestServeUsersGetDetailMatchesSuspendedNameExactly(t *testing.T) {
+	srv, client, mock := newAPIUsersTestServer(t)
+	mock.ExpectQuery(regexp.QuoteMeta(`WHERE u.username = ? OR (u.username REGEXP '^SUSPENDED_[0-9]{14}_' AND SUBSTRING(u.username, 26) = ?) ORDER BY u.username = ? DESC LIMIT 1`)).
+		WithArgs("john", "john", "john").
+		WillReturnRows(sqlmock.NewRows([]string{"user_id"}))
+
+	resp, err := client.Get(srv.URL + "/api/users/john")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
 	}
 }
 
