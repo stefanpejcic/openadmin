@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"net"
+	"os"
 	"os/exec"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -67,10 +69,18 @@ var sshSessionsRun = func() string {
 	return string(out)
 }
 
-// openSSHPeers counts established connections owned by sshd, so it works whatever port SSH listens on
+// sshProcTitle is swapped out in tests, sshd rewrites its title as the login goes along
+var sshProcTitle = func(pid string) string {
+	b, _ := os.ReadFile("/proc/" + pid + "/cmdline")
+	return strings.TrimSpace(strings.ReplaceAll(string(b), "\x00", " "))
+}
+
+var ssPIDRe = regexp.MustCompile(`pid=(\d+)`)
+
+// openSSHPeers counts logged-in SSH connections per IP from ss output, so it works whatever port SSH listens on
 func openSSHPeers(ssOutput string) []sshPeer {
-	seen := map[string]bool{}
-	counts := map[string]int{}
+	// privileged and child sshd share the socket, collect every pid holding each peer ip:port
+	holders := map[string][]string{}
 	for _, line := range strings.Split(ssOutput, "\n") {
 		if !strings.Contains(line, `"sshd`) {
 			continue
@@ -79,18 +89,20 @@ func openSSHPeers(ssOutput string) []sshPeer {
 		if len(fields) < 4 {
 			continue
 		}
-		// privileged and child sshd share the socket, count each peer ip:port once
-		peer := fields[3]
-		if seen[peer] {
+		for _, m := range ssPIDRe.FindAllStringSubmatch(line, -1) {
+			holders[fields[3]] = append(holders[fields[3]], m[1])
+		}
+	}
+	counts := map[string]int{}
+	for peer, pids := range holders {
+		if !sshLoggedIn(pids) {
 			continue
 		}
-		seen[peer] = true
 		host, _, err := net.SplitHostPort(peer)
 		if err != nil {
 			continue
 		}
-		host = strings.TrimPrefix(host, "::ffff:")
-		counts[host]++
+		counts[strings.TrimPrefix(host, "::ffff:")]++
 	}
 	out := make([]sshPeer, 0, len(counts))
 	for ip, n := range counts {
@@ -98,4 +110,22 @@ func openSSHPeers(ssOutput string) []sshPeer {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].IP < out[j].IP })
 	return out
+}
+
+// sshLoggedIn wants the [priv] monitor plus its session process, logins still in progress and port forwards only have one of them
+func sshLoggedIn(pids []string) bool {
+	monitor, session := false, false
+	for _, pid := range pids {
+		name, state, ok := strings.Cut(sshProcTitle(pid), ": ")
+		if !ok || !strings.HasPrefix(name, "sshd") {
+			continue
+		}
+		// a session is "root@pts/0", "root@notty" or "root", anything mid-login is tagged like "[accepted]" or "unknown [net]"
+		if strings.HasSuffix(state, " [priv]") {
+			monitor = true
+		} else if !strings.Contains(state, "[") {
+			session = true
+		}
+	}
+	return monitor && session
 }
