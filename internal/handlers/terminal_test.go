@@ -15,6 +15,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"openadmin/internal/activity"
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
 )
@@ -26,6 +27,10 @@ func newTerminalTestServer(t *testing.T, term *Terminal, role string) (*httptest
 	admindb.Path = filepath.Join(dir, "users.db")
 	t.Cleanup(func() { admindb.Path = origPath })
 
+	origActivityDir := activity.Dir
+	activity.Dir = filepath.Join(dir, "activity")
+	t.Cleanup(func() { activity.Dir = origActivityDir })
+
 	origFlag := TerminalDisableFlagPath
 	TerminalDisableFlagPath = filepath.Join(dir, "disable_openadmin_terminal_ui")
 	t.Cleanup(func() { TerminalDisableFlagPath = origFlag })
@@ -33,6 +38,8 @@ func newTerminalTestServer(t *testing.T, term *Terminal, role string) (*httptest
 	origCwd := TerminalPTYCwd
 	TerminalPTYCwd = dir
 	t.Cleanup(func() { TerminalPTYCwd = origCwd })
+	// runs before the restores above: live handlers still read those vars while they wind down
+	t.Cleanup(webTerminalActive.Wait)
 
 	db, err := admindb.Open()
 	if err != nil {
@@ -330,6 +337,108 @@ func dialHostTerminal(t *testing.T, srv *httptest.Server, client *http.Client, s
 		t.Fatal(err)
 	}
 	return conn
+}
+
+// termExpectClosedSoon reads until the server closes the socket, failing if that doesn't happen before our own deadline (which would mean it was never torn down)
+func termExpectClosedSoon(t *testing.T, conn *websocket.Conn, within time.Duration) {
+	t.Helper()
+	conn.SetReadDeadline(time.Now().Add(within + 2*time.Second))
+	start := time.Now()
+	var err error
+	for {
+		if _, _, err = conn.ReadMessage(); err != nil {
+			break
+		}
+	}
+	if ne, ok := err.(net.Error); ok && ne.Timeout() {
+		t.Fatalf("session was not torn down, read timed out after %s instead of being closed", time.Since(start).Round(time.Millisecond))
+	}
+	if time.Since(start) > within {
+		t.Fatalf("session closed but took %s, longer than expected %s", time.Since(start).Round(time.Millisecond), within)
+	}
+}
+
+func TestCloseWebTerminalsForAdmin(t *testing.T) {
+	origDir := activity.Dir
+	activity.Dir = t.TempDir()
+	t.Cleanup(func() { activity.Dir = origDir })
+
+	mk := func(username string, closed *bool) func() {
+		r := httptest.NewRequest("GET", "/ws/terminal", nil)
+		r.RemoteAddr = "203.0.113.4:5555"
+		r = auth.WithCurrentUser(r, &admindb.User{Username: username})
+		return trackWebTerminal(r, "host", func() { *closed = true })
+	}
+	var aliceClosed, bobClosed bool
+	removeAlice := mk("alice", &aliceClosed)
+	removeBob := mk("bob", &bobClosed)
+	t.Cleanup(removeAlice)
+	t.Cleanup(removeBob)
+
+	if n := closeWebTerminalsForAdmin("alice"); n != 1 {
+		t.Fatalf("closeWebTerminalsForAdmin(alice) closed %d sessions, want 1", n)
+	}
+	if !aliceClosed {
+		t.Fatal("alice's session should have been closed")
+	}
+	if bobClosed {
+		t.Fatal("bob's session must not have been closed")
+	}
+}
+
+// logout/delete/suspend call closeWebTerminalsForAdmin, which must drop a live session
+func TestWebTerminalTornDownForAdmin(t *testing.T) {
+	term := &Terminal{}
+	srv, client := newTerminalTestServer(t, term, "admin")
+	conn := dialHostTerminal(t, srv, client, "sh")
+	defer conn.Close()
+
+	// let the session register before we tear it down
+	time.Sleep(200 * time.Millisecond)
+	if n := closeWebTerminalsForAdmin("caller"); n != 1 {
+		t.Fatalf("expected to close 1 session for caller, closed %d", n)
+	}
+	termExpectClosedSoon(t, conn, 3*time.Second)
+}
+
+// a session must drop when the disable flag appears while it's live
+func TestWebTerminalTornDownOnDisableFlag(t *testing.T) {
+	origWatch := terminalDisableWatch
+	terminalDisableWatch = 150 * time.Millisecond
+	t.Cleanup(func() { terminalDisableWatch = origWatch })
+
+	term := &Terminal{}
+	srv, client := newTerminalTestServer(t, term, "admin")
+	conn := dialHostTerminal(t, srv, client, "sh")
+	defer conn.Close()
+
+	if err := os.WriteFile(TerminalDisableFlagPath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	termExpectClosedSoon(t, conn, 3*time.Second)
+}
+
+// opening and closing a terminal must land in the admin's activity log
+func TestWebTerminalSessionLogged(t *testing.T) {
+	term := &Terminal{}
+	srv, client := newTerminalTestServer(t, term, "admin")
+	conn := dialHostTerminal(t, srv, client, "sh")
+	// read a little so the session is really up, then close from the client side
+	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	conn.ReadMessage()
+	conn.Close()
+
+	logPath := activity.Path("caller")
+	deadline := time.Now().Add(4 * time.Second)
+	var data []byte
+	for time.Now().Before(deadline) {
+		data, _ = os.ReadFile(logPath)
+		if strings.Contains(string(data), "Opened the root web terminal") && strings.Contains(string(data), "Closed the root web terminal") {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("activity log missing the open/close entries, got: %q", string(data))
 }
 
 // readUntil reads frames until want shows up or the per-read deadline passes, returning everything read

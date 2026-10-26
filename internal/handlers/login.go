@@ -552,6 +552,10 @@ func (u *webauthnUser) WebAuthnCredentials() []webauthn.Credential {
 
 // HandleLogout handles GET /logout.
 func (l *Login) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	// cut any live web terminal this admin left open, the session cookie is about to go away
+	if u := auth.CurrentUser(r); u != nil {
+		closeWebTerminalsForAdmin(u.Username)
+	}
 	_ = auth.LogoutUser(w, r, l.Sessions)
 	auth.AddFlash(w, r, l.Sessions, "Logged out successfully", "success")
 	http.Redirect(w, r, "/login", http.StatusSeeOther)

@@ -198,13 +198,22 @@ func (a *Administrators) runAction(action, username, password string, r *http.Re
 		return runOpenCLI(adminCommandError, "opencli", "admin", "rename", username, r.FormValue("new_username"))
 
 	case "suspend":
-		return runOpenCLI(adminCommandError, "opencli", "admin", "suspend", username)
+		ok, msg := runOpenCLI(adminCommandError, "opencli", "admin", "suspend", username)
+		if ok {
+			// a suspended admin shouldn't keep a live root shell
+			closeWebTerminalsForAdmin(username)
+		}
+		return ok, msg
 
 	case "unsuspend":
 		return runOpenCLI(adminCommandError, "opencli", "admin", "unsuspend", username)
 
 	case "delete":
-		return runOpenCLI(adminCommandError, "opencli", "admin", "delete", username)
+		ok, msg := runOpenCLI(adminCommandError, "opencli", "admin", "delete", username)
+		if ok {
+			closeWebTerminalsForAdmin(username)
+		}
+		return ok, msg
 
 	default:
 		return false, "Unknown action."

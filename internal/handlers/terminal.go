@@ -39,6 +39,35 @@ var TerminalDisableFlagPath = "/root/disable_openadmin_terminal_ui"
 // chdir into.
 var TerminalPTYCwd = "/root"
 
+// terminalDisableWatch is how often a live session rechecks the disable flag, a var so tests can speed it up
+var terminalDisableWatch = 5 * time.Second
+
+// watchTerminalDisabled force-closes conn if the disable flag shows up while the session is live, since the flag is usually created out of band (touch) with no handler to hook. Returns a stop func that waits for the watcher to exit.
+func watchTerminalDisabled(conn *websocket.Conn) func() {
+	done := make(chan struct{})
+	exited := make(chan struct{})
+	go func() {
+		defer close(exited)
+		ticker := time.NewTicker(terminalDisableWatch)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if _, err := os.Stat(TerminalDisableFlagPath); err == nil {
+					_ = conn.Close()
+					return
+				}
+			}
+		}
+	}()
+	return func() {
+		close(done)
+		<-exited
+	}
+}
+
 // terminalCSP locks the terminal page down to same-origin assets: everything
 // (xterm included) is self-hosted, the websocket can only reach this origin,
 // and the page can't be framed. Alpine and the inline setup script still need
@@ -263,7 +292,8 @@ func (t *Terminal) ServeHostTerminalWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-	defer trackWebTerminal(r, "host")()
+	defer trackWebTerminal(r, "host", func() { _ = conn.Close() })()
+	defer watchTerminalDisabled(conn)()
 
 	init, ok := terminalReadInit(conn)
 	if !ok {
@@ -286,7 +316,8 @@ func (t *Terminal) ServeUserTerminalWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-	defer trackWebTerminal(r, username+"/"+containerName)()
+	defer trackWebTerminal(r, username+"/"+containerName, func() { _ = conn.Close() })()
+	defer watchTerminalDisabled(conn)()
 
 	init, ok := terminalReadInit(conn)
 	if !ok {
