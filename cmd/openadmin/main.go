@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/csrf"
 
 	"openadmin/internal/admindb"
+	"openadmin/internal/apidocs"
 	"openadmin/internal/auth"
 	"openadmin/internal/bootstrap"
 	"openadmin/internal/config"
@@ -28,6 +29,21 @@ import (
 )
 
 func main() {
+	// opencli api list, prints the endpoints and exits before anything starts
+	if len(os.Args) > 1 && os.Args[1] == "api-endpoints" {
+		base := "https://localhost:2087"
+		if len(os.Args) > 2 {
+			base = os.Args[2]
+		}
+		text, err := apidocs.Text(base)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Print(text)
+		return
+	}
+
 	handlers.EnsureErrorLogDirs()
 
 	devMode := bootstrap.IsDevMode()

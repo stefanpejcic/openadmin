@@ -26,12 +26,32 @@ var licenseRunOpenCLI = func(args ...string) (stdout, stderr string, err error) 
 	return runOpenCLICaptured(args...)
 }
 
+// licenseKeyFromOutput reads `opencli license key --json`, which prints
+// {"key": "..."} or {"key": null}. Older opencli printed the bare key or
+// "No License Key", so those are still accepted.
+func licenseKeyFromOutput(stdout string) string {
+	out := strings.TrimSpace(stdout)
+	var parsed struct {
+		Key *string `json:"key"`
+	}
+	if json.Unmarshal([]byte(out), &parsed) == nil {
+		if parsed.Key == nil {
+			return ""
+		}
+		return *parsed.Key
+	}
+	if out == "No License Key" {
+		return ""
+	}
+	return out
+}
+
 // ServeLicense handles GET /license.
 func (l *LicensePage) ServeLicense(w http.ResponseWriter, r *http.Request) {
 	stdout, _, err := licenseRunOpenCLI("opencli", "license", "key", "--json")
 	var key interface{}
 	if err == nil {
-		key = strings.TrimSpace(stdout)
+		key = licenseKeyFromOutput(stdout)
 	}
 
 	if r.URL.Query().Get("output") == "json" {
@@ -55,7 +75,7 @@ func (l *LicensePage) ServeLicenseKey(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusInternalServerError, "Failed to read license key")
 			return
 		}
-		writeJSON(w, map[string]string{"key": strings.TrimSpace(stdout)})
+		writeJSON(w, map[string]string{"key": licenseKeyFromOutput(stdout)})
 
 	case http.MethodPost:
 		var body map[string]string

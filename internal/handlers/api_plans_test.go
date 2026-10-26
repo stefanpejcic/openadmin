@@ -192,8 +192,16 @@ func TestServePlanDetailGetFound(t *testing.T) {
 }
 
 func TestServePlanDetailDeleteSuccess(t *testing.T) {
-	srv, client, _ := newAPIPlansTestServer(t, nil)
-	stubAPICheckOutputRun(t, "deleted", nil)
+	srv, client, mock := newAPIPlansTestServer(t, nil)
+	mock.ExpectQuery("SELECT \\* FROM plans WHERE id = ?").WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(1, "starter"))
+
+	var gotArgs []string
+	orig := apiCheckOutputRun
+	apiCheckOutputRun = func(args ...string) (string, error) {
+		gotArgs = args
+		return "deleted", nil
+	}
+	t.Cleanup(func() { apiCheckOutputRun = orig })
 
 	req, _ := http.NewRequest(http.MethodDelete, srv.URL+"/api/plans/1", nil)
 	resp, err := client.Do(req)
@@ -208,6 +216,34 @@ func TestServePlanDetailDeleteSuccess(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&out)
 	if out["message"] != "Plan deleted successfully." || out["output"] != "deleted" {
 		t.Fatalf("unexpected body: %v", out)
+	}
+	if strings.Join(gotArgs, " ") != "opencli plan-delete starter --json" {
+		t.Fatalf("plan-delete must get the plan name, got %v", gotArgs)
+	}
+}
+
+func TestServePlanDetailDeleteNotFound(t *testing.T) {
+	srv, client, mock := newAPIPlansTestServer(t, nil)
+	mock.ExpectQuery("SELECT \\* FROM plans WHERE id = ?").WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
+	called := false
+	orig := apiCheckOutputRun
+	apiCheckOutputRun = func(args ...string) (string, error) {
+		called = true
+		return "", nil
+	}
+	t.Cleanup(func() { apiCheckOutputRun = orig })
+
+	req, _ := http.NewRequest(http.MethodDelete, srv.URL+"/api/plans/99", nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+	if called {
+		t.Fatal("plan-delete must not run for a missing plan")
 	}
 }
 

@@ -27,7 +27,7 @@ func (a *APILicense) ServeLicense(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusInternalServerError, "Failed to read license key")
 			return
 		}
-		writeJSON(w, map[string]string{"key": strings.TrimSpace(stdout)})
+		writeJSON(w, map[string]string{"key": licenseKeyFromOutput(stdout)})
 
 	case http.MethodDelete:
 		stdout, _, err := licenseRunOpenCLI("opencli", "license", "delete", "--json")

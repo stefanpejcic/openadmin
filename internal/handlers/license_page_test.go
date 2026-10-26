@@ -243,3 +243,17 @@ func TestServeSupportReportSuccessAndFailure(t *testing.T) {
 		t.Fatalf("expected failure flash, got %s", truncate(string(body2)))
 	}
 }
+
+func TestLicenseKeyFromOutput(t *testing.T) {
+	cases := map[string]string{
+		`{"key": "enterprise-abc123"}`: "enterprise-abc123",
+		`{"key": null}`:                "",
+		"enterprise-abc123\n":          "enterprise-abc123",
+		"No License Key":               "",
+	}
+	for in, want := range cases {
+		if got := licenseKeyFromOutput(in); got != want {
+			t.Errorf("licenseKeyFromOutput(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -225,7 +225,19 @@ func (p *APIPlans) handleGet(w http.ResponseWriter, r *http.Request, planIDStr s
 }
 
 func (p *APIPlans) handleDelete(w http.ResponseWriter, r *http.Request, planIDStr string) {
-	output, runErr := apiCheckOutputRun("opencli", "plan-delete", planIDStr, "--json")
+	// plan-delete takes the plan name, not the id
+	plan, err := paneldb.GetPlanByID(p.MySQL, planIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "Plan not found")
+		return
+	}
+	planName, _ := plan["name"].(string)
+	if planName == "" {
+		writeJSONError(w, http.StatusNotFound, "Plan not found")
+		return
+	}
+
+	output, runErr := apiCheckOutputRun("opencli", "plan-delete", planName, "--json")
 	if runErr == nil {
 		writeJSON(w, map[string]interface{}{
 			"success": true,
