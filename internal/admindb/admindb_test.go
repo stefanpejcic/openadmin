@@ -145,3 +145,30 @@ func TestCreateUserDuplicateUsernameFails(t *testing.T) {
 		t.Fatal("expected duplicate username to fail (UNIQUE constraint)")
 	}
 }
+
+func TestCredentialBackupEligible(t *testing.T) {
+	db := withScratchDB(t)
+	if err := db.CreateUser("admin", "hash", "admin"); err != nil {
+		t.Fatal(err)
+	}
+	u, _ := db.UserByUsername("admin")
+	if _, err := db.CreateCredential(u.ID, "synced", "pubkey", 0, "iCloud"); err != nil {
+		t.Fatal(err)
+	}
+
+	cred, err := db.CredentialByCredentialID("synced")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cred.BackupEligible.Valid {
+		t.Fatalf("expected unknown backup_eligible on a fresh row, got %+v", cred.BackupEligible)
+	}
+
+	if err := db.SetCredentialBackupEligible("synced", true); err != nil {
+		t.Fatal(err)
+	}
+	cred, _ = db.CredentialByCredentialID("synced")
+	if !cred.BackupEligible.Valid || !cred.BackupEligible.Bool {
+		t.Fatalf("expected backup_eligible true, got %+v", cred.BackupEligible)
+	}
+}

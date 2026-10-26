@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,6 +24,8 @@ import (
 type OpenpanelSettings struct {
 	Sessions       *auth.Manager
 	LicenseChecker *license.Checker // nil on Community
+	// panel DB, only used to count sites for the PageSpeed hint
+	MySQL *sql.DB
 }
 
 // openpanelFileFields lists the custom-code-backed fields (raw files, not
@@ -72,6 +75,8 @@ var openpanelStringFields = []string{
 	"captcha_provider", "recaptcha_site_key", "recaptcha_secret_key",
 	"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key",
 	"applications_dashboard_items",
+	"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_name", "ai_instructions",
+	"ai_monthly_limit", "ai_max_tokens", "ai_actions",
 }
 
 type openpanelValidationKind int
@@ -82,6 +87,8 @@ const (
 	openpanelOneToHundred
 	openpanelSpaceSeparatedList
 	openpanelSpaceSeparatedExtensions
+	openpanelOneToMax // options[0] is the max
+	openpanelSingleLine
 )
 
 type openpanelRule struct {
@@ -134,6 +141,15 @@ var openpanelValidValues = map[string]openpanelRule{
 	"permit_subdomain_sharing":        {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"permit_username_change_by_user":  {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"captcha_provider":                {kind: openpanelEnum, options: []string{"google", "turnstile", "custom", "none"}},
+	"ai_provider":                     {kind: openpanelEnum, options: []string{"openrouter", "openai", "anthropic", "custom"}},
+	"ai_monthly_limit":                {kind: openpanelNonNegativeInt},
+	"ai_actions":                      {kind: openpanelEnum, options: []string{"off", "read", "all"}},
+	"ai_max_tokens":                   {kind: openpanelOneToMax, options: []string{"64000"}},
+	"ai_name":                         {kind: openpanelSingleLine},
+	"ai_instructions":                 {kind: openpanelSingleLine},
+	"ai_model":                        {kind: openpanelSingleLine},
+	"ai_base_url":                     {kind: openpanelSingleLine},
+	"ai_api_key":                      {kind: openpanelSingleLine},
 }
 
 var openpanelSpaceSeparatedListRe = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
@@ -162,6 +178,18 @@ func validateOpenpanelValue(key, value string) (normalized string, ok bool, errM
 			return "", false, fmt.Sprintf("Error: '%s' must be an integer between 1 and 100 for %s.", value, key)
 		}
 		return strconv.Itoa(n), true, ""
+
+	case openpanelOneToMax:
+		max, _ := strconv.Atoi(rule.options[0])
+		n, err := strconv.Atoi(value)
+		if err != nil || n < 1 || n > max {
+			return "", false, fmt.Sprintf("Error: '%s' must be an integer between 1 and %d for %s.", value, max, key)
+		}
+		return strconv.Itoa(n), true, ""
+
+	case openpanelSingleLine:
+		// the config is key=value per line, a newline would break the file
+		return strings.Join(strings.Fields(value), " "), true, ""
 
 	case openpanelSpaceSeparatedList:
 		items := strings.Fields(value)
@@ -213,6 +241,9 @@ func openpanelSectionForKey(key string) string {
 		return "CAPTCHA"
 	case "validate_ip_address_cookie":
 		return "SECURITY"
+	}
+	if strings.HasPrefix(key, "ai_") {
+		return "AI"
 	}
 	return "USERS"
 }
@@ -359,14 +390,45 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 		fileContents[key] = content
 	}
 
+	// the file manager works inside the openpanel container, so its size limits are compared to that container's RAM
+	openpanelRAMGB := parseRAMLimitGB(readEnvGroups()["OPENPANEL"]["RAM"])
+
 	webtemplates.Render(w, "settings_openpanel.html", mergeChrome(map[string]interface{}{
-		"ConfigData":        configData,
-		"CSRFToken":         csrf.Token(r),
-		"Flashes":           auth.PopFlashes(w, r, o.Sessions),
-		"HasEnterprise":     hasEnterpriseAccess(r, o.LicenseChecker),
-		"HowtoGuides":       fileContents["howto_guides"],
-		"ForbiddenUsers":    fileContents["forbidden_usernames"],
-		"RestrictedDomains": fileContents["restricted_domains"],
-		"PagespeedAPIKey":   fileContents["pagespeed_api_key"],
+		"DNSModuleEnabled":   hasModule(modulesEnabledList(ModulesConfigFilePath), "dns"),
+		"AIModuleEnabled":    hasModule(modulesEnabledList(ModulesConfigFilePath), "ai_assistant"),
+		"AIUsage":            loadAIUsage(),
+		"SMTPConfigured":     strings.TrimSpace(config.Load(config.OpenpanelConfigPath).Get("SMTP", "mail_server", "")) != "",
+		"OpenpanelRAMMB":     int(openpanelRAMGB * 1024),
+		"OpenpanelRAM":       formatLimit(openpanelRAMGB) + " GB",
+		"MySQLCustomVersion": mysqlCustomVersion(),
+		"SiteCount":          totalSites(defaultsSiteTypesRun(o.MySQL)),
+		"ConfigData":         configData,
+		"CSRFToken":          csrf.Token(r),
+		"Flashes":            auth.PopFlashes(w, r, o.Sessions),
+		"HasEnterprise":      hasEnterpriseAccess(r, o.LicenseChecker),
+		"HowtoGuides":        fileContents["howto_guides"],
+		"ForbiddenUsers":     fileContents["forbidden_usernames"],
+		"RestrictedDomains":  fileContents["restricted_domains"],
+		"PagespeedAPIKey":    fileContents["pagespeed_api_key"],
 	}, r, "OpenPanel Settings"))
+}
+
+// mysqlCustomVersion is the MYSQL_VERSION tag new users get when it isn't latest, the first start has to pull that image
+func mysqlCustomVersion() string {
+	raw, err := os.ReadFile(DefaultsEnvPath)
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		k, v, ok := strings.Cut(strings.TrimSpace(line), "=")
+		if !ok || strings.TrimSpace(k) != "MYSQL_VERSION" {
+			continue
+		}
+		v = strings.Trim(strings.TrimSpace(v), `"'`)
+		if v == "" || v == "latest" {
+			return ""
+		}
+		return v
+	}
+	return ""
 }

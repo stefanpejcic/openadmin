@@ -75,6 +75,13 @@ func (a *APISettingsNotifications) handlePost(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// checked before anything is applied so a bad URL doesn't leave a half-saved update
+	newWebhook, err := apiWebhookValue(data)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	mainConfig := config.Load(config.OpenpanelConfigPath)
 	notifConfig := config.Load(NotificationsConfigPath)
 	notifDefault := notifConfig["DEFAULT"]
@@ -90,8 +97,8 @@ func (a *APISettingsNotifications) handlePost(w http.ResponseWriter, r *http.Req
 		apiNotifUpdateNumericIfChanged(data, key, httpConfig[key])
 	}
 
-	if newWebhook, ok := apiNotifFieldValue(data, "webhook_url"); ok && apiNotifChanged(notifDefault["webhook_url"], newWebhook) {
-		runOpenCLINotificationUpdate("webhook_url", newWebhook)
+	if newWebhook != nil && *newWebhook != normalizeWebhookURLs(notifDefault["webhook_url"]) {
+		runOpenCLINotificationUpdate("webhook_url", *newWebhook)
 	}
 
 	if newEmail, ok := apiNotifFieldValue(data, "email"); ok && apiNotifChanged(currentEmail, newEmail) {
@@ -198,6 +205,27 @@ func apiNotifFieldValue(data map[string]interface{}, key string) (string, bool) 
 		return "", false
 	}
 	return apiJSONValueToString(v), true
+}
+
+// webhook_url can be sent as a space separated string or a list of URLs, nil means it wasn't sent
+func apiWebhookValue(data map[string]interface{}) (*string, error) {
+	raw, ok := data["webhook_url"]
+	if !ok || raw == nil {
+		return nil, nil
+	}
+	var vals []string
+	if list, isList := raw.([]interface{}); isList {
+		for _, v := range list {
+			vals = append(vals, apiJSONValueToString(v))
+		}
+	} else {
+		vals = []string{apiJSONValueToString(raw)}
+	}
+	joined, err := joinWebhookURLs(vals)
+	if err != nil {
+		return nil, err
+	}
+	return &joined, nil
 }
 
 // apiNotifChanged mirrors the underlying route's changed() helper: both

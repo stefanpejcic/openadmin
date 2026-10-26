@@ -4,10 +4,13 @@
 package webtemplates
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"math"
 	"net/http"
@@ -15,14 +18,19 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"openadmin/static"
 )
 
 //go:embed *.html
 var files embed.FS
 
 var funcMap = template.FuncMap{
+	"asset":    assetURL,
 	"contains": strings.Contains,
+	"join":     strings.Join,
 	// jsStr escapes a value for embedding inside a single-quoted JS string
 	// literal within an HTML attribute (e.g. Alpine's x-show="'...'"). Go's
 	// html/template only applies JS escaping in contexts it recognizes as
@@ -200,6 +208,11 @@ var funcMap = template.FuncMap{
 		s, _ := v.(string)
 		return strings.ReplaceAll(s, old, new)
 	},
+	"siteTypeLabel":    SiteTypeLabel,
+	"vulnSourceLogo":   VulnSourceLogo,
+	"vulnSourceSprite": VulnSourceSprite,
+	"siteTypeSprite":   SiteTypeSprite,
+	"siteTypeUse":      SiteTypeUse,
 	"firstUpper": func(s string) string {
 		if s == "" {
 			return ""
@@ -401,6 +414,24 @@ var funcMap = template.FuncMap{
 		escaped := template.HTMLEscapeString(s)
 		return template.HTML(strings.ReplaceAll(escaped, `\n`, "<br>"))
 	},
+}
+
+// assetHashes holds the content hash of each static file asked for by asset, embedded files never change while running
+var assetHashes sync.Map
+
+// assetURL adds ?v=<content hash> to a /static/ path so the browser can cache it for good and still get a new build right away
+func assetURL(p string) string {
+	if h, ok := assetHashes.Load(p); ok {
+		return p + "?v=" + h.(string)
+	}
+	raw, err := fs.ReadFile(static.Files, strings.TrimPrefix(p, "/static/"))
+	if err != nil {
+		return p
+	}
+	sum := sha256.Sum256(raw)
+	h := hex.EncodeToString(sum[:6])
+	assetHashes.Store(p, h)
+	return p + "?v=" + h
 }
 
 var templates = template.Must(template.New("").Funcs(funcMap).ParseFS(files, "*.html"))

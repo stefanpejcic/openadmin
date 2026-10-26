@@ -459,7 +459,8 @@ func (l *Login) HandlePasskeyComplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	waUser := &webauthnUser{user: user, credential: stored}
+	assertedBE := parsed.Response.AuthenticatorData.Flags.HasBackupEligible()
+	waUser := &webauthnUser{user: user, credential: stored, assertedBE: assertedBE}
 	handler := func(rawID, userHandle []byte) (webauthn.User, error) {
 		return waUser, nil
 	}
@@ -471,6 +472,9 @@ func (l *Login) HandlePasskeyComplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = l.DB.UpdateCredentialSignCount(stored.CredentialID, uint32(cred.Authenticator.SignCount))
+	if !stored.BackupEligible.Valid {
+		_ = l.DB.SetCredentialBackupEligible(stored.CredentialID, assertedBE)
+	}
 
 	if !user.IsActive {
 		writeJSONError(w, http.StatusForbidden, "Login failed. User is not active.")
@@ -516,6 +520,7 @@ func (l *Login) HandlePasskeyComplete(w http.ResponseWriter, r *http.Request) {
 type webauthnUser struct {
 	user       *admindb.User
 	credential *admindb.WebauthnCredential
+	assertedBE bool
 }
 
 func (u *webauthnUser) WebAuthnID() []byte          { return []byte(fmt.Sprintf("%d", u.user.ID)) }
@@ -535,6 +540,11 @@ func (u *webauthnUser) WebAuthnCredentials() []webauthn.Credential {
 		PublicKey: pubKey,
 	}
 	c.Authenticator.SignCount = u.credential.SignCount
+	// go-webauthn rejects a BE mismatch, older rows never stored it so trust this login's flag once
+	c.Flags.BackupEligible = u.assertedBE
+	if u.credential.BackupEligible.Valid {
+		c.Flags.BackupEligible = u.credential.BackupEligible.Bool
+	}
 	return []webauthn.Credential{c}
 }
 

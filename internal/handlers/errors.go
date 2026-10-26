@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"openadmin/internal/auth"
 	"openadmin/internal/config"
 	"openadmin/internal/webtemplates"
 )
@@ -44,6 +45,15 @@ func apiEnabled() bool {
 }
 
 func renderErrorPage(w http.ResponseWriter, r *http.Request, errorMessage string, errorCode int) {
+	// the error page has the whole panel menu and hostname, anonymous visitors get the login page like any other route instead
+	if !auth.IsAuthenticated(r) {
+		if errorCode == http.StatusNotFound {
+			auth.RedirectToLogin(w, r)
+			return
+		}
+		http.Error(w, errorMessage, errorCode)
+		return
+	}
 	w.WriteHeader(errorCode)
 	webtemplates.Render(w, "system_error.html", mergeChrome(map[string]interface{}{
 		"ErrorMessage": errorMessage,
@@ -88,6 +98,10 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
+				// a handler aborting a half sent response wants the connection dropped, not an error page appended
+				if rec == http.ErrAbortHandler {
+					panic(rec)
+				}
 				logError("Unhandled exception: %v\n%s", rec, debug.Stack())
 				message := fmt.Sprintf("%v", rec)
 				if message == "" {

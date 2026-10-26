@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -65,12 +64,12 @@ function backupsUserRunNow() {
                 if (!data.done) {
                     attempts++;
                     if (attempts >= 600) {
-                        clearInterval(timer);
+                        opStop(timer);
                         showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
                     }
                     return;
                 }
-                clearInterval(timer);
+                opStop(timer);
                 showToast(data.message, data.success ? 'success' : 'error');
                 if (data.success) {
                     setTimeout(function () { window.location.reload(); }, 1500);
@@ -79,13 +78,13 @@ function backupsUserRunNow() {
             .catch(function () {
                 attempts++;
                 if (attempts >= 600) {
-                    clearInterval(timer);
+                    opStop(timer);
                 }
             });
     }
 
     setTimeout(function () {
-        timer = setInterval(poll, 1500);
+        timer = opPoll(poll, 1500);
     }, 1000);
 }
 </script>
@@ -118,6 +117,12 @@ function backupsUserRunNow() {
 			</li>
 
 			<li class="flex">
+				<a @click="tab = 'exclusions'" :class="tab === 'exclusions' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
+						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Exclude Accounts</span>
+				</a>
+			</li>
+
+			<li class="flex">
 				<a @click="tab = 'runs'" :class="tab === 'runs' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
 						<span class="-mb-px flex items-center justify-center whitespace-nowrap border-b-2 border-transparent px-3 pb-2 text-sm transition-all text-gray-500 dark:text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400 group-hover:border-gray-300 group-hover:dark:border-gray-400 group-data-[active]:border-blue-500 group-data-[active]:text-blue-500 group-data-[active]:dark:border-blue-500 group-data-[active]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">Runs</span>
 				</a>
@@ -130,8 +135,8 @@ function backupsUserRunNow() {
 <div class="p-4 sm:p-6">
 
     <!-- SETTINGS -->
-    <div x-show="tab === 'settings'" role="tabpanel">
-        <div class="mb-4 rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-3 text-sm text-gray-600 dark:text-gray-400">
+    <div x-show="tab === 'settings'" role="tabpanel" x-data="{ choice: '' }" data-choice="{{.ScheduleChoice}}" x-init="choice = $el.dataset.choice">
+        <div x-show="choice === 'disabled'" x-cloak class="mb-4 rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-3 text-sm text-gray-600 dark:text-gray-400">
             <strong>Disabled</strong> (default): each user manages their own backup from their own account when backups module is enabled -- nothing runs centrally. Choosing Daily/Weekly/Monthly instead runs backups for <em>every</em> user on that schedule, via the "opencli docker-backup" <a href="/server/crons" class="font-medium underline hover:no-underline">System Cron Job</a>. See the docs for the difference between <a href="https://openpanel.com/docs/articles/backups/configuring-backups/" target="_blank" class="font-medium underline hover:no-underline">user-defined and admin-defined backups</a>.
         </div>
         <div class="sm:mx-auto sm:max-w-2xl">
@@ -140,7 +145,7 @@ function backupsUserRunNow() {
 
                 <div class="form-group">
                     <label for="schedule_choice">Schedule</label>
-                    <select id="schedule_choice" name="schedule_choice" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 mt-2">
+                    <select id="schedule_choice" name="schedule_choice" x-model="choice" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 mt-2">
                         <option value="disabled" {{if eq .ScheduleChoice "disabled"}}selected{{end}}>Disabled -- user configured</option>
                         <option value="daily" {{if eq .ScheduleChoice "daily"}}selected{{end}}>Daily</option>
                         <option value="weekly" {{if eq .ScheduleChoice "weekly"}}selected{{end}}>Weekly</option>
@@ -155,36 +160,191 @@ function backupsUserRunNow() {
     </div>
 
     <!-- CONFIGURATION -->
-    <div x-show="tab === 'configuration'" x-cloak role="tabpanel" x-data="restoreComponentFor('backup_env', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/backups/backup.env')">
-        <div class="mb-4 rounded border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-400/10 p-3 text-sm text-amber-800 dark:text-amber-400">
-            This only applies to <strong>new users</strong> going forward -- it's the default <code class="font-mono">backup.env</code> every new account is provisioned with. It does not change any existing user's own backup settings. To apply it to all existing users too, run the script from <a href="https://github.com/stefanpejcic/OpenPanel/discussions/1146#discussioncomment-18524567" target="_blank" rel="noopener" class="underline">this discussion</a>.
+    <div x-show="tab === 'configuration'" x-cloak role="tabpanel" x-data="{ ...restoreComponentFor('backup_env', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/backups/backup.env'), advanced: false, destination: '' }" data-destination="{{.BackupEnvForm.Destination}}" x-init="destination = $el.dataset.destination">
+
+        <div class="flex items-center justify-end gap-2 pb-4">
+            <button type="button" @click="advanced = true; restoreDefault()" class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700" :disabled="loading">
+              <template x-if="!loading"><span>Restore Default</span></template>
+              <template x-if="loading">
+                <svg class="animate-spin h-4 w-4 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+              </template>
+            </button>
+            <button type="button" @click="advanced = !advanced" class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700" x-text="advanced ? 'Form' : 'Advanced'">Advanced</button>
         </div>
-        <form method="POST" action="/backups/user/configuration" class="space-y-4">
+
+        <!-- form view -->
+        <form x-show="!advanced" method="POST" action="/backups/user/configuration" class="space-y-6">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="mode" value="form">
+
+            {{if .BackupEnvForm.MultipleActive}}
+            <div class="rounded border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-400/10 p-3 text-sm text-amber-800 dark:text-amber-400">More than one destination is set in backup.env. Saving keeps only the selected one, the others get commented out.</div>
+            {{end}}
+
+            <div class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 class="font-semibold text-gray-900 dark:text-gray-50">Destination</h2>
+                    <p class="mt-1 text-sm leading-6 text-gray-500">Where backups are uploaded. Only the selected destination is active in backup.env, the others stay commented out.</p>
+                </div>
+                <div class="md:col-span-2 space-y-4">
+                    <div class="form-group">
+                        <label for="destination" class="text-sm font-medium">Destination</label>
+                        <select id="destination" name="destination" x-model="destination" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 mt-2">
+                            <option value="" disabled>Select a destination</option>
+                            {{range .BackupEnvForm.Sections}}
+                            <option value="{{.Name}}">{{.Label}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+                    {{range .BackupEnvForm.Sections}}
+                    <div data-section="{{.Name}}" x-show="destination === $el.dataset.section" class="space-y-4">
+                        {{range .Fields}}
+                        <div class="form-group">
+                            <label for="values_{{.Key}}" class="text-sm font-medium font-mono">{{.Key}}</label>
+                            <input type="{{if .Secret}}password{{else}}text{{end}}" id="values_{{.Key}}" name="values[{{.Key}}]" value="{{.Value}}" autocomplete="off" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 mt-2">
+                        </div>
+                        {{end}}
+                        <small class="form-hint">Empty fields stay commented out in backup.env.</small>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+
+            {{if .BackupEnvForm.Settings}}
+            <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+            <div class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 class="font-semibold text-gray-900 dark:text-gray-50">Backup settings</h2>
+                    <p class="mt-1 text-sm leading-6 text-gray-500">Schedule, retention, compression and notifications.</p>
+                </div>
+                <div class="md:col-span-2 space-y-4">
+                    {{range .BackupEnvForm.Settings}}
+                    <div class="form-group">
+                        <label for="settings_{{.Key}}" class="text-sm font-medium font-mono">{{.Key}}</label>
+                        {{if eq .Key "BACKUP_SOURCES"}}
+                        <select id="settings_{{.Key}}" name="settings[{{.Key}}]" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 mt-2">
+                            <option value="/backup" {{if eq .Value "/backup"}}selected{{end}}>Everything</option>
+                            <option value="/backup/html" {{if eq .Value "/backup/html"}}selected{{end}}>Website Files (/var/www/html/)</option>
+                            <option value="/backup/01-mail" {{if eq .Value "/backup/01-mail"}}selected{{end}}>Emails</option>
+                            <option value="/backup/01-vhosts" {{if eq .Value "/backup/01-vhosts"}}selected{{end}}>VirtualHosts</option>
+                            <option value="/backup/01-mysql" {{if eq .Value "/backup/01-mysql"}}selected{{end}}>MySQL Databases</option>
+                            <option value="/backup/01-postgres" {{if eq .Value "/backup/01-postgres"}}selected{{end}}>PostgreSQL Databases</option>
+                            <option value="/backup/crons.ini" {{if eq .Value "/backup/crons.ini"}}selected{{end}}>Cron Jobs</option>
+                        </select>
+                        {{else if eq .Key "NOTIFICATION_LEVEL"}}
+                        <select id="settings_{{.Key}}" name="settings[{{.Key}}]" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 mt-2">
+                            <option value="error" {{if eq .Value "error"}}selected{{end}}>ERROR (only failed runs)</option>
+                            <option value="info" {{if eq .Value "info"}}selected{{end}}>INFO (every run)</option>
+                        </select>
+                        {{else}}
+                        <input type="{{if .Secret}}password{{else}}text{{end}}" id="settings_{{.Key}}" name="settings[{{.Key}}]" value="{{.Value}}" autocomplete="off" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 mt-2">
+                        {{end}}
+                        {{if eq .Key "NOTIFICATION_URLS"}}<small class="form-hint">Comma-separated notification URLs (email, Slack, etc.), see <a href="https://containrrr.dev/shoutrrr/v0.8/services/overview/" target="_blank" rel="noopener" class="underline">shoutrrr services</a>.</small>
+                        {{else if eq .Key "GZIP_PARALLELISM"}}<small class="form-hint">Blocks compressed in parallel, 0 uses all available threads.</small>
+                        {{else if eq .Key "BACKUP_EXCLUDE_REGEXP"}}<small class="form-hint">Full path to exclude, or a regular expression.</small>
+                        {{else if eq .Key "BACKUP_RETENTION_DAYS"}}<small class="form-hint">Days a backup is kept, old ones are pruned automatically.</small>
+                        {{else if eq .Key "BACKUP_CRON_EXPRESSION"}}<small class="form-hint">Only used by the backup container's own scheduler, central runs follow the Settings tab.</small>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+
+            <div x-data="{ confirmApply: false }" class="space-y-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600">Save</button>
+                    <button type="button" x-show="!confirmApply" @click="confirmApply = true" class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">Save and apply to existing accounts</button>
+                </div>
+                <p x-show="!confirmApply" class="text-xs text-gray-500 dark:text-gray-400">Save changes the default for new accounts only, existing accounts keep their own backup configuration.</p>
+                <div x-show="confirmApply" x-cloak class="rounded border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-400/10 p-3 text-sm text-amber-800 dark:text-amber-400">
+                    <p>This saves the configuration and applies it to <strong>all existing accounts</strong>, overwriting their own backup configuration. Each account's <code class="font-mono">backup.env</code> is replaced with this default, their backup settings become admin-managed, and their backup containers restart.</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="submit" name="apply_existing" value="1" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border border-transparent px-3 py-2 text-center text-sm font-medium text-white shadow-sm bg-red-600 hover:bg-red-700">Save and apply to all accounts</button>
+                        <button type="button" @click="confirmApply = false" class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- advanced: raw file -->
+        <form x-show="advanced" x-cloak method="POST" action="/backups/user/configuration" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="mode" value="advanced">
 
             <div class="form-group">
-                <div class="flex items-center justify-between">
-                    <label for="backup_env">Default backup.env</label>
-                    <button
-                      type="button"
-                      @click="restoreDefault"
-                      class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                      :disabled="loading">
-                      <template x-if="!loading"><span>Restore Default</span></template>
-                      <template x-if="loading">
-                        <svg class="animate-spin h-4 w-4 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                        </svg>
-                      </template>
-                    </button>
-                </div>
+                <label for="backup_env">Default backup.env</label>
                 <textarea id="backup_env" name="backup_env" rows="24" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 font-mono text-xs shadow-sm outline-none transition-colors text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 mt-2">{{.BackupEnv}}</textarea>
                 <small class="form-hint">Destination (S3/WebDAV/SSH/etc.), retention, and notification settings. Path: /etc/openpanel/backups/backup.env</small>
             </div>
 
-            <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600">Save</button>
+            <div x-data="{ confirmApply: false }" class="space-y-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600">Save</button>
+                    <button type="button" x-show="!confirmApply" @click="confirmApply = true" class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">Save and apply to existing accounts</button>
+                </div>
+                <p x-show="!confirmApply" class="text-xs text-gray-500 dark:text-gray-400">Save changes the default for new accounts only, existing accounts keep their own backup configuration.</p>
+                <div x-show="confirmApply" x-cloak class="rounded border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-400/10 p-3 text-sm text-amber-800 dark:text-amber-400">
+                    <p>This saves the configuration and applies it to <strong>all existing accounts</strong>, overwriting their own backup configuration. Each account's <code class="font-mono">backup.env</code> is replaced with this default, their backup settings become admin-managed, and their backup containers restart.</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="submit" name="apply_existing" value="1" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border border-transparent px-3 py-2 text-center text-sm font-medium text-white shadow-sm bg-red-600 hover:bg-red-700">Save and apply to all accounts</button>
+                        <button type="button" @click="confirmApply = false" class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">Cancel</button>
+                    </div>
+                </div>
+            </div>
         </form>
+    </div>
+
+    <!-- EXCLUDE ACCOUNTS -->
+    <div x-show="tab === 'exclusions'" x-cloak role="tabpanel">
+        {{if .ExclusionsError}}
+        <p class="p-4 text-sm text-red-600 dark:text-red-400">Could not load accounts: {{.ExclusionsError}}</p>
+        {{else if not .Exclusions}}
+        <p class="p-4 text-sm text-gray-500 dark:text-gray-500">No accounts found.</p>
+        {{else}}
+        <form method="POST" action="/backups/user/exclusions" class="space-y-4" x-data="{ q: '' }">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+            <div class="flex items-center justify-between gap-2">
+                <input type="search" x-model="q" placeholder="Filter accounts…" class="w-full max-w-xs rounded border px-3 py-1.5 text-sm shadow-sm outline-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600">Save</button>
+            </div>
+
+            <div class="overflow-x-auto rounded border border-gray-200 dark:border-gray-800">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-900 text-left text-xs uppercase text-gray-500 dark:text-gray-500">
+                        <tr>
+                            <th class="w-12 px-3 py-2">Exclude</th>
+                            <th class="px-3 py-2">Account</th>
+                            <th class="px-3 py-2">Context</th>
+                            <th class="px-3 py-2">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .Exclusions}}
+                        <tr data-user="{{.Username}}" x-show="q === '' || $el.dataset.user.toLowerCase().includes(q.toLowerCase())">
+                            <td class="px-3 py-2">
+                                <input type="checkbox" id="exclude_{{.Username}}" name="exclude" value="{{.Username}}" {{if .Excluded}}checked{{end}} class="h-4 w-4 rounded border-gray-300 dark:border-gray-700 text-indigo-600">
+                            </td>
+                            <td class="px-3 py-2"><label for="exclude_{{.Username}}" class="cursor-pointer font-medium">{{.Username}}</label></td>
+                            <td class="px-3 py-2 font-mono text-xs text-gray-500 dark:text-gray-500">{{.Context}}</td>
+                            <td class="px-3 py-2">
+                                {{if .Excluded}}
+                                <span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-amber-50 text-amber-800 ring-amber-600/30 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20">Excluded</span>
+                                {{else}}
+                                <span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Backed up</span>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+        {{end}}
     </div>
 
     <!-- RUNS -->

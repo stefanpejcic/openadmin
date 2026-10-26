@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -56,12 +55,12 @@ function backupsAction(url, loadingMessage, confirmMessage) {
                 if (!data.done) {
                     attempts++;
                     if (attempts >= 300) {
-                        clearInterval(timer);
+                        opStop(timer);
                         showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
                     }
                     return;
                 }
-                clearInterval(timer);
+                opStop(timer);
                 showToast(data.message, data.success ? 'success' : 'error');
                 if (data.success) {
                     setTimeout(function () { window.location.reload(); }, 1500);
@@ -70,13 +69,13 @@ function backupsAction(url, loadingMessage, confirmMessage) {
             .catch(function () {
                 attempts++;
                 if (attempts >= 300) {
-                    clearInterval(timer);
+                    opStop(timer);
                 }
             });
     }
 
     setTimeout(function () {
-        timer = setInterval(poll, 1500);
+        timer = opPoll(poll, 1500);
     }, 1000);
 }
 

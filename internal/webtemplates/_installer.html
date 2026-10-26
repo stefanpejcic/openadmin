@@ -1,0 +1,76 @@
+{{/* install button with live output for a missing service, takes ID Title Name Text Action Status Open OpenLabel Installing CSRFToken IsReseller */}}
+{{define "installer"}}
+{{if .IsReseller}}
+<div class="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
+    <h1 class="text-2xl font-medium">Not Installed</h1>
+    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{.Name}} isn't installed on this server yet, ask your administrator to install it.</p>
+</div>
+{{else}}
+<div id="{{.ID}}" class="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center" x-data="installerWidget({{if .Installing}}true{{else}}false{{end}}, '{{.Status}}')" x-init="resume()">
+    <div class="w-full max-w-2xl">
+        <h1 class="text-2xl font-medium">Not Installed</h1>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="status === 'idle'">{{.Text}} Installing it takes a few minutes and runs in the background, so you can leave this page and come back later.</p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="status === 'running'" style="display: none;">Installing {{.Name}} in the background, you can leave this page and come back later.</p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-show="status === 'finished' && !installed" style="display: none;">Installation finished but {{.Name}} was not detected, check the output below.</p>
+        <form method="POST" action="{{.Action}}" @submit.prevent="start($el)" class="mt-4" x-show="status !== 'running' && !installed">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 dark:bg-indigo-500 dark:text-gray-900 dark:hover:bg-indigo-600" x-text="status === 'finished' ? 'Retry install' : 'Install {{.Name}}'">Install {{.Name}}</button>
+        </form>
+        <div x-show="status === 'running'" class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400" style="display: none;">
+            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle><path fill="currentColor" class="opacity-75" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+            Installing...
+        </div>
+        <a href="{{.Open}}" x-show="installed" class="mt-4 inline-flex items-center justify-center rounded border border-transparent bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 dark:bg-indigo-500 dark:text-gray-900" style="display: none;">{{.OpenLabel}}</a>
+        <p x-show="error" x-text="error" class="mt-2 text-sm text-red-600 dark:text-red-400" style="display: none;"></p>
+        <pre x-show="status !== 'idle'" x-ref="out" x-text="output || 'Waiting for output...'" class="mt-4 overflow-auto whitespace-pre-wrap rounded border border-gray-200 p-3 text-left text-xs dark:border-gray-800" style="display: none; background: #111827; color: #e5e7eb; max-height: 24rem; overflow-wrap: anywhere;"></pre>
+    </div>
+</div>
+<script>
+function installerWidget(running, statusURL) {
+    return {
+        status: running ? 'running' : 'idle',
+        installed: false,
+        output: '',
+        error: '',
+        timer: null,
+        // pick the output back up if the admin left and came back mid-install
+        async resume() {
+            if (this.status !== 'running') return;
+            await this.poll();
+            if (this.status === 'running') this.timer = opPoll(() => this.poll(), 2000);
+        },
+        async start(form) {
+            this.error = '';
+            try {
+                const res = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (!data.success) { this.error = data.error || 'Failed to start the installation.'; return; }
+            } catch (e) {
+                this.error = 'Failed to start the installation.';
+                return;
+            }
+            this.status = 'running';
+            this.output = '';
+            opStop(this.timer);
+            this.timer = opPoll(() => this.poll(), 2000);
+        },
+        async poll() {
+            try {
+                const res = await fetch(statusURL, { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                const out = this.$refs.out;
+                const atBottom = !out || out.scrollHeight - out.scrollTop - out.clientHeight < 40;
+                this.output = (data.output || '').replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
+                this.status = data.status;
+                this.installed = data.status !== 'running' && data.installed;
+                if (atBottom) this.$nextTick(() => { if (out) out.scrollTop = out.scrollHeight; });
+                if (data.status !== 'running') opStop(this.timer);
+            } catch (e) {
+                console.error('Failed to fetch install output', e);
+            }
+        }
+    }
+}
+</script>
+{{end}}
+{{end}}

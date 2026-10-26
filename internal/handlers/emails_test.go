@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
@@ -36,13 +37,19 @@ func newEmailsTestServer(t *testing.T, e *Emails) (*httptest.Server, *http.Clien
 	emailsRestartMailserverRun = func() {}
 	t.Cleanup(func() { emailsRestartMailserverRun = origRestart })
 
-	origAccounts := emailsListAccountsRun
+	origAccounts, origAccountsFile, origQuotasFile := emailsListAccountsRun, EmailsAccountsFile, EmailsQuotasFile
 	emailsListAccountsRun = func() []emailQuota { return nil }
-	t.Cleanup(func() { emailsListAccountsRun = origAccounts })
+	EmailsAccountsFile, EmailsQuotasFile = filepath.Join(dir, "postfix-accounts.cf"), filepath.Join(dir, "dovecot-quotas.cf")
+	resetEmailAccountsCache()
+	t.Cleanup(func() {
+		emailsListAccountsRun, EmailsAccountsFile, EmailsQuotasFile = origAccounts, origAccountsFile, origQuotasFile
+		resetEmailAccountsCache()
+	})
 
 	origPs := emailsPodmanPsRun
 	emailsPodmanPsRun = func(args ...string) (string, error) { return "", nil }
-	t.Cleanup(func() { emailsPodmanPsRun = origPs })
+	resetMailserverStatus()
+	t.Cleanup(func() { emailsPodmanPsRun = origPs; resetMailserverStatus() })
 
 	db, err := admindb.Open()
 	if err != nil {
@@ -511,7 +518,7 @@ func TestServeEmailsWebmailLinkTokenSuccessRedirectsWithToken(t *testing.T) {
 func TestServeEmailsSettingsPOSTStorageLocationRejectedWithExistingAccounts(t *testing.T) {
 	e := &Emails{}
 	srv, client := newEmailsTestServer(t, e)
-	emailsListAccountsRun = func() []emailQuota { return []emailQuota{{Email: "a@b.com"}} }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|{SHA512-CRYPT}x|5000\n"), 0644)
 
 	resp, err := client.PostForm(srv.URL+"/emails/settings", url.Values{
 		"storage_type": {"user_dir"}, "email_storage_location": {"user_dir"},
@@ -603,7 +610,7 @@ func TestServeEmailsAccountsRendersHTMLNotInstalled(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Emails", "No emails yet.", "Not Configured", "opencli email-server install", "</html>"} {
+	for _, want := range []string{"Emails", "No emails yet.", "Not Installed", `action="/emails/install"`, "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -616,6 +623,9 @@ func TestServeEmailsAccountsRendersHTMLRunning(t *testing.T) {
 	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
 	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
 	emailsListAccountsRun = func() []emailQuota { return []emailQuota{{Email: "a@b.com", Quota: "512M [10%]"}} }
+	// the page lists accounts from the mailserver's file and takes the usage from the last opencli run
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|{SHA512-CRYPT}x\n"), 0644)
+	cachedEmailAccounts()
 
 	resp, err := client.Get(srv.URL + "/emails/accounts")
 	if err != nil {
@@ -626,10 +636,29 @@ func TestServeEmailsAccountsRendersHTMLRunning(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"emailsApp()", `"a@b.com","512M [10%]"`, "email hosted on this server", "</html>"} {
+	for _, want := range []string{"emailsApp()", `"a@b.com","512M [10%]",10`, "email hosted on this server", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
+	}
+}
+
+func TestEmailAccountsQuickWithoutUsageYet(t *testing.T) {
+	e := &Emails{}
+	newEmailsTestServer(t, e)
+	ran := make(chan struct{}, 1)
+	emailsListAccountsRun = func() []emailQuota { ran <- struct{}{}; return nil }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|x\nc@d.com|x\n"), 0644)
+	os.WriteFile(EmailsQuotasFile, []byte("a@b.com:2G\n"), 0644)
+
+	accounts, fresh := emailAccountsQuick()
+	if fresh || len(accounts) != 2 || accounts[0].Quota != "( - / 2G ) [0%]" || accounts[1].Quota != "( - / ~ ) [0%]" {
+		t.Fatalf("got %+v fresh=%v", accounts, fresh)
+	}
+	select {
+	case <-ran:
+	case <-time.After(2 * time.Second):
+		t.Fatal("usage should be refreshed in the background")
 	}
 }
 
@@ -647,7 +676,7 @@ func TestServeEmailsQueueRendersHTMLNotInstalled(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Email Queue", "Not Configured", "</html>"} {
+	for _, want := range []string{"Email Queue", "Not Installed", `action="/emails/install"`, "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -868,6 +897,133 @@ func TestServeEmailsSettingsRendersHTMLRunning(t *testing.T) {
 	for _, want := range []string{"Email Settings", "MailServer Status", "Relay Hosts", "relay.example.com", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
+		}
+	}
+}
+
+func TestServeEmailsSettingsWarnsWhenEmailsModuleDisabled(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
+	origModules := ModulesConfigFilePath
+	ModulesConfigFilePath = filepath.Join(t.TempDir(), "openpanel.config")
+	t.Cleanup(func() { ModulesConfigFilePath = origModules })
+
+	get := func() string {
+		resp, err := client.Get(srv.URL + "/emails/settings")
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+
+	os.WriteFile(ModulesConfigFilePath, []byte("enabled_modules=\"domains,dns\"\n"), 0644)
+	body := get()
+	if !strings.Contains(body, "the Emails module is disabled") {
+		t.Fatal("expected the Emails module warning")
+	}
+	for _, want := range []string{"hourly email limits set on plans", "IMAP and POP3 are disabled", "Rspamd, Amavis and ClamAV are all off"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected %q in the page", want)
+		}
+	}
+	os.WriteFile(ModulesConfigFilePath, []byte("enabled_modules=\"domains,emails\"\n"), 0644)
+	if strings.Contains(get(), "the Emails module is disabled") {
+		t.Fatal("expected no warning with the Emails module enabled")
+	}
+}
+
+func TestServeEmailsInstallStatusIdle(t *testing.T) {
+	dir := t.TempDir()
+	origLog, origPID := EmailsInstallLogPath, EmailsInstallPIDFile
+	EmailsInstallLogPath, EmailsInstallPIDFile = dir+"/log", dir+"/pid"
+	t.Cleanup(func() { EmailsInstallLogPath, EmailsInstallPIDFile = origLog, origPID })
+
+	rec := httptest.NewRecorder()
+	(&Emails{}).ServeEmailsInstallStatus(rec, httptest.NewRequest(http.MethodGet, "/emails/install/status", nil))
+	if !strings.Contains(rec.Body.String(), `"status":"idle"`) {
+		t.Fatalf("expected idle status, got %s", rec.Body.String())
+	}
+}
+
+func TestServeEmailsInstallStartsOnce(t *testing.T) {
+	dir := t.TempDir()
+	origLog, origPID, origRun := EmailsInstallLogPath, EmailsInstallPIDFile, emailsInstallRun
+	EmailsInstallLogPath, EmailsInstallPIDFile = dir+"/log", dir+"/pid"
+	started := 0
+	emailsInstallRun = func() error { started++; return nil }
+	t.Cleanup(func() { EmailsInstallLogPath, EmailsInstallPIDFile, emailsInstallRun = origLog, origPID, origRun })
+
+	rec := httptest.NewRecorder()
+	(&Emails{}).ServeEmailsInstall(rec, httptest.NewRequest(http.MethodPost, "/emails/install", nil))
+	if started != 1 || !strings.Contains(rec.Body.String(), `"success":true`) {
+		t.Fatalf("expected the install to start, got %d %s", started, rec.Body.String())
+	}
+}
+
+func TestCachedEmailAccountsReusesUntilTheAccountFilesChange(t *testing.T) {
+	e := &Emails{}
+	newEmailsTestServer(t, e)
+	calls := 0
+	emailsListAccountsRun = func() []emailQuota { calls++; return []emailQuota{{Email: "a@b.com"}} }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|x|1\n"), 0644)
+
+	cachedEmailAccounts()
+	cachedEmailAccounts()
+	if calls != 1 {
+		t.Fatalf("expected one container call while nothing changed, got %d", calls)
+	}
+
+	// an account added from the user panel shows up straight away
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|x|1\nc@d.com|y|2\n"), 0644)
+	cachedEmailAccounts()
+	if calls != 2 {
+		t.Fatalf("expected a refetch after the account file changed, got %d", calls)
+	}
+
+	os.WriteFile(EmailsQuotasFile, []byte("a@b.com:1G\n"), 0644)
+	cachedEmailAccounts()
+	if calls != 3 {
+		t.Fatalf("expected a refetch after the quota file changed, got %d", calls)
+	}
+}
+
+func TestServeEmailsAccountsFallsBackToTheAccountFileWhenStopped(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "", nil }
+	emailsListAccountsRun = func() []emailQuota { t.Fatal("the container must not be asked while it's down"); return nil }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|{SHA512-CRYPT}x|5000\n"), 0644)
+
+	resp, err := client.Get(srv.URL + "/emails/accounts?output=json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	for _, want := range []string{`"email":"a@b.com"`, `"from_file":true`, `"status":"stopped"`} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected %s in %s", want, body)
+		}
+	}
+}
+
+func TestChangesEmailAccounts(t *testing.T) {
+	for args, want := range map[string]bool{
+		"opencli email-setup email add a@b.com pw": true,
+		"opencli email-setup email del a@b.com":    true,
+		"opencli email-setup quota set a@b.com 1G": true,
+		"opencli email-setup quota del a@b.com":    true,
+		"opencli email-setup email update a@b.com": false,
+		"opencli email-setup email restrict add":   false,
+		"opencli email-setup email list":           false,
+	} {
+		if got := changesEmailAccounts(strings.Fields(args)); got != want {
+			t.Errorf("%s: got %v, want %v", args, got, want)
 		}
 	}
 }

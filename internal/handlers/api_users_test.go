@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
+
+	"openadmin/internal/admindb"
 )
 
 func newAPIUsersTestServer(t *testing.T) (*httptest.Server, *http.Client, sqlmock.Sqlmock) {
@@ -156,6 +158,53 @@ func TestServeUsersCreateSuccess(t *testing.T) {
 	json.NewDecoder(resp.Body).Decode(&out)
 	if out["success"] != true {
 		t.Fatalf("expected success=true, got %v", out)
+	}
+}
+
+func captureAPICheckOutputRun(t *testing.T) *[]string {
+	t.Helper()
+	var got []string
+	orig := apiCheckOutputRun
+	apiCheckOutputRun = func(args ...string) (string, error) { got = args; return "User created.\n", nil }
+	t.Cleanup(func() { apiCheckOutputRun = orig })
+	return &got
+}
+
+func TestServeUsersCreateAsResellerForcesOwnReseller(t *testing.T) {
+	withScratchForbiddenUsernames(t, "")
+	got := captureAPICheckOutputRun(t)
+
+	body := `{"email":"a@b.com","username":"newuser","password":"pw","plan_name":"default","reseller":"someoneelse"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/users", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = withAPIUser(req, &admindb.User{Username: "res1", Role: "reseller"})
+	rec := httptest.NewRecorder()
+	(&APIUsers{}).ServeUsers(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if args := strings.Join(*got, " "); !strings.HasSuffix(args, " --reseller=res1") {
+		t.Fatalf("expected --reseller=res1, got %q", args)
+	}
+}
+
+func TestServeUsersCreateAsAdminPassesReseller(t *testing.T) {
+	withScratchForbiddenUsernames(t, "")
+	got := captureAPICheckOutputRun(t)
+
+	body := `{"email":"a@b.com","username":"newuser","password":"pw","plan_name":"default","reseller":"res1"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/users", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = withAPIUser(req, &admindb.User{Username: "admin1", Role: "admin"})
+	rec := httptest.NewRecorder()
+	(&APIUsers{}).ServeUsers(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if args := strings.Join(*got, " "); !strings.Contains(args, "--reseller=res1") {
+		t.Fatalf("expected --reseller=res1, got %q", args)
 	}
 }
 

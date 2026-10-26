@@ -476,9 +476,24 @@ func (wf *WAF) wafAllDomains() (domains []string, owners map[string]string) {
 	return domains, owners
 }
 
+// wafDomainsFor is wafAllDomains limited to the reseller's domains when a reseller is logged in
+func (wf *WAF) wafDomainsFor(r *http.Request) (domains []string, owners map[string]string) {
+	domains, owners = wf.wafAllDomains()
+	scope := scopeFor(r, wf.MySQL)
+	if scope == nil {
+		return domains, owners
+	}
+	domains = filterRows(scope, domains, scope.AllowsDomain)
+	mine := map[string]string{}
+	for _, d := range domains {
+		mine[d] = owners[d]
+	}
+	return domains, mine
+}
+
 // wafResolveTarget treats anything with a dot as a domain and the rest as a username
-func (wf *WAF) wafResolveTarget(target string) (kind string, domains []string, owners map[string]string, ok bool) {
-	all, owners := wf.wafAllDomains()
+func (wf *WAF) wafResolveTarget(r *http.Request, target string) (kind string, domains []string, owners map[string]string, ok bool) {
+	all, owners := wf.wafDomainsFor(r)
 	if strings.Contains(target, ".") {
 		if !wafDomainRE.MatchString(target) || !wafContains(all, target) {
 			return "", nil, owners, false
@@ -824,6 +839,16 @@ type wafProfileRow struct {
 	Domains   int
 }
 
+func countMissingProfiles(rows []wafProfileRow) int {
+	n := 0
+	for _, r := range rows {
+		if !r.Installed {
+			n++
+		}
+	}
+	return n
+}
+
 func (wf *WAF) wafProfileRows(domains []string) []wafProfileRow {
 	used := map[string]int{}
 	for _, d := range domains {
@@ -995,7 +1020,7 @@ func wafUsersOf(domains []string, owners map[string]string) []string {
 
 // ServeWAFDomains handles GET /security/waf/domains, every domain with its WAF mode and links to manage it per domain or per user
 func (wf *WAF) ServeWAFDomains(w http.ResponseWriter, r *http.Request) {
-	domains, owners := wf.wafAllDomains()
+	domains, owners := wf.wafDomainsFor(r)
 	rows := wafDomainRows(domains, owners)
 	sortCol, sortDirection := readSort(r, wafDomainSortKeys)
 	sortWAFDomains(rows, sortCol, sortDirection)
@@ -1017,7 +1042,7 @@ func (wf *WAF) ServeWAFDomains(w http.ResponseWriter, r *http.Request) {
 // ServeWAFTargetRules handles GET/POST /security/waf/rules/{target}, target is a domain or a username
 func (wf *WAF) ServeWAFTargetRules(w http.ResponseWriter, r *http.Request) {
 	target := r.PathValue("target")
-	kind, domains, owners, ok := wf.wafResolveTarget(target)
+	kind, domains, owners, ok := wf.wafResolveTarget(r, target)
 	if !ok {
 		auth.AddFlash(w, r, wf.Sessions, "Error: no domain or user with WAF config found for "+target, "error")
 		http.Redirect(w, r, "/security/waf/domains", http.StatusSeeOther)
@@ -1152,10 +1177,10 @@ func (wf *WAF) ServeWAFLogs(w http.ResponseWriter, r *http.Request) {
 	var domains []string
 	var owners map[string]string
 	if target == "" {
-		domains, owners = wf.wafAllDomains()
+		domains, owners = wf.wafDomainsFor(r)
 	} else {
 		var ok bool
-		kind, domains, owners, ok = wf.wafResolveTarget(target)
+		kind, domains, owners, ok = wf.wafResolveTarget(r, target)
 		if !ok {
 			auth.AddFlash(w, r, wf.Sessions, "Error: no domain or user with WAF logs found for "+target, "error")
 			http.Redirect(w, r, "/security/waf/logs", http.StatusSeeOther)

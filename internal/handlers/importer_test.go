@@ -313,7 +313,7 @@ func TestServeImportFromBackupOpenPanelPOSTMissingPath(t *testing.T) {
 func TestServeImportFromBackupOpenPanelPOSTSuccess(t *testing.T) {
 	origRun := importerRestoreOpenPanelBackupRun
 	var captured string
-	importerRestoreOpenPanelBackupRun = func(backupPath string) error {
+	importerRestoreOpenPanelBackupRun = func(backupPath, reseller string) error {
 		captured = backupPath
 		return nil
 	}
@@ -355,7 +355,7 @@ func TestServeImportFromBackupOpenPanelPOSTWaitsForNewLog(t *testing.T) {
 	t.Cleanup(func() { importerNewLogWaitTimeout, importerNewLogWaitInterval = origTimeout, origInterval })
 
 	origRun := importerRestoreOpenPanelBackupRun
-	importerRestoreOpenPanelBackupRun = func(backupPath string) error {
+	importerRestoreOpenPanelBackupRun = func(backupPath, reseller string) error {
 		// Simulate opencli taking a moment to write its log file after
 		// being started, rather than it existing the instant Start() returns.
 		go func() {

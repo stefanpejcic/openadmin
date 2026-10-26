@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
@@ -13,7 +12,7 @@
 <style>[x-cloak] { display: none !important; }</style>
 
 <!-- Page header -->
-<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div x-data="{ showSection: window.location.hash === '#add' }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
     <header>
         <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
             <div class="grow">
@@ -26,14 +25,94 @@
                     {{end}}
                 </h2>
             </div>
+            {{if eq .MailserverStatus "running"}}
+            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Add Email</a>
+            </div>
+            {{end}}
         </div>
     </header>
+
+    {{if eq .MailserverStatus "running"}}
+    <!-- same fields as the user panel's /emails/new -->
+    <div x-show="showSection" x-cloak class="mt-8 w-full">
+        <form method="POST" action="/emails/new" x-data="newEmailForm()" class="sm:mx-auto">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm font-medium" for="new_email_username">Email<span class="text-red-500">*</span></label>
+                    <div class="mt-2 flex">
+                        <input type="text" name="username" id="new_email_username" required maxlength="64" pattern="[A-Za-z0-9._%+\-]+" title="Letters, numbers, and . _ % + -" placeholder="info" autocomplete="off" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <span class="inline-flex items-center border-y border-gray-300 bg-gray-100 px-2 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">@</span>
+                        <select name="domain" required x-model="domain" class="relative block w-full appearance-none rounded-r border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                            <option value="" disabled>Select a domain</option>
+                            {{range .EmailDomains}}<option value="{{.Domain}}">{{.Domain}}</option>{{end}}
+                        </select>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="ownerOf(domain) ? 'Owner: ' + ownerOf(domain) : '{{if .EmailDomains}}Pick one of the domains on this server.{{else}}No domains yet, add one on the Domains page first.{{end}}'"></p>
+                </div>
+                <div class="col-span-full sm:col-span-3">
+                    <label class="text-sm font-medium" for="new_email_password">Password<span class="text-red-500">*</span></label>
+                    <div class="mt-2 flex">
+                        <input :type="showPassword ? 'text' : 'password'" name="password" id="new_email_password" x-model="password" required minlength="8" maxlength="128" pattern="\S+" title="8 or more characters, no spaces" autocomplete="new-password" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <button type="button" @click="generate()" tabindex="-1" class="border px-3 text-sm font-medium border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 cursor-pointer">Generate</button>
+                        <button type="button" @click="showPassword = !showPassword" tabindex="-1" class="rounded-r border px-3 text-sm font-medium border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 cursor-pointer" x-text="showPassword ? 'Hide' : 'Show'"></button>
+                    </div>
+                </div>
+                <div class="col-span-full sm:col-span-2">
+                    <label class="text-sm font-medium" for="new_email_quota">Storage quota</label>
+                    <div class="mt-2 flex">
+                        <input type="number" min="0" step="any" name="quota" id="new_email_quota" value="0" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <select name="unit" class="rounded-r border px-2 text-sm border-gray-300 bg-white text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
+                            <option value="k">KiB</option>
+                            <option value="M">MiB</option>
+                            <option value="G" selected>GiB</option>
+                            <option value="T">TiB</option>
+                        </select>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">0 for unlimited.</p>
+                </div>
+                <div class="col-span-full sm:col-span-2 flex items-center pt-6">
+                    <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="send_welcome" value="1" class="rounded border-gray-300 dark:border-gray-700"> Send welcome email</label>
+                </div>
+                <div class="col-span-full sm:col-span-2 flex items-end justify-end">
+                    <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white bg-blue-500 hover:bg-blue-600 cursor-pointer">Add Email</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script>
+    const EMAIL_DOMAINS = {{toJSON .EmailDomains}} || [];
+    function newEmailForm() {
+        const owners = Object.fromEntries(EMAIL_DOMAINS.map(d => [d.domain, d.owner]));
+        return {
+            domain: '',
+            password: '',
+            showPassword: false,
+            ownerOf(domain) { return owners[(domain || '').trim().toLowerCase()] || ''; },
+            generate() {
+                const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                const bytes = crypto.getRandomValues(new Uint32Array(16));
+                this.password = Array.from(bytes, b => chars[b % chars.length]).join('');
+                this.showPassword = true;
+            },
+        };
+    }
+    </script>
+    {{end}}
 </div>
 
-{{if eq .MailserverStatus "running"}}
+{{if or (eq .MailserverStatus "running") .FromFile}}
+{{if .FromFile}}
+<div class="mx-6 mt-4 rounded border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-400/10 dark:text-yellow-400">
+    The mailserver is not running, these accounts are read from <code>postfix-accounts.cf</code>. Quota usage and account actions are unavailable until it is started again.
+</div>
+{{end}}
 
 <script>
     const EMAIL_DATA = {{toJSON .EmailPairs}};
+    // the list comes from the mailserver's files, usage that isn't known yet is fetched from opencli after the page is up
+    const EMAIL_USAGE_PENDING = {{if .UsagePending}}true{{else}}false{{end}};
 </script>
 
 <div x-data="emailsApp()">
@@ -86,7 +165,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 
-                    <template x-for="[email, quota] in sortedEmails" :key="email">
+                    <template x-for="[email, quota, pct] in sortedEmails" :key="email">
                         <tr x-show="searchQuery === '' || email.toLowerCase().includes(searchQuery.toLowerCase())"
                             class="group hover:bg-gray-50 hover:dark:bg-gray-900 [&_td:last-child]:pr-4 [&_td:first-child]:pl-4">
 
@@ -99,8 +178,7 @@
                             <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" x-text="email"></td>
 
                             <!-- Quota + progress bar -->
-                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[180px]"
-                                x-data="{ pct: parseInt((quota.match(/\[(\d+)%\]/) || [0,0])[1]) }">
+                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[180px]">
                                 <span x-text="quota"></span>
                                 <div class="h-2 w-32 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                                     <div class="h-2 rounded-full transition-all duration-300"
@@ -125,53 +203,14 @@
 
                             <!-- Actions dropdown -->
                             <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap text-end">
-<div class="relative" x-data="{ open: false, pos: '' }" @click.outside="open = false" @scroll.window="open = false" @resize.window="open = false">
-    <!-- fixed position so the table's overflow wrapper can't clip the menu -->
-    <button x-ref="btn" @click="const r = $refs.btn.getBoundingClientRect(); pos = (r.bottom + 200 > window.innerHeight ? 'bottom:' + (window.innerHeight - r.top + 4) : 'top:' + (r.bottom + 4)) + 'px;right:' + (window.innerWidth - r.right) + 'px'; open = !open"
-            class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer"
-            type="button">
-        <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
+{{if not .FromFile}}
+<button type="button" @click.stop="openMenu($event.currentTarget, email)" :aria-label="'Actions for ' + email"
+        class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer">
+    <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
             <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
         </svg>
-    </button>
-
-    <div x-show="open" x-cloak x-transition :style="pos"
-         class="fixed z-50 rounded border p-1 shadow-xl shadow-black/[2.5%] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 min-w-40 text-left cursor-pointer">
-        <!-- aria-labelledby is intentionally left blank here: `email` is only
-             an Alpine x-for loop variable, not an actual element id, so
-             there's nothing valid to point it at. (Note: this comment
-             intentionally avoids writing literal curly-brace template
-             delimiters -- html/template parses them even inside an HTML
-             comment, and doing so previously broke the whole template set
-             at init time.) -->
-        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="">
-            <li class="flex">
-                <button @click="open=false; openPassword(email)"
-                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
-                    Change Password
-                </button>
-            </li>
-            <li class="flex">
-                <button @click="open=false; openQuota(email)"
-                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
-                    Set Quota
-                </button>
-            </li>
-            <li class="flex">
-                <button @click="open=false; openRestrict(email)"
-                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
-                    Restrictions
-                </button>
-            </li>
-            <li class="flex">
-                <button @click="open=false; openDelete(email)"
-                        class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">
-                    Delete Account
-                </button>
-            </li>
-        </ul>
-    </div>
-</div>
+</button>
+{{end}}
                             </td>
                         </tr>
                     </template>
@@ -186,6 +225,37 @@
 {{template "bulk_bar" .}}
 </div>
         </div>
+    </div>
+
+    <!-- one actions menu for every row, opened by openMenu -->
+    <div x-show="menuEmail" x-ref="menu" x-cloak :style="menuPos" @click.outside="menuEmail = ''" @keydown.escape.window="menuEmail = ''" @scroll.window="menuEmail = ''" @resize.window="menuEmail = ''"
+         class="fixed z-50 rounded border p-1 shadow-xl shadow-black/[2.5%] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 min-w-40 text-left cursor-pointer">
+        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+            <li class="flex">
+                <button @click="const e = menuEmail; menuEmail = ''; openPassword(e)"
+                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    Change Password
+                </button>
+            </li>
+            <li class="flex">
+                <button @click="const e = menuEmail; menuEmail = ''; openQuota(e)"
+                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    Set Quota
+                </button>
+            </li>
+            <li class="flex">
+                <button @click="const e = menuEmail; menuEmail = ''; openRestrict(e)"
+                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    Restrictions
+                </button>
+            </li>
+            <li class="flex">
+                <button @click="const e = menuEmail; menuEmail = ''; openDelete(e)"
+                        class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    Delete Account
+                </button>
+            </li>
+        </ul>
     </div>
 
 
@@ -363,6 +433,22 @@ function emailsApp() {
             return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
         },
         emails: EMAIL_DATA,
+        init() {
+            if (!EMAIL_USAGE_PENDING) return;
+            fetch('/emails/accounts?output=json')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data || !Array.isArray(data.emails)) return;
+                    const usage = Object.fromEntries(data.emails.map(e => [e.email, e.quota]));
+                    this.emails = this.emails.map(([email, quota, pct]) => {
+                        const q = usage[email];
+                        if (q === undefined) return [email, quota, pct];
+                        const m = q.match(/\[(\d+)%\]/);
+                        return [email, q, m ? parseInt(m[1], 10) : 0];
+                    });
+                })
+                .catch(() => {});
+        },
 
         sortBy: 'email',
         sortDir: 'asc',
@@ -375,12 +461,29 @@ function emailsApp() {
                     valB = b[0].toLowerCase();
                 } else {
                     // sort by % used; treat missing % as 0
-                    valA = parseInt((a[1].match(/\[(\d+)%\]/) || [0, 0])[1]);
-                    valB = parseInt((b[1].match(/\[(\d+)%\]/) || [0, 0])[1]);
+                    valA = a[2];
+                    valB = b[2];
                 }
                 if (valA < valB) return this.sortDir === 'asc' ? -1 : 1;
                 if (valA > valB) return this.sortDir === 'asc' ? 1 : -1;
                 return 0;
+            });
+        },
+
+        menuEmail: '',
+        menuPos: '',
+        openMenu(el, email) {
+            if (this.menuEmail === email) { this.menuEmail = ''; return; }
+            const r = el.getBoundingClientRect();
+            const right = 'right:' + Math.max(8, window.innerWidth - r.right) + 'px';
+            this.menuPos = 'top:' + (r.bottom + 4) + 'px;' + right;
+            this.menuEmail = email;
+            // flip above the button when it would run off the bottom of the window
+            this.$nextTick(() => {
+                const h = this.$refs.menu.offsetHeight;
+                if (r.bottom + 4 + h > window.innerHeight && r.top - 4 - h > 0) {
+                    this.menuPos = 'top:' + (r.top - 4 - h) + 'px;' + right;
+                }
             });
         },
 
@@ -537,15 +640,7 @@ function emailsApp() {
 </script>
 
 {{else if eq .MailserverStatus "not_installed"}}
-<div style="
-        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-        height: 90vh;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    "><div><style>.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}</style><h1 class="next-error-h1" style="display:inline-block;margin:0 20px 0 0;padding:0 23px 0 0;font-size:24px;font-weight:500;vertical-align:top;line-height:49px">Not Configured</h1><div style="display:inline-block"><h2 style="font-size:14px;font-weight:400;line-height:49px;margin:0">This Mailserver is not yet installed, install it from terminal with the following command: <pre>opencli email-server install</pre></h2></div></div></div>
+{{template "installer" (dict "ID" "mailserver-install" "Name" "the mailserver" "Text" "The mailserver hosts email accounts for your users' domains." "Action" "/emails/install" "Status" "/emails/install/status" "Open" "/emails/accounts" "OpenLabel" "Open Emails" "Installing" .Installing "CSRFToken" .CSRFToken "IsReseller" .IsReseller)}}
 {{else if eq .MailserverStatus "stopped"}}
 <!-- Intentional quirk preserved: the dark-mode media-query selector is
      missing its leading "." so it never matches (`next-error-h1` instead of

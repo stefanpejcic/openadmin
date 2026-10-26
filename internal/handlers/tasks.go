@@ -68,14 +68,11 @@ func displayOpencliCommand(command string) string {
 	return command
 }
 
-// listOpencliTasks reuses the process manager's /proc snapshot, filtered to
+// listOpencliTasks is the process manager's /proc snapshot limited to
 // opencli invocations, with start time added.
 func listOpencliTasks() []taskInfo {
 	var tasks []taskInfo
-	for _, p := range listAllProcesses() {
-		if !isOpencliCommand(p.Command) {
-			continue
-		}
+	for _, p := range listProcesses(isOpencliCommand) {
 		startedAt, elapsed := processStartedAgo(p.PID)
 		tasks = append(tasks, taskInfo{
 			PID:           p.PID,

@@ -1,8 +1,9 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
+{{/* the only pages that use jquery, the layout no longer loads it */}}
+<script src="/static/dist/js/jquery361.min.js"></script>
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -204,6 +205,85 @@
 </dl>
 {{end}}
 
+
+{{with .Summary}}
+<!-- daily summary, every account's day added up -->
+<div id="daily-summary" class="my-4 relative w-full border p-6 text-left shadow-xs bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 rounded">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2">
+        <div>
+            <h3 class="font-medium text-gray-900 dark:text-gray-50">Daily Summary</h3>
+            <p class="text-sm/6 text-gray-500 dark:text-gray-500">{{.DayLabel}} &middot; {{.Accounts}} {{if eq .Accounts 1}}account{{else}}accounts{{end}}</p>
+        </div>
+    </div>
+    <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">{{.Headline}}</p>
+
+    <dl class="mt-4 flex flex-wrap items-center gap-x-12 gap-y-2">
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">Requests</dt>
+            <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Requests}}</p>{{if .Delta}}<span class="text-sm font-medium {{if .DeltaUp}}text-green-600 dark:text-green-400{{else}}text-red-600 dark:text-red-500{{end}}">{{.Delta}}</span>{{end}}</dd>
+        </div>
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">Visitors</dt>
+            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Visitors}}</p></dd>
+        </div>
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">Data sent</dt>
+            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Sent}}</p></dd>
+        </div>
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">Server errors</dt>
+            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Errors}}</p></dd>
+        </div>
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">WAF blocks</dt>
+            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Blocked}}</p></dd>
+        </div>
+    </dl>
+
+    <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Needs attention</p>
+            {{if .Attention}}
+            <ul role="list" class="mt-2 divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Attention}}
+                <li class="py-2 text-sm">
+                    <a href="/users/{{.Username}}" class="font-medium text-indigo-600 dark:text-indigo-400">{{.Username}}</a>
+                    <span class="text-gray-900 dark:text-gray-50">{{.Title}}</span>
+                    {{if .Detail}}<p class="text-gray-500 dark:text-gray-500">{{.Detail}}</p>{{end}}
+                </li>
+                {{end}}
+            </ul>
+            {{if .MoreAttn}}<p class="mt-2 text-sm text-gray-500 dark:text-gray-500">and {{.MoreAttn}} more</p>{{end}}
+            {{else}}
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">Nothing needs attention.</p>
+            {{end}}
+            {{if .LookCount}}<p class="mt-2 text-sm text-gray-500 dark:text-gray-500">{{.LookCount}} {{if eq .LookCount 1}}thing is{{else}}things are{{end}} worth a look on {{.LookAccounts}} {{if eq .LookAccounts 1}}account{{else}}accounts{{end}}.</p>{{end}}
+        </div>
+        <div>
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Busiest websites</p>
+            {{if .Sites}}
+            <ul role="list" class="mt-2 space-y-3">
+                {{range .Sites}}
+                <li class="text-sm">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="truncate text-gray-900 dark:text-gray-50">{{.Name}} <a href="/users/{{.Username}}" class="text-gray-500 dark:text-gray-500">{{.Username}}</a></span>
+                        <span class="text-gray-500 dark:text-gray-500">{{.Requests}}</span>
+                    </div>
+                    <div class="mt-1 flex w-full items-center" role="progressbar" aria-label="Share of requests">
+                        <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
+                            <div class="h-full flex-col rounded-full bg-blue-500 dark:bg-blue-500" style="width: {{.Share}}%;"></div>
+                        </div>
+                    </div>
+                </li>
+                {{end}}
+            </ul>
+            {{else}}
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">No website had visitors.</p>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{end}}
 
 <dl class="my-4 grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 
@@ -556,6 +636,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function refreshTasks() {
+        if (document.hidden) return;
         fetch('/tasks?output=json')
             .then(function (res) { return res.json(); })
             .then(function (data) {
@@ -581,6 +662,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     refreshTasks();
     setInterval(refreshTasks, 5000);
+    // polls are skipped while the tab is in the background, refresh as soon as it's back
+    document.addEventListener('visibilitychange', refreshTasks);
 });
 </script>
 {{end}}

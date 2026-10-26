@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"context"
 	cryptorand "crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -17,12 +18,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"openadmin/internal/auth"
 	"openadmin/internal/config"
 	"openadmin/internal/podman"
-	"openadmin/internal/webtemplates"
 )
 
 // Emails bundles all /emails/* handlers.
@@ -30,6 +31,7 @@ type Emails struct {
 	Sessions   *auth.Manager
 	PublicIP   string
 	MasterPass string // dovecot master password, loaded once at startup
+	MySQL      *sql.DB
 }
 
 const emailsMailserverContainerName = "openadmin_mailserver"
@@ -136,7 +138,33 @@ var emailsRestartMailserverRun = func() {
 		"cd /usr/local/mail/openmail/ && podman-compose down mailserver && podman-compose up -d mailserver").Start()
 }
 
+// mailserver status is asked for on every email page, podman ps is ~50ms so it's reused for a few seconds
+var (
+	mailserverStatusMu  sync.Mutex
+	mailserverStatusAt  time.Time
+	mailserverStatusVal string
+)
+
+var mailserverStatusTTL = 5 * time.Second
+
 func checkMailserverStatus() string {
+	mailserverStatusMu.Lock()
+	defer mailserverStatusMu.Unlock()
+	if time.Since(mailserverStatusAt) < mailserverStatusTTL {
+		return mailserverStatusVal
+	}
+	mailserverStatusVal, mailserverStatusAt = readMailserverStatus(), time.Now()
+	return mailserverStatusVal
+}
+
+// resetMailserverStatus is for anything that starts or stops the mailserver
+func resetMailserverStatus() {
+	mailserverStatusMu.Lock()
+	mailserverStatusAt = time.Time{}
+	mailserverStatusMu.Unlock()
+}
+
+func readMailserverStatus() string {
 	if _, err := os.Stat(EmailsMailComposeFile); err != nil {
 		return "not_installed"
 	}
@@ -299,8 +327,19 @@ var emailsListAccountsRun = func() []emailQuota {
 		return result
 	}
 
-	raw, ferr := os.ReadFile("/usr/local/mail/openmail/docker-data/dms/config/postfix-accounts.cf")
-	if ferr != nil {
+	return emailAccountsFromFile()
+}
+
+// docker-mailserver's account and quota files, a changed mtime on either means the account list changed
+var (
+	EmailsAccountsFile = "/usr/local/mail/openmail/docker-data/dms/config/postfix-accounts.cf"
+	EmailsQuotasFile   = "/usr/local/mail/openmail/docker-data/dms/config/dovecot-quotas.cf"
+)
+
+// emailAccountsFromFile lists accounts without the container, quota usage is unknown so it's left empty
+func emailAccountsFromFile() []emailQuota {
+	raw, err := os.ReadFile(EmailsAccountsFile)
+	if err != nil {
 		return nil
 	}
 	var result []emailQuota
@@ -316,10 +355,150 @@ var emailsListAccountsRun = func() []emailQuota {
 	return result
 }
 
+// emailAccountsCount counts accounts from the file, enough to know whether any exist without asking the container
+func emailAccountsCount() int {
+	return len(emailAccountsFromFile())
+}
+
+var (
+	emailAccountsMu      sync.Mutex
+	emailAccountsCache   []emailQuota
+	emailAccountsKey     string
+	emailAccountsFetched time.Time
+)
+
+// emailAccountsTTL bounds how stale the quota usage numbers get, adding or removing accounts invalidates right away
+const emailAccountsTTL = time.Minute
+
+func emailAccountsCacheKey() string {
+	key := ""
+	for _, p := range []string{EmailsAccountsFile, EmailsQuotasFile} {
+		if info, err := os.Stat(p); err == nil {
+			key += fmt.Sprintf("%d:%d;", info.ModTime().UnixNano(), info.Size())
+		} else {
+			key += "-;"
+		}
+	}
+	return key
+}
+
+// cachedEmailAccounts is emailsListAccountsRun, which asks the container for every account's quota, reused until the account files change or a minute passes
+func cachedEmailAccounts() []emailQuota {
+	key := emailAccountsCacheKey()
+	emailAccountsMu.Lock()
+	if key == emailAccountsKey && time.Since(emailAccountsFetched) < emailAccountsTTL {
+		defer emailAccountsMu.Unlock()
+		return emailAccountsCache
+	}
+	emailAccountsMu.Unlock()
+	// not under the lock, a page asking for the last known usage must never wait on the container
+	accounts := emailsListAccountsRun()
+	emailAccountsMu.Lock()
+	emailAccountsCache, emailAccountsKey, emailAccountsFetched = accounts, key, time.Now()
+	emailAccountsMu.Unlock()
+	return accounts
+}
+
+var emailAccountsRefreshing bool
+
+// emailUsageNow returns the last known quota usage per account right away, fresh is false when it's outdated and a refresh was started in the background
+func emailUsageNow() (usage map[string]string, fresh bool) {
+	key := emailAccountsCacheKey()
+	emailAccountsMu.Lock()
+	fresh = key == emailAccountsKey && time.Since(emailAccountsFetched) < emailAccountsTTL
+	usage = make(map[string]string, len(emailAccountsCache))
+	for _, a := range emailAccountsCache {
+		usage[a.Email] = a.Quota
+	}
+	if !fresh && !emailAccountsRefreshing {
+		emailAccountsRefreshing = true
+		go func() {
+			cachedEmailAccounts()
+			emailAccountsMu.Lock()
+			emailAccountsRefreshing = false
+			emailAccountsMu.Unlock()
+		}()
+	}
+	emailAccountsMu.Unlock()
+	return usage, fresh
+}
+
+// emailQuotaLimits reads dovecot-quotas.cf, email:limit per line, accounts without a line are unlimited
+func emailQuotaLimits() map[string]string {
+	limits := map[string]string{}
+	raw, err := os.ReadFile(EmailsQuotasFile)
+	if err != nil {
+		return limits
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if email, limit, ok := strings.Cut(strings.TrimSpace(line), ":"); ok && email != "" {
+			limits[email] = strings.TrimSpace(limit)
+		}
+	}
+	return limits
+}
+
+// emailAccountsQuick lists the accounts from the mailserver's own files with the last known usage, the same shape as the opencli list
+func emailAccountsQuick() (accounts []emailQuota, fresh bool) {
+	usage, fresh := emailUsageNow()
+	limits := emailQuotaLimits()
+	for _, a := range emailAccountsFromFile() {
+		if q, ok := usage[a.Email]; ok {
+			a.Quota = q
+		} else {
+			limit := limits[a.Email]
+			if limit == "" {
+				limit = "~"
+			}
+			a.Quota = "( - / " + limit + " ) [0%]"
+			fresh = false
+		}
+		accounts = append(accounts, a)
+	}
+	return accounts, fresh
+}
+
+// resetEmailAccountsCache drops the cached list, after our own changes and in tests that swap emailsListAccountsRun
+func resetEmailAccountsCache() {
+	emailAccountsMu.Lock()
+	defer emailAccountsMu.Unlock()
+	emailAccountsCache, emailAccountsKey, emailAccountsFetched = nil, "", time.Time{}
+}
+
+// emailAccountsFor lists accounts from the container when it's up, from the account file when it's installed but not running
+func emailAccountsFor(mailserverStatus string) (accounts []emailQuota, fromFile bool) {
+	if mailserverStatus == "running" {
+		return cachedEmailAccounts(), false
+	}
+	return emailAccountsFromFile(), true
+}
+
+// changesEmailAccounts is true for opencli email-setup calls that add or delete accounts or change a quota
+func changesEmailAccounts(args []string) bool {
+	if len(args) < 4 || args[1] != "email-setup" {
+		return false
+	}
+	switch args[2] + " " + args[3] {
+	case "email add", "email del", "quota set", "quota del":
+		return true
+	}
+	return false
+}
+
+// emailQuotaPct pulls the usage percent out of quota text like "12M / 1G [1%]"
+func emailQuotaPct(quota string) int {
+	if m := emailQuotaPctRe.FindStringSubmatch(quota); m != nil {
+		n, _ := strconv.Atoi(m[1])
+		return n
+	}
+	return 0
+}
+
+var emailQuotaPctRe = regexp.MustCompile(`\[(\d+)%\]`)
+
 // ServeEmailsSettings handles GET/POST /emails/settings.
 func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
-	accounts := emailsListAccountsRun()
-	totalCount := len(accounts)
+	totalCount := emailAccountsCount()
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
@@ -419,6 +598,7 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 			}
 
 			emailsRestartMailserverRun()
+			resetMailserverStatus()
 
 			if len(triggeredServices) > 0 {
 				auth.AddFlash(w, r, e.Sessions, fmt.Sprintf("Configuration updated! %s require Mailserver to be recreated. Make sure to stop&start the service.", strings.Join(triggeredServices, " and ")), "info")
@@ -447,8 +627,10 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	webtemplates.Render(w, "emails_settings.html", mergeChrome(map[string]interface{}{
+	renderGzip(w, r, "emails_settings.html", mergeChrome(map[string]interface{}{
 		"MailserverStatus":     mailserverStatus,
+		"Installing":           emailsInstallRunning(),
+		"EmailsModuleEnabled":  hasModule(modulesEnabledList(ModulesConfigFilePath), "emails"),
 		"WebmailStatus":        webmailStatus,
 		"WebmailServices":      webmailServices,
 		"WebmailDomain":        webmailDomain,
@@ -462,6 +644,9 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 // runEmailsCmd is a 30s-timeout subprocess wrapper shared by the
 // /emails/api/* endpoints.
 var runEmailsCmd = func(args []string) (bool, string) {
+	if changesEmailAccounts(args) {
+		defer resetEmailAccountsCache()
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
@@ -503,6 +688,10 @@ func (e *Emails) ServeUpdatePassword(w http.ResponseWriter, r *http.Request) {
 		writeJSONMessage(w, http.StatusBadRequest, "Email and password are required.")
 		return
 	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
+		return
+	}
 	ok, out := runEmailsCmd([]string{"opencli", "email-setup", "email", "update", email, password})
 	if ok {
 		writeJSON(w, map[string]string{"message": "Password updated."})
@@ -520,6 +709,10 @@ func (e *Emails) ServeQuotaSet(w http.ResponseWriter, r *http.Request) {
 		writeJSONMessage(w, http.StatusBadRequest, "Email and quota are required.")
 		return
 	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
+		return
+	}
 	ok, out := runEmailsCmd([]string{"opencli", "email-setup", "quota", "set", email, quota})
 	if ok {
 		writeJSON(w, map[string]string{"message": "Quota updated."})
@@ -534,6 +727,10 @@ func (e *Emails) ServeQuotaDel(w http.ResponseWriter, r *http.Request) {
 	email := strings.TrimSpace(body.Email)
 	if email == "" {
 		writeJSONMessage(w, http.StatusBadRequest, "Email is required.")
+		return
+	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
 		return
 	}
 	ok, out := runEmailsCmd([]string{"opencli", "email-setup", "quota", "del", email})
@@ -554,6 +751,10 @@ func (e *Emails) ServeRestrict(w http.ResponseWriter, r *http.Request) {
 		writeJSONMessage(w, http.StatusBadRequest, "Invalid parameters.")
 		return
 	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		writeJSONMessage(w, http.StatusForbidden, "Email is not on a domain of your users.")
+		return
+	}
 	ok, out := runEmailsCmd([]string{"opencli", "email-setup", "email", "restrict", action, rtype, email})
 	if ok {
 		writeJSON(w, map[string]string{"message": "Restriction updated."})
@@ -567,6 +768,10 @@ func (e *Emails) ServeDeleteEmails(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&body)
 	if len(body.Emails) == 0 {
 		writeJSONMessage(w, http.StatusBadRequest, "No emails provided.")
+		return
+	}
+	if !scopeFor(r, e.MySQL).AllowsEmails(body.Emails) {
+		writeJSONMessage(w, http.StatusForbidden, "Some of these emails are not on a domain of your users.")
 		return
 	}
 	args := append([]string{"opencli", "email-setup", "email", "del"}, body.Emails...)
@@ -585,36 +790,64 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 	outputJSON := r.URL.Query().Get("output") == "json"
 	mailserverStatus := checkMailserverStatus()
 
-	if mailserverStatus != "running" {
+	var accounts []emailQuota
+	fromFile := false
+	usageFresh := true
+	if mailserverStatus != "not_installed" {
+		if mailserverStatus == "running" && !outputJSON {
+			accounts, usageFresh = emailAccountsQuick()
+		} else {
+			accounts, fromFile = emailAccountsFor(mailserverStatus)
+		}
+		scope := scopeFor(r, e.MySQL)
+		accounts = filterRows(scope, accounts, func(a emailQuota) bool { return scope.AllowsEmail(a.Email) })
+	}
+	// container down and nothing in the account file, the stopped page is all there is to show
+	if mailserverStatus != "running" && len(accounts) == 0 {
 		if outputJSON {
 			writeJSON(w, map[string]string{"status": mailserverStatus})
 			return
 		}
-		webtemplates.Render(w, "emails_accounts.html", mergeChrome(map[string]interface{}{
+		renderGzip(w, r, "emails_accounts.html", mergeChrome(map[string]interface{}{
 			"MailserverStatus": mailserverStatus,
+			"Installing":       emailsInstallRunning(),
 			"Emails":           nil,
-			"EmailPairs":       [][2]string{},
+			"EmailPairs":       [][3]interface{}{},
 			"Flashes":          auth.PopFlashes(w, r, e.Sessions),
 		}, r, "Accounts"))
 		return
 	}
 
-	accounts := emailsListAccountsRun()
 	if outputJSON {
+		if fromFile {
+			writeJSON(w, map[string]interface{}{"status": mailserverStatus, "emails": accounts, "from_file": true})
+			return
+		}
 		writeJSON(w, map[string]interface{}{"emails": accounts})
 		return
 	}
-	pairs := make([][2]string, 0, len(accounts))
+	// the usage percent is worked out here once instead of a regex per row in the browser
+	pairs := make([][3]interface{}, 0, len(accounts))
 	for _, a := range accounts {
-		pairs = append(pairs, [2]string{a.Email, a.Quota})
+		pairs = append(pairs, [3]interface{}{a.Email, a.Quota, emailQuotaPct(a.Quota)})
 	}
-	webtemplates.Render(w, "emails_accounts.html", mergeChrome(map[string]interface{}{
+	data := map[string]interface{}{
 		"MailserverStatus": mailserverStatus,
+		"FromFile":         fromFile,
+		"Installing":       emailsInstallRunning(),
 		"Emails":           accounts,
 		"EmailPairs":       pairs,
+		"UsagePending":     !usageFresh,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
-		"BulkActions":      EmailAccountsBulkActions(),
-	}, r, "Accounts"))
+	}
+	if mailserverStatus == "running" {
+		data["EmailDomains"] = e.emailDomainOptions(r)
+	}
+	// every bulk action goes through the container, so there's none to offer while it's down
+	if !fromFile {
+		data["BulkActions"] = EmailAccountsBulkActions()
+	}
+	renderGzip(w, r, "emails_accounts.html", mergeChrome(data, r, "Accounts"))
 }
 
 func getEmailQueue() []map[string]interface{} {
@@ -643,7 +876,7 @@ func getEmailQueue() []map[string]interface{} {
 // POST is accepted but never actually distinguished from GET.
 func (e *Emails) ServeEmailsQueue(w http.ResponseWriter, r *http.Request) {
 	mailserverStatus := checkMailserverStatus()
-	queue := getEmailQueue()
+	queue := scopeFor(r, e.MySQL).filterQueue(getEmailQueue())
 
 	if r.URL.Query().Get("output") == "json" {
 		writeJSON(w, map[string]interface{}{"queue": queue, "mailserver_status": mailserverStatus})
@@ -655,8 +888,9 @@ func (e *Emails) ServeEmailsQueue(w http.ResponseWriter, r *http.Request) {
 			queueIDs = append(queueIDs, id)
 		}
 	}
-	webtemplates.Render(w, "emails_queue.html", mergeChrome(map[string]interface{}{
+	renderGzip(w, r, "emails_queue.html", mergeChrome(map[string]interface{}{
 		"MailserverStatus": mailserverStatus,
+		"Installing":       emailsInstallRunning(),
 		"Queue":            queue,
 		"QueueIDs":         queueIDs,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
@@ -676,6 +910,20 @@ func (e *Emails) ServeEmailsQueueAction(w http.ResponseWriter, r *http.Request) 
 			return err
 		}
 		return cmd.Run()
+	}
+
+	// a reseller never gets the whole-queue commands, only their own message ids
+	if rs := scopeFor(r, e.MySQL); rs != nil {
+		if (action != "retry" && action != "delete") || (scope != "all" && scope != "selected") {
+			writeJSONError2(w, http.StatusBadRequest, "Invalid action.")
+			return
+		}
+		targets, ok := rs.queueTargets(getEmailQueue(), scope, queueIDs)
+		if !ok {
+			writeJSONError2(w, http.StatusForbidden, "Some of these messages are not from or to your users.")
+			return
+		}
+		scope, queueIDs = "selected", targets
 	}
 
 	var err error
@@ -728,16 +976,17 @@ func (e *Emails) ServeEmailsReports(w http.ResponseWriter, r *http.Request) {
 	flashes := auth.PopFlashes(w, r, e.Sessions)
 	switch status {
 	case "not_installed":
-		webtemplates.Render(w, "emails_mailserver_not_installed_with_header.html", mergeChrome(map[string]interface{}{
-			"Flashes": flashes,
+		renderGzip(w, r, "emails_mailserver_not_installed_with_header.html", mergeChrome(map[string]interface{}{
+			"Flashes":    flashes,
+			"Installing": emailsInstallRunning(),
 		}, r, "Email Reports"))
 	case "stopped":
-		webtemplates.Render(w, "emails_mailserver_stopped_with_header.html", mergeChrome(map[string]interface{}{
+		renderGzip(w, r, "emails_mailserver_stopped_with_header.html", mergeChrome(map[string]interface{}{
 			"Flashes": flashes,
 		}, r, "Email Reports"))
 	default:
 		_, err := os.Stat(EmailsReportsIndexFile)
-		webtemplates.Render(w, "emails_reports.html", mergeChrome(map[string]interface{}{
+		renderGzip(w, r, "emails_reports.html", mergeChrome(map[string]interface{}{
 			"Flashes":      flashes,
 			"ReportsExist": err == nil,
 		}, r, "Email Reports"))
@@ -921,6 +1170,10 @@ func (e *Emails) ServeEmailsWebmailLink(w http.ResponseWriter, r *http.Request) 
 
 	if !emailsRegex.MatchString(email) {
 		http.Error(w, "Invalid email format", http.StatusInternalServerError)
+		return
+	}
+	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 

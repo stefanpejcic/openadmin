@@ -14,7 +14,7 @@ func TestQuickStartModulesCustomized(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "openpanel.config")
 
-	os.WriteFile(path, []byte("enabled_modules=services,filemanager,autoinstaller,domains,ssl,php,dns,locale,account,sessions,mysql,mysql_import,remote_mysql,process_manager,php_options,favorites,phpmyadmin,crons,domain_logs,wordpress,website_builder,usage,webserver_conf,waf,redis,memcached,login_history,activity,twofa,goaccess,docroot\n"), 0644)
+	os.WriteFile(path, []byte("enabled_modules=services,filemanager,autoinstaller,domains,ssl,php,dns,locale,account,sessions,mysql,mysql_import,remote_mysql,process_manager,php_options,favorites,phpmyadmin,crons,domain_logs,error_logs,summary,wordpress,website_builder,usage,webserver_conf,waf,redis,memcached,login_history,activity,twofa,goaccess,docroot\n"), 0644)
 	if quickStartModulesCustomized(path) {
 		t.Fatalf("expected default modules list to not be flagged as customized")
 	}
@@ -24,7 +24,7 @@ func TestQuickStartModulesCustomized(t *testing.T) {
 		t.Fatalf("expected a shrunk modules list to be flagged as customized")
 	}
 
-	os.WriteFile(path, []byte("enabled_modules=services,filemanager,autoinstaller,domains,ssl,php,dns,locale,account,sessions,mysql,mysql_import,remote_mysql,process_manager,php_options,favorites,phpmyadmin,crons,domain_logs,wordpress,website_builder,usage,webserver_conf,waf,redis,memcached,login_history,activity,twofa,goaccess,docroot,ftp\n"), 0644)
+	os.WriteFile(path, []byte("enabled_modules=services,filemanager,autoinstaller,domains,ssl,php,dns,locale,account,sessions,mysql,mysql_import,remote_mysql,process_manager,php_options,favorites,phpmyadmin,crons,domain_logs,error_logs,summary,wordpress,website_builder,usage,webserver_conf,waf,redis,memcached,login_history,activity,twofa,goaccess,docroot,ftp\n"), 0644)
 	if !quickStartModulesCustomized(path) {
 		t.Fatalf("expected an extended modules list to be flagged as customized")
 	}

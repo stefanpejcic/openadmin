@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -21,7 +20,7 @@
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
                     <h1 class="mb-1 text-xl font-bold">Edit Domain Templates</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Edit VirtualHosts templates and default landing pages used for new domains.</h2>
+                    <h2 class="text-sm font-medium text-slate-500">Edit the default landing page and the pages shown on suspended domains and accounts.</h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
                     <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">Save Files</button>
@@ -113,6 +112,52 @@
 
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+
+    <div>
+        <h2 id="suspension-reasons" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Suspension Reasons</h2>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Pages admins can pick when suspending a domain, e.g. DMCA or overdue payment. The reason name is shown to the user in their panel and the page to visitors.</p>
+    </div>
+
+    <div class="md:col-span-2 space-y-3">
+        {{range .Reasons}}
+        <details x-data="{ html: {{toJSON .Content}} }" class="rounded border border-gray-200 dark:border-gray-800">
+            <summary class="cursor-pointer select-none px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-50">{{.Name}} <span class="font-normal text-gray-500">/suspended/{{.Slug}}.html</span></summary>
+            <div class="space-y-3 border-t border-gray-200 p-4 dark:border-gray-800">
+                <div class="flex items-end gap-2">
+                    <div class="grow">
+                        <label class="block text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                        <input type="text" name="reason_name__{{.Slug}}" value="{{.Name}}" maxlength="100" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+                    </div>
+                    <button type="submit" name="delete_reason" value="{{.Slug}}" onclick="return confirm('Delete this suspension reason?')" class="inline-flex items-center rounded border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-50 dark:border-red-800 dark:bg-gray-950 dark:hover:bg-red-950">Delete</button>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <textarea x-model="html" name="reason_content__{{.Slug}}" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="18">{{.Content}}</textarea>
+                    <iframe :srcdoc="html" sandbox style="height:100%; width:100%;"></iframe>
+                </div>
+            </div>
+        </details>
+        {{end}}
+
+        <details x-data="{ html: '' }" class="rounded border border-dashed border-gray-300 dark:border-gray-700" {{if not .Reasons}}open{{end}}>
+            <summary class="cursor-pointer select-none px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400">+ Add suspension reason</summary>
+            <div class="space-y-3 border-t border-gray-200 p-4 dark:border-gray-800">
+                <div>
+                    <label class="block text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                    <input type="text" name="new_reason_name" maxlength="100" placeholder="Suspended for Copyright / DMCA Violation" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <textarea x-model="html" name="new_reason_content" placeholder="Leave empty to start from the Suspended Website page" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="12"></textarea>
+                    <iframe :srcdoc="html" sandbox style="height:100%; width:100%;"></iframe>
+                </div>
+                <p class="text-xs text-gray-500">Saved with the rest of the page when you click Save Files.</p>
+            </div>
+        </details>
+    </div>
+</div>
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
 <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" x-data="restoreComponentFor('suspended_user', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/caddy/templates/suspended_user.html')">
 
     <div>
@@ -152,207 +197,31 @@
     </div>
 </div>
 
-<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" x-data="restoreComponentFor('docker_apache_domain', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/nginx/vhosts/1.1/docker_apache_domain.conf')">
-
-    <div>
-        <h2 id="apache" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Apache VirtualHost</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Template used for creating VirtualHosts of domains added by users with Apache webserver.</p>
-            <button
-      type="button"
-      @click="restoreDefault"
-      class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-      :disabled="loading">
-      <template x-if="!loading"><span>Restore Default</span></template>
-      <template x-if="loading">
-        <svg class="animate-spin h-4 w-4 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
-      </template>
-    </button>
-    </div>
-    <div class="md:col-span-2">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-            <div class="col-span-full">
-                <div class="relative w-full mt-2">
-
-                    <div class="row form-selectgroup form-selectgroup-boxes d-flex">
-                        <div class="mt-4 grid grid-cols-1 gap-4">
-                            <textarea id="docker_apache_domain" name="docker_apache_domain" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerApacheDomain}}</textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" x-data="restoreComponentFor('docker_nginx_domain', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/nginx/vhosts/1.1/docker_nginx_domain.conf')">
-
-    <div>
-        <h2 id="nginx" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Nginx VirtualHost</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Template used for creating VirtualHosts of domains added by users with Nginx webserver.</p>
-            <button
-      type="button"
-      @click="restoreDefault"
-      class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-      :disabled="loading">
-      <template x-if="!loading"><span>Restore Default</span></template>
-      <template x-if="loading">
-        <svg class="animate-spin h-4 w-4 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
-      </template>
-    </button>
-    </div>
-    <div class="md:col-span-2">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-            <div class="col-span-full">
-                <div class="relative w-full mt-2">
-
-                    <div class="row form-selectgroup form-selectgroup-boxes d-flex">
-                        <div class="mt-4 grid grid-cols-1 gap-4">
-                            <textarea id="docker_nginx_domain" name="docker_nginx_domain" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerNginxDomain}}</textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" x-data="restoreComponentFor('docker_openresty_domain', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/nginx/vhosts/1.1/docker_openresty_domain.conf')">
-
-    <div>
-        <h2 id="openresty" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">OpenResty VirtualHost</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Template used for creating VirtualHosts of domains added by users with OpenResty webserver.</p>
-            <button
-      type="button"
-      @click="restoreDefault"
-      class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-      :disabled="loading">
-      <template x-if="!loading"><span>Restore Default</span></template>
-      <template x-if="loading">
-        <svg class="animate-spin h-4 w-4 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
-      </template>
-    </button>
-    </div>
-    <div class="md:col-span-2">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-            <div class="col-span-full">
-                <div class="relative w-full mt-2">
-
-                    <div class="row form-selectgroup form-selectgroup-boxes d-flex">
-                        <div class="mt-4 grid grid-cols-1 gap-4">
-                            <textarea id="docker_openresty_domain" name="docker_openresty_domain" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerOpenrestyDomain}}</textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" x-data="restoreComponentFor('docker_varnish', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/varnish/default.vcl')">
-
-    <div>
-        <h2 id="varnish" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Varnish Template</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">
-            This <code>default.vcl</code> template is applied to Varnish instances created for new user accounts. The placeholder <code>VARNISH_BACKEND_HOST</code> is automatically replaced with the user's actual web server.
-        </p>
-            <button
-      type="button"
-      @click="restoreDefault"
-      class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-      :disabled="loading">
-      <template x-if="!loading"><span>Restore Default</span></template>
-      <template x-if="loading">
-        <svg class="animate-spin h-4 w-4 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
-      </template>
-    </button>
-    </div>
-    <div class="md:col-span-2">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-            <div class="col-span-full">
-                <div class="relative w-full mt-2">
-
-                    <div class="row form-selectgroup form-selectgroup-boxes d-flex">
-                        <div class="mt-4 grid grid-cols-1 gap-4">
-                            <textarea id="docker_varnish" name="docker_varnish" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerVarnish}}</textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3" x-data="restoreComponentFor('docker_caddy', 'https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/caddy/templates/domain.conf')">
-
-    <div>
-        <h2 id="caddy" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Caddy VHosts</h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">
-            This template is applied to all newly added domains. The variables <code>&lt;DOMAIN_NAME&gt; &lt;SSL_PORT&gt; &lt;NON_SSL_PORT&gt;</code> are automatically replaced by OpenPanel during domain creation. Do not modify the comments, as they are used as markers for Dedicated IP and Varnish Caching.
-        </p>
-
-            <button
-      type="button"
-      @click="restoreDefault"
-      class="inline-flex items-center rounded border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-      :disabled="loading">
-      <template x-if="!loading"><span>Restore Default</span></template>
-      <template x-if="loading">
-        <svg class="animate-spin h-4 w-4 text-gray-600 dark:text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
-      </template>
-    </button>
-    </div>
-    <div class="md:col-span-2">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-            <div class="col-span-full">
-                <div class="relative w-full mt-2">
-
-                    <div class="row form-selectgroup form-selectgroup-boxes d-flex">
-                        <div class="mt-4 grid grid-cols-1 gap-4">
-                            <textarea id="docker_caddy" name="docker_caddy" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500" rows="25" cols="50">{{.DockerCaddy}}</textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 </div>
 
 <script>
 function restoreComponentFor(id, githubFile) {
   return {
     loading: false,
+    // config files without a live preview warn when they differ from the default
+    modified: false,
+    defaultText: null,
+    async init() {
+      if (!id.startsWith('docker_')) return;
+      const textarea = document.getElementById(id);
+      if (!textarea) return;
+      try {
+        const res = await fetch(githubFile);
+        if (!res.ok) return;
+        this.defaultText = await res.text();
+      } catch (e) {
+        return;
+      }
+      const norm = t => t.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').trim();
+      const check = () => { this.modified = norm(textarea.value) !== norm(this.defaultText); };
+      textarea.addEventListener('input', check);
+      check();
+    },
     async restoreDefault() {
       this.loading = true;
       try {
@@ -360,7 +229,10 @@ function restoreComponentFor(id, githubFile) {
         if (!res.ok) throw new Error('Failed to fetch default configuration from GitHub');
         const text = await res.text();
         const textarea = document.getElementById(id);
-        if (textarea) textarea.value = text;
+        if (textarea) {
+          textarea.value = text;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
 
         if (typeof setupLivePreview === 'function' && !id.startsWith('docker_')) {
           setupLivePreview(id, `preview_${id}`);

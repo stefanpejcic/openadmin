@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -197,6 +198,8 @@ func TestServeDefaultsGetJSON(t *testing.T) {
 
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -222,6 +225,8 @@ func TestServeDefaultsGetPropagatesNonTimeoutPHPWatchError(t *testing.T) {
 
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return nil, &ftpStubError{"connection refused"} }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -244,6 +249,8 @@ func TestServeDefaultsPostRewritesEnvAndTogglesVarnish(t *testing.T) {
 
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -324,6 +331,8 @@ NGINX_ENABLED="true"
 			"8.2": {StatusLabel: "Latest", IsLatestVersion: true, ActiveSupportEndDate: "2026-12-31"},
 		}, nil
 	}
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -373,6 +382,8 @@ MYSQL_TYPE="mariadb"
 
 	origPHP := defaultsPHPWatchRun
 	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return nil, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
 	t.Cleanup(func() { defaultsPHPWatchRun = origPHP })
 
 	d := &Defaults{}
@@ -557,9 +568,8 @@ func TestServeDefaultsFilesDeletePartialFailure(t *testing.T) {
 	}
 }
 
-func TestServeUserFilesGetAndPost(t *testing.T) {
-	// query_context_by_username needs a MySQL connection; with nil MySQL it
-	// returns an error and an empty context, so files resolve under "/home/".
+// an unknown user used to resolve to /home/.env, now it's a 404
+func TestServeUserFilesUnknownUser(t *testing.T) {
 	d := &Defaults{}
 	srv, client := newDefaultsTestServer(t, d)
 
@@ -569,7 +579,112 @@ func TestServeUserFilesGetAndPost(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), `"env"`) || !strings.Contains(string(body), `"compose"`) {
-		t.Fatalf("expected env/compose JSON keys, got %s", body)
+	if resp.StatusCode != http.StatusNotFound || !strings.Contains(string(body), "User not found") {
+		t.Fatalf("expected 404 User not found, got %d %s", resp.StatusCode, body)
+	}
+}
+
+func TestAdviseWebserver(t *testing.T) {
+	if a := adviseWebserver(map[string]int{}); a != nil {
+		t.Fatalf("expected no advice without sites, got %+v", a)
+	}
+	cases := []struct {
+		counts map[string]int
+		ok     string
+		text   string
+	}{
+		{map[string]int{"WordPress": 12, "Joomla": 3, "NodeJS": 4}, "openlitespeed,apache", "12 of 19 sites on this server are WordPress"},
+		{map[string]int{"NodeJS": 3, "Python": 2, "n8n": 1, "WordPress": 4}, "nginx", "6 of 10 sites on this server are Node.js/Python apps"},
+		{map[string]int{"Java": 2, "ruby": 2, "PHP": 1}, "openresty", "Java/Ruby apps, which run best on OpenResty"},
+		{map[string]int{"Drupal": 2, "websitebuilder": 1, "": 1}, "apache,nginx", "4 of 4 sites on this server are other CMS/PHP sites"},
+		{map[string]int{"WordPress": 2, "Drupal": 2}, "openlitespeed,apache", "WordPress"},
+	}
+	for _, c := range cases {
+		a := adviseWebserver(c.counts)
+		if a == nil || strings.Join(a.OK, ",") != c.ok || !strings.Contains(a.Text, c.text) {
+			t.Fatalf("adviseWebserver(%v) = %+v, want ok=%s text~%q", c.counts, a, c.ok, c.text)
+		}
+	}
+}
+
+func TestServeDefaultsRendersRecommendations(t *testing.T) {
+	withScratchDefaultsPaths(t)
+	os.WriteFile(DefaultsEnvPath, []byte("WEB_SERVER=\"nginx\"\nMYSQL_TYPE=\"mysql\"\nNGINX_CPU=\"0.5\"\nNGINX_RAM=\"0.5G\"\n"), 0644)
+	origPHP := defaultsPHPWatchRun
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return map[string]phpVersionStatus{}, nil }
+	resetPHPWatchCache()
+	t.Cleanup(resetPHPWatchCache)
+	origSites := defaultsSiteTypesRun
+	defaultsSiteTypesRun = func(_ *sql.DB) map[string]int { return map[string]int{"WordPress": 5} }
+	origPlans := defaultsPlanMinimumsRun
+	defaultsPlanMinimumsRun = func(_ *sql.DB) planMinimums { return planMinimums{CPU: 2, CPUPlan: "Standard", RAMGB: 2, RAMPlan: "Standard"} }
+	t.Cleanup(func() { defaultsPHPWatchRun, defaultsSiteTypesRun, defaultsPlanMinimumsRun = origPHP, origSites, origPlans })
+
+	srv, client := newDefaultsTestServer(t, &Defaults{})
+	resp, err := client.Get(srv.URL + "/settings/defaults")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	for _, want := range []string{
+		`data-ok="openlitespeed,apache"`,
+		"5 of 5 sites on this server are WordPress, which performs best on OpenLiteSpeed",
+		"MySQL uses about 100 MB more RAM per user than MariaDB",
+		"5 WordPress sites are on this server. Recommended: enable Varnish",
+		"Number(v) > 0 && Number(v) < 2",
+		"Users on the Standard plan get 2 CPU",
+		"Autostarted services use resources on every new account",
+		`class="col-span-full mt-3 text-sm text-amber-600 dark:text-amber-500">5 of 5 sites`,
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected %q in the page", want)
+		}
+	}
+}
+
+func TestCountSitesOfType(t *testing.T) {
+	if got := countSitesOfType(map[string]int{"WordPress": 3, "wordpress": 2, "Joomla": 4}, "wordpress"); got != 5 {
+		t.Fatalf("expected case-insensitive count of 5, got %d", got)
+	}
+}
+
+func TestLatestPHPOption(t *testing.T) {
+	opts := []phpVersionOption{{Version: "8.5"}, {Version: "8.4"}, {Version: "8.3"}}
+	data := map[string]phpVersionStatus{"8.4": {IsLatestVersion: true}, "8.5": {IsNextVersion: true}}
+	if got := latestPHPOption(opts, data); got != "8.4" {
+		t.Fatalf("latestPHPOption = %q, want 8.4", got)
+	}
+	if got := latestPHPOption(opts[2:], data); got != "" {
+		t.Fatalf("expected empty when the latest version isn't installed, got %q", got)
+	}
+}
+
+func TestPHPWatchStatusesCachesAndKeepsLastGoodList(t *testing.T) {
+	origPHP := defaultsPHPWatchRun
+	calls := 0
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) {
+		calls++
+		return map[string]phpVersionStatus{"8.4": {IsLatestVersion: true}}, nil
+	}
+	resetPHPWatchCache()
+	t.Cleanup(func() { defaultsPHPWatchRun = origPHP; resetPHPWatchCache() })
+
+	for i := 0; i < 3; i++ {
+		if got, err := phpWatchStatuses(); err != nil || !got["8.4"].IsLatestVersion {
+			t.Fatalf("got %v, %v", got, err)
+		}
+	}
+	if calls != 1 {
+		t.Fatalf("expected one fetch while fresh, got %d", calls)
+	}
+
+	// a failed refresh keeps serving the list it already had
+	defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) { return nil, &ftpStubError{"down"} }
+	if got, err := refreshPHPWatch(); err != nil || !got["8.4"].IsLatestVersion {
+		t.Fatalf("expected the last good list, got %v, %v", got, err)
+	}
+	if got, err := phpWatchStatuses(); err != nil || !got["8.4"].IsLatestVersion {
+		t.Fatalf("expected the last good list, got %v, %v", got, err)
 	}
 }

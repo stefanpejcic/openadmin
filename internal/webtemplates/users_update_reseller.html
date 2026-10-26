@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -27,6 +26,28 @@
     </header>
     </div>
 
+
+{{if .ResellerPlans}}
+<div id="resellerPlanSection">
+    <div class="sm:mx-auto sm:max-w-2xl mt-8">
+        <h2 class="mb-1 text-lg font-bold">Reseller Package</h2>
+        <p class="mb-4 text-sm text-gray-500">{{if .ResellerData.ResellerPlan}}Currently on <a href="/plans/resellers/{{.ResellerData.ResellerPlan}}" class="font-medium underline">{{.ResellerData.ResellerPlan}}</a>. {{end}}Applying a package replaces the limits below. Moving to a package with fewer accounts or less disk than the reseller already uses is refused.</p>
+        <form method="POST" action="/resellers" class="flex flex-col gap-2 sm:flex-row">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="action" value="change_plan">
+            <input type="hidden" name="username" value="{{.Username}}">
+            <select name="reseller_plan" required class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                {{$current := .ResellerData.ResellerPlan}}
+                {{range .ResellerPlans}}<option value="{{.Name}}" {{if eq .Name $current}}selected{{end}}>{{.Name}} &middot; {{if eq .MaxAccounts 0}}&infin;{{else}}{{.MaxAccounts}}{{end}} accounts &middot; {{if eq .MaxDiskBlocks 0}}&infin;{{else}}{{.MaxDiskGB}} GB{{end}}</option>{{end}}
+            </select>
+            <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 cursor-pointer">Apply Package</button>
+        </form>
+        <div class="mx-auto mt-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+        <h2 class="mt-6 text-lg font-bold">Custom Limits</h2>
+        <p class="text-sm text-gray-500">Saved limits are overwritten when the reseller's package is edited or another package is applied.</p>
+    </div>
+</div>
+{{end}}
 
 <div id="collapseAddNewUser">
     <div class="sm:mx-auto sm:max-w-2xl" style="display:block;">
@@ -60,7 +81,7 @@
         <!-- Alpine.js state to hold selected plans -->
         <div
             x-data='{
-                selectedPlans: {{toJSON .ResellerData.AllowedPlans}},
+                selectedPlans: {{toJSON .ResellerData.AllowedPlans}}.map(String),
                 togglePlan(id) {
                     if (this.selectedPlans.includes(id)) {
                         this.selectedPlans = this.selectedPlans.filter(p => p !== id);

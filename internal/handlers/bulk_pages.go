@@ -25,8 +25,19 @@ func BulkRoutes(mux *http.ServeMux, sessions *auth.Manager, opts auth.Options, u
 			ServeBulkDispatch(sessions, mux, w, r, actions(), route)
 		}))
 	}
-	mux.HandleFunc("POST /domains/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
-		serveBulkDispatchOrdered(sessions, mux, w, r, DomainsBulkActions(domains.ownerPHPVersions(nil)), domainsBulkRoute, nil, domainsBulkBatch)
+	// resellers too, the replayed row routes check ownership and the batch is filtered here
+	mux.HandleFunc("POST /domains/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		s := scopeFor(r, domains.MySQL)
+		serveBulkDispatchOrdered(sessions, mux, w, r, DomainsBulkActions(domains.ownerPHPVersions(nil)), domainsBulkRoute, nil, scopedBatch(s, s.AllowsDomain, domainsBulkBatch))
+	}))
+	// postfwd reloads once for the whole selection
+	mux.HandleFunc("POST /emails/domain-limits/bulk", auth.RequireAdmin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		serveBulkDispatchOrdered(sessions, mux, w, r, EmailDomainLimitsBulkActions(), emailDomainLimitsBulkRoute, nil, emailDomainLimitsBulkBatch)
+	}))
+	// one opencli call for the whole selection, so caddy reloads once
+	mux.HandleFunc("POST /domains/ratelimit/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		s := scopeFor(r, domains.MySQL)
+		serveBulkDispatchOrdered(sessions, mux, w, r, RateLimitBulkActions(), rateLimitBulkRoute, nil, scopedBatch(s, s.AllowsDomain, rateLimitBulkBatch))
 	}))
 	admin("POST /services/bulk", ServicesBulkActions, servicesBulkRoute)
 	admin("POST /server/processes/bulk", ProcessesBulkActions, processesBulkRoute)
@@ -73,6 +84,10 @@ func BulkRoutes(mux *http.ServeMux, sessions *auth.Manager, opts auth.Options, u
 	mux.HandleFunc("POST /emails/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
 		ServeBulkDispatch(sessions, mux, w, r, EmailAccountsBulkActions(), emailAccountsBulkRoute)
 	}))
+	// the replayed quota route checks the account is on one of the reseller's domains
+	mux.HandleFunc("POST /services/ftp/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
+		ServeBulkDispatch(sessions, mux, w, r, FTPBulkActions(), ftpBulkRoute)
+	}))
 	mux.HandleFunc("POST /resellers/bulk", auth.RequireLogin(sessions, opts, func(w http.ResponseWriter, r *http.Request) {
 		ServeBulkDispatch(sessions, mux, w, r, AccountsBulkActions("resellers"), accountsBulkRoute("/resellers"))
 	}))
@@ -112,14 +127,19 @@ func UsersBulkActions(plans []paneldb.RowMap, ips []string) []webtemplates.BulkA
 
 // bulkActions lists the plans the admin or reseller behind r may assign, same as the /users page
 func (u *Users) bulkActions(r *http.Request) []webtemplates.BulkAction {
-	var allowed []int
-	if owner := u.resellerScope(r); owner != "" {
-		if ids, ok := paneldb.AllowedPlansForReseller(owner); ok {
-			allowed = ids
-		}
+	plans, _ := paneldb.GetAllPlans(u.MySQL, resellerPlanScope(u.resellerScope(r)))
+	return u.withImunifyScan(r, UsersBulkActions(plans, serverPublicIPs()))
+}
+
+// usersImunifyScanAction replays POST /security/imunify/{user}, which is admin only
+var usersImunifyScanAction = webtemplates.BulkAction{Key: "imunify", Icon: "scan-search", Label: "Scan with ImunifyAV", Confirm: "Queue an ImunifyAV malware scan of each selected user's files? Scans run in the background, results show on the Websites page."}
+
+// withImunifyScan adds the ImunifyAV scan for admins when the agent is installed
+func (u *Users) withImunifyScan(r *http.Request, actions []webtemplates.BulkAction) []webtemplates.BulkAction {
+	if u.resellerScope(r) != "" || !imunifyInstalled() {
+		return actions
 	}
-	plans, _ := paneldb.GetAllPlans(u.MySQL, allowed)
-	return UsersBulkActions(plans, serverPublicIPs())
+	return append(actions, usersImunifyScanAction)
 }
 
 // usersEditFields are the /user/edit form fields the one-value actions fill in
@@ -142,6 +162,8 @@ func usersBulkRoute(action, value, username string) (*BulkCall, BulkResult) {
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/user/edit/" + url.PathEscape(username), Form: url.Values{usersEditFields[action]: {value}}})
 	case "backup":
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/user/export/create/" + url.PathEscape(username)})
+	case "imunify":
+		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/security/imunify/" + url.PathEscape(username)})
 	case "twofa", "passkeys":
 		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/users/" + url.PathEscape(username) + "/account-setting/" + action})
 	}
@@ -161,9 +183,12 @@ func DomainsBulkActions(phpVersions []string) []webtemplates.BulkAction {
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
 		{Key: "waf", Icon: "shield-check", Label: "WAF", Confirm: "Set the WAF for the selected domains:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
+		{Key: "ratelimit", Icon: "clock", Label: "Rate limit", Confirm: "Rate limit for the selected domains, custom limits are set on the Rate Limiting page:",
+			Input: &webtemplates.BulkInput{Type: "select", Options: []webtemplates.BulkOption{{Value: "default", Label: "Server default"}, {Value: "off", Label: "No limits"}}}},
 		{Key: "cloudflare", Icon: "cloud", Label: "Cloudflare", Confirm: "Cloudflare-only access for the selected domains, restricted domains not proxied through Cloudflare return 403 to visitors:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Restrict to Cloudflare", "Unrestrict")}},
-		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected domains?"},
+		{Key: "suspend", Icon: "pause", Label: "Suspend", Confirm: "Suspend the selected domains, users can't unsuspend them. Reason:",
+			Input: &webtemplates.BulkInput{Type: "select", Options: suspensionReasonOptions()}},
 		{Key: "unsuspend", Icon: "play", Label: "Unsuspend", Confirm: "Unsuspend the selected domains?"},
 		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected domains? Their files are kept, but DNS zones, SSL and web server config are removed.", Danger: true},
 	}
@@ -177,17 +202,17 @@ func (d *Domains) ownerPHPVersions(rows []paneldb.RowMap) []string {
 			return nil
 		}
 	}
+	contexts := paneldb.UserContexts(d.MySQL)
 	seenOwner, seen := map[string]bool{}, map[string]bool{}
 	var versions []string
 	for _, row := range rows {
 		owner, _ := row["username"].(string)
-		owner = stripSuspendedPrefix(owner)
 		if owner == "" || seenOwner[owner] {
 			continue
 		}
 		seenOwner[owner] = true
-		context, err := queryContextByUsername(d.MySQL, owner)
-		if err != nil || context == "" {
+		context := contexts[owner]
+		if context == "" {
 			continue
 		}
 		list, _ := cachedAvailablePHPVersions(context)
@@ -216,16 +241,30 @@ func phpVersionLess(a, b string) bool {
 	return ci < di
 }
 
+func suspensionReasonOptions() []webtemplates.BulkOption {
+	opts := []webtemplates.BulkOption{{Value: "default", Label: "Default suspended page"}}
+	for _, t := range listSuspensionTemplates() {
+		opts = append(opts, webtemplates.BulkOption{Value: t.Slug, Label: t.Name})
+	}
+	return opts
+}
+
 func onOffOptions(on, off string) []webtemplates.BulkOption {
 	return []webtemplates.BulkOption{{Value: "on", Label: on}, {Value: "off", Label: off}}
 }
 
 // domainsBulkBatch sends every selected domain to one opencli call so caddy only reloads once
 func domainsBulkBatch(action, value string, items []string) ([]BulkResult, bool) {
-	if action != "cloudflare" {
-		return nil, false
+	switch action {
+	case "cloudflare":
+		return cloudflareBulk(bulkOnOff(value, "enable", "disable"), items), true
+	case "ratelimit":
+		if value != "default" && value != "off" {
+			return nil, false
+		}
+		return rateLimitApply(items, value, 0, 0), true
 	}
-	return cloudflareBulk(bulkOnOff(value, "enable", "disable"), items), true
+	return nil, false
 }
 
 func bulkOnOff(value, on, off string) string {
@@ -255,7 +294,12 @@ func domainsBulkRoute(action, value, domain string) (*BulkCall, BulkResult) {
 		return toggle("hsts", url.Values{"hsts_action": {bulkOnOff(value, "On", "Off")}})
 	case "waf":
 		return toggle("waf", url.Values{"modsec_action": {bulkOnOff(value, "On", "Off")}})
-	case "suspend", "unsuspend", "delete":
+	case "suspend":
+		if value != "default" && !suspensionTemplateExists(value) {
+			return BulkSkip("Unknown suspension reason.")
+		}
+		return toggle(action, url.Values{"template": {value}})
+	case "unsuspend", "delete":
 		return toggle(action, url.Values{})
 	}
 	return BulkSkip("Unknown bulk action.")
@@ -366,6 +410,25 @@ func EmailAccountsBulkActions() []webtemplates.BulkAction {
 		{Key: "allow_receive", Icon: "inbox", Label: "Allow receiving", Confirm: "Remove the receiving restriction from the selected email accounts?"},
 		{Key: "delete", Icon: "trash", Label: "Delete", Confirm: "Permanently delete the selected email accounts and their mail? This cannot be undone.", Danger: true},
 	}
+}
+
+func FTPBulkActions() []webtemplates.BulkAction {
+	return []webtemplates.BulkAction{
+		{Key: "quota", Icon: "hard-drive", Label: "Set quota", Confirm: "Set the disk quota for the selected FTP accounts:",
+			Input: &webtemplates.BulkInput{Type: "text", Pattern: "[0-9]+[MmGg]?", Placeholder: "500M", Hint: "a number of MB, or with M or G, e.g. 500M or 2G"}},
+		{Key: "quota_remove", Icon: "infinity", Label: "Remove quota", Confirm: "Remove the disk quota from the selected FTP accounts?"},
+	}
+}
+
+// ftpBulkRoute replays the quota form on /services/ftp
+func ftpBulkRoute(action, value, user string) (*BulkCall, BulkResult) {
+	switch action {
+	case "quota":
+		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/services/ftp/quota", Form: url.Values{"user": {user}, "quota": {value}}})
+	case "quota_remove":
+		return BulkDo(BulkCall{Method: http.MethodPost, Path: "/services/ftp/quota", Form: url.Values{"user": {user}, "quota": {"unlimited"}}})
+	}
+	return BulkSkip("Unknown bulk action.")
 }
 
 // emailAccountsBulkRoute replays the JSON calls the row menu on /emails/accounts makes

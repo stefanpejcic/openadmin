@@ -140,6 +140,9 @@ func TestServeGeneralGetRendersCurrentValues(t *testing.T) {
 	if !strings.Contains(got, `value="2087"`) || !strings.Contains(got, `value="2083"`) {
 		t.Fatalf("expected both ports rendered, got %s", truncate(got))
 	}
+	if !strings.Contains(got, `x-show="isIP()"`) || !strings.Contains(got, "it's also used for the SSL certificate on SMTP") {
+		t.Fatal("expected the IP-instead-of-domain hint")
+	}
 }
 
 // TestServeGeneralGetRendersSSLSectionViaOpencli covers the new SSL

@@ -4,9 +4,11 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -106,6 +108,33 @@ func tailLogLines(raw string, n int) string {
 		lines = lines[len(lines)-n:]
 	}
 	return strings.Join(lines, "")
+}
+
+// tailFileLines is tailLogLines on a file, reading backwards from the end so a large log isn't loaded whole
+func tailFileLines(path string, n int) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return "", err
+	}
+	size := info.Size()
+	for chunk := int64(64 << 10); ; chunk *= 4 {
+		if chunk > size {
+			chunk = size
+		}
+		buf := make([]byte, chunk)
+		if _, err := f.ReadAt(buf, size-chunk); err != nil && err != io.EOF {
+			return "", err
+		}
+		// more newlines than n means the cut-off first line isn't one of the last n
+		if chunk == size || bytes.Count(buf, []byte("\n")) > n {
+			return tailLogLines(string(buf), n), nil
+		}
+	}
 }
 
 // getDockerLogRun is injectable so tests never shell out to a real podman
@@ -249,7 +278,28 @@ func (l *Logs) ServeViewLog(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		raw, err := os.ReadFile(logPath)
+		var content string
+		var err error
+		if linesParam == "ALL" {
+			var raw []byte
+			raw, err = os.ReadFile(logPath)
+			content = string(raw)
+		} else {
+			n, perr := strconv.Atoi(strings.TrimSpace(linesParam))
+			if perr == nil && n < 0 {
+				perr = errors.New("maxlen must be non-negative")
+			}
+			if perr != nil {
+				// a missing file still answers 404 before a bad line count
+				if _, serr := os.Stat(logPath); os.IsNotExist(serr) {
+					writeJSONError(w, http.StatusNotFound, "Log file not found")
+					return
+				}
+				writeJSONError(w, http.StatusInternalServerError, perr.Error())
+				return
+			}
+			content, err = tailFileLines(logPath, n)
+		}
 		if err != nil {
 			if os.IsNotExist(err) {
 				writeJSONError(w, http.StatusNotFound, "Log file not found")
@@ -257,21 +307,6 @@ func (l *Logs) ServeViewLog(w http.ResponseWriter, r *http.Request) {
 				writeJSONError(w, http.StatusInternalServerError, err.Error())
 			}
 			return
-		}
-
-		var content string
-		if linesParam == "ALL" {
-			content = string(raw)
-		} else {
-			n, err := strconv.Atoi(strings.TrimSpace(linesParam))
-			if err == nil && n < 0 {
-				err = errors.New("maxlen must be non-negative")
-			}
-			if err != nil {
-				writeJSONError(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-			content = tailLogLines(string(raw), n)
 		}
 		writeJSON(w, map[string]string{"content": content})
 

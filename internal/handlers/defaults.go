@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/csrf"
@@ -205,6 +206,63 @@ var defaultsPHPWatchRun = func() (map[string]phpVersionStatus, error) {
 	return out, nil
 }
 
+var (
+	phpWatchMu       sync.Mutex
+	phpWatchData     map[string]phpVersionStatus
+	phpWatchErr      error
+	phpWatchFetched  time.Time
+	phpWatchFetching bool
+)
+
+const (
+	phpWatchTTL      = 6 * time.Hour
+	phpWatchRetryTTL = 5 * time.Minute
+)
+
+// phpWatchStatuses serves the cached php.watch list and refreshes it in the background once stale, only the very first call waits on the fetch
+func phpWatchStatuses() (map[string]phpVersionStatus, error) {
+	phpWatchMu.Lock()
+	if phpWatchFetched.IsZero() {
+		phpWatchMu.Unlock()
+		return refreshPHPWatch()
+	}
+	ttl := phpWatchTTL
+	if phpWatchErr != nil || len(phpWatchData) == 0 {
+		ttl = phpWatchRetryTTL
+	}
+	if time.Since(phpWatchFetched) > ttl && !phpWatchFetching {
+		phpWatchFetching = true
+		go refreshPHPWatch()
+	}
+	data, err := phpWatchData, phpWatchErr
+	phpWatchMu.Unlock()
+	return data, err
+}
+
+// refreshPHPWatch keeps the last good list when a refetch fails
+func refreshPHPWatch() (map[string]phpVersionStatus, error) {
+	data, err := defaultsPHPWatchRun()
+	phpWatchMu.Lock()
+	defer phpWatchMu.Unlock()
+	phpWatchFetching = false
+	phpWatchFetched = time.Now()
+	if (err != nil || len(data) == 0) && len(phpWatchData) > 0 {
+		return phpWatchData, nil
+	}
+	phpWatchData, phpWatchErr = data, err
+	return data, err
+}
+
+// resetPHPWatchCache is for tests that swap defaultsPHPWatchRun
+func resetPHPWatchCache() {
+	phpWatchMu.Lock()
+	defer phpWatchMu.Unlock()
+	phpWatchData, phpWatchErr, phpWatchFetched, phpWatchFetching = nil, nil, time.Time{}, false
+}
+
+// WarmPHPWatch fetches the php.watch list at startup so no page waits on it
+func WarmPHPWatch() { go phpWatchStatuses() }
+
 // --- normalize_ram ---
 
 var (
@@ -284,6 +342,9 @@ type defaultsFieldView struct {
 	Label     string
 	Value     string
 	Required  bool
+	// smallest plan limit in use, the page warns below it, 0 means no recommendation
+	MinRec     float64
+	MinRecText string
 }
 
 type defaultsGroupView struct {
@@ -403,6 +464,16 @@ func buildPHPVersionOptions(current string, phpVersionsData map[string]phpVersio
 	return options
 }
 
+// latestPHPOption is the installed version php.watch marks as latest, empty when that one isn't installed
+func latestPHPOption(options []phpVersionOption, phpVersionsData map[string]phpVersionStatus) string {
+	for _, o := range options {
+		if phpVersionsData[o.Version].IsLatestVersion {
+			return o.Version
+		}
+	}
+	return ""
+}
+
 // composePortLineRe matches whichever form of the varnish port variable is
 // currently on a webserver's ports line in the compose template: either the
 // docker-compose-only nested fallback ("${PROXY_HTTP_PORT:-${HTTP_PORT}}",
@@ -431,11 +502,16 @@ func rewriteDefaultsComposeVarnishPort(content string, varnishEnabled bool) stri
 		replacement = "${PROXY_HTTP_PORT}"
 	}
 
+	webservers := defaultsComposeWebservers
+	if names, err := webserverServicesInComposeData([]byte(content)); err == nil && len(names) > 0 {
+		webservers = names
+	}
+
 	lines := strings.SplitAfter(content, "\n")
 	inBlock := false
 	for i, line := range lines {
 		trimmed := strings.TrimRight(line, " \t\r\n")
-		for _, webserver := range defaultsComposeWebservers {
+		for _, webserver := range webservers {
 			if strings.HasSuffix(trimmed, "container_name: "+webserver) {
 				inBlock = true
 				break
@@ -476,6 +552,12 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		raw, err := os.ReadFile(DefaultsEnvPath)
 		if err != nil {
 			auth.AddFlash(w, r, d.Sessions, "Environment file not found.", "error")
+			http.Redirect(w, r, r.URL.String(), http.StatusSeeOther)
+			return
+		}
+
+		if ws := strings.TrimSpace(r.PostFormValue("WEB_SERVER")); ws != "" && !containsWebserver(availableWebservers(DefaultsComposeFilePath), ws) {
+			auth.AddFlash(w, r, d.Sessions, "Webserver "+ws+" is not defined in the default docker-compose.yml template.", "error")
 			http.Redirect(w, r, r.URL.String(), http.StatusSeeOther)
 			return
 		}
@@ -567,7 +649,7 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defaults := readDefaultsEnvGroups()
-	phpVersionsData, err := defaultsPHPWatchRun()
+	phpVersionsData, err := phpWatchStatuses()
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -597,14 +679,36 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		phpFPM = defaults["PHP_FPM"]
 	}
 
+	webservers := availableWebservers(DefaultsComposeFilePath)
+	if !containsWebserver(webservers, webServer) {
+		webServer = webservers[0]
+	}
+	webserverSet := map[string]bool{}
+	var extraWebservers []string
+	for _, ws := range webservers {
+		webserverSet[ws] = true
+		if !containsWebserver(fallbackWebservers, ws) {
+			extraWebservers = append(extraWebservers, ws)
+		}
+	}
+
 	activeJSON, _ := json.Marshal(activeServices)
+	siteTypes := defaultsSiteTypesRun(d.MySQL)
+	phpOptions := buildPHPVersionOptions(phpVersion, phpVersionsData)
+	planMins := defaultsPlanMinimumsRun(d.MySQL)
 
 	webtemplates.Render(w, "settings_defaults.html", mergeChrome(map[string]interface{}{
-		"WebServer":          webServer,
-		"MySQLType":          mysqlType,
-		"VarnishEnabled":     varnishEnabled,
-		"PHPVersionOptions":  buildPHPVersionOptions(phpVersion, phpVersionsData),
-		"AvailableServices":  availableServices,
+		"WebServer":            webServer,
+		"AvailableWebservers":  webserverSet,
+		"ExtraWebservers":      extraWebservers,
+		"GenericWebserverIcon": genericWebserverIcon,
+		"WebserverAdvice":      adviseWebserver(siteTypes),
+		"WordPressSites":       countSitesOfType(siteTypes, "wordpress"),
+		"MySQLType":            mysqlType,
+		"VarnishEnabled":       varnishEnabled,
+		"PHPVersionOptions":    phpOptions,
+		"LatestPHPVersion":     latestPHPOption(phpOptions, phpVersionsData),
+		"AvailableServices":    availableServices,
 		// template.JS tells html/template's contextual autoescaper this
 		// value is already valid JS/JSON, not a plain string to be
 		// re-encoded -- without it, the autoescaper wraps the array in an
@@ -613,8 +717,8 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		// `new Set(...)` on that string ends up splitting it into
 		// individual characters instead of service names.
 		"ActiveServicesJSON": htmltemplate.JS(activeJSON),
-		"PHPFPMGroups":       buildPHPFPMGroups(phpFPM, phpVersionsData),
-		"OtherGroups":        buildOtherDefaultsGroups(defaults),
+		"PHPFPMGroups":       applyPlanMinimums(buildPHPFPMGroups(phpFPM, phpVersionsData), planMins),
+		"OtherGroups":        applyPlanMinimums(buildOtherDefaultsGroups(defaults), planMins),
 		"CSRFToken":          csrf.Token(r),
 		"Flashes":            auth.PopFlashes(w, r, d.Sessions),
 	}, r, "Edit defaults"))
@@ -817,7 +921,16 @@ func queryContextByUsername(db *sql.DB, username string) (string, error) {
 // ServeUserFiles handles GET/POST /settings/defaults/files/{username}.
 func (d *Defaults) ServeUserFiles(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
+	// resellers can edit the files of their own users, cgroup plan limits still cap the containers
+	if !scopeFor(r, d.MySQL).AllowsUser(username) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: you do not own this account")
+		return
+	}
 	context, _ := queryContextByUsername(d.MySQL, username)
+	if context == "" || strings.ContainsAny(context, "/.") {
+		writeJSONError(w, http.StatusNotFound, "User not found")
+		return
+	}
 
 	envPath := "/home/" + context + "/.env"
 	composePath := "/home/" + context + "/docker-compose.yml"

@@ -128,12 +128,17 @@ var dnsZoneReloadRun = func() error {
 func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request) {
 	domainName := r.PathValue("domain_name")
 
+	scope := scopeFor(r, h.MySQL)
 	if domainName == "" {
 		domains, err := paneldb.GetAllDomains(h.MySQL)
 		mysqlIsDown := err != nil
 		if mysqlIsDown {
 			domains = nil
 		}
+		domains = filterRows(scope, domains, func(row paneldb.RowMap) bool {
+			u, _ := row["domain_url"].(string)
+			return scope.AllowsDomain(u)
+		})
 		webtemplates.Render(w, "domains_dns_zone_editor.html", mergeChrome(map[string]interface{}{
 			"Domains":     domains,
 			"MySQLIsDown": mysqlIsDown,
@@ -146,6 +151,11 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 
 	if !isDomain(domainName) {
 		auth.AddFlash(w, r, h.Sessions, "Invalid domain name format.", "danger")
+		http.Redirect(w, r, "/domains/dns", http.StatusSeeOther)
+		return
+	}
+	if !scope.AllowsDomain(domainName) {
+		auth.AddFlash(w, r, h.Sessions, "Domain "+domainName+" is not owned by one of your users.", "danger")
 		http.Redirect(w, r, "/domains/dns", http.StatusSeeOther)
 		return
 	}

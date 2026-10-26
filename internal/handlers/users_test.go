@@ -446,6 +446,30 @@ func TestStripSuspendedPrefixOnlyStripsWhenMarkerPresent(t *testing.T) {
 	}
 }
 
+func TestLastLineOfReadsOnlyTheTail(t *testing.T) {
+	dir := t.TempDir()
+	cases := map[string]string{
+		"":               "",
+		"only\n":         "only",
+		"a\nb\nlast\n\n": "last",
+		strings.Repeat("x", 50000) + "\n" + strings.Repeat("y", 20000) + "\n": strings.Repeat("y", 20000),
+	}
+	i := 0
+	for content, want := range cases {
+		path := filepath.Join(dir, "f"+strings.Repeat("_", i))
+		i++
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if got := string(lastLineOf(path)); got != want {
+			t.Errorf("lastLineOf(%.20q...) = %.20q..., want %.20q...", content, got, want)
+		}
+	}
+	if lastLineOf(filepath.Join(dir, "missing")) != nil {
+		t.Error("missing file should give nil")
+	}
+}
+
 func TestServeCreateUserGetRendersHTML(t *testing.T) {
 	mysqlDB, mock, err := sqlmock.New()
 	if err != nil {

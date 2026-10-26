@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -103,6 +104,10 @@ func Open() (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	// a couple of connections are plenty for the panel, idle ones are closed instead of kept open forever
+	db.SetMaxOpenConns(20)
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxIdleTime(5 * time.Minute)
 	if parseErr != nil {
 		return db, fmt.Errorf("reading %s: %w", OptionFilePath, parseErr)
 	}

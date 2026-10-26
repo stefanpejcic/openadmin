@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"openadmin/internal/admindb"
+	"openadmin/internal/auth"
 	"openadmin/internal/config"
 )
 
@@ -47,9 +49,16 @@ func TestNotFoundHandlerServesMatchedRoute(t *testing.T) {
 	}
 }
 
+// loggedIn puts an admin on every request, the error page only shows the panel to logged in users
+func loggedIn(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, auth.WithCurrentUser(r, &admindb.User{Username: "admin", Role: "admin"}))
+	})
+}
+
 func TestNotFoundHandlerHTMLForUnmatchedRoute(t *testing.T) {
 	mux := http.NewServeMux()
-	srv := httptest.NewServer(NotFoundHandler(mux))
+	srv := httptest.NewServer(loggedIn(NotFoundHandler(mux)))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/nope")
@@ -66,6 +75,25 @@ func TestNotFoundHandlerHTMLForUnmatchedRoute(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected HTML error page to contain %q, got %s", want, truncate(got))
 		}
+	}
+}
+
+func TestNotFoundHandlerAnonymousGoesToLogin(t *testing.T) {
+	rec := httptest.NewRecorder()
+	NotFoundHandler(http.NewServeMux()).ServeHTTP(rec, httptest.NewRequest("GET", "/security/nope?x=1", nil))
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/login?next=%2Fsecurity%2Fnope%3Fx%3D1" {
+		t.Fatalf("anonymous 404 should redirect to login, got %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	if strings.Contains(rec.Body.String(), "</html>") {
+		t.Fatal("anonymous 404 must not render the panel layout")
+	}
+}
+
+func TestRecoverMiddlewareAnonymousPlainError(t *testing.T) {
+	rec := httptest.NewRecorder()
+	RecoverMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic("boom") })).ServeHTTP(rec, httptest.NewRequest("GET", "/", nil))
+	if rec.Code != http.StatusInternalServerError || strings.Contains(rec.Body.String(), "</html>") {
+		t.Fatalf("anonymous error should be plain text, got %d %s", rec.Code, truncate(rec.Body.String()))
 	}
 }
 
@@ -110,7 +138,7 @@ func TestRecoverMiddlewareCatchesPanic(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("boom")
 	})
-	srv := httptest.NewServer(RecoverMiddleware(next))
+	srv := httptest.NewServer(loggedIn(RecoverMiddleware(next)))
 	defer srv.Close()
 
 	resp, err := http.Get(srv.URL + "/")

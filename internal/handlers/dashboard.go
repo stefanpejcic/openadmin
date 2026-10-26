@@ -63,6 +63,8 @@ type dashboardPageData struct {
 	dashboardAdminData
 	dashboardResellerData
 	Flashes []auth.Flash
+	// nil when the summary module is off or no account has a saved summary yet
+	Summary *serverSummary
 }
 
 // onboardingPageData is the shape webtemplates/onboarding.html renders
@@ -131,6 +133,10 @@ func (d *Dashboard) ServeDashboard(w http.ResponseWriter, r *http.Request) {
 func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, wantJSON bool) {
 	forceDomain := config.Openpanel().Get("DEFAULT", "force_domain", "")
 
+	// podman can take a few seconds, so it runs alongside the database counts
+	containers := make(chan int, 1)
+	go func() { containers <- containerCountCache.get(localContainerCount) }()
+
 	counts, err := paneldb.GetCounts(d.MySQL)
 	if err != nil {
 		d.serveAdminDashboardError(w, r, wantJSON)
@@ -142,7 +148,7 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		PlanCount:         counts.PlanCount,
 		SiteCount:         counts.SiteCount,
 		DomainCount:       counts.DomainCount,
-		RunningContainers: localContainerCount(),
+		RunningContainers: <-containers,
 		MailCount:         emailCount(),
 	}
 
@@ -154,7 +160,16 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		Chrome:             buildChrome(r, "Dashboard"),
 		dashboardAdminData: data,
 		Flashes:            auth.PopFlashes(w, r, d.Sessions),
+		Summary:            d.summary(""),
 	})
+}
+
+// summary is the combined daily summary for the widget, owner scopes it to a reseller's accounts
+func (d *Dashboard) summary(owner string) *serverSummary {
+	if !summaryEnabled() {
+		return nil
+	}
+	return cachedServerSummary(d.MySQL, owner)
 }
 
 func (d *Dashboard) serveAdminDashboardError(w http.ResponseWriter, r *http.Request, wantJSON bool) {
@@ -213,11 +228,11 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 
 	if raw, err := os.ReadFile(resellerFile); err == nil {
 		var parsed struct {
-			MaxAccounts       interface{} `json:"max_accounts"`
-			CurrentAccounts   interface{} `json:"current_accounts"`
-			AllowedPlans      []string    `json:"allowed_plans"`
-			CurrentDiskBlocks interface{} `json:"current_disk_blocks"`
-			MaxDiskBlocks     interface{} `json:"max_disk_blocks"`
+			MaxAccounts       interface{}     `json:"max_accounts"`
+			CurrentAccounts   interface{}     `json:"current_accounts"`
+			AllowedPlans      paneldb.PlanIDs `json:"allowed_plans"`
+			CurrentDiskBlocks interface{}     `json:"current_disk_blocks"`
+			MaxDiskBlocks     interface{}     `json:"max_disk_blocks"`
 		}
 		if json.Unmarshal(raw, &parsed) == nil {
 			if parsed.MaxAccounts != nil {
@@ -226,8 +241,8 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 			if parsed.CurrentAccounts != nil {
 				currentAccounts = toDisplayString(parsed.CurrentAccounts)
 			}
-			if parsed.AllowedPlans != nil {
-				allowedPlans = parsed.AllowedPlans
+			for _, id := range parsed.AllowedPlans {
+				allowedPlans = append(allowedPlans, strconv.Itoa(id))
 			}
 			if parsed.CurrentDiskBlocks != nil {
 				currentDiskBlocks = parsed.CurrentDiskBlocks
@@ -267,6 +282,7 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 		Chrome:                buildChrome(r, "Reseller Dashboard"),
 		dashboardResellerData: data,
 		Flashes:               auth.PopFlashes(w, r, d.Sessions),
+		Summary:               d.summary(user.Username),
 	})
 }
 
@@ -303,6 +319,36 @@ func toDisplayString(v interface{}) string {
 	}
 }
 
+// these shell out to slow commands, the dashboard asks for them on every load
+var (
+	containerCountCache = &ttlCache[int]{ttl: time.Minute}
+	cpuModelCache       = &ttlCache[string]{ttl: 24 * time.Hour}
+	packageUpdatesCache = &ttlCache[string]{ttl: time.Hour}
+)
+
+// WarmSystemInfo fills the slow system info caches in the background at startup so the first dashboard isn't kept waiting on apt
+func WarmSystemInfo() {
+	go func() {
+		cpuModelCache.get(cpuModelName)
+		packageUpdatesCache.get(packageUpdatesCount)
+	}()
+}
+
+// processCount counts the numeric dirs in /proc, same number ps -e lists without forking it
+func processCount() string {
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return "Unavailable"
+	}
+	n := 0
+	for _, e := range entries {
+		if name := e.Name(); e.IsDir() && name[0] >= '0' && name[0] <= '9' {
+			n++
+		}
+	}
+	return strconv.Itoa(n)
+}
+
 // localContainerCount counts containers in the local (root/"default")
 // podman context only. Per-user remote podman contexts are not yet
 // handled here -- see the backlog -- so this undercounts on installs with
@@ -318,22 +364,9 @@ func localContainerCount() int {
 	return len(lines)
 }
 
-// emailCount uses opencli's email list, without the postfix-accounts.cf
-// fallback file parsing (see backlog).
+// emailCount counts postfix-accounts.cf, the opencli list asks the mailserver for every account's quota which is far too slow for a counter
 func emailCount() int {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	out, err := exec.CommandContext(ctx, "opencli", "email-setup", "email", "list").Output()
-	if err != nil {
-		return 0
-	}
-	count := 0
-	for _, line := range strings.Split(string(out), "\n") {
-		if strings.HasPrefix(line, "*") {
-			count++
-		}
-	}
-	return count
+	return emailAccountsCount()
 }
 
 // HandleQuickStartDismiss handles POST /api/quickstart/dismiss: creates
@@ -461,7 +494,7 @@ func (d *Dashboard) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 	info := systemInfo{
 		CPU: "Unavailable", Uptime: "Unavailable", RunningProcesses: "Unavailable",
 		OS: osPrettyName(), Time: time.Now().Format("2006-01-02 15:04:05"),
-		OpenpanelVersion: chromeSite.PanelVersion, PackageUpdates: packageUpdatesCount(),
+		OpenpanelVersion: chromeSite.PanelVersion, PackageUpdates: packageUpdatesCache.get(packageUpdatesCount),
 	}
 
 	if hostname, err := os.Hostname(); err == nil {
@@ -470,7 +503,7 @@ func (d *Dashboard) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 	if release, err := os.ReadFile("/proc/sys/kernel/osrelease"); err == nil {
 		info.Kernel = strings.TrimSpace(string(release))
 	}
-	info.CPU = cpuModelName()
+	info.CPU = cpuModelCache.get(cpuModelName)
 	if uptime, err := os.ReadFile("/proc/uptime"); err == nil {
 		fields := strings.Fields(string(uptime))
 		if len(fields) > 0 {
@@ -479,9 +512,7 @@ func (d *Dashboard) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if out, err := exec.Command("ps", "-e").Output(); err == nil {
-		info.RunningProcesses = strconv.Itoa(strings.Count(string(out), "\n"))
-	}
+	info.RunningProcesses = processCount()
 
 	writeJSON(w, info)
 }
@@ -494,6 +525,14 @@ func (d *Dashboard) ServeUserActivityStatus(w http.ResponseWriter, r *http.Reque
 	status, err := activeSessionUsernamesRun()
 	if err != nil {
 		status = map[string]string{}
+	}
+	// resellers only see who of their own users is online
+	if scope := scopeFor(r, d.MySQL); scope != nil {
+		for u := range status {
+			if !scope.AllowsUser(u) {
+				delete(status, u)
+			}
+		}
 	}
 	writeJSON(w, status)
 }

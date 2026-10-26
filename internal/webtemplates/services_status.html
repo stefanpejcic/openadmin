@@ -1,8 +1,9 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
+{{/* the only pages that use jquery, the layout no longer loads it */}}
+<script src="/static/dist/js/jquery361.min.js"></script>
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -58,7 +59,7 @@ function restartAdminService(form) {
             success: function (response) {
                 if (response.status === "up" && !successShown) {
                     successShown = true;
-                    clearInterval(timer);
+                    opStop(timer);
                     showToast('OpenAdmin has been restarted.', 'success');
                     setTimeout(function () { window.location.reload(); }, 1000);
                 }
@@ -66,7 +67,7 @@ function restartAdminService(form) {
             error: function () {
                 timeout--;
                 if (timeout <= 0) {
-                    clearInterval(timer);
+                    opStop(timer);
                     showToast('OpenAdmin did not come back online in time. Please refresh the page manually.', 'error');
                 }
             }
@@ -74,7 +75,7 @@ function restartAdminService(form) {
     }
 
     setTimeout(function () {
-        timer = setInterval(checkAdminStatus, 1000);
+        timer = opPoll(checkAdminStatus, 1000);
     }, 3000);
 }
 
@@ -110,14 +111,14 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                 if (!data.done) {
                     attempts++;
                     if (attempts >= 90) {
-                        clearInterval(timer);
+                        opStop(timer);
                         showToast('This is taking longer than expected. Please refresh the page to check status.', 'error');
                         Alpine.store('actions').locked = false;
                         onSettled();
                     }
                     return;
                 }
-                clearInterval(timer);
+                opStop(timer);
                 showToast(data.message, data.success ? 'success' : 'error');
                 onSettled();
                 if (data.success) {
@@ -129,7 +130,7 @@ function submitServiceAction(form, loadingMessage, onSettled) {
             .catch(function () {
                 attempts++;
                 if (attempts >= 90) {
-                    clearInterval(timer);
+                    opStop(timer);
                     Alpine.store('actions').locked = false;
                     onSettled();
                 }
@@ -137,7 +138,7 @@ function submitServiceAction(form, loadingMessage, onSettled) {
     }
 
     setTimeout(function () {
-        timer = setInterval(poll, 1000);
+        timer = opPoll(poll, 1000);
     }, 1000);
 }
 </script>

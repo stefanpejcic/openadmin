@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -146,6 +147,11 @@ type notificationsPageData struct {
 	NotificationsPausedUntil string
 	LastCheck                sentinelLastCheck
 	Flashes                  []auth.Flash
+
+	// filters and paging are done here, the page used to ship every entry and hide them in the browser
+	Query, Status, Severity, Category  string
+	Page, TotalPages, PerPage, Matched int
+	PrevURL, NextURL                   string
 }
 
 // notificationCounts feeds the numbers next to the page's filter options
@@ -208,7 +214,27 @@ func newNotificationRow(n Notification, index int) notificationRow {
 }
 
 // readNotifications returns the parsed entries newest first, the same order the 1-indexed line numbers count in
+type parsedNotifications struct {
+	entries []Notification
+	err     error
+}
+
+var notificationsCache fileCache[parsedNotifications]
+
+// readNotifications is newest first, every page's unread badge calls it so the parse is reused until the log changes; callers must not modify the slice
 func readNotifications() ([]Notification, error) {
+	p, ok := notificationsCache.get(NotificationsLogPath, func(string) parsedNotifications {
+		entries, err := parseNotificationLines()
+		return parsedNotifications{entries, err}
+	})
+	if !ok {
+		// missing log, readNotificationLines creates it
+		return parseNotificationLines()
+	}
+	return p.entries, p.err
+}
+
+func parseNotificationLines() ([]Notification, error) {
 	lines, err := readNotificationLines()
 	if err != nil {
 		return nil, err
@@ -218,6 +244,46 @@ func readNotifications() ([]Notification, error) {
 		out = append(out, parseNotification(lines[i]))
 	}
 	return out, nil
+}
+
+// notificationsPerPage is how many entries /notifications shows unless ?per_page= says otherwise
+const notificationsPerPage = 100
+
+func orAll(v string) string {
+	if v == "" {
+		return "all"
+	}
+	return v
+}
+
+// notificationMatches is the search box and the three filter dropdowns of /notifications
+func notificationMatches(e Notification, query, status, severity, category string) bool {
+	if query != "" {
+		summary, _, _ := strings.Cut(strings.TrimSpace(e.Message), "\n")
+		if !strings.Contains(strings.ToLower(e.Title+" "+summary), strings.ToLower(query)) {
+			return false
+		}
+	}
+	switch status {
+	case "unread":
+		if !e.Unread() {
+			return false
+		}
+	case "resolved":
+		if e.ResolvedAt == "" {
+			return false
+		}
+	}
+	if severity != "" && severity != "all" {
+		sev := e.Severity
+		if sev != "critical" && sev != "warning" {
+			sev = "info"
+		}
+		if sev != severity {
+			return false
+		}
+	}
+	return category == "" || category == "all" || e.Category == category
 }
 
 // ServeView handles GET /notifications.
@@ -233,12 +299,19 @@ func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows := make([]notificationRow, len(entries))
+	q := r.URL.Query()
+	query := strings.TrimSpace(q.Get("q"))
+	status, severity, category := q.Get("status"), q.Get("severity"), q.Get("category")
+	perPage := notificationsPerPage
+	if n, err := strconv.Atoi(q.Get("per_page")); err == nil && n > 0 && n <= 1000 {
+		perPage = n
+	}
+
+	var rows []notificationRow
 	var counts notificationCounts
 	seenCategory := map[string]bool{}
 	var categories []string
 	for i, e := range entries {
-		rows[i] = newNotificationRow(e, i+1)
 		counts.All++
 		if e.Unread() {
 			counts.Unread++
@@ -258,6 +331,10 @@ func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 			seenCategory[e.Category] = true
 			categories = append(categories, e.Category)
 		}
+		if notificationMatches(e, query, status, severity, category) {
+			// the index stays the position in the whole log, bulk actions key on it
+			rows = append(rows, newNotificationRow(e, i+1))
+		}
 	}
 	sort.Strings(categories)
 
@@ -267,9 +344,36 @@ func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 		pausedUntilLabel = pausedUntil.Format("Jan 2, 15:04")
 	}
 
+	matched := len(rows)
+	totalPages := max(1, (matched+perPage-1)/perPage)
+	page, _ := strconv.Atoi(q.Get("page"))
+	page = min(max(page, 1), totalPages)
+	rows = rows[min((page-1)*perPage, matched):min(page*perPage, matched)]
+	pageURL := func(p int) string {
+		v := url.Values{}
+		for k, val := range map[string]string{"q": query, "status": status, "severity": severity, "category": category} {
+			if val != "" && val != "all" {
+				v.Set(k, val)
+			}
+		}
+		if perPage != notificationsPerPage {
+			v.Set("per_page", strconv.Itoa(perPage))
+		}
+		if p > 1 {
+			v.Set("page", strconv.Itoa(p))
+		}
+		if len(v) == 0 {
+			return "/notifications"
+		}
+		return "/notifications?" + v.Encode()
+	}
+
 	chrome := buildChrome(r, "Notifications")
 	chrome.BulkActions = NotificationsBulkActions()
 	webtemplates.Render(w, "notifications.html", notificationsPageData{
+		Query: query, Status: orAll(status), Severity: orAll(severity), Category: orAll(category),
+		Page: page, TotalPages: totalPages, PerPage: perPage, Matched: matched,
+		PrevURL: pageURL(page - 1), NextURL: pageURL(page + 1),
 		Chrome:                   chrome,
 		Notifications:            rows,
 		Counts:                   counts,

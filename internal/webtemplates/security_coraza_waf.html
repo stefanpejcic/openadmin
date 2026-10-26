@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -59,16 +58,17 @@
         </div>
         <div class="md:col-span-2">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-                <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="status">Enable</label>
+                <div class="col-span-full sm:col-span-3" x-data="{ wafOn: {{if eq .Status "on"}}true{{else}}false{{end}} }"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="status">Enable</label>
                     <div class="relative w-full mt-2">
                         <div class="mt-2 flex items-center gap-2">
-                        <select name="status" id="status" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <select name="status" id="status" @change="wafOn = $event.target.value === 'yes'" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
                             <option value="yes" {{if eq .Status "on"}}selected{{end}}>Enabled {{if eq .Status "on"}}(current){{end}}</option>
                             <option value="no" {{if eq .Status "off"}}selected{{end}}>Disabled {{if eq .Status "off"}}(current){{end}}</option>
                         </select>
                         <button type="submit" class="relative inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 border-black bg-black text-white hover:bg-gray-800">Save</button>
                         </div>
                     </div>
+                    <p x-show="!wafOn" x-cloak class="mt-2 text-sm text-amber-600 dark:text-amber-500">Recommended: enable the WAF, it blocks common attacks like SQL injection and XSS before they reach user sites.</p>
                 </div>
             </div>
         </div>
@@ -129,6 +129,7 @@
         <div>
             <h2 id="profiles" class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">App profiles</h2>
             <p class="mt-1 text-sm leading-6 text-gray-500">Official CRS exclusion plugins that users can turn on per domain to stop false blocks in popular apps.</p>
+            {{if .MissingProfiles}}<p class="mt-2 text-sm leading-6 text-amber-600 dark:text-amber-500">{{.MissingProfiles}} app profile{{if gt .MissingProfiles 1}}s are{{else}} is{{end}} missing. Recommended: install them with the button below, so users can stop false blocks in apps like WordPress.</p>{{end}}
         </div>
         <div class="md:col-span-2 space-y-4">
             <div class="overflow-x-auto">

@@ -102,7 +102,7 @@ func (p *Plans) renderList(w http.ResponseWriter, r *http.Request, plans []panel
 	}
 	chrome := buildChrome(r, "Plans")
 	chrome.BulkActions = PlansBulkActions(fetchFeatureSets(auth.CurrentUser(r)))
-	webtemplates.Render(w, "plans.html", plansListPageData{
+	renderGzip(w, r, "plans.html", plansListPageData{
 		Chrome:        chrome,
 		Plans:         plans,
 		MySQLIsDown:   mysqlIsDown,

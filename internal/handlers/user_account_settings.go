@@ -22,11 +22,14 @@ import (
 	"openadmin/internal/podman"
 )
 
-// userWebserverOptions is the fixed set of webservers a user can switch
-// to, matching OpenPanel's own hardcoded list (internal/modules/docker/
-// switch.go) -- not derived from which podman images happen to be
-// downloaded.
-var userWebserverOptions = []string{"apache", "nginx", "openresty", "openlitespeed", "litespeed"}
+// userWebserverOptions is what the user's own compose file defines as webservers, with the current one kept in so the select still shows it
+func userWebserverOptions(context string) []string {
+	options := availableWebservers("/home/" + context + "/docker-compose.yml")
+	if current := getUserEnvValue(context, "WEB_SERVER"); current != "" && !containsWebserver(options, current) {
+		options = append([]string{current}, options...)
+	}
+	return options
+}
 
 func userEnvPath(context string) string {
 	return "/home/" + context + "/.env"
@@ -202,14 +205,7 @@ func (u *Users) setUserLocale(context, locale string) (string, error) {
 }
 
 func (u *Users) setUserWebserver(username, context, newWebserver string) (string, error) {
-	valid := false
-	for _, ws := range userWebserverOptions {
-		if ws == newWebserver {
-			valid = true
-			break
-		}
-	}
-	if !valid {
+	if !containsWebserver(availableWebservers("/home/"+context+"/docker-compose.yml"), newWebserver) {
 		return "", fmt.Errorf("invalid webserver: %s", newWebserver)
 	}
 

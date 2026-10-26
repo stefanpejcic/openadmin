@@ -9,10 +9,12 @@ package handlers
 
 import (
 	"bufio"
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -274,6 +276,21 @@ type detailStatsWidget struct {
 	RAMColor          string
 	RAMHumanUsage     string
 	RAMHumanTotal     string
+
+	// names of the rings at 90% or more, the tab then suggests checking usage and the plan limits
+	OverLimit []string
+}
+
+func (w detailStatsWidget) withOverLimit() detailStatsWidget {
+	for _, ring := range []struct{ name, value string }{
+		{"Disk", w.DiskUsageRounded}, {"Inodes", w.InodesUsageRounded},
+		{"CPU", w.CPURatioRounded}, {"Memory", w.RAMPercentRounded},
+	} {
+		if v, err := strconv.ParseFloat(ring.value, 64); err == nil && v >= 90 {
+			w.OverLimit = append(w.OverLimit, ring.name)
+		}
+	}
+	return w
 }
 
 const detailRingCircumference = 182.212373908208
@@ -409,19 +426,41 @@ func readDiskUsageFor(username string) (diskUsage, bool) {
 	return d, ok
 }
 
+// lastLineOf reads backwards from the end of path, resource_usage.txt keeps every snapshot so reading it whole gets slow
+func lastLineOf(path string) []byte {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil
+	}
+	size := info.Size()
+	for chunk := int64(8 << 10); ; chunk *= 4 {
+		if chunk > size {
+			chunk = size
+		}
+		buf := make([]byte, chunk)
+		if _, err := f.ReadAt(buf, size-chunk); err != nil && err != io.EOF {
+			return nil
+		}
+		buf = bytes.TrimRight(buf, "\n")
+		if i := bytes.LastIndexByte(buf, '\n'); i >= 0 {
+			return buf[i+1:]
+		}
+		if chunk == size {
+			return buf
+		}
+	}
+}
+
 // readUsageStatsFor reads the last JSON line of a single user's
 // resource_usage.txt.
 func readUsageStatsFor(context string) (json.RawMessage, bool) {
-	raw, err := os.ReadFile("/home/" + context + "/resource_usage.txt")
-	if err != nil {
-		return nil, false
-	}
-	lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
-	if len(lines) == 0 || lines[len(lines)-1] == "" {
-		return nil, false
-	}
-	last := lines[len(lines)-1]
-	if !json.Valid([]byte(last)) {
+	last := lastLineOf("/home/" + context + "/resource_usage.txt")
+	if len(last) == 0 || !json.Valid(last) {
 		return nil, false
 	}
 	return json.RawMessage(last), true
@@ -441,16 +480,12 @@ func readUsageStatsAll() map[string]map[string]interface{} {
 		if !e.IsDir() {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join("/home", e.Name(), "resource_usage.txt"))
-		if err != nil {
-			continue
-		}
-		lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
-		if len(lines) == 0 || lines[len(lines)-1] == "" {
+		last := lastLineOf(filepath.Join("/home", e.Name(), "resource_usage.txt"))
+		if len(last) == 0 {
 			continue
 		}
 		var parsed map[string]interface{}
-		if json.Unmarshal([]byte(lines[len(lines)-1]), &parsed) != nil {
+		if json.Unmarshal(last, &parsed) != nil {
 			continue
 		}
 		if user, ok := parsed["user"].(string); ok && user != "" {
@@ -490,6 +525,17 @@ func notesMapFor(users []paneldb.RowMap) map[string]string {
 		out[context] = readUserNotes(context)
 	}
 	return out
+}
+
+// resellerPlanScope is the plan filter for GetAllPlans, nil for admins and an empty list for a reseller with no plans so they don't see every plan
+func resellerPlanScope(reseller string) []int {
+	if reseller == "" {
+		return nil
+	}
+	if ids, ok := paneldb.AllowedPlansForReseller(reseller); ok {
+		return ids
+	}
+	return []int{}
 }
 
 func (u *Users) resellerScope(r *http.Request) string {
@@ -584,14 +630,7 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 			row["passkeys"] = passkeys[fmt.Sprint(row["id"])]
 		}
 
-		var allowed []int
-		if resellerOwner != "" {
-			ids, ok := paneldb.AllowedPlansForReseller(resellerOwner)
-			if ok {
-				allowed = ids
-			}
-		}
-		plans, _ = paneldb.GetAllPlans(u.MySQL, allowed)
+		plans, _ = paneldb.GetAllPlans(u.MySQL, resellerPlanScope(resellerOwner))
 
 		if key, ok := usersSortKeys[sortCol]; ok {
 			sortRowMaps(users, key, strings.EqualFold(direction, "desc"))
@@ -609,12 +648,12 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 
 	planNames, ownerNames, hasNoOwner := userFilterOptions(users)
 	chrome := buildChrome(r, "Users")
-	chrome.BulkActions = UsersBulkActions(plans, serverPublicIPs())
+	chrome.BulkActions = u.withImunifyScan(r, UsersBulkActions(plans, serverPublicIPs()))
 	// transfer runs through the admin-only /import/transfer routes, so resellers don't get it
 	if u.resellerScope(r) == "" {
 		chrome.BulkActions = append(chrome.BulkActions, webtemplates.BulkAction{Key: "transfer", Icon: "transfer", Label: "Transfer", Modal: "open-bulk-transfer"})
 	}
-	webtemplates.Render(w, "users_list.html", usersListPageData{
+	renderGzip(w, r, "users_list.html", usersListPageData{
 		PlanNames:     planNames,
 		OwnerNames:    ownerNames,
 		HasNoOwner:    hasNoOwner,
@@ -654,6 +693,7 @@ type userDetailPageData struct {
 	PlanCPU           string
 	PlanRAM           string
 	Services          []composeServiceView
+	ServiceAdvice     []string
 	Features          []map[string]interface{}
 	HasCustomFeatures bool
 	CSRFToken         string
@@ -830,6 +870,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 
 	chrome := buildChrome(r, "User: "+stripSuspendedPrefix(username))
 	chrome.BulkActions = UserContainersBulkActions()
+	services := composeServicesForUser(u.MySQL, username)
 	webtemplates.Render(w, "user_detail.html", userDetailPageData{
 		Chrome:            chrome,
 		Username:          username,
@@ -837,7 +878,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Disk:              disk,
 		Notes:             readUserNotes(userData.Context),
 		Stats:             parsedStats,
-		StatsWidget:       buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats),
+		StatsWidget:       buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats).withOverLimit(),
 		ServerIP:          serverIP,
 		ServerName:        serverName(),
 		DockerCtx:         userData.Context,
@@ -845,14 +886,15 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Locale:            userLocale(userData.Context),
 		CountryCode:       countryCodeForIP(serverIP),
 		EnvData:           envData,
-		WebserverOptions:  userWebserverOptions,
+		WebserverOptions:  userWebserverOptions(userData.Context),
 		DefaultPHPVersion: defaultPHPVersionFor(username),
 		InstalledLocales:  installedLocaleCodes(),
 		PlanID:            userData.PlanID,
 		PlanName:          planName,
 		PlanCPU:           planCPU,
 		PlanRAM:           planRAM,
-		Services:          composeServicesForUser(u.MySQL, username),
+		Services:          services,
+		ServiceAdvice:     append(adviseUserServices(username, userServiceStateRun(u.MySQL, username, services)), adviseServiceLimits(services, planName, planCPU, planRAM, thresholdHostRun())...),
 		Features:          features,
 		HasCustomFeatures: hasCustomFeatures,
 		CSRFToken:         csrf.Token(r),
@@ -906,11 +948,19 @@ func (u *Users) HandleNotes(w http.ResponseWriter, r *http.Request) {
 
 // ServeIPs handles GET /json/ips: a map of usernames with a dedicated IP
 // address on file to that address.
+// UserIPFilesGlob is a var so tests can point it at a temp dir
+var UserIPFilesGlob = "/etc/openpanel/openpanel/core/users/*/ip.json"
+
 func (u *Users) ServeIPs(w http.ResponseWriter, r *http.Request) {
 	out := map[string]interface{}{}
-	matches, _ := filepath.Glob("/etc/openpanel/openpanel/core/users/*/ip.json")
+	scope := scopeFor(r, u.MySQL)
+	matches, _ := filepath.Glob(UserIPFilesGlob)
 	for _, ipFile := range matches {
 		username := filepath.Base(filepath.Dir(ipFile))
+		// resellers only get the IPs of their own users
+		if !scope.AllowsUser(username) {
+			continue
+		}
 		raw, err := os.ReadFile(ipFile)
 		if err != nil {
 			continue
@@ -1142,6 +1192,32 @@ func readUserCreateDefaultsEnv() (webServer, mysqlType string, varnish bool) {
 	return
 }
 
+// userCreateWebserverOptions is the add-user webserver cards, one per webserver service in the default compose template
+func userCreateWebserverOptions() []userCreateOption {
+	known := map[string]userCreateOption{}
+	for _, o := range userCreateWebservers {
+		known[o.Value] = o
+	}
+	var out []userCreateOption
+	for _, name := range availableWebservers(DefaultsComposeFilePath) {
+		if o, ok := known[name]; ok {
+			out = append(out, o)
+			continue
+		}
+		out = append(out, userCreateOption{Value: name, Label: name, Icon: genericWebserverIcon})
+	}
+	return out
+}
+
+func userCreateHasWebserver(options []userCreateOption, name string) bool {
+	for _, o := range options {
+		if o.Value == name {
+			return true
+		}
+	}
+	return false
+}
+
 // ServeCreateUser handles GET/POST /user/new.
 func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -1149,17 +1225,14 @@ func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resellerOwner := u.resellerScope(r)
-	var allowed []int
-	if resellerOwner != "" {
-		if ids, ok := paneldb.AllowedPlansForReseller(resellerOwner); ok {
-			allowed = ids
-		}
-	}
-	plans, err := paneldb.GetAllPlans(u.MySQL, allowed)
+	plans, err := paneldb.GetAllPlans(u.MySQL, resellerPlanScope(u.resellerScope(r)))
 	mysqlIsDown := err != nil
 
 	webServer, mysqlType, varnish := readUserCreateDefaultsEnv()
+	webservers := userCreateWebserverOptions()
+	if !userCreateHasWebserver(webservers, webServer) && len(webservers) > 0 {
+		webServer = webservers[0].Value
+	}
 
 	webtemplates.Render(w, "user_add.html", userCreatePageData{
 		Chrome:           buildChrome(r, "Add User"),
@@ -1168,7 +1241,7 @@ func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 		WebServer:        webServer,
 		MySQLType:        mysqlType,
 		VarnishEnabled:   varnish,
-		Webservers:       userCreateWebservers,
+		Webservers:       webservers,
 		SQLOptions:       userCreateSQLOptions,
 		ResellersEnabled: resellersEnabled(),
 		CSRFToken:        csrf.Token(r),
@@ -1219,8 +1292,7 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 
 	if webserver != "" {
 		base := strings.TrimPrefix(strings.ToLower(webserver), "varnish+")
-		switch base {
-		case "apache", "nginx", "openresty", "openlitespeed":
+		if containsWebserver(availableWebservers(DefaultsComposeFilePath), base) {
 			command = append(command, "--webserver="+webserver)
 		}
 	}

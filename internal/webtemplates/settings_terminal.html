@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -50,6 +49,8 @@
             {{else if eq .TerminalType "root"}}
               Command line access to the server's "root" account.
             {{end}}
+            {{range .WebSessions}}<span class="text-amber-600 dark:text-amber-500">Web terminal already open by <b>{{.Admin}}</b> from {{.IP}} since {{.Since.Format "15:04"}}.</span>{{end}}
+            {{range .SSHPeers}}<span class="text-amber-600 dark:text-amber-500">SSH session{{if gt .Count 1}}s ({{.Count}}){{end}} open from {{.IP}}.</span>{{end}}
           </h2>
         </div>
 
@@ -94,6 +95,9 @@
     {{else}}
     const WS_PATH = `/ws/terminal`;
     {{end}}
+    // ?cmd= from the url, typed once the shell is up, Enter only when the link came from inside OpenAdmin
+    let pendingCommand = {{.InitialCommand}};
+    const AUTO_RUN = {{if .AutoRun}}true{{else}}false{{end}};
 
     // ── xterm setup ─────────────────────────────────────────────────────────
     const term = new Terminal({
@@ -198,6 +202,17 @@
           term.write(new Uint8Array(evt.data));
         } else {
           term.write(evt.data);
+        }
+        // first output means the prompt is there, give it a moment to finish printing
+        if (pendingCommand) {
+          const cmd = pendingCommand;
+          pendingCommand = '';
+          setTimeout(() => {
+            if (!AUTO_RUN) {
+              term.write('\r\n\x1b[33m[The command from the link was typed but not run, check it and press Enter]\x1b[0m\r\n');
+            }
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send(cmd + (AUTO_RUN ? '\r' : ''));
+          }, 200);
         }
       };
 

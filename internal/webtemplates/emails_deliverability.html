@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div x-data="deliverabilityPage" x-init="load(false)">
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+                <div class="grow">
+                    <h1 class="mb-1 text-xl font-bold">Email Deliverability</h1>
+                    <h2 class="text-sm font-medium text-slate-500">
+                        <span x-show="loading">Checking DKIM, SPF and DMARC records of every domain...</span>
+                        <span x-show="!loading && error" x-text="error"></span>
+                        <span x-show="!loading && !error && rows.length === 0">No domains yet.</span>
+                        <span x-show="!loading && !error && rows.length > 0"><b x-text="badCount"></b> of <b x-text="rows.length"></b> <span x-text="rows.length === 1 ? 'domain needs' : 'domains need'"></span> DNS changes for email.</span>
+                    </h2>
+                </div>
+                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                    <button type="button" @click="load(true)" :disabled="loading" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:opacity-50 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Check again</button>
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <div class="space-y-3">
+        <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center sm:gap-x-6">
+                <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+                    <input x-model.debounce.150ms="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search by domain/owner..." type="search">
+                    <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500 min-h-[90vh]">
+            <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="deliverability_table">
+                <thead class="">
+                    <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                        <template x-for="col in columns" :key="col.key">
+                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                    <span x-text="col.label"></span>
+                                    <div class="-space-y-2">
+                                        <a href="#" @click.prevent="sort = col.key; dir = 'desc'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50" :class="sort === col.key && dir === 'desc' ? 'opacity-30' : ''"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
+                                        <a href="#" @click.prevent="sort = col.key; dir = 'asc'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50" :class="sort === col.key && dir === 'asc' ? 'opacity-30' : ''"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></a>
+                                    </div>
+                                </div>
+                            </th>
+                        </template>
+                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Actions</th>
+                    </tr>
+                </thead>
+                <!-- one tbody with divide-y like /domains, a domain's details are their own item in the list right under it -->
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <tr x-show="loading"><td colspan="7" class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">Looking up DNS records, this can take a moment on servers with many domains...</td></tr>
+                    <tr x-show="!loading && visible.length === 0 && rows.length > 0"><td colspan="7" class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">No domains match the search.</td></tr>
+                    <template x-for="item in items" :key="item.key">
+                        <tr @click="item.detail || toggle(item.row.domain)" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900" :class="item.detail ? 'bg-gray-50 dark:bg-gray-900' : 'cursor-pointer'">
+                            <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="item.row.domain"></td>
+                            <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><a :href="'/users/' + item.row.owner" @click.stop x-text="item.row.owner"></a></td>
+                            <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><span :class="badge(item.row.dkim.status)" x-text="label(item.row.dkim.status)"></span></td>
+                            <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><span :class="badge(item.row.spf.status)" x-text="label(item.row.spf.status)"></span></td>
+                            <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><span :class="badge(item.row.dmarc.status)" x-text="label(item.row.dmarc.status)"></span></td>
+                            <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><span :class="badge(item.row.ok ? 'ok' : 'bad')" x-text="item.row.ok ? 'Good' : 'Needs changes'"></span></td>
+                            <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 text-right">
+                                <a :href="'/domains/dns/' + item.row.domain" @click.stop target="_blank" class="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline dark:text-indigo-400"><svg class="size-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/></svg>Edit DNS</a>
+                            </td>
+                            <td x-show="item.detail" colspan="7" class="px-4 py-3">
+                                <div class="grid gap-3 lg:grid-cols-3">
+                                    <template x-for="rec in [['DKIM', 'mail._domainkey.' + item.row.domain, item.row.dkim], ['SPF', item.row.domain, item.row.spf], ['DMARC', '_dmarc.' + item.row.domain, item.row.dmarc]]" :key="rec[0]">
+                                        <div class="rounded border border-gray-200 bg-white p-3 text-xs dark:border-gray-800 dark:bg-gray-950">
+                                            <div class="mb-2 flex items-center justify-between">
+                                                <span class="font-semibold text-gray-900 dark:text-gray-50" x-text="rec[0] + ' TXT ' + rec[1]"></span>
+                                                <span :class="badge(rec[2].status)" x-text="label(rec[2].status)"></span>
+                                            </div>
+                                            <p class="text-gray-500 dark:text-gray-400">Current</p>
+                                            <p class="mb-2 break-all font-mono text-gray-900 dark:text-gray-50 select-text" x-text="rec[2].current || 'not found'"></p>
+                                            <template x-if="rec[2].status !== 'ok'">
+                                                <div>
+                                                    <p class="text-gray-500 dark:text-gray-400">Expected</p>
+                                                    <p class="break-all font-mono text-gray-900 dark:text-gray-50 select-text" x-text="rec[2].expected || 'no key generated for this domain yet'"></p>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    const order = { missing: 0, mismatch: 1, wrong_ip: 1, ok: 2 };
+    Alpine.data('deliverabilityPage', () => ({
+        rows: [],
+        loading: true,
+        error: '',
+        searchQuery: '',
+        open: {},
+        sort: 'domain',
+        dir: 'asc',
+        columns: [
+            { key: 'domain', label: 'Domain' },
+            { key: 'owner', label: 'Owner' },
+            { key: 'dkim', label: 'DKIM' },
+            { key: 'spf', label: 'SPF' },
+            { key: 'dmarc', label: 'DMARC' },
+            { key: 'ok', label: 'Status' },
+        ],
+        async load(refresh) {
+            this.loading = true;
+            this.error = '';
+            try {
+                const res = await fetch('/emails/deliverability?output=json' + (refresh ? '&refresh=1' : ''));
+                if (!res.ok) throw new Error('status ' + res.status);
+                this.rows = (await res.json()).domains || [];
+            } catch (e) {
+                this.error = 'Could not check the domains: ' + e.message;
+            }
+            this.loading = false;
+        },
+        get badCount() { return this.rows.filter(r => !r.ok).length; },
+        get visible() {
+            const q = this.searchQuery.trim().toLowerCase();
+            const key = (r) => {
+                const k = this.sort;
+                if (k === 'ok') return r.ok ? 1 : 0;
+                if (k === 'dkim' || k === 'spf' || k === 'dmarc') return order[r[k].status] ?? 0;
+                return (r[k] || '').toLowerCase();
+            };
+            return this.rows
+                .filter(r => q === '' || r.domain.includes(q) || (r.owner || '').toLowerCase().includes(q))
+                .sort((a, b) => {
+                    const x = key(a), y = key(b);
+                    const c = x < y ? -1 : x > y ? 1 : 0;
+                    return this.dir === 'asc' ? c : -c;
+                });
+        },
+        get items() {
+            const out = [];
+            for (const row of this.visible) {
+                out.push({ key: row.domain, row, detail: false });
+                if (this.open[row.domain]) out.push({ key: row.domain + '#details', row, detail: true });
+            }
+            return out;
+        },
+        toggle(domain) { this.open[domain] = !this.open[domain]; },
+        label(s) { return { ok: 'OK', missing: 'Missing', mismatch: 'Mismatch', wrong_ip: 'Wrong IP' }[s] || s; },
+        badge(s) {
+            const base = 'inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 ';
+            if (s === 'ok') return base + 'bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20';
+            if (s === 'missing' || s === 'bad') return base + 'bg-red-50 text-red-800 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20';
+            return base + 'bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20';
+        },
+    }));
+});
+</script>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -125,6 +124,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var scheduledBadge = '<span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">Scheduled</span>';
 
     setInterval(function () {
+        // no polling from a background tab
+        if (document.hidden) return;
         // rebuilding the rows would drop the ticked checkboxes
         if (document.querySelector('#tasks_tbody input.bulk-select-box:checked')) return;
         fetch('/tasks?output=json')

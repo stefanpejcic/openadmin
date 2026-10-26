@@ -231,27 +231,49 @@ func checkDomainSSLHealth(domain, sslType string, idx caddyTLSIndex) domainSSLHe
 		return domainSSLHealth{}
 	}
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return domainSSLHealth{Status: "missing"}
-	}
-
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return domainSSLHealth{Status: "unreadable"}
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return domainSSLHealth{Status: "unreadable"}
+	notAfter, status := certNotAfter(path)
+	if status != "" {
+		return domainSSLHealth{Status: status}
 	}
 
 	switch {
-	case time.Now().After(cert.NotAfter):
-		return domainSSLHealth{Status: "expired", NotAfter: cert.NotAfter}
-	case time.Until(cert.NotAfter) <= sslExpiringSoonWindow:
-		return domainSSLHealth{Status: "expiring", NotAfter: cert.NotAfter}
+	case time.Now().After(notAfter):
+		return domainSSLHealth{Status: "expired", NotAfter: notAfter}
+	case time.Until(notAfter) <= sslExpiringSoonWindow:
+		return domainSSLHealth{Status: "expiring", NotAfter: notAfter}
 	default:
-		return domainSSLHealth{NotAfter: cert.NotAfter}
+		return domainSSLHealth{NotAfter: notAfter}
 	}
+}
+
+type certExpiry struct {
+	notAfter time.Time
+	status   string
+}
+
+var certCache fileCache[certExpiry]
+
+// certNotAfter parses the leaf cert's expiry, cached until the file changes; status is "missing" or "unreadable" on failure
+func certNotAfter(path string) (time.Time, string) {
+	e, ok := certCache.get(path, parseCertExpiry)
+	if !ok {
+		return time.Time{}, "missing"
+	}
+	return e.notAfter, e.status
+}
+
+func parseCertExpiry(path string) certExpiry {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return certExpiry{status: "missing"}
+	}
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return certExpiry{status: "unreadable"}
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return certExpiry{status: "unreadable"}
+	}
+	return certExpiry{notAfter: cert.NotAfter}
 }

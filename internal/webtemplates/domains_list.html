@@ -87,7 +87,7 @@
 
                             <div class="col-span-full {{if eq .LicenseType "Enterprise"}}{{else}}sm:col-span-2 h-full{{end}} flex items-end justify-end">
                                 <div class="relative mt-2 flex items-center gap-3">
-                                    <a href="#add" @click.prevent="bulkMode = true" class="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">Adding more than one domain?</a>
+{{if not .IsReseller}}                                    <a href="#add" @click.prevent="bulkMode = true" class="whitespace-nowrap text-sm text-blue-600 hover:underline dark:text-blue-400">Adding more than one domain?</a>{{end}}
                                     <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">
                                         Add Domain
                                     </button>
@@ -424,6 +424,15 @@ function userSearch() {
                                 <li>
                                     <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
                                         <label class="inline-flex items-center w-full cursor-pointer">
+                                            <input type="checkbox" x-model="columns.ratelimit" x-on:change="saveColumns" class="sr-only peer">
+                                            <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+                                            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Rate limit</span>
+                                        </label>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
+                                        <label class="inline-flex items-center w-full cursor-pointer">
                                             <input type="checkbox" x-model="columns.waf" x-on:change="saveColumns" class="sr-only peer">
                                             <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
                                             <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">WAF</span>
@@ -454,6 +463,12 @@ function userSearch() {
         openDeleteModal(domain) {
             this.domainToDelete = domain
             this.showDeleteModal = true
+        },
+        showSuspendModal: false,
+        domainToSuspend: '',
+        openSuspendModal(domain) {
+            this.domainToSuspend = domain
+            this.showSuspendModal = true
         }
     }" class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500 h-screen" id="domains">
                 {{template "bulk_open" (dict "Table" "#domains_table" "Endpoint" "/domains/bulk")}}
@@ -542,6 +557,8 @@ function userSearch() {
                                 </div>
                             </th>
 
+                            <th x-show="columns.ratelimit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Rate limit</th>
+
                             <th x-show="columns.waf" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span>WAF</span>
@@ -574,7 +591,7 @@ function userSearch() {
 {{$domainURL := index . "domain_url"}}
 {{$username := index . "username"}}
 {{$status := index . "status"}}
-                        <tr data-domain="{{$domainURL}}" x-show="searchQuery === '' || '{{$domainURL}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{lastSegment $username "_"}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if contains $username "SUSPENDED_"}}bg-red-50 dark:bg-red-400/10{{end}}">
+                        <tr data-domain="{{$domainURL}}" data-owner="{{lastSegment $username "_"}}" x-show="domainRowMatches($el, searchQuery)" class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if contains $username "SUSPENDED_"}}bg-red-50 dark:bg-red-400/10{{end}}">
 {{$skip := "unsuspend"}}{{if eq $status "suspended"}}{{$skip = "suspend"}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" $domainURL "Label" $domainURL "Skip" $skip)}}
 
@@ -589,17 +606,19 @@ function userSearch() {
                 {{if eq $status "active"}}
                 <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
                 {{else if eq $status "suspended"}}
-                <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Suspended</span>
+{{$by := index . "suspended_by"}}{{$reason := index . "suspend_reason"}}{{$comment := index . "suspend_comment"}}
+                <span title="{{if $reason}}Reason: {{$reason}}{{end}}{{if $comment}}{{if $reason}} | {{end}}Comment: {{$comment}}{{end}}" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 {{if eq $by "admin"}}bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20{{else}}bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20{{end}}">Suspended{{if eq $by "admin"}} by admin{{else if eq $by "user"}} by user{{end}}</span>{{if $reason}}
+                <span class="block text-xs font-normal text-gray-500 dark:text-gray-400">{{$reason}}</span>{{end}}
                 {{else}}
                 <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Unknown</span>
                 {{end}}
             </span>
             </td>
 
-            <td x-show="columns.php" class="group p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left" x-data="phpVersionEditor('{{$domainURL}}', '{{$username}}', '{{index . "php_version"}}')">
+            <td x-show="columns.php" class="group p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left" data-php-domain="{{$domainURL}}" data-php-owner="{{$username}}" data-php-version="{{index . "php_version"}}">
 {{$phpVer := index . "php_version"}}
 {{$phpData := index $root.PHPVersions $phpVer}}
-            <div x-show="!editing" class="flex items-center gap-1.5">
+            <div class="php-view flex items-center gap-1.5">
                                         {{if $phpData}}
                                         {{if or (index $phpData "isLatestVersion") (index $phpData "isFutureVersion") (index $phpData "isNextVersion")}}
                                         <div>
@@ -647,15 +666,7 @@ function userSearch() {
                                             </dd>
                                         </div>
                                         {{end}}
-                <a href="#" @click.prevent="startEdit()" class="hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Change PHP version"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
-            </div>
-            <div x-show="editing" class="flex items-center gap-1.5" @click.away="editing = false">
-                <select x-model="selected" class="text-sm rounded border px-1.5 py-1 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white">
-                    <template x-if="loading"><option>Loading…</option></template>
-                    <template x-for="v in versions" :key="v"><option :value="v" x-text="v"></option></template>
-                </select>
-                <button type="button" @click="save()" :disabled="saving" class="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 disabled:bg-blue-300 cursor-pointer">Save</button>
-                <button type="button" @click="editing = false" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-700 cursor-pointer">Cancel</button>
+                <a href="#" class="php-edit hidden group-hover:inline-block text-gray-400 hover:text-gray-600 cursor-pointer" title="Change PHP version"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/></svg></a>
             </div>
             </td>
 
@@ -717,7 +728,7 @@ function userSearch() {
                 {{$sslType := index . "ssl"}}
                 {{$sslProblem := index . "ssl_problem"}}
                 {{$sslExpires := index . "ssl_expires"}}
-                <a href="/domains/ssl/{{$domainURL}}" class="flex select-none items-center gap-2" title="{{if eq $sslProblem "expired"}}Certificate expired{{if $sslExpires}} on {{$sslExpires}}{{end}}{{else if eq $sslProblem "expiring"}}Certificate expires soon{{if $sslExpires}} on {{$sslExpires}}{{end}}{{else if eq $sslProblem "missing"}}SSL is configured but no certificate file was found on disk{{else if eq $sslProblem "unreadable"}}Certificate file could not be parsed{{else if $sslExpires}}Certificate valid until {{$sslExpires}}{{else if eq $sslType "automatic"}}Automatic SSL{{else if eq $sslType "custom"}}Custom SSL{{else}}No SSL{{end}} &mdash; click to view and manage">
+                <a href="{{if $root.IsReseller}}#{{else}}/domains/ssl/{{$domainURL}}{{end}}" class="flex select-none items-center gap-2" title="{{if eq $sslProblem "expired"}}Certificate expired{{if $sslExpires}} on {{$sslExpires}}{{end}}{{else if eq $sslProblem "expiring"}}Certificate expires soon{{if $sslExpires}} on {{$sslExpires}}{{end}}{{else if eq $sslProblem "missing"}}SSL is configured but no certificate file was found on disk{{else if eq $sslProblem "unreadable"}}Certificate file could not be parsed{{else if $sslExpires}}Certificate valid until {{$sslExpires}}{{else if eq $sslType "automatic"}}Automatic SSL{{else if eq $sslType "custom"}}Custom SSL{{else}}No SSL{{end}} &mdash; click to view and manage">
                     {{if or (eq $sslType "automatic") (eq $sslType "custom")}}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-lock-check"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11.5 21h-4.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v.5"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/>{{if or (eq $sslProblem "expired") (eq $sslProblem "missing")}}<path class="text-red-500 dark:text-red-500" d="M15 15l6 6"/><path class="text-red-500 dark:text-red-500" d="M21 15l-6 6"/>{{else if or (eq $sslProblem "expiring") (eq $sslProblem "unreadable")}}<path class="text-orange-500 dark:text-orange-500" d="M18 15v3"/><path class="text-orange-500 dark:text-orange-500" d="M18 21v.01"/>{{else}}<path class="text-emerald-500 dark:text-emerald-500" d="M15 19l2 2l4 -4"/>{{end}}</svg>
                     {{else}}
@@ -737,58 +748,48 @@ function userSearch() {
             </td>
 
             <td x-show="columns.hsts" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
-                <form method="POST" action="/domains/hsts/toggle"
-                    x-data="{
-                        enabled: {{if eq (index . "hsts") "on"}}true{{else}}false{{end}},
-                        isSuspended: {{if eq $status "suspended"}}true{{else}}false{{end}}
-                    }"
-                    class="flex items-center gap-2">
-
+                <form method="POST" action="/domains/hsts/toggle" class="flex items-center gap-2">
+{{$on := eq (index . "hsts") "on"}}{{$off := eq $status "suspended"}}
                     <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
                     <input type="hidden" name="domain_name" value="{{$domainURL}}">
-                    <input type="hidden" name="hsts_action" :value="enabled ? 'Off' : 'On'">
+                    <input type="hidden" name="hsts_action" value="{{if $on}}Off{{else}}On{{end}}">
 
                     <button
                         type="submit"
-                        :disabled="isSuspended"
-                        :title="isSuspended ? 'Action is disabled for suspended domain' : (enabled ? 'Click to disable HSTS for this domain' : 'Click to enable HSTS for this domain')"
-                        @click.prevent="if(!isSuspended){ enabled = !enabled; $el.form.submit() }"
-                        :aria-checked="enabled"
-                        :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
-                        class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800">
+                        {{if $off}}disabled{{end}}
+                        title="{{if $off}}Action is disabled for suspended domain{{else if $on}}Click to disable HSTS for this domain{{else}}Click to enable HSTS for this domain{{end}}"
+                        role="switch" aria-checked="{{if $on}}true{{else}}false{{end}}"
+                        class="{{if $on}}bg-indigo-600 dark:bg-indigo-600{{else}}bg-gray-200 dark:bg-gray-950{{end}} relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800">
 
-                        <span :class="enabled ? 'translate-x-4' : 'translate-x-0'" class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 shadow transition-all duration-150 ease-in-out"></span>
+                        <span class="{{if $on}}translate-x-4{{else}}translate-x-0{{end}} inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 shadow transition-all duration-150 ease-in-out"></span>
                     </button>
 
-                    <span class="text-xs text-gray-500 dark:text-gray-400" x-text="enabled ? 'On' : 'Off'"></span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{if $on}}On{{else}}Off{{end}}</span>
                 </form>
             </td>
 
-           <td x-show="columns.waf" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
-                <form method="POST" action="/domains/waf/toggle"
-                    x-data="{
-                        enabled: {{if eq (index . "waf") "on"}}true{{else}}false{{end}},
-                        isSuspended: {{if eq $status "suspended"}}true{{else}}false{{end}}
-                    }"
-                    class="flex items-center gap-2">
+            <td x-show="columns.ratelimit" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                <a href="/domains/ratelimit" title="Manage rate limits">{{$rl := index . "ratelimit"}}{{if eq $rl "default"}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Default</span>{{else if eq $rl "custom"}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Custom</span>{{else}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Off</span>{{end}}</a>
+            </td>
 
+           <td x-show="columns.waf" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                <form method="POST" action="/domains/waf/toggle" class="flex items-center gap-2">
+{{$on := eq (index . "waf") "on"}}{{$off := eq $status "suspended"}}
                     <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
                     <input type="hidden" name="domain_name" value="{{$domainURL}}">
-                    <input type="hidden" name="modsec_action" :value="enabled ? 'Off' : 'On'">
+                    <input type="hidden" name="modsec_action" value="{{if $on}}Off{{else}}On{{end}}">
 
                     <button
                         type="submit"
-                        :disabled="isSuspended"
-                        :title="isSuspended ? 'Action is disabled for suspended domain' : (enabled ? 'Click to disable WAF for this domain' : 'Click to enable WAF for this domain')"
-                        @click.prevent="if(!isSuspended){ enabled = !enabled; $el.form.submit() }"
-                        :aria-checked="enabled"
-                        :class="enabled ? 'bg-indigo-600 dark:bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
-                        class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800">
+                        {{if $off}}disabled{{end}}
+                        title="{{if $off}}Action is disabled for suspended domain{{else if $on}}Click to disable WAF for this domain{{else}}Click to enable WAF for this domain{{end}}"
+                        role="switch" aria-checked="{{if $on}}true{{else}}false{{end}}"
+                        class="{{if $on}}bg-indigo-600 dark:bg-indigo-600{{else}}bg-gray-200 dark:bg-gray-950{{end}} relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-0.5 shadow-inner ring-1 ring-inset transition-all ring-black/5 dark:ring-gray-800">
 
-                        <span :class="enabled ? 'translate-x-4' : 'translate-x-0'" class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 shadow transition-all duration-150 ease-in-out"></span>
+                        <span class="{{if $on}}translate-x-4{{else}}translate-x-0{{end}} inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 shadow transition-all duration-150 ease-in-out"></span>
                     </button>
 
-                    <span class="text-xs text-gray-500 dark:text-gray-400" x-text="enabled ? 'On' : 'Off'"></span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{if $on}}On{{else}}Off{{end}}</span>
                 </form>
             </td>
 
@@ -797,64 +798,11 @@ function userSearch() {
 
             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
 
-                <button id="{{index . "domain_id"}}" data-dropdown-toggle="dropdown-{{index . "domain_id"}}" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer" type="button">
+                <button type="button" class="domain-menu-btn relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer" data-domain="{{$domainURL}}" data-owner="{{$username}}" data-status="{{$status}}"{{if index . "cloudflare"}} data-cloudflare{{end}} data-webserver="{{if eq $webserver "apache"}}Apache{{else if eq $webserver "nginx"}}NGINX{{else if eq $webserver "openresty"}}OpenResty{{else if or (eq $webserver "openlitespeed") (eq $webserver "litespeed")}}OpenLiteSpeed{{else}}Main{{end}}" aria-haspopup="menu">
                 <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
                     <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
                 </svg>
                 </button>
-
-                <div id="dropdown-{{index . "domain_id"}}" class="relative z-50 hidden rounded border p-1 shadow-xl shadow-black/[2.5%] max-h-[var(--radix-popper-available-height)] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade min-w-40 text-left cursor-pointer">
-                    <ul class="py-2 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="{{index . "domain_id"}}">
-
-                    {{if hasModule $root.EnabledModules "dns"}}
-                    <li class="flex">
-                        <a href="/domains/dns/{{$domainURL}}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit DNS Zone</a>
-                    </li>
-                    {{end}}
-
-                    {{if ne $status "suspended"}}
-                    <li class="flex">
-                        <a href="/domains/ssl/{{$domainURL}}" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Manage SSL</a>
-                    </li>
-                    {{end}}
-
-                    <li class="flex">
-                        <a href="/domains/vhost/{{$username}}/{{$domainURL}}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Virtual Host</a>
-                    </li>
-
-                    <li class="flex">
-                        <a href="/domains/config/{{$username}}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit {{if eq $webserver "apache"}}Apache{{else if eq $webserver "nginx"}}NGINX{{else if eq $webserver "openresty"}}OpenResty{{else if or (eq $webserver "openlitespeed") (eq $webserver "litespeed")}}OpenLiteSpeed{{else}}Main{{end}} Config</a>
-                    </li>
-
-                    <li class="flex">
-                        <a href="/domains/caddy/{{$domainURL}}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Caddyfile</a>
-                    </li>
-
-                    {{if ne $status "suspended"}}
-                    <li class="flex">
-                        <form method="POST" action="/domains/cloudflare/toggle" class="flex items-center gap-2 w-full"{{if not (index . "cloudflare")}} onsubmit="return confirm('Only Cloudflare IPs will be able to reach {{$domainURL}}, make sure the domain is proxied through Cloudflare or visitors will get a 403. Continue?')"{{end}}>
-                            <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
-                            <input type="hidden" name="domain_name" value="{{$domainURL}}">
-                            <input type="hidden" name="cloudflare_action" value="{{if index . "cloudflare"}}disable{{else}}enable{{end}}">
-                            <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">{{if index . "cloudflare"}}Unrestrict from Cloudflare{{else}}Restrict to Cloudflare{{end}}</button>
-                        </form>
-                    </li>
-                    {{end}}
-
-                    <li class="flex">
-                        <form method="POST" action="/domains/{{if eq $status "active"}}suspend{{else if eq $status "suspended"}}unsuspend{{end}}/toggle" class="flex items-center gap-2 w-full">
-                            <input type="hidden" name="csrf_token" value="{{$root.CSRFToken}}">
-                            <input type="hidden" name="domain_name" value="{{$domainURL}}">
-                            <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">{{if eq $status "active"}}Suspend domain{{else if eq $status "suspended"}}Unsuspend domain{{end}}</button>
-                        </form>
-                    </li>
-
-                    <li class="flex">
-                        <button type="button" @click="openDeleteModal('{{$domainURL}}')" class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">Delete domain</button>
-                    </li>
-
-                    </ul>
-                </div>
 
             </td>
 
@@ -878,6 +826,47 @@ function userSearch() {
                     </tbody>
                 </table>
 {{template "bulk_bar" .}}
+
+<!-- one actions menu shared by all rows, filled in from the clicked row's button -->
+<div id="domain-menu" role="menu" style="position:fixed;z-index:50" class="hidden rounded border p-1 shadow-xl shadow-black/[2.5%] max-h-[var(--radix-popper-available-height)] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade min-w-40 text-left cursor-pointer">
+    <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
+    {{if hasModule .EnabledModules "dns"}}
+    <li class="flex"><a data-href="/domains/dns/{domain}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit DNS Zone</a></li>
+    {{end}}
+    {{if not .IsReseller}}
+    <li class="flex" data-show="not-suspended"><a data-href="/domains/ssl/{domain}" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Manage SSL</a></li>
+    <li class="flex"><a data-href="/domains/vhost/{owner}/{domain}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Virtual Host</a></li>
+    <li class="flex"><a data-href="/domains/config/{owner}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit <span data-text="webserver"></span> Config</a></li>
+    <li class="flex"><a data-href="/domains/caddy/{domain}" target="_blank" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Caddyfile</a></li>
+    {{end}}
+    <li class="flex" data-show="not-suspended">
+        <form method="POST" action="/domains/cloudflare/toggle" class="domain-menu-cloudflare flex items-center gap-2 w-full">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="domain_name" value="">
+            <input type="hidden" name="cloudflare_action" value="">
+            <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900"></button>
+        </form>
+    </li>
+    <li class="flex" data-show="suspended">
+        <form method="POST" action="/domains/unsuspend/toggle" class="flex items-center gap-2 w-full">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <input type="hidden" name="domain_name" value="">
+            <button type="submit" class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Unsuspend domain</button>
+        </form>
+    </li>
+    <li class="flex" data-show="active"><button type="button" data-action="suspend" class="text-left w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50 data-[disabled]:pointer-events-none data-[disabled]:text-gray-400 data-[disabled]:hover:bg-none dark:data-[disabled]:text-gray-600 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">Suspend domain</button></li>
+    <li class="flex"><button type="button" data-action="delete" class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">Delete domain</button></li>
+    </ul>
+</div>
+
+<!-- php version editor, cloned into a row's php cell on edit -->
+<template id="php-editor-tpl">
+    <div class="php-editor flex items-center gap-1.5">
+        <select class="text-sm rounded border px-1.5 py-1 border-gray-300 dark:border-gray-700 dark:bg-gray-700 dark:text-white"><option>Loading…</option></select>
+        <button type="button" data-action="save" class="px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 disabled:bg-blue-300 cursor-pointer">Save</button>
+        <button type="button" data-action="cancel" class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-700 cursor-pointer">Cancel</button>
+    </div>
+</template>
 </div>
 
                 <div x-show="showDeleteModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" @keydown.escape.window="showDeleteModal = false">
@@ -925,6 +914,43 @@ function userSearch() {
                     </div>
                 </div>
 
+                <div x-show="showSuspendModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" @keydown.escape.window="showSuspendModal = false">
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showSuspendModal = false"></div>
+
+                    <div @click.stop class="relative w-full max-w-xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#090E1A]">
+                        <div class="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Suspend Domain</h3>
+                            <p class="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">Visitors of <span class="font-semibold text-gray-900 dark:text-white" x-text="domainToSuspend"></span> will see the page for the selected reason. The user can't unsuspend, edit or delete the domain until you unsuspend it.</p>
+                        </div>
+
+                        <form method="POST" action="/domains/suspend/toggle">
+                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                            <input type="hidden" name="domain_name" :value="domainToSuspend">
+
+                            <div class="space-y-4 px-6 py-4">
+                                <div>
+                                    <label for="suspend_template" class="block text-sm font-medium text-gray-900 dark:text-white">Reason</label>
+                                    <select id="suspend_template" name="template" class="mt-1 block w-full rounded border px-2.5 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                                        <option value="default">Default suspended page</option>
+                                        {{range .Reasons}}<option value="{{.Slug}}">{{.Name}}</option>
+                                        {{end}}
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500">The reason name is shown to the user in their panel.{{if not .IsReseller}} <a href="/domains/file-templates#suspension-reasons" class="underline">Manage reasons</a>{{end}}</p>
+                                </div>
+                                <div>
+                                    <label for="suspend_comment" class="block text-sm font-medium text-gray-900 dark:text-white">Comment <span class="font-normal text-gray-500">(optional, visible to the user)</span></label>
+                                    <input id="suspend_comment" type="text" name="comment" maxlength="255" autocomplete="off" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
+                                </div>
+                            </div>
+
+                            <div class="flex gap-3 border-t px-6 py-4 border-gray-200 dark:border-gray-800">
+                                <button type="button" @click="showSuspendModal = false" class="inline-flex w-full items-center justify-center rounded border px-3 py-2 text-sm font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900">Cancel</button>
+                                <button type="submit" class="inline-flex w-full items-center justify-center rounded border px-3 py-2 text-sm font-medium shadow-sm text-white border-transparent bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600">Suspend</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
             </div>
             <div class="px-6 py-2 flex items-center justify-between">
@@ -939,40 +965,56 @@ function userSearch() {
 </div>
 
 <script>
-function phpVersionEditor(domainURL, username, currentVersion) {
-    return {
-        editing: false,
-        loading: false,
-        saving: false,
-        versions: [],
-        selected: currentVersion,
+// row filter, names come from data attributes so quotes in them can't break the expression
+function domainRowMatches(row, query) {
+    const q = (query || '').toLowerCase();
+    return q === '' || row.dataset.domain.toLowerCase().includes(q) || row.dataset.owner.toLowerCase().includes(q);
+}
 
-        startEdit() {
-            this.editing = true;
-            this.selected = currentVersion;
-            if (this.versions.length === 0) {
-                this.loading = true;
-                fetch(`/php/${encodeURIComponent(username)}/available`)
-                    .then(res => res.json())
-                    .then(data => { this.versions = data.versions || []; })
-                    .catch(() => { this.versions = []; })
-                    .finally(() => { this.loading = false; });
-            }
-        },
+// PHP VERSION EDITOR, built only when a row's pencil is clicked
+(function () {
+    const tpl = document.getElementById('php-editor-tpl');
+    if (!tpl) return;
+    const versionsByOwner = {};
 
-        save() {
-            if (!this.selected || this.selected === currentVersion) {
-                this.editing = false;
-                return;
-            }
-            this.saving = true;
+    function close(cell) {
+        cell.querySelector('.php-editor')?.remove();
+        cell.querySelector('.php-view').classList.remove('hidden');
+    }
+
+    function fillSelect(select, versions, current) {
+        select.replaceChildren(...versions.map(v => new Option(v, v, false, v === current)));
+    }
+
+    function open(cell) {
+        const { phpDomain: domainURL, phpOwner: username, phpVersion: current } = cell.dataset;
+        const editor = tpl.content.firstElementChild.cloneNode(true);
+        const select = editor.querySelector('select');
+        const save = editor.querySelector('[data-action="save"]');
+        cell.querySelector('.php-view').classList.add('hidden');
+        cell.appendChild(editor);
+
+        if (versionsByOwner[username]) {
+            fillSelect(select, versionsByOwner[username], current);
+        } else {
+            fetch(`/php/${encodeURIComponent(username)}/available`)
+                .then(res => res.json())
+                .then(data => { versionsByOwner[username] = data.versions || []; })
+                .catch(() => { versionsByOwner[username] = []; })
+                .finally(() => fillSelect(select, versionsByOwner[username], current));
+        }
+
+        editor.querySelector('[data-action="cancel"]').addEventListener('click', () => close(cell));
+        save.addEventListener('click', () => {
+            if (!select.value || select.value === current) return close(cell);
+            save.disabled = true;
             fetch(`/php/${encodeURIComponent(domainURL)}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
                 },
-                body: new URLSearchParams({ version: this.selected })
+                body: new URLSearchParams({ version: select.value })
             })
                 .then(res => res.json())
                 .then(data => {
@@ -984,13 +1026,84 @@ function phpVersionEditor(domainURL, username, currentVersion) {
                     }
                 })
                 .catch(() => showToast('Failed to update PHP version', 'error'))
-                .finally(() => {
-                    this.saving = false;
-                    this.editing = false;
-                });
+                .finally(() => close(cell));
+        });
+    }
+
+    document.addEventListener('click', e => {
+        const pencil = e.target.closest('.php-edit');
+        if (pencil) {
+            e.preventDefault();
+            const cell = pencil.closest('td[data-php-domain]');
+            if (!cell.querySelector('.php-editor')) open(cell);
+            return;
         }
-    };
-}
+        // clicking anywhere else closes an open editor, like the old @click.away
+        document.querySelectorAll('td[data-php-domain] .php-editor').forEach(ed => {
+            if (!ed.contains(e.target)) close(ed.closest('td'));
+        });
+    });
+})();
+
+// ROW ACTIONS MENU, one menu shared by every row
+(function () {
+    const menu = document.getElementById('domain-menu');
+    if (!menu) return;
+    const cloudflare = menu.querySelector('.domain-menu-cloudflare');
+    let current = null;
+
+    function hide() {
+        menu.classList.add('hidden');
+        current = null;
+    }
+
+    function show(btn) {
+        current = btn;
+        const { domain, owner, status, webserver } = btn.dataset;
+        const cf = btn.hasAttribute('data-cloudflare');
+        menu.querySelectorAll('[data-href]').forEach(a => {
+            a.href = a.dataset.href.replace('{domain}', encodeURIComponent(domain)).replace('{owner}', encodeURIComponent(owner));
+        });
+        menu.querySelectorAll('[data-text="webserver"]').forEach(el => { el.textContent = webserver; });
+        menu.querySelectorAll('[data-show]').forEach(li => {
+            const want = li.dataset.show;
+            const visible = want === 'active' ? status === 'active' : want === 'suspended' ? status === 'suspended' : status !== 'suspended';
+            li.classList.toggle('hidden', !visible);
+        });
+        menu.querySelectorAll('input[name="domain_name"]').forEach(i => { i.value = domain; });
+        cloudflare.querySelector('input[name="cloudflare_action"]').value = cf ? 'disable' : 'enable';
+        cloudflare.querySelector('button').textContent = cf ? 'Unrestrict from Cloudflare' : 'Restrict to Cloudflare';
+        cloudflare.dataset.confirm = cf ? '' : `Only Cloudflare IPs will be able to reach ${domain}, make sure the domain is proxied through Cloudflare or visitors will get a 403. Continue?`;
+
+        menu.classList.remove('hidden');
+        const r = btn.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
+        let y = r.bottom + 4;
+        if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 4);
+        menu.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';
+        menu.style.top = y + 'px';
+    }
+
+    cloudflare.addEventListener('submit', e => {
+        if (cloudflare.dataset.confirm && !confirm(cloudflare.dataset.confirm)) e.preventDefault();
+    });
+    menu.addEventListener('click', e => {
+        const action = e.target.closest('[data-action]')?.dataset.action;
+        if (!action || !current) return;
+        const modals = Alpine.$data(document.getElementById('domains'));
+        const domain = current.dataset.domain;
+        hide();
+        if (action === 'suspend') modals.openSuspendModal(domain);
+        else if (action === 'delete') modals.openDeleteModal(domain);
+    });
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.domain-menu-btn');
+        if (btn) return btn === current ? hide() : show(btn);
+        if (!menu.contains(e.target)) hide();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
+    addEventListener('scroll', hide, true);
+    addEventListener('resize', hide);
+})();
 
 function domainsTable() {
     return {
@@ -1004,6 +1117,7 @@ function domainsTable() {
             webserver: true,
             ssl: true,
             hsts: false,
+            ratelimit: false,
             waf: true,
             owner: true
         },
@@ -1030,7 +1144,8 @@ function domainsTable() {
         },
 
         updateCount() {
-            this.count = [...this.$refs.tbody.querySelectorAll('tr.user-row')]
+            // the tbody sits inside the bulk x-data so $refs can't see it
+            this.count = [...document.querySelectorAll('#domains_table tr.user-row')]
                 .filter(row => row.offsetParent !== null).length;
         },
 

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -100,9 +102,29 @@ func TestAPISettingsResellersPostInvalidActionReturns400(t *testing.T) {
 	}
 }
 
-func TestAPISettingsResellersPostCreateSucceeds(t *testing.T) {
+func withResellersEnabled(t *testing.T, enabled string) {
+	t.Helper()
+	path := withScratchAdminIni(t)
+	os.WriteFile(path, []byte("[RESELLERS]\nenabled = "+enabled+"\n"), 0644)
+}
+
+// fake opencli on PATH that logs its args so we can check what create ran
+func withFakeOpenCLI(t *testing.T) string {
+	t.Helper()
+	binDir := t.TempDir()
+	logFile := filepath.Join(binDir, "args.log")
+	os.WriteFile(filepath.Join(binDir, "opencli"), []byte("#!/bin/sh\necho \"$@\" > "+logFile+"\necho \"Successfully created reseller $3\"\n"), 0755)
+	origPath := os.Getenv("PATH")
+	os.Setenv("PATH", binDir)
+	t.Cleanup(func() { os.Setenv("PATH", origPath) })
+	return logFile
+}
+
+func TestAPISettingsResellersPostCreateRunsOpenCLI(t *testing.T) {
 	h, createUser := newAPISettingsResellersHandler(t)
 	adminToken := createUser("admin1", "admin")
+	withResellersEnabled(t, "yes")
+	logFile := withFakeOpenCLI(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/settings/resellers",
 		strings.NewReader(`{"action":"create","username":"newreseller","password":"secretpw"}`))
@@ -120,12 +142,33 @@ func TestAPISettingsResellersPostCreateSucceeds(t *testing.T) {
 		t.Fatalf("expected success=true, got %v", body)
 	}
 
-	created, err := h.DB.UserByUsername("newreseller")
-	if err != nil {
-		t.Fatalf("expected newreseller to exist: %v", err)
+	args, _ := os.ReadFile(logFile)
+	if got := strings.TrimSpace(string(args)); got != "admin new newreseller secretpw --reseller" {
+		t.Fatalf("unexpected opencli args: %q", got)
 	}
-	if created.Role != "reseller" {
-		t.Fatalf("expected role reseller, got %q", created.Role)
+}
+
+func TestAPISettingsResellersPostCreateRefusedWhenDisabled(t *testing.T) {
+	h, createUser := newAPISettingsResellersHandler(t)
+	adminToken := createUser("admin1", "admin")
+	withResellersEnabled(t, "no")
+	logFile := withFakeOpenCLI(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/settings/resellers",
+		strings.NewReader(`{"action":"create","username":"newreseller","password":"secretpw"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	rec := httptest.NewRecorder()
+	h.ServeSettingsResellers(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "Resellers are disabled") {
+		t.Fatalf("expected disabled message, got %s", rec.Body.String())
+	}
+	if _, err := os.Stat(logFile); err == nil {
+		t.Fatal("opencli should not run while resellers are disabled")
 	}
 }
 

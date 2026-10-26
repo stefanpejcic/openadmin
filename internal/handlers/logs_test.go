@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -551,5 +552,30 @@ func TestServeCrashlogsSettingsAndRawView(t *testing.T) {
 	rawResp.Body.Close()
 	if !strings.Contains(string(rawBody), "boom") {
 		t.Fatalf("expected crash log content, got %s", truncate(string(rawBody)))
+	}
+}
+
+func TestTailFileLinesMatchesTailLogLines(t *testing.T) {
+	dir := t.TempDir()
+	big := strings.Repeat("a fairly long log line that keeps going for a while\n", 20000)
+	cases := []string{
+		"", "one\n", "one", "a\nb\nc\n", "a\nb\nc", "a\r\nb\r\n", "\n\n\n",
+		big, big + "last line without newline", strings.Repeat("x", 200000) + "\nshort\n",
+	}
+	for i, content := range cases {
+		path := filepath.Join(dir, fmt.Sprintf("log%d", i))
+		os.WriteFile(path, []byte(content), 0644)
+		for _, n := range []int{0, 1, 2, 3, 100, 5000, 30000} {
+			got, err := tailFileLines(path, n)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := tailLogLines(content, n); got != want {
+				t.Fatalf("case %d n=%d: got %d bytes, want %d", i, n, len(got), len(want))
+			}
+		}
+	}
+	if _, err := tailFileLines(filepath.Join(dir, "missing"), 10); !os.IsNotExist(err) {
+		t.Fatalf("expected not-exist, got %v", err)
 	}
 }

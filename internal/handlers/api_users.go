@@ -339,6 +339,7 @@ func (a *APIUsers) handleCreate(w http.ResponseWriter, r *http.Request) {
 		PlanName  string `json:"plan_name"`
 		Webserver string `json:"webserver"`
 		SQLType   string `json:"sql_type"`
+		Reseller  string `json:"reseller"`
 	}
 	if json.NewDecoder(r.Body).Decode(&body) != nil {
 		writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
@@ -361,6 +362,12 @@ func (a *APIUsers) handleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	args := []string{"opencli", "user-add", body.Username, body.Password, body.Email, body.PlanName}
+	// a reseller always creates for themselves so opencli checks their limits, same as the GUI
+	if acting := APIUserFromContext(r); acting != nil && acting.Role == "reseller" {
+		args = append(args, "--reseller="+acting.Username)
+	} else if body.Reseller != "" && body.Reseller != "root" {
+		args = append(args, "--reseller="+body.Reseller)
+	}
 	if body.SQLType == "mysql" || body.SQLType == "mariadb" {
 		args = append(args, "--sql="+body.SQLType)
 	}

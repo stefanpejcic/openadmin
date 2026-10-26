@@ -63,6 +63,9 @@ func RequireAdmin(mgr *Manager, opts Options, next http.HandlerFunc) http.Handle
 	}
 }
 
+// RedirectToLogin sends an anonymous visitor to /login, for handlers outside RequireLogin like the 404 page
+func RedirectToLogin(w http.ResponseWriter, r *http.Request) { redirectToLogin(w, r) }
+
 func redirectToLogin(w http.ResponseWriter, r *http.Request) {
 	next := r.URL.RequestURI()
 	http.Redirect(w, r, "/login?next="+url.QueryEscape(next), http.StatusSeeOther)

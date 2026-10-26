@@ -26,6 +26,8 @@ import (
 // Locales bundles the /settings/locales handler.
 type Locales struct {
 	Sessions *auth.Manager
+	// logins from this IP are OpenAdmin's own autologins, not where the user is
+	PublicIP string
 }
 
 // LocalesGithubURL / TranslationsDir / DefaultLocaleFilePath are the
@@ -371,6 +373,11 @@ func (l *Locales) handlePost(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&fields)
 	}
 
+	// resellers can install and update locales but the default and deleting affect every account
+	if (fields["delete"] != "" || fields["default"] != "") && IsReseller(r) {
+		writeJSONError(w, http.StatusForbidden, "Only administrators can set the default locale or delete locales.")
+		return
+	}
 	res := runLocaleAction(fields["locale"], fields["update"], fields["delete"], fields["default"])
 	if res.Status == http.StatusBadRequest {
 		writeJSONError(w, res.Status, res.Message)
@@ -422,6 +429,11 @@ func (l *Locales) handleGet(w http.ResponseWriter, r *http.Request) {
 		flashes = append(flashes, auth.Flash{Category: "info", Message: msg})
 	}
 
+	// built from every user's login countries, so resellers don't get it
+	var suggestions []localeSuggestion
+	if !IsReseller(r) {
+		suggestions = suggestLocales(results, userLoginCountries(LocalesUsersDir, l.PublicIP))
+	}
 	webtemplates.Render(w, "settings_locales.html", mergeChrome(map[string]interface{}{
 		"Translations":  results,
 		"DefaultLocale": defaultLocaleBase,
@@ -429,5 +441,6 @@ func (l *Locales) handleGet(w http.ResponseWriter, r *http.Request) {
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       flashes,
 		"BulkActions":   LocalesBulkActions(),
+		"Suggestions":   suggestions,
 	}, r, "Locale Settings"))
 }

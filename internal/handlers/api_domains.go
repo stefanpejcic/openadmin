@@ -55,6 +55,11 @@ func (a *APIDomains) ServeDomains(w http.ResponseWriter, r *http.Request) {
 	if err != nil || domains == nil {
 		domains = []paneldb.RowMap{}
 	}
+	scope := scopeFor(r, a.MySQL)
+	domains = filterRows(scope, domains, func(row paneldb.RowMap) bool {
+		u, _ := row["domain_url"].(string)
+		return scope.AllowsDomain(u)
+	})
 	writeJSON(w, map[string]interface{}{"domains": domains})
 }
 
@@ -76,6 +81,10 @@ func (a *APIDomains) HandleAddDomain(w http.ResponseWriter, r *http.Request) {
 
 	if body.Username == "" || body.Domain == "" {
 		writeJSONError(w, http.StatusBadRequest, "username and domain are required")
+		return
+	}
+	if !scopeFor(r, a.MySQL).AllowsUser(body.Username) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: you do not own this account")
 		return
 	}
 	if errMsg := validateDocroot(body.Docroot); errMsg != "" {
@@ -102,6 +111,10 @@ func (a *APIDomains) HandleDomainAction(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, "domain is required")
 		return
 	}
+	if !scopeFor(r, a.MySQL).AllowsDomain(domain) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: domain is not owned by one of your users")
+		return
+	}
 
 	cliCmd, ok := apiDomainActionMap[strings.ToLower(action)]
 	if !ok {
@@ -109,7 +122,34 @@ func (a *APIDomains) HandleDomainAction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	stdout, stderr, returncode := apiRunCapture("opencli", cliCmd, domain)
+	args := []string{"opencli", cliCmd, domain}
+	switch cliCmd {
+	case "domains-suspend":
+		// body is optional, {"template": "dmca", "comment": "..."}
+		var body struct {
+			Template string `json:"template"`
+			Comment  string `json:"comment"`
+		}
+		if r.ContentLength != 0 && json.NewDecoder(r.Body).Decode(&body) != nil {
+			writeJSONError(w, http.StatusBadRequest, "Invalid JSON body")
+			return
+		}
+		args = append(args, "--by=admin")
+		if body.Template != "" && body.Template != "default" {
+			if !suspensionTemplateExists(body.Template) {
+				writeJSONError(w, http.StatusBadRequest, "Unknown suspension template: "+body.Template)
+				return
+			}
+			args = append(args, "--template="+body.Template)
+		}
+		if c := strings.TrimSpace(body.Comment); c != "" {
+			args = append(args, "--comment="+c)
+		}
+	case "domains-unsuspend":
+		args = append(args, "--by=admin")
+	}
+
+	stdout, stderr, returncode := apiRunCapture(args...)
 	writeAPIRunResult(w, stdout, stderr, returncode)
 }
 
@@ -118,6 +158,10 @@ func (a *APIDomains) ServeDomainDocroot(w http.ResponseWriter, r *http.Request) 
 	domain := r.PathValue("domain")
 	if domain == "" {
 		writeJSONError(w, http.StatusBadRequest, "domain is required")
+		return
+	}
+	if !scopeFor(r, a.MySQL).AllowsDomain(domain) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: domain is not owned by one of your users")
 		return
 	}
 

@@ -54,15 +54,11 @@ func Run(opts Options) error {
 	useTLS := UseTLS(opts.CertFile, opts.KeyFile, false)
 	if useTLS {
 		srv.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
-		// ListenAndServeTLS auto-configures HTTP/2 whenever TLSNextProto is
-		// nil. gorilla/websocket's Upgrade() needs to hijack the
-		// underlying net.Conn, which HTTP/2's multiplexed ResponseWriter
-		// doesn't support (http.Hijacker type-assertion fails), so any
-		// browser that negotiates h2 over TLS gets a 500 "response does
-		// not implement http.Hijacker" on every /ws/* route. Setting a
-		// non-nil (even empty) TLSNextProto disables that auto-upgrade,
-		// forcing HTTP/1.1 so websocket hijacking keeps working.
-		srv.TLSNextProto = make(map[string]func(*http.Server, *tls.Conn, http.Handler))
+		// HTTP/2 loads a page's scripts and styles over one connection, websockets still work since Go only offers
+		// websockets over HTTP/2 (RFC 8441) with GODEBUG=http2xconnect=1, so browsers open their own HTTP/1.1 connection for /ws/*
+		srv.Protocols = new(http.Protocols)
+		srv.Protocols.SetHTTP1(true)
+		srv.Protocols.SetHTTP2(true)
 	}
 
 	errCh := make(chan error, 1)

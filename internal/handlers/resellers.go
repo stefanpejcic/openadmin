@@ -31,7 +31,7 @@ type Resellers struct {
 var resellerValidActions = map[string]bool{
 	"create": true, "reset_password": true, "rename_user": true, "update": true,
 	"suspend": true, "unsuspend": true, "delete": true, "disable_2fa": true, "disable_passkeys": true,
-	"update_branding": true,
+	"update_branding": true, "change_plan": true,
 }
 
 // resellersEnabled reports whether reseller functionality is turned on
@@ -75,19 +75,21 @@ type resellerRow struct {
 	MaxDiskBlocks     int    `json:"max_disk_blocks"`
 	AllowedPlans      []int  `json:"allowed_plans"`
 	LogoURL           string `json:"logo_url"`
+	ResellerPlan      string `json:"reseller_plan"`
 }
 
 type resellerData struct {
-	MaxAccounts       int    `json:"max_accounts"`
-	CurrentAccounts   int    `json:"current_accounts"`
-	AllowedPlans      []int  `json:"allowed_plans"`
-	CurrentDiskBlocks int    `json:"current_disk_blocks"`
-	MaxDiskBlocks     int    `json:"max_disk_blocks"`
-	LogoURL           string `json:"logo_url"`
+	MaxAccounts       int             `json:"max_accounts"`
+	CurrentAccounts   int             `json:"current_accounts"`
+	AllowedPlans      paneldb.PlanIDs `json:"allowed_plans"`
+	CurrentDiskBlocks int             `json:"current_disk_blocks"`
+	MaxDiskBlocks     int             `json:"max_disk_blocks"`
+	LogoURL           string          `json:"logo_url"`
+	ResellerPlan      string          `json:"reseller_plan"`
 }
 
 func defaultResellerData() resellerData {
-	return resellerData{AllowedPlans: []int{}}
+	return resellerData{AllowedPlans: paneldb.PlanIDs{}}
 }
 
 // readResellerData reads a reseller's JSON data file, falling back to
@@ -102,7 +104,7 @@ func readResellerData(username string) resellerData {
 		return defaultResellerData()
 	}
 	if parsed.AllowedPlans == nil {
-		parsed.AllowedPlans = []int{}
+		parsed.AllowedPlans = paneldb.PlanIDs{}
 	}
 	return parsed
 }
@@ -250,7 +252,17 @@ func (rs *Resellers) runAction(action, username, password string, r *http.Reques
 		if !resellersEnabled() {
 			return false, "Resellers are disabled. Enable them on this page first."
 		}
-		return runOpenCLI(adminCommandError, "opencli", "admin", "new", username, password, "--reseller")
+		args := []string{"opencli", "admin", "new", username, password, "--reseller"}
+		if plan := r.FormValue("reseller_plan"); plan != "" {
+			if _, ok := readResellerPlan(plan); !ok {
+				return false, "Reseller package '" + plan + "' does not exist."
+			}
+			args = append(args, "--plan="+plan)
+		}
+		return runOpenCLI(adminCommandError, args...)
+
+	case "change_plan":
+		return applyResellerPlan(username, r.FormValue("reseller_plan"))
 
 	case "rename_user":
 		return runOpenCLI(adminCommandError, "opencli", "admin", "rename", username, r.FormValue("new_username"))
@@ -329,6 +341,7 @@ func (rs *Resellers) render(w http.ResponseWriter, r *http.Request) {
 			MaxDiskBlocks:     rd.MaxDiskBlocks,
 			AllowedPlans:      rd.AllowedPlans,
 			LogoURL:           rd.LogoURL,
+			ResellerPlan:      rd.ResellerPlan,
 		})
 	}
 
@@ -346,6 +359,7 @@ func (rs *Resellers) render(w http.ResponseWriter, r *http.Request) {
 		"Users":            rows,
 		"ResellersEnabled": resellersEnabled(),
 		"ResellerCount":    len(rows),
+		"ResellerPlans":    listResellerPlans(),
 		"Flashes":          auth.PopFlashes(w, r, rs.Sessions),
 		"BulkActions":      AccountsBulkActions("resellers"),
 	}, r, "Resellers"))
@@ -394,10 +408,11 @@ func (rs *Resellers) ServeEditForm(w http.ResponseWriter, r *http.Request) {
 			plans, _ = paneldb.GetAllPlans(rs.MySQL, nil)
 		}
 		webtemplates.Render(w, "users_update_reseller.html", mergeChrome(map[string]interface{}{
-			"Username":     user.Username,
-			"ResellerData": rd,
-			"Plans":        plans,
-			"Flashes":      auth.PopFlashes(w, r, rs.Sessions),
+			"Username":      user.Username,
+			"ResellerData":  rd,
+			"Plans":         plans,
+			"ResellerPlans": listResellerPlans(),
+			"Flashes":       auth.PopFlashes(w, r, rs.Sessions),
 		}, r, "Edit Reseller: "+user.Username))
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -100,7 +99,7 @@ func (s *APISystem) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 	info := systemInfo{
 		CPU: "Unavailable", Uptime: "Unavailable", RunningProcesses: "Unavailable",
 		OS: osPrettyName(), Time: time.Now().Format("2006-01-02 15:04:05"),
-		OpenpanelVersion: chromeSite.PanelVersion, PackageUpdates: packageUpdatesCount(),
+		OpenpanelVersion: chromeSite.PanelVersion, PackageUpdates: packageUpdatesCache.get(packageUpdatesCount),
 	}
 
 	if hostname, err := os.Hostname(); err == nil {
@@ -109,7 +108,7 @@ func (s *APISystem) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 	if release, err := os.ReadFile("/proc/sys/kernel/osrelease"); err == nil {
 		info.Kernel = strings.TrimSpace(string(release))
 	}
-	info.CPU = cpuModelName()
+	info.CPU = cpuModelCache.get(cpuModelName)
 	if uptime, err := os.ReadFile("/proc/uptime"); err == nil {
 		fields := strings.Fields(string(uptime))
 		if len(fields) > 0 {
@@ -118,9 +117,7 @@ func (s *APISystem) ServeSystemInfo(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if out, err := exec.Command("ps", "-e").Output(); err == nil {
-		info.RunningProcesses = strconv.Itoa(strings.Count(string(out), "\n"))
-	}
+	info.RunningProcesses = processCount()
 
 	writeJSON(w, info)
 }

@@ -411,6 +411,58 @@
       },
       {
         "method": "GET",
+        "path": "/api/plans/resellers",
+        "auth": "RequireAPIAdmin",
+        "description": "Lists reseller plans (packages) with their account and disk limits, the user plans resellers on them may assign, and the resellers currently on each plan.",
+        "response": [
+          {
+            "name": "reseller_basic",
+            "description": "10 accounts, 50 GB",
+            "max_accounts": 10,
+            "max_disk_blocks": 51200000,
+            "allowed_plans": [
+              1,
+              2
+            ],
+            "resellers": [
+              "reseller1"
+            ]
+          }
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/api/plans/resellers",
+        "auth": "RequireAPIAdmin",
+        "description": "Creates, updates or deletes a reseller plan (action create/update/delete); updating a plan reapplies its limits to the resellers on it. allowed_plans accepts [1,2], [\"1\",\"2\"] or \"1,2\".",
+        "body": {
+          "action": "create",
+          "name": "reseller_basic",
+          "description": "10 accounts, 50 GB",
+          "max_accounts": 10,
+          "max_disk_blocks": 51200000,
+          "allowed_plans": [
+            1,
+            2
+          ]
+        },
+        "response": {
+          "success": true,
+          "message": "OK",
+          "plan": {
+            "name": "reseller_basic",
+            "description": "10 accounts, 50 GB",
+            "max_accounts": 10,
+            "max_disk_blocks": 51200000,
+            "allowed_plans": [
+              1,
+              2
+            ]
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/plans/{plan_id}",
         "auth": "RequireAPIToken",
         "description": "Returns a single plan's details by numeric ID. Routes with a non-numeric plan_id never reach this handler and are reported as a plain 404.",
@@ -1575,7 +1627,7 @@
         "method": "POST",
         "path": "/api/settings/resellers",
         "auth": "RequireAPIToken",
-        "description": "Runs one reseller-account action (create/reset_password/rename_user/update/suspend/unsuspend/delete/disable_2fa/disable_passkeys); a caller with the reseller role can only ever reset their own password through this endpoint regardless of the submitted action/username.",
+        "description": "Runs one reseller-account action (create/reset_password/rename_user/update/change_plan/update_branding/suspend/unsuspend/delete/disable_2fa/disable_passkeys); create and change_plan accept a reseller plan name in plan; a caller with the reseller role can only ever reset their own password through this endpoint regardless of the submitted action/username.",
         "body": {
           "action": "update",
           "username": "reseller1",
@@ -1817,7 +1869,7 @@
         "method": "GET",
         "path": "/api/settings/locales",
         "auth": "RequireAPIAdmin",
-        "description": "Lists translation locales available on GitHub, marking which are installed locally and which one is the current default.",
+        "description": "Lists translation locales available on GitHub, marking which are installed locally and which one is the current default. update_available is true when the installed file differs from the latest version on GitHub.",
         "response": {
           "default_locale": "en",
           "translations": [
@@ -1826,14 +1878,16 @@
               "provider": "OpenPanel",
               "path": "/etc/openpanel/openadmin/translations/en",
               "installed": true,
-              "is_default": true
+              "is_default": true,
+              "update_available": false
             },
             {
               "locale": "de-DE",
               "provider": "Community",
               "path": "",
               "installed": false,
-              "is_default": false
+              "is_default": false,
+              "update_available": false
             }
           ]
         }
@@ -1842,14 +1896,21 @@
         "method": "POST",
         "path": "/api/settings/locales",
         "auth": "RequireAPIAdmin",
-        "description": "Either installs a new locale ('locale' field) by downloading its translation files, or sets the panel's default locale ('default' field); exactly one of the two fields is expected per call.",
+        "description": "Installs a locale ('locale' field), updates an installed one ('update' field), deletes one ('delete' field), or sets the panel's default locale ('default' field); exactly one field is expected per call. Pass 'all' to 'locale' to install every available locale, or to 'update' to update every locale that has an update available. With {\"locale\": \"all\"} or any 'update' value the response also carries 'installed' and 'failed' arrays, and success is false if any locale failed to download. The default locale can't be deleted.",
         "body": {
           "locale": "de-DE",
+          "update": "",
+          "delete": "",
           "default": ""
         },
         "response": {
           "success": true,
-          "message": "Locale 'de-DE' installed successfully."
+          "message": "Locale 'de-DE' installed successfully.",
+          "installed": [
+            "de-de",
+            "sr-rs"
+          ],
+          "failed": []
         }
       }
     ]

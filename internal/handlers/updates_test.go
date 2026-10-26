@@ -597,3 +597,63 @@ func TestServeUpdatesGetShowUpdateNowWhenRealUpdateAvailable(t *testing.T) {
 		t.Fatalf("expected the update-now button to show for a real newer version, got %s", truncate(string(body)))
 	}
 }
+
+func TestUpdatePreferenceFor(t *testing.T) {
+	cases := map[[2]string]string{
+		{"on", "on"}:   "minor_and_major",
+		{"off", "on"}:  "minor_only",
+		{"on", "off"}:  "major_only",
+		{"off", "off"}: "none",
+		{"", ""}:       "minor_only",
+	}
+	for in, want := range cases {
+		if got := updatePreferenceFor(in[0], in[1]); got != want {
+			t.Fatalf("updatePreferenceFor(%q, %q) = %q, want %q", in[0], in[1], got, want)
+		}
+	}
+}
+
+func TestDaysSinceLastUpdate(t *testing.T) {
+	now := time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)
+	if got := daysSinceLastUpdate(nil, now); got != -1 {
+		t.Fatalf("expected -1 without logs, got %d", got)
+	}
+	logs := []updateLogEntry{{Timestamp: now.Add(-45 * 24 * time.Hour).Unix()}, {Timestamp: now.Add(-100 * 24 * time.Hour).Unix()}}
+	if got := daysSinceLastUpdate(logs, now); got != 45 {
+		t.Fatalf("expected the newest log to count, got %d", got)
+	}
+}
+
+func TestServeUpdatesWarnsWhenAutoUpdatesAreOff(t *testing.T) {
+	withScratchUpdatesPaths(t)
+	os.WriteFile(UpdatesConfigFilePath, []byte("[PANEL]\nautoupdate=off\nautopatch=off\n"), 0644)
+	os.MkdirAll(UpdatesLogDir, 0755)
+	old := filepath.Join(UpdatesLogDir, "2026-07-01.log")
+	os.WriteFile(old, []byte("x"), 0644)
+	stamp := time.Now().Add(-40 * 24 * time.Hour)
+	os.Chtimes(old, stamp, stamp)
+
+	origHub := updatesDockerHubTagsRun
+	updatesDockerHubTagsRun = func() ([]string, error) { return nil, &ftpStubError{"skip"} }
+	origFallback := updatesFallbackVersionRun
+	updatesFallbackVersionRun = func() (string, error) { return "0.0.0", nil }
+	t.Cleanup(func() { updatesDockerHubTagsRun, updatesFallbackVersionRun = origHub, origFallback })
+
+	srv, client := newUpdatesTestServer(t, &Updates{})
+	resp, err := client.Get(srv.URL + "/settings/updates")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	for _, want := range []string{
+		`data-pref="none"`,
+		"at least once a month. The last update ran 40 days ago.",
+		"https://openpanel.com/docs/articles/opencli/update/",
+		"at least once a quarter to get them.</p>",
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected %q in the page", want)
+		}
+	}
+}

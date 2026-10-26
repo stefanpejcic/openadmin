@@ -124,7 +124,7 @@ func TestBulkActionIconsExist(t *testing.T) {
 			}
 		}
 	}
-	check("users", UsersBulkActions(nil, nil))
+	check("users", append(UsersBulkActions(nil, nil), usersImunifyScanAction))
 	check("containers", UserContainersBulkActions())
 	check("locales", LocalesBulkActions())
 	check("waf", WAFRulesBulkActions())
@@ -137,4 +137,7 @@ func TestBulkActionIconsExist(t *testing.T) {
 	check("plans", PlansBulkActions(nil))
 	check("resellers", AccountsBulkActions("resellers"))
 	check("domains", DomainsBulkActions(nil))
+	check("websites", WebsitesBulkActions(true, true))
+	check("ratelimit", RateLimitBulkActions())
+	check("domain-limits", EmailDomainLimitsBulkActions())
 }

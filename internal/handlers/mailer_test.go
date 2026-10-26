@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"bufio"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -473,5 +476,189 @@ func TestServeSendEmailDetailsAndFooter(t *testing.T) {
 	}
 	if !strings.Contains(gotBody, "Edit notification preferences") || strings.Contains(gotBody, "Edit Notification Preferences") {
 		t.Fatalf("expected the preferences link in the footer, got %s", truncate(gotBody))
+	}
+}
+
+func TestServeSendEmailAcceptsMultipleRecipients(t *testing.T) {
+	withScratchMailerConfig(t, "mail_server=smtp.example.com", "mail_username=user", "mail_security_token=right")
+	origSend := mailerSendRun
+	var gotTo string
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error {
+		gotTo = to
+		return nil
+	}
+	t.Cleanup(func() { mailerSendRun = origSend })
+
+	srv, client := newMailerTestServer(t, &Mailer{})
+	resp, err := client.PostForm(srv.URL+"/send_email", url.Values{
+		"recipient": {"a@b.com, c@d.org"}, "subject": {"Alert"}, "body": {"x"}, "transient": {"right"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || gotTo != "a@b.com, c@d.org" {
+		t.Fatalf("expected 200 with list passed through, got %d to=%q", resp.StatusCode, gotTo)
+	}
+
+	resp, err = client.PostForm(srv.URL+"/send_email", url.Values{
+		"recipient": {"a@b.com,nope"}, "subject": {"Alert"}, "body": {"x"}, "transient": {"right"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 when one address is invalid, got %d", resp.StatusCode)
+	}
+}
+
+type fakeSMTPResult struct {
+	rcpts []string
+	data  string
+}
+
+// tiny fake SMTP server that rejects RCPTs listed in reject and answers the end of DATA with dataReply
+func startFakeSMTP(t *testing.T, reject map[string]bool, dataReply string) (int, func() fakeSMTPResult) {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+
+	var res fakeSMTPResult
+	var data strings.Builder
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		r := bufio.NewReader(conn)
+		reply := func(s string) { conn.Write([]byte(s + "\r\n")) }
+		reply("220 test")
+		inData := false
+		for {
+			line, err := r.ReadString('\n')
+			if err != nil {
+				return
+			}
+			line = strings.TrimRight(line, "\r\n")
+			if inData {
+				if line == "." {
+					inData = false
+					reply(dataReply)
+					continue
+				}
+				data.WriteString(line + "\n")
+				continue
+			}
+			switch cmd := strings.ToUpper(line); {
+			case strings.HasPrefix(cmd, "EHLO"), strings.HasPrefix(cmd, "HELO"):
+				reply("250 test")
+			case strings.HasPrefix(cmd, "RCPT TO:"):
+				addr := strings.Trim(line[len("RCPT TO:"):], "<>")
+				if reject[addr] {
+					reply("550 no such user")
+					continue
+				}
+				res.rcpts = append(res.rcpts, addr)
+				reply("250 ok")
+			case cmd == "DATA":
+				inData = true
+				reply("354 go")
+			case cmd == "QUIT":
+				reply("221 bye")
+				return
+			default:
+				reply("250 ok")
+			}
+		}
+	}()
+
+	port, _ := strconv.Atoi(strings.Split(ln.Addr().String(), ":")[1])
+	return port, func() fakeSMTPResult {
+		ln.Close()
+		<-done
+		res.data = data.String()
+		return res
+	}
+}
+
+func TestMailerSendRunSendsRcptPerAddress(t *testing.T) {
+	port, result := startFakeSMTP(t, nil, "250 ok")
+	cfg := mailerSMTPConfig{Server: "127.0.0.1", Port: port, DefaultSender: "root@host"}
+	if err := mailerSendRun(cfg, "a@b.com, c@d.org", "Alert", "<p>hi</p>"); err != nil {
+		t.Fatal(err)
+	}
+	res := result()
+	if len(res.rcpts) != 2 || res.rcpts[0] != "a@b.com" || res.rcpts[1] != "c@d.org" {
+		t.Fatalf("expected one RCPT per address, got %q", res.rcpts)
+	}
+	if !strings.Contains(res.data, "To: a@b.com, c@d.org") {
+		t.Fatalf("expected joined To header, got %q", res.data)
+	}
+}
+
+func TestMailerSendRunSkipsRejectedRecipient(t *testing.T) {
+	port, result := startFakeSMTP(t, map[string]bool{"bad@b.com": true}, "250 ok")
+	cfg := mailerSMTPConfig{Server: "127.0.0.1", Port: port, DefaultSender: "root@host"}
+	err := mailerSendRun(cfg, "bad@b.com, c@d.org", "Alert", "<p>hi</p>")
+	if !isPartialSend(err) || !strings.Contains(err.Error(), "bad@b.com") {
+		t.Fatalf("expected partial send error naming bad@b.com, got %v", err)
+	}
+	res := result()
+	if len(res.rcpts) != 1 || res.rcpts[0] != "c@d.org" {
+		t.Fatalf("expected only the good address accepted, got %q", res.rcpts)
+	}
+	if !strings.Contains(res.data, "To: c@d.org\n") {
+		t.Fatalf("expected To header without the rejected address, got %q", res.data)
+	}
+}
+
+func TestMailerSendRunFailsWhenAllRecipientsRejected(t *testing.T) {
+	port, result := startFakeSMTP(t, map[string]bool{"a@b.com": true, "c@d.org": true}, "250 ok")
+	cfg := mailerSMTPConfig{Server: "127.0.0.1", Port: port, DefaultSender: "root@host"}
+	err := mailerSendRun(cfg, "a@b.com,c@d.org", "Alert", "<p>hi</p>")
+	if err == nil || isPartialSend(err) {
+		t.Fatalf("expected a hard failure, got %v", err)
+	}
+	if res := result(); res.data != "" {
+		t.Fatalf("expected no DATA sent, got %q", res.data)
+	}
+}
+
+func TestMailerSendRunReportsRejectionAfterData(t *testing.T) {
+	port, result := startFakeSMTP(t, nil, "554 message rejected as spam")
+	cfg := mailerSMTPConfig{Server: "127.0.0.1", Port: port, DefaultSender: "root@host"}
+	err := mailerSendRun(cfg, "a@b.com", "Alert", "<p>hi</p>")
+	if err == nil || !strings.Contains(err.Error(), "spam") {
+		t.Fatalf("expected the end-of-DATA rejection to be returned, got %v", err)
+	}
+	result()
+}
+
+func TestServeSendEmailPartialSendStillSucceeds(t *testing.T) {
+	withScratchMailerConfig(t, "mail_server=smtp.example.com", "mail_username=user", "mail_security_token=right")
+	origSend := mailerSendRun
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error {
+		return &rejectedRecipientsError{rejected: map[string]error{"bad@b.com": io.EOF}}
+	}
+	t.Cleanup(func() { mailerSendRun = origSend })
+
+	srv, client := newMailerTestServer(t, &Mailer{})
+	resp, err := client.PostForm(srv.URL+"/send_email", url.Values{
+		"recipient": {"bad@b.com,c@d.org"}, "subject": {"Alert"}, "body": {"x"}, "transient": {"right"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), "sent successfully") {
+		t.Fatalf("expected success when some recipients got it, got %d: %s", resp.StatusCode, body)
 	}
 }

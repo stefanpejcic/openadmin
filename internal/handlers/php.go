@@ -159,10 +159,11 @@ func (p *PHP) ServePHP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "settings_php.html", mergeChrome(map[string]interface{}{
-		"Options":   fileContents["options"],
-		"Versions":  versions,
-		"CSRFToken": csrf.Token(r),
-		"Flashes":   auth.PopFlashes(w, r, p.Sessions),
+		"Options":    fileContents["options"],
+		"Versions":   versions,
+		"MissingPHP": missingPHPVersions(versionLabels),
+		"CSRFToken":  csrf.Token(r),
+		"Flashes":    auth.PopFlashes(w, r, p.Sessions),
 	}, r, "PHP Settings"))
 }
 
@@ -242,4 +243,25 @@ func writeJSONStatus(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
+}
+
+// missingPHPVersions lists released, still supported PHP versions with no ini file here, newest first
+func missingPHPVersions(installed []string) []string {
+	statuses, err := phpWatchStatuses()
+	if err != nil {
+		return nil
+	}
+	have := map[string]bool{}
+	for _, v := range installed {
+		have[v] = true
+	}
+	var missing []string
+	for v, st := range statuses {
+		if have[v] || st.IsEOLVersion || st.IsFutureVersion {
+			continue
+		}
+		missing = append(missing, v)
+	}
+	sort.Slice(missing, func(i, j int) bool { return compareVersionTags(missing[i], missing[j]) > 0 })
+	return missing
 }

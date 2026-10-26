@@ -298,3 +298,75 @@ func TestNotificationsViewShowsLastCheck(t *testing.T) {
 		t.Fatalf("expected the last check line in the page, got:\n%s", body)
 	}
 }
+
+func TestNotificationsViewDetailTogglesNeedNoAlpinePerRow(t *testing.T) {
+	path := withScratchNotificationsLog(t)
+	os.WriteFile(path, []byte(
+		`{"time":"2026-01-01 10:00:00","status":"unread","title":"ram","details":{"kind":"ram","percent":91,"processes":"PID 1 bash"}}`+"\n"+
+			`{"time":"2026-01-01 10:01:00","status":"unread","title":"disk","details":{"kind":"disk","percent":95,"partitions":"/dev/sda1 95%"}}`+"\n"+
+			`{"time":"2026-01-01 10:02:00","status":"unread","title":"oom","message":"killed","details":{"kind":"oom","system":["mysqld"]}}`+"\n"+
+			`{"time":"2026-01-01 10:03:00","status":"unread","title":"plain","message":"summary line\nmore text"}`+"\n"), 0644)
+
+	srv := httptest.NewServer(newNotificationsMux(&Notifications{Sessions: auth.NewManager("test-secret", false)}))
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	page := string(body)
+	if n := strings.Count(page, `class="nt-switch`); n != 4 {
+		t.Fatalf("expected a toggle for each of the 4 notifications, got %d", n)
+	}
+	for _, want := range []string{"Display Processes", "Show Partitions", "Show details", "PID 1 bash", "/dev/sda1 95%", "mysqld", "more text"} {
+		if !strings.Contains(page, want) {
+			t.Fatalf("expected %q on the page", want)
+		}
+	}
+	if strings.Contains(page, `x-text="open ?`) {
+		t.Fatal("a detail toggle still goes through Alpine")
+	}
+}
+
+func TestNotificationsViewFiltersAndPages(t *testing.T) {
+	path := withScratchNotificationsLog(t)
+	var lines []string
+	for i := 0; i < 250; i++ {
+		sev, title := "info", "Routine check"
+		if i%50 == 0 {
+			sev, title = "critical", "Disk failing"
+		}
+		lines = append(lines, `{"time":"2026-01-01 10:00:00","status":"unread","severity":"`+sev+`","title":"`+title+`","message":"m"}`)
+	}
+	os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644)
+	n := &Notifications{Sessions: auth.NewManager("test-secret", false)}
+	srv := httptest.NewServer(newNotificationsMux(n))
+	defer srv.Close()
+
+	get := func(q string) string {
+		resp, err := http.Get(srv.URL + "/notifications" + q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+	// each row has its title twice, in the row and as the bulk checkbox label
+	rows := func(got string) int {
+		return (strings.Count(got, "Routine check") + strings.Count(got, "Disk failing")) / 2
+	}
+	if got := get(""); rows(got) != 100 || !strings.Contains(got, "Page 1 of 3") {
+		t.Errorf("first page should hold 100 of 250, got %d", rows(got))
+	}
+	if got := get("?page=3"); rows(got) != 50 {
+		t.Errorf("last page should hold the remaining 50, got %d", rows(got))
+	}
+	if got := get("?severity=critical"); rows(got) != 5 || strings.Contains(got, "Routine check") {
+		t.Errorf("severity filter should only keep the 5 critical ones, got %d", rows(got))
+	}
+	if got := get("?q=disk"); rows(got) != 5 {
+		t.Errorf("search should match the title, got %d", rows(got))
+	}
+}

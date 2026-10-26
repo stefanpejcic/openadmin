@@ -405,6 +405,7 @@ func (s *Services) handleStatusPost(w http.ResponseWriter, r *http.Request) {
 
 		go func() {
 			success, rawMessage := controlServiceRun(realName, container, action)
+			resetMailserverStatus()
 			message, _ := serviceActionMessage(realName, container, action, success, rawMessage)
 
 			pendingServiceActionsMu.Lock()
@@ -424,6 +425,7 @@ func (s *Services) handleStatusPost(w http.ResponseWriter, r *http.Request) {
 		auth.AddFlash(w, r, s.Sessions, "Invalid type, please set: 'system' or 'docker' as type.", "error")
 	} else {
 		success, rawMessage := controlServiceRun(realName, container, action)
+		resetMailserverStatus()
 		message, category := serviceActionMessage(realName, container, action, success, rawMessage)
 		auth.AddFlash(w, r, s.Sessions, message, category)
 	}

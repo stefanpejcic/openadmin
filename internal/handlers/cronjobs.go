@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -129,6 +130,7 @@ func addOrUpdateCron(lineNumber int, schedule string, loggingEnabled bool) error
 type cronsPageData struct {
 	webtemplates.Chrome
 	CronJobs    []CronJob
+	Warnings    []cronWarning
 	FileMissing bool
 	CSRFToken   string
 	Flashes     []auth.Flash
@@ -140,6 +142,10 @@ type cronsPageData struct {
 // ServeCrons handles GET/POST /server/crons.
 func (c *Cronjobs) ServeCrons(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
+		// resellers get the page read only
+		if denyReseller(w, r) {
+			return
+		}
 		c.handlePost(w, r)
 		return
 	}
@@ -164,6 +170,7 @@ func (c *Cronjobs) ServeCrons(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "crons.html", cronsPageData{
 		Chrome:      chrome,
 		CronJobs:    jobs,
+		Warnings:    cronWarnings(jobs, time.Now()),
 		FileMissing: fileMissing,
 		CSRFToken:   csrf.Token(r),
 		Flashes:     auth.PopFlashes(w, r, c.Sessions),

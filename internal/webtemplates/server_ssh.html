@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -103,13 +102,14 @@
     <div class="p-4">
 
         <div x-show="tab === 'basic'" role="tabpanel">
-            <form method="POST" class="space-y-4">
+            <form method="POST" class="space-y-4" x-data="{ port: '', pass: '', pubkey: '', init() { this.port = this.$el.querySelector('#port').value; this.pass = this.$el.querySelector('#password_auth').value; this.pubkey = this.$el.querySelector('#pubkey_auth').value } }">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
                 <div class="form-group">
                     <label for="port" class="">SSH Port</label>
-                    <input type="number" id="port" name="port" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950" min="22" max="10000" value="{{.Port}}" autocomplete="off">
+                    <input type="number" id="port" name="port" @input="port = $event.target.value" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950" min="22" max="10000" value="{{.Port}}" autocomplete="off">
                     <small class="form-hint">Make sure to open the new port on firewall.</small>
+                    <p x-show="String(port).trim() === '22'" x-cloak class="mt-1 text-sm text-amber-600 dark:text-amber-500">Port 22 is the default and the first one bots try. Recommended: block it in the <a href="/security/firewall" class="font-medium underline hover:no-underline">firewall</a> and allow it only for the IPs admins connect from, or move SSH to another port.</p>
                 </div>
 
                 <div class="form-group">
@@ -122,18 +122,21 @@
 
                 <div class="form-group">
                     <label for="password_auth" class="">Password Authentication</label>
-                    <select id="password_auth" name="password_auth" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 mt-2">
+                    <select id="password_auth" name="password_auth" @change="pass = $event.target.value" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 mt-2">
                         <option {{if eq .PasswordAuth "yes"}}selected{{end}} value="yes">yes</option>
                         <option {{if eq .PasswordAuth "no"}}selected{{end}} value="no">no</option>
                     </select>
+                    <p x-show="pass === 'yes' && pubkey === 'yes'" x-cloak class="mt-1 text-sm text-amber-600 dark:text-amber-500">Recommended: turn off password authentication now that public key authentication is on, so passwords can't be brute-forced.{{if not .Keys}} There are no authorized keys yet, so add yours first or you'll be locked out.{{end}}</p>
+                    <p x-show="pass === 'yes' && pubkey === 'no'" x-cloak class="mt-1 text-sm text-amber-600 dark:text-amber-500">Recommended: enable public key authentication, then turn this off.</p>
                 </div>
 
                 <div class="form-group">
                     <label for="pubkey_auth" class="">Public Key Authentication</label>
-                    <select id="pubkey_auth" name="pubkey_auth" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 mt-2">
+                    <select id="pubkey_auth" name="pubkey_auth" @change="pubkey = $event.target.value" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 mt-2">
                         <option {{if eq .PubkeyAuth "yes"}}selected{{end}} value="yes">yes</option>
                         <option {{if eq .PubkeyAuth "no"}}selected{{end}} value="no">no</option>
                     </select>
+                    <p x-show="pubkey === 'no'" x-cloak class="mt-1 text-sm text-amber-600 dark:text-amber-500">Recommended: enable public key authentication. Key logins can't be brute-forced like passwords.</p>
                 </div>
 
                 <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600">Save</button>

@@ -45,16 +45,17 @@ func (s *statusRecorder) Unwrap() http.ResponseWriter { return s.ResponseWriter 
 
 // activityIgnored are POSTs that don't change anything an admin did, logins have their own log
 var activityIgnored = map[string]bool{
-	"POST /login":                            true,
-	"POST /login/":                           true,
-	"POST /login/2fa":                        true,
-	"POST /login/passkey/begin":              true,
-	"POST /login/passkey/complete":           true,
-	"POST /send_email":                       true,
-	"POST /security/passkeys/register/begin": true,
-	"POST /settings/notifications/test-smtp": true,
-	"POST /api/tour/complete":                true,
-	"POST /api/quickstart/dismiss":           true,
+	"POST /login":                               true,
+	"POST /login/":                              true,
+	"POST /login/2fa":                           true,
+	"POST /login/passkey/begin":                 true,
+	"POST /login/passkey/complete":              true,
+	"POST /send_email":                          true,
+	"POST /security/passkeys/register/begin":    true,
+	"POST /settings/notifications/test-smtp":    true,
+	"POST /settings/notifications/test-webhook": true,
+	"POST /api/tour/complete":                   true,
+	"POST /api/quickstart/dismiss":              true,
 }
 
 // ActivityMiddleware writes one line to the acting account's activity log for every request that changes something
@@ -273,9 +274,16 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 		}
 		return "POST " + r.URL.Path
 	},
-	"POST /domains/zone-templates": func(r *http.Request) string { return "Edited DNS zone templates" },
-	"POST /domains/file-templates": func(r *http.Request) string { return "Edited domain file templates" },
-	"POST /domains/dns-cluster":    func(r *http.Request) string { return "Changed DNS cluster settings" },
+	"POST /domains/zone-templates":  func(r *http.Request) string { return "Edited DNS zone templates" },
+	"POST /domains/file-templates":  func(r *http.Request) string { return "Edited domain file templates" },
+	"POST /domains/vhost-templates": func(r *http.Request) string { return "Edited VirtualHost templates" },
+	"POST /domains/dns-cluster":     func(r *http.Request) string { return "Changed DNS cluster settings" },
+	"POST /domains/ratelimit": func(r *http.Request) string {
+		if r.PostFormValue("action") == "default" {
+			return actJoin("Set the server default rate limit to", r.PostFormValue("per_ip")+"/min per IP and", r.PostFormValue("per_site")+"/min per domain")
+		}
+		return actJoin("Set rate limit", quoted(r.PostFormValue("mode")), "for domain", quoted(r.PostFormValue("domain")))
+	},
 
 	// emails
 	"POST /emails/settings":               func(r *http.Request) string { return "Changed email settings" },
@@ -319,6 +327,7 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 	// backups
 	"POST /backups/user/settings":      func(r *http.Request) string { return "Changed user backup settings" },
 	"POST /backups/user/configuration": func(r *http.Request) string { return "Changed user backup configuration" },
+	"POST /backups/user/exclusions":    func(r *http.Request) string { return "Changed accounts excluded from user backups" },
 	"POST /backups/user/run":           func(r *http.Request) string { return "Started a user backup" },
 	"POST /backups/system":             func(r *http.Request) string { return "Changed system backup settings" },
 	"POST /backups/system/run":         func(r *http.Request) string { return "Started a system backup" },

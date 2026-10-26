@@ -78,6 +78,11 @@ func defaultPHPVersionFor(username string) string {
 // ServePHPVersion handles GET/POST /php/{value}.
 func (p *PHP) ServePHPVersion(w http.ResponseWriter, r *http.Request) {
 	value := r.PathValue("value")
+	scope := scopeFor(r, p.MySQL)
+	if (isDomain(value) && !scope.AllowsDomain(value)) || (!isDomain(value) && !scope.AllowsUser(value)) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden")
+		return
+	}
 	if isDomain(value) {
 		p.servePHPVersionForDomain(w, r, value)
 		return
@@ -267,6 +272,10 @@ func (p *PHP) domainOwnerLacksPHP(domain, version string) (string, bool) {
 // ServePHPAvailableVersions handles GET /php/{username}/available.
 func (p *PHP) ServePHPAvailableVersions(w http.ResponseWriter, r *http.Request) {
 	username := r.PathValue("username")
+	if !scopeFor(r, p.MySQL).AllowsUser(username) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden")
+		return
+	}
 	context, err := queryContextByUsername(p.MySQL, username)
 	if err != nil || context == "" {
 		writeJSONError(w, http.StatusNotFound, "User not found")

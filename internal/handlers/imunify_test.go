@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
@@ -40,6 +43,8 @@ func newImunifyTestServer(t *testing.T, im *Imunify) (*httptest.Server, *http.Cl
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /security/imunify/", im.ServeImunifyGUI)
 	mux.HandleFunc("GET /security/imunify/assets/static/{filename...}", im.ServeImunifyStatic)
+	mux.HandleFunc("POST /security/imunify/install", im.ServeImunifyInstall)
+	mux.HandleFunc("GET /security/imunify/install/status", im.ServeImunifyInstallStatus)
 	mux.HandleFunc("GET /imav/{path...}", im.ServeImunifyPHP)
 	mux.HandleFunc("POST /imav/{path...}", im.ServeImunifyPHP)
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +72,7 @@ func withStubbedImunifyRunners(t *testing.T, available bool, portOpen bool, toke
 	imunifyCommandAvailableRun = func(string) bool { return available }
 	imunifyIsPortOpenRun = func(string, int) bool { return portOpen }
 	imunifyStartDetachedRun = func() {}
-	imunifyGetTokenRun = func() (string, bool) { return token, tokenOK }
+	imunifyGetTokenRun = func(string) (string, bool) { return token, tokenOK }
 	t.Cleanup(func() {
 		imunifyCommandAvailableRun = origAvailable
 		imunifyIsPortOpenRun = origPortOpen
@@ -88,10 +93,71 @@ func TestServeImunifyGUINotInstalled(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"Not Configured", "</html>"} {
+	for _, want := range []string{"Not Installed", "Install ImunifyAV", "/security/imunify/install", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}
+	}
+}
+
+func withScratchImunifyInstall(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	origLog, origPID, origRun := ImunifyInstallLogPath, ImunifyInstallPIDFile, imunifyInstallRun
+	ImunifyInstallLogPath = filepath.Join(dir, "install.log")
+	ImunifyInstallPIDFile = filepath.Join(dir, "install.pid")
+	t.Cleanup(func() {
+		ImunifyInstallLogPath, ImunifyInstallPIDFile, imunifyInstallRun = origLog, origPID, origRun
+	})
+}
+
+func TestServeImunifyInstallStartsInBackground(t *testing.T) {
+	withStubbedImunifyRunners(t, false, false, "", false)
+	withScratchImunifyInstall(t)
+	started := false
+	imunifyInstallRun = func() error {
+		started = true
+		os.WriteFile(ImunifyInstallLogPath, []byte("Installing ImunifyAV..."), 0644)
+		return os.WriteFile(ImunifyInstallPIDFile, []byte("999999999"), 0644)
+	}
+	srv, client := newImunifyTestServer(t, &Imunify{})
+
+	resp, err := client.Post(srv.URL+"/security/imunify/install", "application/x-www-form-urlencoded", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !started || !strings.Contains(string(body), `"success":true`) {
+		t.Fatalf("expected install to start, got %d %s", resp.StatusCode, body)
+	}
+
+	resp, err = client.Get(srv.URL + "/security/imunify/install/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	for _, want := range []string{`"status":"finished"`, "Installing ImunifyAV...", `"installed":false`} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("expected status to contain %q, got %s", want, body)
+		}
+	}
+}
+
+func TestServeImunifyInstallRefusesWhenInstalled(t *testing.T) {
+	withStubbedImunifyRunners(t, true, false, "", false)
+	withScratchImunifyInstall(t)
+	imunifyInstallRun = func() error { t.Fatal("install should not run"); return nil }
+	srv, client := newImunifyTestServer(t, &Imunify{})
+
+	resp, err := client.Post(srv.URL+"/security/imunify/install", "application/x-www-form-urlencoded", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409, got %d", resp.StatusCode)
 	}
 }
 
@@ -112,7 +178,7 @@ func TestServeImunifyGUINotRunningStartsDetached(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"Not Running", "</html>"} {
+	for _, want := range []string{"Starting ImunifyAV", "/security/imunify/gui/status", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}
@@ -129,7 +195,7 @@ func TestServeImunifyGUIAutostartsAndServesGUIOnceRunning(t *testing.T) {
 	imunifyCommandAvailableRun = func(string) bool { return true }
 	imunifyIsPortOpenRun = func(string, int) bool { return portOpen }
 	imunifyStartDetachedRun = func() { started = true; portOpen = true }
-	imunifyGetTokenRun = func() (string, bool) { return "abc123", true }
+	imunifyGetTokenRun = func(string) (string, bool) { return "abc123", true }
 	t.Cleanup(func() {
 		imunifyCommandAvailableRun = origAvailable
 		imunifyIsPortOpenRun = origPortOpen
@@ -150,7 +216,7 @@ func TestServeImunifyGUIAutostartsAndServesGUIOnceRunning(t *testing.T) {
 	if !started {
 		t.Fatal("expected start_imunify_detached to be invoked")
 	}
-	if strings.Contains(got, "Not Running") {
+	if strings.Contains(got, "Starting ImunifyAV") {
 		t.Fatalf("expected the real GUI once the port comes up after autostart, got %s", truncate(got))
 	}
 	for _, want := range []string{"token=abc123", "</html>"} {
@@ -285,7 +351,7 @@ func TestServeImunifyPHPAutostartsAndProxiesOnceRunning(t *testing.T) {
 	imunifyCommandAvailableRun = func(string) bool { return true }
 	imunifyIsPortOpenRun = func(string, int) bool { return portOpen }
 	imunifyStartDetachedRun = func() { started = true; portOpen = true }
-	imunifyGetTokenRun = func() (string, bool) { return "", false }
+	imunifyGetTokenRun = func(string) (string, bool) { return "", false }
 	t.Cleanup(func() {
 		imunifyCommandAvailableRun = origAvailable
 		imunifyIsPortOpenRun = origPortOpen
@@ -344,5 +410,39 @@ func TestServeImunifyPHPForbidsEscapingRoot(t *testing.T) {
 	}
 	if called {
 		t.Fatal("expected the proxy to never be reached for a forbidden path")
+	}
+}
+
+func TestServeResellerImunifyLooksUpContextsOnce(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.ExpectQuery(`SELECT username, server FROM users`).
+		WillReturnRows(sqlmock.NewRows([]string{"username", "server"}).AddRow("bob", "bobctx").AddRow("carol", "carolctx"))
+
+	imunifyUsersMu.Lock()
+	origCache, origUntil := imunifyUsersCache, imunifyUsersUntil
+	imunifyUsersCache, imunifyUsersUntil = map[string]imunifyUser{"bobctx": {User: "bobctx", Infected: 3, ScanDate: 1}}, time.Now().Add(time.Hour)
+	imunifyUsersMu.Unlock()
+	t.Cleanup(func() {
+		imunifyUsersMu.Lock()
+		imunifyUsersCache, imunifyUsersUntil = origCache, origUntil
+		imunifyUsersMu.Unlock()
+	})
+
+	im := &Imunify{MySQL: db, Sessions: auth.NewManager("test-secret", false)}
+	scope := &resellerScope{Reseller: "res", users: map[string]bool{"bob": true, "carol": true}, domains: map[string]string{}}
+	rec := httptest.NewRecorder()
+	im.serveResellerImunify(rec, httptest.NewRequest(http.MethodGet, "/security/imunify/", nil), scope)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("expected a single contexts query: %v", err)
+	}
+	body := rec.Body.String()
+	// only bob's context has a scan with infected files
+	if n := strings.Count(body, "text-red-600 dark:text-red-500 font-medium"); n != 1 {
+		t.Fatalf("expected one infected row, got %d", n)
 	}
 }

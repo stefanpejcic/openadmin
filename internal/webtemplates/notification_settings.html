@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
@@ -51,13 +50,18 @@
                 <div x-show="tooltip" x-transition x-cloak class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; right: 0;">Leave empty to disable.<br>Daily Reports can be disabled by editing the cron schedule from <b>Server &gt; Scheduled Actions</b> page.</div>
             </span>
         </h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Send notifications and Daily Usage reports to this address.</p>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Send notifications and Daily Usage reports to these addresses.</p>
     </div>
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4">
-            <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="email">Email address:</label>
-                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                        name="email" placeholder="" value="{{.EmailAddress}}" type="text"></div>
+            <div class="col-span-full" x-data="inputList('email')" data-items="{{.EmailAddressesJSON}}"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="email_0">Email address:</label>
+                <template x-for="(item, i) in items" :key="item.id">
+                    <div class="mt-2 flex items-center gap-2">
+                        <input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700" :id="'email_' + i" name="email" x-model="item.value" placeholder="admin@example.com" type="email">
+                        <button type="button" x-show="i > 0" @click="remove(i)" title="Remove email address" class="inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-sm font-medium shadow-sm transition-all disabled:pointer-events-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">&minus;</button>
+                    </div>
+                </template>
+                <button type="button" x-show="items[items.length - 1].value.trim()" x-cloak @click="add()" title="Add another email address" class="mt-2 inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-sm font-medium shadow-sm transition-all disabled:pointer-events-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">+</button>
             </div>
         </div>
     </div>
@@ -86,13 +90,25 @@
 </div>
             </span>
         </h2>
-        <p class="mt-1 text-sm leading-6 text-gray-500">Send notifications to a webhook URL.</p>
+        <p class="mt-1 text-sm leading-6 text-gray-500">Send notifications to one or more webhook URLs.</p>
     </div>
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4">
-            <div class="col-span-full"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="webhook_url">Webhook URL:</label>
-                <div class="relative w-full mt-2"><input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden"
-                        name="webhook_url" placeholder="" value="{{.ConfigData.Get "DEFAULT" "webhook_url" ""}}" type="url"></div>
+            <div class="col-span-full" x-data="inputList('webhook_url')" data-items="{{.WebhookURLsJSON}}"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="webhook_url_0">Webhook URL:</label>
+                <template x-for="(item, i) in items" :key="item.id">
+                    <div class="mt-2">
+                        <div class="flex items-center gap-2">
+                            <input class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700" :id="'webhook_url_' + i" name="webhook_url" x-model="item.value" placeholder="https://discord.com/api/webhooks/..." type="url">
+                            <button type="button" x-show="i > 0" @click="remove(i)" title="Remove webhook" class="inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-sm font-medium shadow-sm transition-all disabled:pointer-events-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">&minus;</button>
+                            <button type="button" @click="test(item)" :disabled="!item.value || item.loading" class="inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-sm font-medium shadow-sm transition-all disabled:pointer-events-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">
+                                <span x-show="!item.loading">Test</span>
+                                <span x-show="item.loading">Testing&hellip;</span>
+                            </button>
+                        </div>
+                        <p x-show="item.result" x-cloak class="mt-1 text-sm break-all" :class="item.ok ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'" x-text="item.result"></p>
+                    </div>
+                </template>
+                <button type="button" x-show="items[items.length - 1].value.trim()" x-cloak @click="add()" title="Add another webhook" class="mt-2 inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-sm font-medium shadow-sm transition-all disabled:pointer-events-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">+</button>
             </div>
         </div>
     </div>
@@ -149,6 +165,8 @@
                                 <span class="text-sm" x-text="serviceStates['{{.Key}}'] ? 'Enabled' : 'Disabled'"></span>
                             </div>
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{.Desc}}</p>
+                            {{if .WhenOff}}<p x-show="!serviceStates['{{.Key}}']" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">{{.WhenOff}}</p>{{end}}
+                            {{if .WhenOn}}<p x-show="serviceStates['{{.Key}}']" x-cloak class="mt-1 text-xs text-amber-600 dark:text-amber-500">{{.WhenOn}}</p>{{end}}
                         </div>
                     </div>
                 {{end}}
@@ -170,14 +188,17 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
         {{range .Thresholds}}
 
-            <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{.Key}}">{{.Label}}</label>
+            <div class="col-span-full sm:col-span-3" x-data="{ v: $el.dataset.value }" data-value="{{.Value}}"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="{{.Key}}">{{.Label}}</label>
                 <div class="relative w-full mt-2 flex-grow flex items-center">
-                    <input type="number" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="{{.Key}}" placeholder="{{.Key}}" min="10" max="100" value="{{.Value}}" >
+                    <input type="number" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::--webkit-search-cancel-button]:hidden [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden" name="{{.Key}}" id="{{.Key}}" placeholder="{{.Key}}" min="10" max="100" x-model="v">
       {{if .ShowPercent}}
         <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">%</span>
       {{end}}
 
                 </div>
+                {{if .Hint}}<p class="text-xs text-gray-500 mt-1">{{.Hint}}</p>{{end}}
+                {{if .WarnBelow}}<p x-show="v !== '' && Number(v) < {{.WarnBelow}}" x-cloak class="text-xs text-amber-600 dark:text-amber-500 mt-1">{{.WarnLowText}}</p>{{end}}
+                {{if .WarnAbove}}<p x-show="v !== '' && Number(v) > {{.WarnAbove}}" x-cloak class="text-xs text-amber-600 dark:text-amber-500 mt-1">{{.WarnHighText}}</p>{{end}}
             </div>
         {{end}}
         </div>
@@ -239,17 +260,21 @@
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
                 <!-- max_total_conn -->
-                <div>
+                <div x-data="{ v: $el.dataset.value }" data-x-model="v">
                     <label class="text-sm font-medium text-gray-900 dark:text-gray-50">Max total connections</label>
                     <input type="number" name="max_total_conn" min="1" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value="{{.MaxTotalConn}}">
                     <p class="text-xs text-gray-500 mt-1">Receive a notification when concurrent connections on ports 80|443 reach this threshold.</p>
+                    {{if .TotalConnAdvice.Recommended}}<p x-show="v === '' || Number(v) < {{.TotalConnAdvice.Recommended}}" x-cloak class="text-xs text-red-600 dark:text-red-500 mt-1">{{.TotalConnAdvice.Hint}} <button type="button" @click="v = '{{.TotalConnAdvice.Recommended}}'; $el.dispatchEvent(new Event('change', { bubbles: true }))" class="ml-1 rounded border px-2 py-0.5 text-xs font-medium border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60">Use {{.TotalConnAdvice.Recommended}}</button></p>{{else if .TotalConnAdvice.Hint}}<p class="text-xs text-amber-600 dark:text-amber-500 mt-1">{{.TotalConnAdvice.Hint}}</p>{{end}}
+                    {{if .TotalConnAdvice.Peak}}<p x-show="v !== '' && Number(v) <= {{.TotalConnAdvice.Peak}}" x-cloak class="text-xs text-red-600 dark:text-red-500 mt-1">{{.TotalConnAdvice.WarnText}}</p>{{end}}
                 </div>
 
                 <!-- max_conn_per_ip -->
-                <div>
+                <div x-data="{ v: $el.dataset.value }" data-x-model="v">
                     <label class="text-sm font-medium text-gray-900 dark:text-gray-50">Max connections per IP</label>
                     <input type="number" name="max_conn_per_ip" min="1" class="relative block w-full appearance-none truncate rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" value="{{.MaxConnPerIP}}">
                     <p class="text-xs text-gray-500 mt-1">Receive a notification when concurrent connections from a single IP reach this threshold.</p>
+                    {{if .PerIPConnAdvice.Recommended}}<p x-show="v === '' || Number(v) < {{.PerIPConnAdvice.Recommended}}" x-cloak class="text-xs text-red-600 dark:text-red-500 mt-1">{{.PerIPConnAdvice.Hint}} <button type="button" @click="v = '{{.PerIPConnAdvice.Recommended}}'; $el.dispatchEvent(new Event('change', { bubbles: true }))" class="ml-1 rounded border px-2 py-0.5 text-xs font-medium border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60">Use {{.PerIPConnAdvice.Recommended}}</button></p>{{else if .PerIPConnAdvice.Hint}}<p class="text-xs text-amber-600 dark:text-amber-500 mt-1">{{.PerIPConnAdvice.Hint}}</p>{{end}}
+                    {{if .PerIPConnAdvice.Peak}}<p x-show="v !== '' && Number(v) <= {{.PerIPConnAdvice.Peak}}" x-cloak class="text-xs text-red-600 dark:text-red-500 mt-1">{{.PerIPConnAdvice.WarnText}}</p>{{end}}
                 </div>
 
             </div>
@@ -274,7 +299,17 @@
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
 
-        {{range .UserActions}}
+        {{range .UserActionGroups}}
+            <div class="col-span-full" x-data="actionGroup" data-group="{{.Name}}">
+                <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-1">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">{{.Name}} <span class="font-normal text-gray-500" x-text="on + '/' + total + ' on'"></span></h3>
+                    <div class="flex gap-1">
+                        <button type="button" @click="setAll(true)" :disabled="on === total" class="rounded border px-2 py-0.5 text-xs font-medium border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:opacity-50">All on</button>
+                        <button type="button" @click="setAll(false)" :disabled="on === 0" class="rounded border px-2 py-0.5 text-xs font-medium border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:opacity-50">All off</button>
+                    </div>
+                </div>
+                <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-6">
+        {{range .Actions}}
 
             <div class="col-span-full sm:col-span-3">
                 <label for="{{.Key}}" class="text-gray-900 dark:text-gray-50 font-medium flex justify-between items-center" x-data="{tooltip: false}">
@@ -293,6 +328,9 @@
                 </label>
             </div>
 
+        {{end}}
+                </div>
+            </div>
         {{end}}
 
 
@@ -319,14 +357,24 @@
     </div>
     <div class="md:col-span-2">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-            <div class="col-span-full">
+            <div class="col-span-full" x-data="{ list: $el.querySelector('textarea').value, has(ip) { return this.list.split(/\s+/).includes(ip) }, add(ip) { if (!this.has(ip)) this.list = (this.list.trim() ? this.list.trim() + '\n' : '') + ip; this.$el.dispatchEvent(new Event('change', { bubbles: true })) } }">
                 <div class="relative w-full mt-2">
                     <div class="row form-selectgroup form-selectgroup-boxes d-flex">
                         <div class="mt-4 grid grid-cols-1 gap-4">
-                            <textarea name="ssh_whitelist" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" rows="5" cols="50">{{.SSHWhitelist}}</textarea>
+                            <textarea name="ssh_whitelist" x-model="list" class="flex min-h-[4rem] w-full rounded border px-3 py-1.5 shadow-sm outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-300 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700" rows="5" cols="50">{{.SSHWhitelist}}</textarea>
                         </div>
                     </div>
                 </div>
+                {{if .WhitelistIdeas}}
+                <div class="mt-3">
+                    <p class="text-xs text-amber-600 dark:text-amber-500">Suggested, from your current connection and earlier OpenAdmin logins:</p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                    {{range .WhitelistIdeas}}
+                        <button type="button" x-show="!has('{{.IP}}')" @click="add('{{.IP}}')" title="Add to the whitelist" class="rounded border px-2 py-0.5 text-xs font-medium border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 text-left">+ {{.IP}} <span class="text-gray-500">({{.Note}})</span></button>
+                    {{end}}
+                    </div>
+                </div>
+                {{end}}
             </div>
         </div>
     </div>
@@ -563,6 +611,80 @@
 
 <script>
 document.addEventListener('alpine:init', () => {
+    // on/off counter and bulk toggle for one group of user action checkboxes
+    Alpine.data('actionGroup', () => ({
+        on: 0,
+        total: 0,
+        group: null,
+        boxes() {
+            // this.$el is the clicked button inside handlers, so keep the group element from init
+            return [...this.group.querySelectorAll('input[type=checkbox]')];
+        },
+        count() {
+            const boxes = this.boxes();
+            this.total = boxes.length;
+            this.on = boxes.filter(b => b.checked).length;
+        },
+        init() {
+            this.group = this.$el;
+            this.count();
+            this.group.addEventListener('change', () => this.count());
+        },
+        setAll(state) {
+            this.boxes().forEach(b => {
+                if (b.checked !== state) {
+                    b.checked = state;
+                    b.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
+    }));
+
+    // repeatable input rows shared by the email and webhook fields
+    Alpine.data('inputList', (field) => ({
+        items: [],
+        nextId: 0,
+        init() {
+            let values = [];
+            try { values = JSON.parse(this.$el.dataset.items) || []; } catch (e) {}
+            if (!values.length) values = [''];
+            this.items = values.map(v => this.newItem(v));
+        },
+        newItem(value) {
+            return { id: this.nextId++, value: value, loading: false, result: '', ok: false };
+        },
+        add() {
+            this.items.push(this.newItem(''));
+            this.$nextTick(() => document.getElementById(field + '_' + (this.items.length - 1))?.focus());
+        },
+        remove(i) {
+            this.items.splice(i, 1);
+            // so the unsaved changes warning notices
+            this.$el.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        async test(item) {
+            item.loading = true;
+            item.result = '';
+            try {
+                const response = await fetch('/settings/notifications/test-webhook', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: new URLSearchParams({ url: item.value.trim() })
+                });
+                const payload = await response.json();
+                item.ok = !!payload.success;
+                item.result = payload.success ? payload.message : (payload.error || 'Webhook test failed.');
+            } catch (e) {
+                item.ok = false;
+                item.result = 'Request failed: ' + e.message;
+            } finally {
+                item.loading = false;
+            }
+        }
+    }));
     Alpine.data('smtpTest', () => ({
         loading: false,
         result: '',

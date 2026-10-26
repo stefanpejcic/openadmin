@@ -2,7 +2,6 @@
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
 <body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
@@ -55,6 +54,7 @@
                                   {{.MailserverStatus}}
                                   </span></span>
                               </div>
+                              {{if and (eq .MailserverStatus "running") (not .EmailsModuleEnabled)}}<p class="mt-2 text-sm text-amber-600 dark:text-amber-500">The mail server is running but the Emails module is disabled, so users can't manage email in OpenPanel. Recommended: <a href="/settings/modules" class="font-medium underline hover:no-underline">enable the Emails module</a>.</p>{{end}}
                           </div>
                           <div class="col-span-full sm:col-span-3"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="Actions">Actions</label>
                               <div class="relative w-full mt-2">
@@ -163,6 +163,7 @@
                       {{end}} {{.WebmailStatus}}
                     </div>
                   </div>
+                  {{if and (ne .WebmailStatus "running") (gt .Emails 0)}}<p class="mt-2 text-sm text-amber-600 dark:text-amber-500">Webmail isn't running but there {{if eq .Emails 1}}is 1 email account{{else}}are {{.Emails}} email accounts{{end}}, so users can't read their mail in the browser. Recommended: start it from <a href="/services" class="font-medium underline hover:no-underline">Service Status</a>.</p>{{end}}
             </div>
 
 
@@ -393,7 +394,7 @@ function emailStorage(current, count) {
                     <div class="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                       <div class="flex items-center gap-2">
 
-              <form class="card" method="POST">
+              <form class="card" method="POST" x-data="{ s: {}, form: null, init() { this.form = this.$el; this.read() }, read() { const next = {}; this.form.querySelectorAll('input[type=checkbox]').forEach(c => next[c.name] = c.checked); this.s = next } }" @change="read()">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
                 <div class="card-body">
@@ -407,6 +408,7 @@ function emailStorage(current, count) {
                                             <small class="form-hint">
                                               (used for rate-limiting emails per hour)
                                             </small>
+                                            <p x-show="!s.ENABLE_POSTFWD" x-cloak class="mt-1 text-sm text-amber-600 dark:text-amber-500">With Postfwd off, the hourly email limits set on plans aren't enforced, so domains and users can send any number of emails.</p>
                                           </div>
                                         </div>
 
@@ -532,6 +534,7 @@ function emailStorage(current, count) {
                                             <small class="form-hint">
                                               Enables the ClamAV service.
                                             </small>
+                                            <p x-show="!s.ENABLE_RSPAMD && !s.ENABLE_AMAVIS && !s.ENABLE_CLAMAV" x-cloak class="mt-1 text-sm text-amber-600 dark:text-amber-500">Rspamd, Amavis and ClamAV are all off, so incoming mail isn't checked for spam or viruses. Recommended: enable at least one of them.</p>
                                           </div>
                                         </div>
 
@@ -556,6 +559,7 @@ function emailStorage(current, count) {
                                             <small class="form-hint">
                                               If enabled, only the Postfix service is started and users can not receive incoming email.
                                             </small>
+                                            <p x-show="s.SMTP_ONLY" x-cloak class="mt-1 text-sm text-amber-600 dark:text-amber-500">Receiving email won't work, IMAP and POP3 are disabled while this is on.</p>
                                           </div>
                                         </div>
 
@@ -701,17 +705,7 @@ function emailStorage(current, count) {
 
 
 {{else if eq .MailserverStatus "not_installed"}}
-
-<div style="
-        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-        height: 90vh;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    "><div><style>.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}</style><h1 class="next-error-h1" style="display:inline-block;margin:0 20px 0 0;padding:0 23px 0 0;font-size:24px;font-weight:500;vertical-align:top;line-height:49px">Not Configured</h1><div style="display:inline-block"><h2 style="font-size:14px;font-weight:400;line-height:49px;margin:0">This Mailserver is not yet installed, install it from terminal with the following command: <pre>opencli email-server install</pre></h2></div></div></div>
-
+{{template "installer" (dict "ID" "mailserver-install" "Name" "the mailserver" "Text" "The mailserver hosts email accounts for your users' domains." "Action" "/emails/install" "Status" "/emails/install/status" "Open" "/emails/settings" "OpenLabel" "Open Emails" "Installing" .Installing "CSRFToken" .CSRFToken "IsReseller" .IsReseller)}}
 {{else if eq .MailserverStatus "stopped"}}
 
 <!-- Intentional quirk preserved: the dark-mode media-query selector is
