@@ -304,7 +304,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	search := &handlers.Search{MySQL: d.MySQL, Sessions: sessions, JSONFilePath: d.SearchJSONPath}
 	dnsCluster := &handlers.DNSCluster{Sessions: sessions, PublicIP: d.PublicIP}
 	emails := &handlers.Emails{Sessions: sessions, PublicIP: d.PublicIP, MasterPass: d.DovecotMasterPass, MySQL: d.MySQL}
-	terminal := &handlers.Terminal{Sessions: sessions, MySQL: d.MySQL}
+	terminal := &handlers.Terminal{Sessions: sessions, MySQL: d.MySQL, DemoMode: d.DemoMode}
 	importer := &handlers.Importer{Sessions: sessions, MySQL: d.MySQL}
 
 	apiAuth := &handlers.APIAuth{DB: d.AdminDB, MySQL: d.MySQL, SecretKey: d.SecretKey}
