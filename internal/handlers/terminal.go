@@ -39,6 +39,30 @@ var TerminalDisableFlagPath = "/root/disable_openadmin_terminal_ui"
 // chdir into.
 var TerminalPTYCwd = "/root"
 
+// terminalDisableWatch is how often a live session rechecks the disable flag, a var so tests can speed it up
+var terminalDisableWatch = 5 * time.Second
+
+// watchTerminalDisabled force-closes conn if the disable flag shows up while the session is live, since the flag is usually created out of band (touch) with no handler to hook. Returns a stop func.
+func watchTerminalDisabled(conn *websocket.Conn) func() {
+	done := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(terminalDisableWatch)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if _, err := os.Stat(TerminalDisableFlagPath); err == nil {
+					_ = conn.Close()
+					return
+				}
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
 // ServeHostTerminalPage handles GET /terminal.
 //
 // Access control: auth.RequireAdmin (wired in main.go) already excludes
@@ -222,7 +246,8 @@ func (t *Terminal) ServeHostTerminalWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-	defer trackWebTerminal(r, "host")()
+	defer trackWebTerminal(r, "host", func() { _ = conn.Close() })()
+	defer watchTerminalDisabled(conn)()
 
 	init, ok := terminalReadInit(conn)
 	if !ok {
@@ -245,7 +270,8 @@ func (t *Terminal) ServeUserTerminalWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-	defer trackWebTerminal(r, username+"/"+containerName)()
+	defer trackWebTerminal(r, username+"/"+containerName, func() { _ = conn.Close() })()
+	defer watchTerminalDisabled(conn)()
 
 	init, ok := terminalReadInit(conn)
 	if !ok {

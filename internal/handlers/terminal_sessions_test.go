@@ -50,8 +50,8 @@ func TestOpenSSHPeers(t *testing.T) {
 func TestTrackWebTerminal(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ws/terminal", nil)
 	r.RemoteAddr = "203.0.113.4:5555"
-	done := trackWebTerminal(r, "host")
-	other := trackWebTerminal(r, "bob/php-fpm-8.4")
+	done := trackWebTerminal(r, "host", func() {})
+	other := trackWebTerminal(r, "bob/php-fpm-8.4", func() {})
 	if got := openWebTerminals("host"); len(got) != 1 || got[0].IP != "203.0.113.4" {
 		t.Fatalf("openWebTerminals(host) = %+v", got)
 	}

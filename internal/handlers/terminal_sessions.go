@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"net/http"
+	"openadmin/internal/activity"
 	"openadmin/internal/auth"
 )
 
@@ -18,6 +19,7 @@ import (
 type webTerminalSession struct {
 	Admin, IP, Target string
 	Since             time.Time
+	closeConn         func()
 }
 
 var (
@@ -26,22 +28,50 @@ var (
 	webTerminalNextID   int
 )
 
-// trackWebTerminal records an open session and returns the func that removes it
-func trackWebTerminal(r *http.Request, target string) func() {
+// trackWebTerminal records an open session (so it shows in the banner and can be torn down), logs it to the admin's activity log, and returns the func that removes and logs the close. closeFn force-closes the underlying websocket.
+func trackWebTerminal(r *http.Request, target string, closeFn func()) func() {
 	admin := ""
 	if u := auth.CurrentUser(r); u != nil {
 		admin = u.Username
 	}
+	ip := clientIP(r)
 	webTerminalMu.Lock()
 	id := webTerminalNextID
 	webTerminalNextID++
-	webTerminalSessions[id] = webTerminalSession{Admin: admin, IP: clientIP(r), Target: target, Since: time.Now()}
+	webTerminalSessions[id] = webTerminalSession{Admin: admin, IP: ip, Target: target, Since: time.Now(), closeConn: closeFn}
 	webTerminalMu.Unlock()
+	_ = activity.Record(admin, ip, terminalActivityAction("Opened", target))
 	return func() {
 		webTerminalMu.Lock()
 		delete(webTerminalSessions, id)
 		webTerminalMu.Unlock()
+		_ = activity.Record(admin, ip, terminalActivityAction("Closed", target))
 	}
+}
+
+// terminalActivityAction is the activity-log line for a terminal session, "host" is root's own shell
+func terminalActivityAction(verb, target string) string {
+	if target == "host" {
+		return verb + " the root web terminal"
+	}
+	return verb + " the web terminal for " + target
+}
+
+// closeWebTerminalsForAdmin force-closes every live session opened by username and returns how many it closed, for logout and when the account is deleted or suspended
+func closeWebTerminalsForAdmin(username string) int {
+	webTerminalMu.Lock()
+	var closers []func()
+	for _, s := range webTerminalSessions {
+		if s.closeConn != nil && s.Admin == username {
+			closers = append(closers, s.closeConn)
+		}
+	}
+	webTerminalMu.Unlock()
+	// closing the websocket unblocks the handler, which runs the remover above
+	for _, c := range closers {
+		c()
+	}
+	return len(closers)
 }
 
 func openWebTerminals(target string) []webTerminalSession {
