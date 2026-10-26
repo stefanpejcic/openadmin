@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -284,5 +285,111 @@ func TestWSTerminalResizeMessageDoesNotReachShell(t *testing.T) {
 	// shell (i.e. it must not have been written to the pty as keystrokes).
 	if strings.Contains(output, `"type":"resize"`) {
 		t.Fatalf("expected the resize control message NOT to be forwarded into the pty, got: %q", output)
+	}
+}
+
+// dialHostTerminal opens an authenticated /ws/terminal websocket and sends the init message
+func dialHostTerminal(t *testing.T, srv *httptest.Server, client *http.Client, shell string) *websocket.Conn {
+	t.Helper()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/terminal"
+	conn, resp, err := (&websocket.Dialer{Jar: client.Jar}).Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial failed: %v (status %v)", err, resp)
+	}
+	initBytes, _ := json.Marshal(terminalInitMessage{Type: "init", Shell: shell, Rows: 24, Cols: 200})
+	if err := conn.WriteMessage(websocket.TextMessage, initBytes); err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
+// readUntil reads frames until want shows up or the per-read deadline passes, returning everything read
+func readUntil(t *testing.T, conn *websocket.Conn, want string, perRead time.Duration) (string, error) {
+	t.Helper()
+	var out strings.Builder
+	for {
+		conn.SetReadDeadline(time.Now().Add(perRead))
+		_, data, err := conn.ReadMessage()
+		if err != nil {
+			return out.String(), err
+		}
+		out.Write(data)
+		if strings.Contains(out.String(), want) {
+			return out.String(), nil
+		}
+	}
+}
+
+// a command that keeps printing must not be killed just because the admin isn't typing, the idle deadline has to count output too
+func TestRunPTYSessionOutputKeepsSessionAlive(t *testing.T) {
+	orig := terminalCommandTimeout
+	terminalCommandTimeout = 2 * time.Second
+	t.Cleanup(func() { terminalCommandTimeout = orig })
+
+	term := &Terminal{}
+	srv, client := newTerminalTestServer(t, term, "admin")
+	conn := dialHostTerminal(t, srv, client, "sh")
+	defer conn.Close()
+
+	// prints for ~6s, well past the 2s idle window, with no keystrokes in between
+	conn.WriteMessage(websocket.TextMessage, []byte("i=0; while [ $i -lt 6 ]; do i=$((i+1)); echo tick_$i; sleep 1; done; echo done_$((21*2))\n"))
+
+	out, err := readUntil(t, conn, "done_42", 15*time.Second)
+	if !strings.Contains(out, "done_42") {
+		t.Fatalf("session was killed mid-command (idle timeout ignored output), err=%v, got: %q", err, out)
+	}
+}
+
+// when the shell exits the server has to close the socket promptly, not leave it lingering until the idle timeout or the next keystroke
+func TestRunPTYSessionClosesWebsocketOnShellExit(t *testing.T) {
+	orig := terminalCommandTimeout
+	terminalCommandTimeout = 30 * time.Second // keep idle timeout out of the way so the close is attributable to the exit
+	t.Cleanup(func() { terminalCommandTimeout = orig })
+
+	term := &Terminal{}
+	srv, client := newTerminalTestServer(t, term, "admin")
+	conn := dialHostTerminal(t, srv, client, "sh")
+	defer conn.Close()
+
+	conn.WriteMessage(websocket.TextMessage, []byte("exit\n"))
+
+	conn.SetReadDeadline(time.Now().Add(8 * time.Second))
+	var err error
+	for {
+		if _, _, err = conn.ReadMessage(); err != nil {
+			break
+		}
+	}
+	if ne, ok := err.(net.Error); ok && ne.Timeout() {
+		t.Fatalf("server did not close the websocket after the shell exited, read timed out instead: %v", err)
+	}
+}
+
+// going quiet (no input, no output) must still close the session after the idle window, the output-based deadline reset must not keep an idle session alive forever
+func TestRunPTYSessionIdleTimeoutStillCloses(t *testing.T) {
+	orig := terminalCommandTimeout
+	terminalCommandTimeout = 1 * time.Second
+	t.Cleanup(func() { terminalCommandTimeout = orig })
+
+	term := &Terminal{}
+	srv, client := newTerminalTestServer(t, term, "admin")
+	conn := dialHostTerminal(t, srv, client, "sh")
+	defer conn.Close()
+
+	// one command so there's recent activity, then go quiet
+	conn.WriteMessage(websocket.TextMessage, []byte("echo primed_$((20+1))\n"))
+	if _, err := readUntil(t, conn, "primed_21", 5*time.Second); err != nil {
+		t.Fatalf("never saw the primer output: %v", err)
+	}
+
+	conn.SetReadDeadline(time.Now().Add(8 * time.Second))
+	start := time.Now()
+	for {
+		if _, _, err := conn.ReadMessage(); err != nil {
+			break
+		}
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Fatalf("idle session was not closed promptly, still open after %s", elapsed.Round(time.Millisecond))
 	}
 }

@@ -27,9 +27,9 @@ type Terminal struct {
 	MySQL    *sql.DB
 }
 
-// terminalCommandTimeout is how long the websocket may sit idle before
-// it's closed.
-const terminalCommandTimeout = 300 * time.Second
+// terminalCommandTimeout is how long the websocket may sit idle (no input
+// and no output) before it's closed. A var so tests can shrink it.
+var terminalCommandTimeout = 300 * time.Second
 
 var TerminalDisableFlagPath = "/root/disable_openadmin_terminal_ui"
 
@@ -158,6 +158,15 @@ func runPTYSession(conn *websocket.Conn, argv []string, rows, cols int, extraEnv
 	}
 	_ = pty.Setsize(ptmx, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)})
 
+	// cap a single inbound frame so one giant message can't balloon memory
+	conn.SetReadLimit(1 << 20)
+
+	// extend the idle deadline on any activity, PTY output included, so a
+	// long-running command that keeps printing isn't killed just because
+	// nobody is typing
+	bump := func() { _ = conn.SetReadDeadline(time.Now().Add(terminalCommandTimeout)) }
+	bump()
+
 	readerDone := make(chan struct{})
 	go func() {
 		defer close(readerDone)
@@ -165,6 +174,7 @@ func runPTYSession(conn *websocket.Conn, argv []string, rows, cols int, extraEnv
 		for {
 			n, err := ptmx.Read(buf)
 			if n > 0 {
+				bump()
 				// Replaces invalid UTF-8 sequences with the standard
 				// replacement character rather than dropping or erroring
 				// on them.
@@ -179,12 +189,22 @@ func runPTYSession(conn *websocket.Conn, argv []string, rows, cols int, extraEnv
 		}
 	}()
 
+	// close the websocket as soon as the shell exits, otherwise the session
+	// (and its "already open" banner entry) lingers until the idle timeout
+	// or the next keystroke
+	go func() {
+		<-readerDone
+		_ = conn.WriteMessage(websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "session ended"))
+		_ = conn.Close()
+	}()
+
 	for {
-		_ = conn.SetReadDeadline(time.Now().Add(terminalCommandTimeout))
 		messageType, data, err := conn.ReadMessage()
 		if err != nil {
 			break
 		}
+		bump()
 
 		if messageType == websocket.TextMessage && len(data) > 0 && data[0] == '{' {
 			var msg terminalInitMessage
