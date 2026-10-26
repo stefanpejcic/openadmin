@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"openadmin/internal/activity"
@@ -285,7 +286,10 @@ func (rs *Resellers) runAction(action, username, password string, r *http.Reques
 		// sets only the logo URL, leaving plans/limits untouched -- see
 		// update_reseller_account in opencli's admin.sh, which only
 		// touches fields whose flag is actually passed.
-		logoURL := r.FormValue("logo_url")
+		logoURL := strings.TrimSpace(r.FormValue("logo_url"))
+		if !validResellerLogoURL(logoURL) {
+			return false, invalidLogoURLMessage
+		}
 		ok, out := runOpenCLI(adminCommandError, "opencli", "admin", "update", username, "--logo_url="+logoURL)
 		if !ok {
 			return false, opencliResultMessage(ok, out)
@@ -433,4 +437,16 @@ func (rs *Resellers) ServeAccount(w http.ResponseWriter, r *http.Request) {
 		"ResellerData": rd,
 		"Flashes":      auth.PopFlashes(w, r, rs.Sessions),
 	}, r, "Change Password"))
+}
+
+// invalidLogoURLMessage is shown for a logo URL validResellerLogoURL rejects
+const invalidLogoURLMessage = "Invalid logo URL, use a plain http:// or https:// URL without quotes, spaces or shell characters."
+
+// resellerLogoURLRe matches the same URLs as reseller_logo_url_valid in opencli's lib/reseller.sh,
+// the value is written into every owned account's .env so nothing that could break out of it
+var resellerLogoURLRe = regexp.MustCompile(`^https?://[A-Za-z0-9._~:/?#@!&()*+,;=%\[\]-]+$`)
+
+// validResellerLogoURL allows an empty value (no logo) or a plain http(s) URL up to 2048 characters
+func validResellerLogoURL(u string) bool {
+	return u == "" || (len(u) <= 2048 && resellerLogoURLRe.MatchString(u))
 }

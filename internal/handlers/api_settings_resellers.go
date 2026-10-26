@@ -192,8 +192,13 @@ func (a *APISettingsResellers) handlePost(w http.ResponseWriter, r *http.Request
 		message = opencliResultMessage(ok, out)
 
 	case "update_branding":
+		logoURL := strings.TrimSpace(body.LogoURL)
+		if !validResellerLogoURL(logoURL) {
+			writeJSONFailure(w, http.StatusBadRequest, invalidLogoURLMessage)
+			return
+		}
 		var out string
-		ok, out = runOpenCLI(adminCommandError, "opencli", "admin", "update", username, "--logo_url="+body.LogoURL)
+		ok, out = runOpenCLI(adminCommandError, "opencli", "admin", "update", username, "--logo_url="+logoURL)
 		if ok {
 			message = "Branding updated for " + username + "."
 		} else {

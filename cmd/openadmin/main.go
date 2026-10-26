@@ -451,12 +451,12 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux.HandleFunc("GET /api/plans/resellers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(handlers.ServeAPIResellerPlans)))
 	mux.HandleFunc("POST /api/plans/resellers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(handlers.ServeAPIResellerPlans)))
-	mux.HandleFunc("GET /api/plans", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeList)))
-	mux.HandleFunc("POST /api/plans", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeList)))
-	mux.HandleFunc("GET /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeDetail)))
-	mux.HandleFunc("PUT /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeDetail)))
-	mux.HandleFunc("PATCH /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeDetail)))
-	mux.HandleFunc("DELETE /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiPlans.ServeDetail)))
+	mux.HandleFunc("GET /api/plans", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiPlans.ServeList)))
+	mux.HandleFunc("POST /api/plans", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiPlans.ServeList)))
+	mux.HandleFunc("GET /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiPlans.ServeDetail)))
+	mux.HandleFunc("PUT /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiPlans.ServeDetail)))
+	mux.HandleFunc("PATCH /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiPlans.ServeDetail)))
+	mux.HandleFunc("DELETE /api/plans/{plan_id}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiPlans.ServeDetail)))
 
 	mux.HandleFunc("GET /api/users/{username}/containers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiContainers.ServeUserContainers)))
 	mux.HandleFunc("POST /api/users/{username}/containers/{action}/{container_name}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIOwnerOrAdmin("username", apiContainers.ServeManageContainer)))

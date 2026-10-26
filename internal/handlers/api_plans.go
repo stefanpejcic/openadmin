@@ -1,8 +1,8 @@
 // This file implements the JSON REST API's plan-management surface:
-// GET/POST /api/plans and GET/PUT/PATCH/DELETE /api/plans/{plan_id}. Unlike
-// every other file in this package, these two routes carry no role gate at
-// all beyond having a valid token -- any authenticated admin, user, or
-// reseller may list, create, edit, or delete plans through this API.
+// GET/POST /api/plans and GET/PUT/PATCH/DELETE /api/plans/{plan_id}. Admins
+// and the "user" role may manage every plan; a reseller only lists and reads
+// the plans in their allowed_plans and can only change or delete one whose
+// accounts are all theirs (see mayAccessPlan in plans.go).
 package handlers
 
 import (
@@ -102,18 +102,24 @@ func jsonScalarToString(v interface{}) string {
 	}
 }
 
-// ServeList handles GET/POST /api/plans. Wrap with (*APIAuth).RequireAPIToken.
+// ServeList handles GET/POST /api/plans. Wrap with (*APIAuth).RequireAPIAdminOrReseller.
 func (p *APIPlans) ServeList(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		p.handleCreate(w, r)
 		return
 	}
 
-	// Reseller scoping of the plan list depends on a page-scoped notion of
-	// "current user" that a bearer token never populates, so the allowed-
-	// plans restriction below never actually applies here -- every caller
-	// sees every plan, admin or reseller alike.
-	plans, err := paneldb.GetAllPlans(p.MySQL, nil)
+	// a reseller only sees the plans in their allowed_plans, same as the /plans page
+	var allowed []int
+	if user := APIUserFromContext(r); user == nil || user.Role == "reseller" {
+		allowed = []int{}
+		if user != nil {
+			if ids, ok := paneldb.AllowedPlansForReseller(user.Username); ok {
+				allowed = ids
+			}
+		}
+	}
+	plans, err := paneldb.GetAllPlans(p.MySQL, allowed)
 	if err != nil || plans == nil {
 		plans = []paneldb.RowMap{}
 	}
@@ -194,7 +200,7 @@ func (p *APIPlans) handleCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 // ServeDetail handles GET/PUT/PATCH/DELETE /api/plans/{plan_id}. Wrap with
-// (*APIAuth).RequireAPIToken.
+// (*APIAuth).RequireAPIAdminOrReseller.
 func (p *APIPlans) ServeDetail(w http.ResponseWriter, r *http.Request) {
 	planIDStr := r.PathValue("plan_id")
 	// The source route only matches a purely numeric segment; anything
@@ -202,6 +208,16 @@ func (p *APIPlans) ServeDetail(w http.ResponseWriter, r *http.Request) {
 	// plain 404 rather than reaching the handler with a non-numeric ID.
 	if _, err := strconv.Atoi(planIDStr); err != nil {
 		http.NotFound(w, r)
+		return
+	}
+
+	user := APIUserFromContext(r)
+	if !mayAccessPlan(p.MySQL, user, planIDStr, false) {
+		writeJSONError(w, http.StatusNotFound, "Plan not found")
+		return
+	}
+	if r.Method != http.MethodGet && !mayAccessPlan(p.MySQL, user, planIDStr, true) {
+		writeJSONError(w, http.StatusForbidden, "Forbidden: accounts of other owners use this plan")
 		return
 	}
 

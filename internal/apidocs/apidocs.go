@@ -28,11 +28,12 @@ type group struct {
 
 // same wording as scripts/generate_openapi.py
 var authText = map[string]string{
-	"none":                   "No authentication.",
-	"RequireAPIToken":        "Any authenticated user.",
-	"RequireAPIAdmin":        "Administrator or user role (the reseller role is blocked).",
-	"RequireAPIOwnerOrAdmin": "Administrator/user role, or a reseller who owns the target account.",
-	"RequireAPISuperAdmin":   "The Super Admin only.",
+	"none":                      "No authentication.",
+	"RequireAPIToken":           "Any authenticated user.",
+	"RequireAPIAdmin":           "Administrator or user role (the reseller role is blocked).",
+	"RequireAPIOwnerOrAdmin":    "Administrator/user role, or a reseller who owns the target account.",
+	"RequireAPIAdminOrReseller": "Administrator/user role, or a reseller limited to the plans assigned to them.",
+	"RequireAPISuperAdmin":      "The Super Admin only.",
 }
 
 const separator = "--------------------------------------------------------------------------------"

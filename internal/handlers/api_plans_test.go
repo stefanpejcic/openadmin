@@ -49,9 +49,11 @@ func newAPIPlansTestServer(t *testing.T, actingUser *admindb.User) (*httptest.Se
 	return srv, srv.Client(), mock
 }
 
-func TestServePlansListReturnsAllPlansRegardlessOfRole(t *testing.T) {
-	reseller := &admindb.User{Username: "res1", Role: "reseller"}
-	srv, client, mock := newAPIPlansTestServer(t, reseller)
+var testAPIAdmin = &admindb.User{Username: "admin", Role: "admin"}
+
+// resellers get a scoped list, see TestAPIPlansListScopedForReseller
+func TestServePlansListReturnsAllPlansForAdmin(t *testing.T) {
+	srv, client, mock := newAPIPlansTestServer(t, testAPIAdmin)
 
 	rows := sqlmock.NewRows([]string{"id", "name"}).AddRow(1, "starter").AddRow(2, "pro")
 	mock.ExpectQuery("SELECT \\* FROM plans").WillReturnRows(rows)
@@ -69,7 +71,7 @@ func TestServePlansListReturnsAllPlansRegardlessOfRole(t *testing.T) {
 	}
 	json.NewDecoder(resp.Body).Decode(&out)
 	if len(out.Plans) != 2 {
-		t.Fatalf("expected 2 plans (unfiltered even for a reseller), got %+v", out)
+		t.Fatalf("expected 2 plans for an admin, got %+v", out)
 	}
 }
 
@@ -163,7 +165,7 @@ func TestServePlanDetailNonNumericIDReturns404(t *testing.T) {
 }
 
 func TestServePlanDetailGetNotFound(t *testing.T) {
-	srv, client, mock := newAPIPlansTestServer(t, nil)
+	srv, client, mock := newAPIPlansTestServer(t, testAPIAdmin)
 	mock.ExpectQuery("SELECT \\* FROM plans WHERE id = ?").WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 	resp, err := client.Get(srv.URL + "/api/plans/99")
@@ -177,7 +179,7 @@ func TestServePlanDetailGetNotFound(t *testing.T) {
 }
 
 func TestServePlanDetailGetFound(t *testing.T) {
-	srv, client, mock := newAPIPlansTestServer(t, nil)
+	srv, client, mock := newAPIPlansTestServer(t, testAPIAdmin)
 	rows := sqlmock.NewRows([]string{"id", "name"}).AddRow(1, "starter")
 	mock.ExpectQuery("SELECT \\* FROM plans WHERE id = ?").WillReturnRows(rows)
 
@@ -192,7 +194,7 @@ func TestServePlanDetailGetFound(t *testing.T) {
 }
 
 func TestServePlanDetailDeleteSuccess(t *testing.T) {
-	srv, client, mock := newAPIPlansTestServer(t, nil)
+	srv, client, mock := newAPIPlansTestServer(t, testAPIAdmin)
 	mock.ExpectQuery("SELECT \\* FROM plans WHERE id = ?").WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(1, "starter"))
 
 	var gotArgs []string
@@ -223,7 +225,7 @@ func TestServePlanDetailDeleteSuccess(t *testing.T) {
 }
 
 func TestServePlanDetailDeleteNotFound(t *testing.T) {
-	srv, client, mock := newAPIPlansTestServer(t, nil)
+	srv, client, mock := newAPIPlansTestServer(t, testAPIAdmin)
 	mock.ExpectQuery("SELECT \\* FROM plans WHERE id = ?").WillReturnRows(sqlmock.NewRows([]string{"id", "name"}))
 	called := false
 	orig := apiCheckOutputRun
@@ -248,7 +250,7 @@ func TestServePlanDetailDeleteNotFound(t *testing.T) {
 }
 
 func TestServePlanDetailEditRequiresJSONContentType(t *testing.T) {
-	srv, client, _ := newAPIPlansTestServer(t, nil)
+	srv, client, _ := newAPIPlansTestServer(t, testAPIAdmin)
 	req, _ := http.NewRequest(http.MethodPut, srv.URL+"/api/plans/1", strings.NewReader(``))
 	resp, err := client.Do(req)
 	if err != nil {
@@ -261,7 +263,7 @@ func TestServePlanDetailEditRequiresJSONContentType(t *testing.T) {
 }
 
 func TestServePlanDetailEditMissingNameRendersNone(t *testing.T) {
-	srv, client, _ := newAPIPlansTestServer(t, nil)
+	srv, client, _ := newAPIPlansTestServer(t, testAPIAdmin)
 
 	var gotArgs []string
 	orig := apiCheckOutputRun

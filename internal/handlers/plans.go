@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,6 +28,31 @@ type Plans struct {
 	MySQL          *sql.DB
 	Sessions       *auth.Manager
 	LicenseChecker *license.Checker // nil on Community
+}
+
+// mayAccessPlan: admins and the "user" role may see and change any plan. A reseller only sees the plans in
+// their allowed_plans, and can change one only when every account on it is theirs, since plan-edit
+// re-applies the limits to all accounts on the plan and plan-delete removes it for everyone.
+func mayAccessPlan(db *sql.DB, user *admindb.User, planID string, modify bool) bool {
+	if user == nil {
+		return false
+	}
+	if user.Role != "reseller" {
+		return true
+	}
+	id, err := strconv.Atoi(strings.TrimSpace(planID))
+	if err != nil {
+		return false
+	}
+	allowed, ok := paneldb.AllowedPlansForReseller(user.Username)
+	if !ok || !slices.Contains(allowed, id) {
+		return false
+	}
+	if !modify {
+		return true
+	}
+	foreign, err := paneldb.PlanHasUsersNotOwnedBy(db, strconv.Itoa(id), user.Username)
+	return err == nil && !foreign
 }
 
 // hasEnterpriseAccess reports whether the current request has an active
@@ -285,6 +311,14 @@ func (p *Plans) HandleCreate(w http.ResponseWriter, r *http.Request) {
 // HandleDelete handles POST /plan/delete/{plan_name}.
 func (p *Plans) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	planName := r.PathValue("plan_name")
+	if currentUser := auth.CurrentUser(r); currentUser == nil || currentUser.Role == "reseller" {
+		planID, err := paneldb.GetPlanIDByName(p.MySQL, planName)
+		if err != nil || !mayAccessPlan(p.MySQL, currentUser, planID, true) {
+			auth.AddFlash(w, r, p.Sessions, "You can't delete plan "+planName+", it isn't yours or other owners' accounts use it.", "error")
+			http.Redirect(w, r, "/plans", http.StatusSeeOther)
+			return
+		}
+	}
 	success, _ := runOpenCLI("", "opencli", "plan-delete", planName, "--json")
 	if success {
 		auth.AddFlash(w, r, p.Sessions, "Plan deleted successfully.", "success")
@@ -309,7 +343,23 @@ type editPlanPageData struct {
 func (p *Plans) ServeEdit(w http.ResponseWriter, r *http.Request) {
 	planID := r.PathValue("plan_id")
 
+	currentUser := auth.CurrentUser(r)
+	if !mayAccessPlan(p.MySQL, currentUser, planID, false) {
+		if r.URL.Query().Get("output") == "json" {
+			writeJSONError(w, http.StatusNotFound, "Plan not found")
+			return
+		}
+		auth.AddFlash(w, r, p.Sessions, "Plan not found.", "error")
+		http.Redirect(w, r, "/plans", http.StatusSeeOther)
+		return
+	}
+
 	if r.Method == http.MethodPost {
+		if !mayAccessPlan(p.MySQL, currentUser, planID, true) {
+			auth.AddFlash(w, r, p.Sessions, "You can't edit this plan, accounts of other owners use it.", "error")
+			http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
+			return
+		}
 		p.handleEditPost(w, r, planID)
 		return
 	}

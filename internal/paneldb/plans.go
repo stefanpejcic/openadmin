@@ -164,6 +164,16 @@ func GetAllPlans(db *sql.DB, allowedPlanIDs []int) ([]RowMap, error) {
 }
 
 // GetPlanIDByName looks up a plan's numeric ID by its (unique) name.
+// PlanHasUsersNotOwnedBy reports whether any account on planID belongs to someone other than owner (admin-owned accounts have no owner)
+func PlanHasUsersNotOwnedBy(db *sql.DB, planID, owner string) (bool, error) {
+	var one int
+	err := db.QueryRow(`SELECT 1 FROM users WHERE plan_id = ? AND (owner IS NULL OR owner <> ?) LIMIT 1`, planID, owner).Scan(&one)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return err == nil, err
+}
+
 func GetPlanIDByName(db *sql.DB, name string) (string, error) {
 	var id string
 	err := db.QueryRow(`SELECT id FROM plans WHERE name = ?`, name).Scan(&id)
