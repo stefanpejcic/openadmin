@@ -91,12 +91,8 @@ func scanRowsAsOrderedMaps(rows *sql.Rows) ([]map[string]interface{}, error) {
 	return out, rows.Err()
 }
 
-// fetchUserPlanRow joins a user with its plan, matching either the exact
-// username or a "SUSPENDED_<id>_<username>" variant. The unescaped "_" in
-// the LIKE pattern matches any single character, same as elsewhere in this
-// package.
+// fetchUserPlanRow joins a user with its plan, same exact-or-suspended match as paneldb.GetUserDataByUsername
 func (a *APIUsers) fetchUserPlanRow(username string) (map[string]interface{}, bool) {
-	suspendedPattern := "SUSPENDED_%_" + username
 	rows, err := a.MySQL.Query(`
 		SELECT
 			u.id AS user_id,
@@ -124,9 +120,10 @@ func (a *APIUsers) fetchUserPlanRow(username string) (map[string]interface{}, bo
 			p.feature_set
 		FROM users u
 		LEFT JOIN plans p ON u.plan_id = p.id
-		WHERE u.username = ? OR u.username LIKE ?
+		WHERE u.username = ? OR (u.username REGEXP '^SUSPENDED_[0-9]{14}_' AND SUBSTRING(u.username, 26) = ?)
+		ORDER BY u.username = ? DESC
 		LIMIT 1
-	`, username, suspendedPattern)
+	`, username, username, username)
 	if err != nil {
 		return nil, false
 	}

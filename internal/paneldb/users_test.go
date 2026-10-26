@@ -103,16 +103,56 @@ func TestGetUserDataByUsernameMatchesSuspendedPattern(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT u.username, u.id, u.email, u.owner, u.twofa_enabled, u.registered_date, u.plan_id, u.server`)).
-		WithArgs("alice", "SUSPENDED_%_alice").
+		WithArgs("alice", "alice", "alice").
 		WillReturnRows(sqlmock.NewRows([]string{"username", "id", "email", "owner", "twofa_enabled", "registered_date", "plan_id", "server"}).
-			AddRow("SUSPENDED_1730000000_alice", 5, "alice@example.com", nil, false, "2025-01-01", 2, "alice"))
+			AddRow("SUSPENDED_20261024120000_alice", 5, "alice@example.com", nil, false, "2025-01-01", 2, "alice"))
 
 	data, err := GetUserDataByUsername(db, "alice")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if data.Username != "SUSPENDED_1730000000_alice" || data.Context != "alice" {
+	if data.Username != "SUSPENDED_20261024120000_alice" || data.Context != "alice" {
 		t.Fatalf("unexpected data: %+v", data)
+	}
+}
+
+// a LIKE 'SUSPENDED_%_john' here also matched SUSPENDED_<ts>_bjohn, so pin the exact form
+func TestGetUserDataByUsernameMatchesSuspendedNameExactly(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	mock.ExpectQuery(regexp.QuoteMeta(`FROM users u WHERE u.username = ? OR (u.username REGEXP '^SUSPENDED_[0-9]{14}_' AND SUBSTRING(u.username, 26) = ?) ORDER BY u.username = ? DESC LIMIT 1`)).
+		WithArgs("john", "john", "john").
+		WillReturnRows(sqlmock.NewRows([]string{"username", "id", "email", "owner", "twofa_enabled", "registered_date", "plan_id", "server"}))
+
+	if _, err := GetUserDataByUsername(db, "john"); err == nil {
+		t.Fatal("expected an error for a missing user")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetUserDataByUsernamePassesWildcardsAsPlainText(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	// "%" and "_" only ever reach = comparisons, never a LIKE pattern
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT u.username, u.id, u.email, u.owner, u.twofa_enabled, u.registered_date, u.plan_id, u.server`)).
+		WithArgs("%_john", "%_john", "%_john").
+		WillReturnRows(sqlmock.NewRows([]string{"username", "id", "email", "owner", "twofa_enabled", "registered_date", "plan_id", "server"}))
+
+	if _, err := GetUserDataByUsername(db, "%_john"); err == nil {
+		t.Fatal("expected an error for a missing user")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -124,7 +164,7 @@ func TestGetUserDataByUsernameNotFound(t *testing.T) {
 	defer db.Close()
 
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT u.username, u.id, u.email, u.owner, u.twofa_enabled, u.registered_date, u.plan_id, u.server`)).
-		WithArgs("ghost", "SUSPENDED_%_ghost").
+		WithArgs("ghost", "ghost", "ghost").
 		WillReturnRows(sqlmock.NewRows([]string{"username", "id", "email", "owner", "twofa_enabled", "registered_date", "plan_id", "server"}))
 
 	if _, err := GetUserDataByUsername(db, "ghost"); err == nil {

@@ -57,7 +57,7 @@ func newAPIUsersExtraTestServer(t *testing.T, actingUser *admindb.User) (*httpte
 
 func expectAliceUserDataForAPI(mock sqlmock.Sqlmock) {
 	mock.ExpectQuery(`SELECT u.username, u.id, u.email`).
-		WithArgs("alice", "SUSPENDED_%_alice").
+		WithArgs("alice", "alice", "alice").
 		WillReturnRows(sqlmock.NewRows([]string{"username", "id", "email", "owner", "twofa_enabled", "registered_date", "plan_id", "server"}).
 			AddRow("alice", int64(3), "alice@example.com", nil, true, "2025-06-01 10:00:00", int64(1), "alice"))
 }
@@ -89,7 +89,7 @@ func TestAPIServePermissionsResetUserNotFound(t *testing.T) {
 	admin := &admindb.User{Username: "admin1", Role: "admin"}
 	srv, client, mock := newAPIUsersExtraTestServer(t, admin)
 	mock.ExpectQuery(`SELECT u.username, u.id, u.email`).
-		WithArgs("ghost", "SUSPENDED_%_ghost").
+		WithArgs("ghost", "ghost", "ghost").
 		WillReturnError(sqlErrConnRefused{})
 
 	resp, err := client.Post(srv.URL+"/api/users/ghost/permissions/reset", "application/json", nil)
