@@ -217,6 +217,18 @@ func TestNewHandlerServesEmbeddedStaticAssets(t *testing.T) {
 		t.Fatalf("expected /static/dist/output.css to be served from the embedded FS, got %d", resp.StatusCode)
 	}
 
+	// the vendored xterm assets must be embedded and served, the terminal page loads them instead of a CDN now
+	for _, asset := range []string{"/static/vendor/xterm/xterm.js", "/static/vendor/xterm/xterm.css", "/static/vendor/xterm/addon-fit.min.js", "/static/vendor/xterm/addon-web-links.min.js", "/static/vendor/punycode/punycode.min.js"} {
+		resp, err = http.Get(srv.URL + asset)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected %s to be served from the embedded FS, got %d", asset, resp.StatusCode)
+		}
+	}
+
 	// robots.txt has a bundled default and no admin override here, so it should come from the embedded FS via GeneralStatic
 	resp, err = http.Get(srv.URL + "/robots.txt")
 	if err != nil {

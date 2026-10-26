@@ -39,6 +39,25 @@ var TerminalDisableFlagPath = "/root/disable_openadmin_terminal_ui"
 // chdir into.
 var TerminalPTYCwd = "/root"
 
+// terminalCSP locks the terminal page down to same-origin assets: everything
+// (xterm included) is self-hosted, the websocket can only reach this origin,
+// and the page can't be framed. Alpine and the inline setup script still need
+// 'unsafe-inline'/'unsafe-eval', so this isn't a full XSS wall, but it keeps
+// an injected tag from pulling script off another host or opening a socket to one.
+const terminalCSP = "default-src 'self'; " +
+	"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+	"style-src 'self' 'unsafe-inline'; " +
+	"img-src 'self' data:; " +
+	"font-src 'self'; " +
+	"connect-src 'self'; " +
+	"base-uri 'self'; " +
+	"object-src 'none'; " +
+	"frame-ancestors 'self'"
+
+func terminalSetCSP(w http.ResponseWriter) {
+	w.Header().Set("Content-Security-Policy", terminalCSP)
+}
+
 // ServeHostTerminalPage handles GET /terminal.
 //
 // Access control: auth.RequireAdmin (wired in main.go) already excludes
@@ -51,6 +70,7 @@ func (t *Terminal) ServeHostTerminalPage(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Web Terminal access is disabled.", http.StatusForbidden)
 		return
 	}
+	terminalSetCSP(w)
 	webtemplates.Render(w, "settings_terminal.html", mergeChrome(map[string]interface{}{
 		"TerminalType":    "root",
 		"TerminalTimeout": int(terminalCommandTimeout.Seconds()),
@@ -65,6 +85,7 @@ func (t *Terminal) ServeHostTerminalPage(w http.ResponseWriter, r *http.Request)
 // Access control: see ServeHostTerminalPage above -- auth.RequireAdmin's
 // reseller exclusion is sufficient here too.
 func (t *Terminal) ServeUserTerminalPage(w http.ResponseWriter, r *http.Request) {
+	terminalSetCSP(w)
 	webtemplates.Render(w, "settings_terminal.html", mergeChrome(map[string]interface{}{
 		"TerminalType":    "users",
 		"TerminalTimeout": int(terminalCommandTimeout.Seconds()),

@@ -112,6 +112,35 @@ func TestServeHostTerminalPageAllowsNonResellerRoles(t *testing.T) {
 	}
 }
 
+func TestTerminalPageSelfHostsAssetsAndSetsCSP(t *testing.T) {
+	term := &Terminal{}
+	srv, client := newTerminalTestServer(t, term, "admin")
+
+	resp, err := client.Get(srv.URL + "/terminal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	csp := resp.Header.Get("Content-Security-Policy")
+	for _, want := range []string{"default-src 'self'", "connect-src 'self'", "frame-ancestors 'self'", "object-src 'none'"} {
+		if !strings.Contains(csp, want) {
+			t.Fatalf("CSP header missing %q, got %q", want, csp)
+		}
+	}
+
+	page := string(body)
+	if strings.Contains(page, "cdn.jsdelivr.net") || strings.Contains(page, "cdnjs.cloudflare.com") {
+		t.Fatalf("terminal page still references a CDN, it should load everything from /static")
+	}
+	for _, want := range []string{"/static/vendor/xterm/xterm.js", "/static/vendor/xterm/xterm.css", "/static/vendor/xterm/addon-fit.min.js"} {
+		if !strings.Contains(page, want) {
+			t.Fatalf("terminal page should load %q, got %s", want, truncate(page))
+		}
+	}
+}
+
 func TestServeHostTerminalPageBlocksReseller(t *testing.T) {
 	term := &Terminal{}
 	srv, client := newTerminalTestServer(t, term, "reseller")
