@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -66,7 +67,10 @@ func Run(opts Options) error {
 		opts.Logger.Println("Server is ready. Spawning workers")
 		var err error
 		if useTLS {
-			err = srv.ListenAndServeTLS(opts.CertFile, opts.KeyFile)
+			var ln net.Listener
+			if ln, err = net.Listen("tcp", srv.Addr); err == nil {
+				err = serveTLS(srv, ln, opts.CertFile, opts.KeyFile)
+			}
 		} else {
 			err = srv.ListenAndServe()
 		}
