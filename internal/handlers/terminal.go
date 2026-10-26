@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 type Terminal struct {
 	Sessions *auth.Manager
 	MySQL    *sql.DB
+	DemoMode bool
 }
 
 // terminalCommandTimeout is how long the websocket may sit idle (no input
@@ -87,6 +89,22 @@ func terminalSetCSP(w http.ResponseWriter) {
 	w.Header().Set("Content-Security-Policy", terminalCSP)
 }
 
+// terminalNameRe guards the username/container path segments before they reach podman exec, so a value like "-flag" can't be read as an option
+var terminalNameRe = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
+
+// terminalDisabled reports whether the web terminal is off right now: the on-disk disable flag, or demo mode. Both the host and the per-container routes go through it now, the flag used to only guard the host route.
+func (t *Terminal) terminalDisabled(w http.ResponseWriter, r *http.Request) bool {
+	if _, err := os.Stat(TerminalDisableFlagPath); err == nil {
+		http.Error(w, "Web Terminal access is disabled.", http.StatusForbidden)
+		return true
+	}
+	if t.DemoMode {
+		http.Error(w, "Web Terminal is disabled in demo mode.", http.StatusForbidden)
+		return true
+	}
+	return false
+}
+
 // ServeHostTerminalPage handles GET /terminal.
 //
 // Access control: auth.RequireAdmin (wired in main.go) already excludes
@@ -95,8 +113,7 @@ func terminalSetCSP(w http.ResponseWriter) {
 // lower-privilege staff account, not a customer login -- so no further
 // role/username restriction is applied here.
 func (t *Terminal) ServeHostTerminalPage(w http.ResponseWriter, r *http.Request) {
-	if _, err := os.Stat(TerminalDisableFlagPath); err == nil {
-		http.Error(w, "Web Terminal access is disabled.", http.StatusForbidden)
+	if t.terminalDisabled(w, r) {
 		return
 	}
 	terminalSetCSP(w)
@@ -114,6 +131,9 @@ func (t *Terminal) ServeHostTerminalPage(w http.ResponseWriter, r *http.Request)
 // Access control: see ServeHostTerminalPage above -- auth.RequireAdmin's
 // reseller exclusion is sufficient here too.
 func (t *Terminal) ServeUserTerminalPage(w http.ResponseWriter, r *http.Request) {
+	if t.terminalDisabled(w, r) {
+		return
+	}
 	terminalSetCSP(w)
 	webtemplates.Render(w, "settings_terminal.html", mergeChrome(map[string]interface{}{
 		"TerminalType":    "users",
@@ -142,6 +162,10 @@ func terminalInitialCommand(r *http.Request) string {
 
 // sameOriginNavigation tells if the admin got here by a link inside OpenAdmin, a ?cmd= from anywhere else is only typed, not run
 func sameOriginNavigation(r *http.Request) bool {
+	// a ?cmd= carried across the login redirect must never auto-run: the admin just logged in, they didn't necessarily mean to run it
+	if ref, err := url.Parse(r.Referer()); err == nil && ref.Host == r.Host && strings.HasPrefix(ref.Path, "/login") {
+		return false
+	}
 	if site := r.Header.Get("Sec-Fetch-Site"); site != "" {
 		return site == "same-origin"
 	}
@@ -152,10 +176,11 @@ func sameOriginNavigation(r *http.Request) bool {
 var terminalUpgrader = websocket.Upgrader{
 	ReadBufferSize:  4096,
 	WriteBufferSize: 4096,
-	// Auth is already enforced by the session cookie (RequireAdmin +
-	// the super-admin check below) before Upgrade() is ever called, so
-	// there's no separate origin allowlist here.
-	CheckOrigin: func(r *http.Request) bool { return true },
+	// CheckOrigin left at gorilla's default: Origin host must equal the
+	// request Host. The session cookie is SameSite=Lax, so a cross-site
+	// page can't ride it, but a same-site page on another port or a
+	// sibling subdomain still could without this check. A non-browser
+	// client (no Origin header) is still allowed.
 }
 
 type terminalInitMessage struct {
@@ -282,8 +307,7 @@ var terminalRunPTYSessionRun = runPTYSession
 // ServeHostTerminalWS handles the websocket at /ws/terminal. Access
 // control: see ServeHostTerminalPage above.
 func (t *Terminal) ServeHostTerminalWS(w http.ResponseWriter, r *http.Request) {
-	if _, err := os.Stat(TerminalDisableFlagPath); err == nil {
-		http.Error(w, "Web Terminal access is disabled.", http.StatusForbidden)
+	if t.terminalDisabled(w, r) {
 		return
 	}
 
@@ -308,8 +332,22 @@ func (t *Terminal) ServeHostTerminalWS(w http.ResponseWriter, r *http.Request) {
 // /ws/terminal/{username}/{container_name}. Access control: see
 // ServeHostTerminalPage above.
 func (t *Terminal) ServeUserTerminalWS(w http.ResponseWriter, r *http.Request) {
+	if t.terminalDisabled(w, r) {
+		return
+	}
 	username := r.PathValue("username")
 	containerName := r.PathValue("container_name")
+	if !terminalNameRe.MatchString(username) || !terminalNameRe.MatchString(containerName) {
+		http.Error(w, "Invalid username or container name.", http.StatusBadRequest)
+		return
+	}
+
+	// resolve the user's podman context first, a lookup miss has to fail here, not fall through to root's own local podman on an empty context
+	podmanContext, err := queryContextByUsername(t.MySQL, username)
+	if err != nil {
+		http.Error(w, "Unknown user.", http.StatusNotFound)
+		return
+	}
 
 	conn, err := terminalUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -324,7 +362,6 @@ func (t *Terminal) ServeUserTerminalWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	podmanContext, _ := queryContextByUsername(t.MySQL, username)
 	argv := podman.Argv(podmanContext, "exec", "-it", "-e", "TERM=xterm-256color", containerName, init.Shell)
 	extraEnv, _ := podman.Env(podmanContext, nil)
 
