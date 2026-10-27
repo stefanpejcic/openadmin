@@ -115,6 +115,7 @@ func TestServeUserBackupsConfigurationFormMode(t *testing.T) {
 	BackupEnvPath = filepath.Join(dir, "backup.env")
 	t.Cleanup(func() { BackupEnvPath = orig })
 	os.WriteFile(BackupEnvPath, []byte(sampleBackupEnv), 0644)
+	stubBackupsHostKey(t, "ssh-ed25519 AAAAnewhost", nil)
 
 	form := url.Values{
 		"mode":                       {"form"},
@@ -134,7 +135,7 @@ func TestServeUserBackupsConfigurationFormMode(t *testing.T) {
 	}
 	got, _ := os.ReadFile(BackupEnvPath)
 	s := string(got)
-	for _, want := range []string{"SSH_HOST_NAME=new.example.comEVIL=1\n", "SSH_PASSWORD=pw2\n", "GZIP_PARALLELISM=4\n"} {
+	for _, want := range []string{"SSH_HOST_NAME=new.example.comEVIL=1\n", "SSH_PASSWORD=pw2\n", "GZIP_PARALLELISM=4\n", "SSH_HOST_PUBLIC_KEY=\"ssh-ed25519 AAAAnewhost\"\n"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("expected %q in saved file:\n%s", want, s)
 		}

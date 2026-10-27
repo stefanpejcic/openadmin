@@ -137,11 +137,17 @@ func (a *APIBackups) ServeUserBackupsConfiguration(w http.ResponseWriter, r *htt
 			writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
 			return
 		}
-		if err := os.WriteFile(BackupEnvPath, []byte(body.BackupEnv), 0644); err != nil {
+		current, _ := os.ReadFile(BackupEnvPath)
+		backupEnv, pinErr := pinBackupSSHHostKey(string(current), body.BackupEnv)
+		if err := os.WriteFile(BackupEnvPath, []byte(backupEnv), 0644); err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "Failed to save backup.env: "+err.Error())
 			return
 		}
-		writeJSON(w, map[string]interface{}{"success": true})
+		resp := map[string]interface{}{"success": true}
+		if pinErr != nil {
+			resp["warning"] = pinErr.Error()
+		}
+		writeJSON(w, resp)
 		return
 	}
 
