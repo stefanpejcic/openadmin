@@ -1,6 +1,6 @@
 module openadmin
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -15,7 +15,7 @@ require (
 	github.com/lib/pq v1.12.3
 	github.com/pquerna/otp v1.5.0
 	github.com/robfig/cron/v3 v3.0.1
-	golang.org/x/crypto v0.54.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/time v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.53.0
