@@ -331,11 +331,11 @@ func (b *Backups) ServeUserBackupsSettings(w http.ResponseWriter, r *http.Reques
 func (b *Backups) ServeUserBackupsConfiguration(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	backupEnv := r.PostFormValue("backup_env")
+	current, readErr := os.ReadFile(BackupEnvPath)
 
 	if r.PostFormValue("mode") == "form" {
-		current, err := os.ReadFile(BackupEnvPath)
-		if err != nil {
-			auth.AddFlash(w, r, b.Sessions, "Failed to read backup.env: "+err.Error(), "error")
+		if readErr != nil {
+			_ = auth.AddFlash(w, r, b.Sessions, "Failed to read backup.env: "+readErr.Error(), "error")
 			http.Redirect(w, r, "/backups/user#configuration", http.StatusSeeOther)
 			return
 		}
@@ -362,8 +362,13 @@ func (b *Backups) ServeUserBackupsConfiguration(w http.ResponseWriter, r *http.R
 		backupEnv = renderBackupEnvForm(string(current), destination, destValues, settings)
 	}
 
-	if err := os.WriteFile(BackupEnvPath, []byte(backupEnv), 0644); err != nil {
-		auth.AddFlash(w, r, b.Sessions, "Failed to save backup.env: "+err.Error(), "error")
+	backupEnv, pinErr := pinBackupSSHHostKey(string(current), backupEnv)
+	writeErr := os.WriteFile(BackupEnvPath, []byte(backupEnv), 0644)
+	if writeErr == nil && pinErr != nil {
+		_ = auth.AddFlash(w, r, b.Sessions, "Saved, but "+pinErr.Error()+".", "warning")
+	}
+	if writeErr != nil {
+		_ = auth.AddFlash(w, r, b.Sessions, "Failed to save backup.env: "+writeErr.Error(), "error")
 	} else if r.PostFormValue("apply_existing") == "1" {
 		contexts, err := backupAccountContexts(b.MySQL)
 		if err != nil {
