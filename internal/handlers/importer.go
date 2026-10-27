@@ -389,11 +389,12 @@ func (im *Importer) ServeImportUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 var importerBackupSearchDirs = []string{"/", "/home", "/root"}
-var importerBackupPatterns = []string{`^backup-.*\.tar\.gz$`, `^.*_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.tar\.gz$`}
+var importerBackupPatterns = []string{`^backup-.*\.tar\.gz$`, `^cpmove-.*\.tar\.gz$`, `^.*_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.tar\.gz$`}
 
 // ServeListBackupFiles handles GET /json/backup-files: a shallow
 // (non-recursive) scan of /, /home, and /root for cPanel/CyberPanel
-// (backup-*.tar.gz) or OpenPanel (<user>_<date>_<time>.tar.gz) backups.
+// (backup-*.tar.gz, or cpmove-*.tar.gz from WHM transfers and pkgacct)
+// or OpenPanel (<user>_<date>_<time>.tar.gz) backups.
 func (im *Importer) ServeListBackupFiles(w http.ResponseWriter, r *http.Request) {
 	if reseller := actingReseller(r); reseller != "" {
 		writeJSON(w, listUploadedBackups(reseller))
