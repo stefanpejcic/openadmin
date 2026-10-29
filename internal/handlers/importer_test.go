@@ -184,6 +184,23 @@ func TestServeImportUserRendersPlans(t *testing.T) {
 	}
 }
 
+// the form used to always post to /import/openpanel, so picking cPanel ran the OpenPanel restore
+func TestServeImportUserFormPostsToSelectedType(t *testing.T) {
+	im := &Importer{MySQL: newImporterPlansStubDB(t)}
+	srv, client := newImporterTestServer(t, im, "admin")
+
+	resp, err := client.Get(srv.URL + "/user/import")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	want := `:action="'/import/' + selectedType"`
+	if !strings.Contains(string(body), want) {
+		t.Fatalf("expected the import form to bind %s, got %s", want, truncate(string(body)))
+	}
+}
+
 // TestServeImportUserRendersPlanCards exercises the plan-card branch (not
 // covered by TestServeImportUserRendersPlans's zero-row stub), including a
 // plan whose cpu/ram/disk_limit/inodes_limit/etc. are all at their
@@ -474,6 +491,7 @@ func TestServeViewAccountImportLogMissingFileJSON(t *testing.T) {
 func TestServeListBackupFilesMatchesPatterns(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "backup-alice.tar.gz"), []byte(""), 0644)
+	os.WriteFile(filepath.Join(dir, "cpmove-carol.tar.gz"), []byte(""), 0644)
 	os.WriteFile(filepath.Join(dir, "bob_2024-01-15_10-30-00.tar.gz"), []byte(""), 0644)
 	os.WriteFile(filepath.Join(dir, "not-a-backup.txt"), []byte(""), 0644)
 
@@ -492,6 +510,9 @@ func TestServeListBackupFilesMatchesPatterns(t *testing.T) {
 	resp.Body.Close()
 	if !strings.Contains(string(body), "backup-alice.tar.gz") {
 		t.Fatalf("expected cPanel-style backup matched, got %s", truncate(string(body)))
+	}
+	if !strings.Contains(string(body), "cpmove-carol.tar.gz") {
+		t.Fatalf("expected cpmove backup from a WHM transfer matched, got %s", truncate(string(body)))
 	}
 	if !strings.Contains(string(body), "bob_2024-01-15_10-30-00.tar.gz") {
 		t.Fatalf("expected OpenPanel-style backup matched, got %s", truncate(string(body)))
