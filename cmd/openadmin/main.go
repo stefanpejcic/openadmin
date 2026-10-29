@@ -741,6 +741,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /domains/config", auth.RequireAdmin(sessions, authOpts, configFileEditor.ServeEditConfigFile))
 	mux.HandleFunc("GET /domains/config/{username}", auth.RequireAdmin(sessions, authOpts, configFileEditor.ServeEditConfigFile))
 	mux.HandleFunc("GET /domains/ssl/{domain_name}", auth.RequireAdmin(sessions, authOpts, sslPage.ServeSSL))
+	mux.HandleFunc("POST /domains/ssl/{domain_name}", auth.RequireAdmin(sessions, authOpts, sslPage.ServeSSL))
 	mux.HandleFunc("GET /domains/log", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/log/", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
 	mux.HandleFunc("GET /domains/log/{domain_name}", auth.RequireAdmin(sessions, authOpts, accessLogs.ServeAccessLog))
