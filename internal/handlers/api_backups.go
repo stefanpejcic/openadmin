@@ -139,7 +139,7 @@ func (a *APIBackups) ServeUserBackupsConfiguration(w http.ResponseWriter, r *htt
 		}
 		current, _ := os.ReadFile(BackupEnvPath)
 		backupEnv, pinErr := pinBackupSSHHostKey(string(current), body.BackupEnv)
-		if err := os.WriteFile(BackupEnvPath, []byte(backupEnv), 0644); err != nil {
+		if err := writeBackupEnv([]byte(backupEnv)); err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "Failed to save backup.env: "+err.Error())
 			return
 		}

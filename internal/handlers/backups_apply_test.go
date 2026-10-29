@@ -35,6 +35,9 @@ func TestApplyBackupEnvToAccounts(t *testing.T) {
 	if applied != 2 || len(failed) != 0 {
 		t.Fatalf("applied=%d failed=%v", applied, failed)
 	}
+	if fi, err := os.Stat(BackupEnvPath); err != nil || fi.Mode().Perm() != 0600 {
+		t.Errorf("default backup.env should be 0600, got %v %v", fi.Mode().Perm(), err)
+	}
 	for _, u := range []string{"alice", "bob"} {
 		link := filepath.Join(BackupsHomeRoot, u, "backup.env")
 		if target, err := os.Readlink(link); err != nil || target != BackupEnvPath {

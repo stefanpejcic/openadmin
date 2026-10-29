@@ -363,7 +363,7 @@ func (b *Backups) ServeUserBackupsConfiguration(w http.ResponseWriter, r *http.R
 	}
 
 	backupEnv, pinErr := pinBackupSSHHostKey(string(current), backupEnv)
-	writeErr := os.WriteFile(BackupEnvPath, []byte(backupEnv), 0644)
+	writeErr := writeBackupEnv([]byte(backupEnv))
 	if writeErr == nil && pinErr != nil {
 		_ = auth.AddFlash(w, r, b.Sessions, "Saved, but "+pinErr.Error()+".", "warning")
 	}

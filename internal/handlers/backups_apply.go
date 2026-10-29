@@ -33,6 +33,26 @@ var backupsRestartUserBackup = func(userContext string) {
 	_ = timed.Run()
 }
 
+// secureBackupEnv makes the default backup.env 0600 root:root, it holds remote backup credentials and every
+// admin-managed account's backup.env links to it, compose reads it as root so accounts don't need to
+func secureBackupEnv() error {
+	if err := os.Chmod(BackupEnvPath, 0600); err != nil {
+		return err
+	}
+	if os.Geteuid() == 0 {
+		return os.Chown(BackupEnvPath, 0, 0)
+	}
+	return nil
+}
+
+// writeBackupEnv saves the default backup.env, WriteFile keeps an existing file's mode so it's secured after
+func writeBackupEnv(data []byte) error {
+	if err := os.WriteFile(BackupEnvPath, data, 0600); err != nil {
+		return err
+	}
+	return secureBackupEnv()
+}
+
 // backupAccountContexts lists every account's context, the folder under /home that holds its backup.env
 func backupAccountContexts(db *sql.DB) ([]string, error) {
 	if db == nil {
@@ -56,6 +76,9 @@ func backupAccountContexts(db *sql.DB) ([]string, error) {
 // applyBackupEnvToAccounts does what the discussion #1146 script did: every account's backup.env becomes a link to the default,
 // gets the admin.backups marker so the panel treats backups as admin-managed, and its backup container restarts in the background
 func applyBackupEnvToAccounts(contexts []string) (applied int, failed []string) {
+	if err := secureBackupEnv(); err != nil {
+		return 0, []string{BackupEnvPath + ": " + err.Error()}
+	}
 	var restart []string
 	for _, c := range contexts {
 		if c == "" || c == "." || c == ".." || strings.ContainsAny(c, "/\\") {
