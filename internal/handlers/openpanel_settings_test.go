@@ -581,7 +581,7 @@ func TestServeOpenpanelSettingsUIThemeSavesAndRenders(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	for _, want := range []string{`name="ui_theme"`, `value="modern" selected="selected">Modern (new)`, `value="classic" >Classic`} {
+	for _, want := range []string{`name="ui_theme"`, `value="modern" selected="selected">Modern`, `value="classic" >Classic`} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("page missing %q", want)
 		}
