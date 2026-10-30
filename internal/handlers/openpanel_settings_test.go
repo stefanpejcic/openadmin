@@ -170,6 +170,7 @@ func TestOpenpanelSectionForKey(t *testing.T) {
 		"terminal_timeout":             "PANEL",
 		"menu_style":                   "PANEL",
 		"ui_theme":                     "PANEL",
+		"login_layout":                 "PANEL",
 		"applications_dashboard_items": "PANEL",
 		"login_ratelimit":              "USERS",
 	}
@@ -623,5 +624,19 @@ func TestServeOpenpanelSettingsUIThemeSavesAndRenders(t *testing.T) {
 	saved, _ = os.ReadFile(OpenpanelSettingsConfigPath)
 	if !strings.Contains(string(saved), "ui_theme=classic") {
 		t.Fatalf("rejected value replaced the saved theme: %q", saved)
+	}
+}
+
+func TestOpenpanelLoginLayoutValues(t *testing.T) {
+	for _, v := range []string{"card", "split"} {
+		if _, ok, _ := validateOpenpanelValue("login_layout", v); !ok {
+			t.Errorf("login_layout %q should be valid", v)
+		}
+	}
+	if _, ok, msg := validateOpenpanelValue("login_layout", "full"); ok || !strings.Contains(msg, "not a valid value") {
+		t.Errorf("login_layout full should be rejected, got ok=%v msg=%q", ok, msg)
+	}
+	if got := openpanelSectionForKey("login_layout"); got != "PANEL" {
+		t.Errorf("login_layout goes under %s, want PANEL", got)
 	}
 }
