@@ -25,7 +25,7 @@ var opencliAllowed = map[string]bool{
 	"email-manage": true,
 	// account and domain actions, run where the account lives
 	"user-suspend": true, "user-unsuspend": true, "user-password": true, "user-change_plan": true,
-	"user-quota": true, "user-2fa": true, "user-email": true, "user-login": true, "user-delete": true,
+	"user-quota": true, "user-2fa": true, "user-litespeed": true, "user-email": true, "user-login": true, "user-delete": true,
 	"user-add": true, "domains-add": true, "domains-suspend": true, "domains-unsuspend": true,
 	"domains-delete": true, "domains-ssl": true, "domains-dns": true, "domains-docroot": true,
 	// settings and server commands with --all-servers

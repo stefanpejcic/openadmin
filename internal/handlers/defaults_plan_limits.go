@@ -15,7 +15,7 @@ type planMinimums struct {
 
 // services whose limit should cover what a user's plan allows, PHP-FPM groups always count
 var planLimitedServices = map[string]bool{
-	"NGINX": true, "APACHE": true, "OPENRESTY": true, "OPENLITESPEED": true, "MYSQL": true, "MARIADB": true,
+	"NGINX": true, "APACHE": true, "OPENRESTY": true, "OPENLITESPEED": true, "LITESPEED": true, "MYSQL": true, "MARIADB": true,
 }
 
 type planLimitRow struct {

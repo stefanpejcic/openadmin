@@ -39,7 +39,7 @@ var webserverMainConfFilenames = map[string]string{
 	"nginx":         "nginx.conf",
 	"openresty":     "openresty.conf",
 	"openlitespeed": "openlitespeed.conf",
-	"litespeed":     "openlitespeed.conf",
+	"litespeed":     "litespeed.conf",
 }
 
 // mainConfPathFor returns the absolute path to context's main webserver

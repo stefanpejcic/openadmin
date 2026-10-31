@@ -68,7 +68,7 @@ func TestMainConfPathForKnownWebservers(t *testing.T) {
 		"nginx":         "nginx.conf",
 		"openresty":     "openresty.conf",
 		"openlitespeed": "openlitespeed.conf",
-		"litespeed":     "openlitespeed.conf",
+		"litespeed":     "litespeed.conf",
 	}
 	for webserver, filename := range cases {
 		want := filepath.Join("/home", "alice-ctx", filename)

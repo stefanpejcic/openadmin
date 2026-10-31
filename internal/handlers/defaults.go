@@ -486,7 +486,7 @@ var composePortLineRe = regexp.MustCompile(`\$\{PROXY_HTTP_PORT(:-\$\{HTTP_PORT\
 // template whose ports line uses the varnish port variable -- the admin can
 // switch WEB_SERVER later without re-saving the Varnish toggle, so all of
 // them need to stay in sync, not just whichever one is selected today.
-var defaultsComposeWebservers = []string{"openlitespeed", "openresty", "nginx", "apache"}
+var defaultsComposeWebservers = []string{"openlitespeed", "litespeed", "openresty", "nginx", "apache"}
 
 // rewriteDefaultsComposeVarnishPort mirrors OpenPanel's
 // docker.SwapWebserverComposePort (internal/modules/docker/proxy_ports.go)
@@ -543,6 +543,45 @@ func dedupeSorted(items []string) []string {
 // --- /settings/defaults ---
 
 // ServeDefaults handles GET/POST /settings/defaults.
+// defaultsPerconaImage is the same image OpenPanel switches an account's mysql service to
+const defaultsPerconaImage = "percona/percona-server:8.0"
+
+// setDefaultsComposePercona points the template's mysql service at percona (with the root user and socket paths its image needs) or back at mysql
+func setDefaultsComposePercona(content string, percona bool) string {
+	lines := strings.SplitAfter(content, "\n")
+	var out []string
+	inMySQL := false
+	for _, line := range lines {
+		trimmed := strings.TrimRight(line, "\r\n")
+		if len(trimmed) > 2 && trimmed[:2] == "  " && trimmed[2] != ' ' && trimmed[2] != '#' {
+			inMySQL = trimmed == "  mysql:"
+		} else if trimmed != "" && trimmed[0] != ' ' {
+			inMySQL = false
+		}
+		if inMySQL {
+			switch {
+			case strings.HasPrefix(trimmed, "    image:"):
+				if percona {
+					out = append(out, "    image: "+defaultsPerconaImage+"\n", "    user: root\n",
+						"    command: [\"--user=root\", \"--socket=/var/run/mysqld/mysqld.sock\", \"--pid-file=/var/run/mysqld/mysqld.pid\"]\n")
+				} else {
+					out = append(out, "    image: mysql:${MYSQL_VERSION:-latest}\n")
+				}
+				continue
+			case strings.HasPrefix(trimmed, "    user:"), strings.HasPrefix(trimmed, "    command:"):
+				continue
+			}
+		}
+		out = append(out, line)
+	}
+	return strings.Join(out, "")
+}
+
+// defaultsUsesPercona is true when the template's mysql service runs percona
+func defaultsUsesPercona(content string) bool {
+	return strings.Contains(content, "    image: "+defaultsPerconaImage)
+}
+
 func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 	availableServices := getAvailableServices()
 
@@ -563,6 +602,12 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		}
 
 		varnishEnabled := strings.TrimSpace(r.PostFormValue("VARNISH")) == "1"
+
+		// percona keeps MYSQL_TYPE=mysql and only swaps the mysql service image, same as OpenPanel does
+		sqlChoice := strings.TrimSpace(r.PostFormValue("MYSQL_TYPE"))
+		if sqlChoice == "percona" {
+			r.PostForm["MYSQL_TYPE"] = []string{"mysql"}
+		}
 
 		lines := strings.SplitAfter(string(raw), "\n")
 		if n := len(lines); n > 0 && lines[n-1] == "" {
@@ -619,6 +664,9 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 
 		if composeRaw, composeErr := os.ReadFile(DefaultsComposeFilePath); composeErr == nil {
 			updated := rewriteDefaultsComposeVarnishPort(string(composeRaw), varnishEnabled)
+			if sqlChoice != "" {
+				updated = setDefaultsComposePercona(updated, sqlChoice == "percona")
+			}
 			os.WriteFile(DefaultsComposeFilePath, []byte(updated), 0644)
 		}
 
@@ -679,6 +727,10 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 		phpFPM = defaults["PHP_FPM"]
 	}
 
+	if composeRaw, err := os.ReadFile(DefaultsComposeFilePath); err == nil && mysqlType == "mysql" && defaultsUsesPercona(string(composeRaw)) {
+		mysqlType = "percona"
+	}
+
 	webservers := availableWebservers(DefaultsComposeFilePath)
 	if !containsWebserver(webservers, webServer) {
 		webServer = webservers[0]
@@ -687,7 +739,7 @@ func (d *Defaults) ServeDefaults(w http.ResponseWriter, r *http.Request) {
 	var extraWebservers []string
 	for _, ws := range webservers {
 		webserverSet[ws] = true
-		if !containsWebserver(fallbackWebservers, ws) {
+		if !containsWebserver(cardWebservers, ws) {
 			extraWebservers = append(extraWebservers, ws)
 		}
 	}

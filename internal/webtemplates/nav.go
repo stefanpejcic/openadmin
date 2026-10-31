@@ -300,7 +300,7 @@ var helpDocs = map[string]string{
 	"/domains/file-templates":        "admin/domains/file_templates",
 	"/domains/vhost-templates":       "admin/domains/vhost_templates",
 	"/domains/ratelimit":             "admin/domains/ratelimit",
-	"/websites":                      "admin/websites",
+	"/websites":                      "admin/websites/websites",
 	"/databases":                     "admin/databases/mysql",
 	"/databases/postgresql":          "admin/databases/postgresql",
 	"/databases/mongodb":             "admin/databases/mongodb",
@@ -337,7 +337,7 @@ var helpDocs = map[string]string{
 	"/server/reboot":                 "admin/system/reboot",
 	"/server/swap":                   "admin/system/swap",
 	"/server/migrate":                "admin/system/migrate",
-	"/server/cluster":                "admin/system/multi-server",
+	"/server/cluster":                "admin/system/multi-server/index",
 	"/server/demo-mode":              "admin/system/demo-mode",
 	"/settings/general":              "admin/settings/general",
 	"/settings/open-panel":           "admin/settings/openpanel",
@@ -350,9 +350,9 @@ var helpDocs = map[string]string{
 	"/settings/locales":              "admin/settings/locales",
 	"/settings/custom-code":          "admin/settings/custom_code",
 	"/license":                       "admin/license",
-	"/dashboard":                     "admin/dashboard",
-	"/notifications":                 "admin/notifications",
-	"/dashboard/summary":             "admin/daily-summary",
+	"/dashboard":                     "admin/001_dashboard",
+	"/notifications":                 "admin/002_notifications",
+	"/dashboard/summary":             "admin/003_daily-summary",
 }
 
 // helpSection picks the part of doc a page shows, "until:X" keeps what's before the X heading and "from:X" keeps that section
