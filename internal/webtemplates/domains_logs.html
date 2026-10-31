@@ -6,7 +6,7 @@
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
-    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 {{if .JSONLogs}}
@@ -15,15 +15,15 @@
 
     <div x-data="{ showSection: false }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
                     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Domain Logs for <span class="punycode">{{.DomainName}}</span></h1>
-                    <h2 class="text-sm text-gray-500 dark:text-gray-500">Showing {{add (mul .ItemsPerPage (add .CurrentPage -1)) 1}} - {{if gt (mul .ItemsPerPage .CurrentPage) .TotalLines}}{{.TotalLines}}{{else}}{{mul .ItemsPerPage .CurrentPage}}{{end}} out of {{.TotalLines}} rows</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Raw webserver access log for this domain.</p>
                 </div>
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <div class="flex flex-none items-center gap-2">
     <p class="text-sm text-gray-500 dark:text-gray-500">
         {{if lt .TotalLines .TotalAllowedLinesForShowAll}}
-        <label for="showAllCheckbox" class="inline-flex cursor-pointer items-center gap-3"><input type="checkbox" role="switch" id="showAllCheckbox" class="peer sr-only" {{if .ShowAll}}checked{{end}}><span class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></span><span class="text-sm text-gray-500">Show all {{.TotalLines}} rows</span></label>
+        <label for="showAllCheckbox" class="inline-flex cursor-pointer items-center gap-3"><input type="checkbox" role="switch" id="showAllCheckbox" class="peer sr-only" {{if .ShowAll}}checked{{end}}><span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span><span class="text-sm text-gray-900 dark:text-gray-50">Show all {{.TotalLines}} rows</span></label>
         {{end}}
     </p>
                 </div>
@@ -88,12 +88,12 @@
         sessionStorage.setItem('columns', JSON.stringify(this.columns));
     }
 }">
-    <div class="flex flex-col justify-between gap-2 px-4 py-6 sm:flex-row sm:items-center sm:p-6">
+    <div class="flex flex-col justify-between gap-2 px-4 py-3 sm:flex-row sm:items-center sm:px-6 lg:px-8">
         <div class="relative w-full sm:w-64 [&>input]:py-1.5">
-            <input
+            <input aria-label="Search log"
                 x-model="searchQuery"
-                class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 file:-my-2 file:-ml-2.5 file:cursor-pointer file:rounded-l-[5px] file:rounded-r-none file:border-0 file:px-3 file:py-2 file:outline-none focus:outline-none disabled:pointer-events-none file:disabled:pointer-events-none file:border-solid file:border-gray-300 file:bg-gray-50 file:text-gray-500 file:hover:bg-gray-100 file:dark:border-gray-800 file:dark:bg-gray-950 file:hover:dark:bg-gray-900/20 file:disabled:dark:border-gray-700 file:disabled:bg-gray-100 file:disabled:text-gray-500 file:disabled:dark:bg-gray-800 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8"
-                placeholder="Search log..."
+                class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-1.5 pl-8 text-sm"
+                placeholder="Search log…"
                 type="search"
             />
             <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
@@ -107,106 +107,85 @@
 
         <!-- Dropdown for Column Visibility -->
         <div class="relative">
-            <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none sm:w-fit mt-2 w-full sm:w-auto gap-x-1.5 whitespace-nowrap sm:mt-0 cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" type="button">Show Columns <svg class="remixicon w-2.5 h-2.5 ms-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-            </button>
+            <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600" type="button">Columns<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></button>
 
             <!-- Dropdown menu -->
-            <div id="dropdownToggle" class="z-10 hidden bg-white divide-y divide-gray-100 rounded-md shadow-xs w-72 dark:bg-gray-950 dark:divide-gray-800">
-                <ul class="p-3 space-y-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby="dropdownToggleButton">
+            <div id="dropdownToggle" class="hidden w-72 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
+                <ul aria-labelledby="dropdownToggleButton">
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.timestamp" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Timestamp</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Timestamp</span>
+                                        <input type="checkbox" role="switch" x-model="columns.timestamp" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.level" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Level</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Level</span>
+                                        <input type="checkbox" role="switch" x-model="columns.level" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.logger" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Logger</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Logger</span>
+                                        <input type="checkbox" role="switch" x-model="columns.logger" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.message" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Message</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Message</span>
+                                        <input type="checkbox" role="switch" x-model="columns.message" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.client_ip" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Client IP</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Client IP</span>
+                                        <input type="checkbox" role="switch" x-model="columns.client_ip" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
 
 
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.method" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Method</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Method</span>
+                                        <input type="checkbox" role="switch" x-model="columns.method" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
 
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.uri" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">URI</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>URI</span>
+                                        <input type="checkbox" role="switch" x-model="columns.uri" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
 
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.status" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Status</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Status</span>
+                                        <input type="checkbox" role="switch" x-model="columns.status" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.size" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Size</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Size</span>
+                                        <input type="checkbox" role="switch" x-model="columns.size" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
                     <li>
-                        <div class="flex p-2 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-                            <label class="inline-flex items-center w-full cursor-pointer">
-                                <input type="checkbox" x-model="columns.duration" x-on:change="saveColumns" class="sr-only peer">
-                                <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Duration</span>
-                            </label>
-                        </div>
-                    </li>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Duration</span>
+                                        <input type="checkbox" role="switch" x-model="columns.duration" x-on:change="saveColumns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+                                    </label>
+                                </li>
 
 
 
@@ -219,48 +198,46 @@
         <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
             <table id="databases-table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                 <thead class="">
-                    <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
-                        <th x-show="columns.timestamp" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Timestamp</th>
-                        <th x-show="columns.level" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Level</th>
-                        <th x-show="columns.logger" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Logger</th>
-                        <th x-show="columns.message" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Message</th>
-                        <th x-show="columns.client_ip" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Client IP</th>
-                        <th x-show="columns.method" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Method</th>
-                        <th x-show="columns.uri" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">URI</th>
-                        <th x-show="columns.status" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Status</th>
-                        <th x-show="columns.size" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Size</th>
-                        <th x-show="columns.duration" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50">Duration</th>
+                    <tr class="border-b border-gray-200 dark:border-gray-800 sm:[&_th:first-child]:pl-6 sm:[&_th:last-child]:pr-6 lg:[&_th:first-child]:pl-8 lg:[&_th:last-child]:pr-8">
+                        <th x-show="columns.timestamp" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Timestamp</th>
+                        <th x-show="columns.level" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Level</th>
+                        <th x-show="columns.logger" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Logger</th>
+                        <th x-show="columns.message" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Message</th>
+                        <th x-show="columns.client_ip" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Client IP</th>
+                        <th x-show="columns.method" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Method</th>
+                        <th x-show="columns.uri" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">URI</th>
+                        <th x-show="columns.status" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Status</th>
+                        <th x-show="columns.size" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Size</th>
+                        <th x-show="columns.duration" scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Duration</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                     {{$domainName := .DomainName}}
                     {{range .JSONLogs}}
-                    <tr x-show="searchQuery === '' || '{{.ts}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.level}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.logger}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.msg}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.request.client_ip}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.request.method}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.request.uri}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.status}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.size}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.duration}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-white dark:hover:bg-gray-900">
-                        <td x-show="columns.timestamp" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 timestamp" data-ts="{{.ts}}">{{.ts}}</td>
-                        <td x-show="columns.level" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{.level}}</td>
-                        <td x-show="columns.logger" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{.logger}}</td>
-                        <td x-show="columns.message" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{.msg}}</td>
-                        <td x-show="columns.client_ip" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{.request.client_ip}}</td>
-                        <td x-show="columns.method" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{.request.method}}</td>
-                        <td x-show="columns.uri" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400"><a href="http://{{$domainName}}{{.request.uri}}" target="_blank" class="hover:underline">{{.request.uri}}</a></td>
-                        <td x-show="columns.status" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">
+                    <tr x-show="searchQuery === '' || '{{.ts}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.level}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.logger}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.msg}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.request.client_ip}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.request.method}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.request.uri}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.status}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.size}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.duration}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:first-child]:pl-6 sm:[&_td:last-child]:pr-6 lg:[&_td:first-child]:pl-8 lg:[&_td:last-child]:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                        <td x-show="columns.timestamp" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums timestamp" data-ts="{{.ts}}">{{.ts}}</td>
+                        <td x-show="columns.level" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{.level}}</td>
+                        <td x-show="columns.logger" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{.logger}}</td>
+                        <td x-show="columns.message" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{.msg}}</td>
+                        <td x-show="columns.client_ip" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{.request.client_ip}}</td>
+                        <td x-show="columns.method" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{.request.method}}</td>
+                        <td x-show="columns.uri" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"><a href="http://{{$domainName}}{{.request.uri}}" target="_blank" rel="noopener" class="hover:underline hover:underline-offset-4">{{.request.uri}}</a></td>
+                        <td x-show="columns.status" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
                             {{$status := printf "%v" .status}}
-                            {{if hasPrefix $status "1"}}
-                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-violet-50 text-violet-900 ring-violet-600/30 dark:bg-violet-400/10 dark:text-violet-400 dark:ring-violet-400/20 me-2">{{.status}}</span>
-                            {{else if hasPrefix $status "2"}}
-                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20 me-2">{{.status}}</span>
+                            {{if hasPrefix $status "2"}}
+                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">{{.status}}</span>
                             {{else if hasPrefix $status "3"}}
-                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20 me-2">{{.status}}</span>
+                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">{{.status}}</span>
                             {{else if hasPrefix $status "4"}}
-                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 me-2">{{.status}}</span>
+                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20">{{.status}}</span>
                             {{else if hasPrefix $status "5"}}
-                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20 me-2">{{.status}}</span>
+                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">{{.status}}</span>
                             {{else}}
-                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 me-2">{{.status}}</span>
+                            <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">{{.status}}</span>
                             {{end}}
                         </td>
-                        <td x-show="columns.size" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{.size}}</td>
-                        <td x-show="columns.duration" class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">{{.duration}}</td>
+                        <td x-show="columns.size" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.size}}</td>
+                        <td x-show="columns.duration" class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.duration}}</td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -304,12 +281,13 @@
 
 
 <!-- pagination -->
-<div class="m-6 flex justify-center">
+<div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm text-gray-500 dark:text-gray-500 sm:px-6 lg:px-8">
+    <p class="tabular-nums">Showing <span class="font-medium text-gray-900 dark:text-gray-50">{{add (mul .ItemsPerPage (add .CurrentPage -1)) 1}}–{{if gt (mul .ItemsPerPage .CurrentPage) .TotalLines}}{{.TotalLines}}{{else}}{{mul .ItemsPerPage .CurrentPage}}{{end}}</span> of <span class="font-medium text-gray-900 dark:text-gray-50">{{.TotalLines}}</span></p>
     <nav aria-label="Pagination">
-        <ul class="flex items-center gap-1 text-sm">
+        <ul class="flex items-center gap-1">
             {{if gt .CurrentPage 1}}
                 <li>
-                    <a href="/domains/log/{{.DomainName}}?page={{add .CurrentPage -1}}" class="inline-flex h-8 items-center justify-center rounded-md border border-gray-300 bg-white px-2.5 text-sm font-medium text-gray-900 shadow-xs transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Previous</a>
+                    <a href="/domains/log/{{.DomainName}}?page={{add .CurrentPage -1}}" aria-label="Previous page" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 size-8"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M10.8284 12.0007L15.7782 16.9504L14.364 18.3646L8 12.0007L14.364 5.63672L15.7782 7.05093L10.8284 12.0007Z"></path></svg></a>
                 </li>
             {{end}}
 
@@ -321,31 +299,31 @@
 
             {{if gt $start 1}}
                 <li>
-                    <a href="/domains/log/{{.DomainName}}?page=1" class="inline-flex size-8 items-center justify-center rounded-md text-sm tabular-nums text-gray-600 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 {{if eq .CurrentPage 1}}bg-gray-100 font-semibold text-gray-900 dark:bg-gray-900 dark:text-gray-50{{end}}">1</a>
+                    <a href="/domains/log/{{.DomainName}}?page=1" class="inline-flex size-8 items-center justify-center rounded-md text-sm tabular-nums text-gray-600 hover:bg-gray-100 aria-[current=page]:bg-gray-100 aria-[current=page]:font-semibold aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"{{if eq .CurrentPage 1}} aria-current="page"{{end}}>1</a>
                 </li>
                 {{if gt $start 2}}
-                    <li><span class="px-1 text-gray-500">&hellip;</span></li>
+                    <li><span class="px-1" aria-hidden="true">&hellip;</span></li>
                 {{end}}
             {{end}}
 
             {{range $p := seq $start $end}}
                 <li>
-                    <a href="/domains/log/{{$domainName}}?page={{$p}}" class="inline-flex size-8 items-center justify-center rounded-md text-sm tabular-nums text-gray-600 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 {{if eq $p $.CurrentPage}}bg-gray-100 font-semibold text-gray-900 dark:bg-gray-900 dark:text-gray-50{{end}}">{{$p}}</a>
+                    <a href="/domains/log/{{$domainName}}?page={{$p}}" class="inline-flex size-8 items-center justify-center rounded-md text-sm tabular-nums text-gray-600 hover:bg-gray-100 aria-[current=page]:bg-gray-100 aria-[current=page]:font-semibold aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"{{if eq $p $.CurrentPage}} aria-current="page"{{end}}>{{$p}}</a>
                 </li>
             {{end}}
 
             {{if lt $end .TotalPages}}
                 {{if lt $end (sub .TotalPages 1)}}
-                    <li><span class="px-1 text-gray-500">&hellip;</span></li>
+                    <li><span class="px-1" aria-hidden="true">&hellip;</span></li>
                 {{end}}
                 <li>
-                    <a href="/domains/log/{{.DomainName}}?page={{.TotalPages}}" class="inline-flex size-8 items-center justify-center rounded-md text-sm tabular-nums text-gray-600 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-900 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 {{if eq .CurrentPage .TotalPages}}bg-gray-100 font-semibold text-gray-900 dark:bg-gray-900 dark:text-gray-50{{end}}">{{.TotalPages}}</a>
+                    <a href="/domains/log/{{.DomainName}}?page={{.TotalPages}}" class="inline-flex size-8 items-center justify-center rounded-md text-sm tabular-nums text-gray-600 hover:bg-gray-100 aria-[current=page]:bg-gray-100 aria-[current=page]:font-semibold aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"{{if eq .CurrentPage .TotalPages}} aria-current="page"{{end}}>{{.TotalPages}}</a>
                 </li>
             {{end}}
 
             {{if lt .CurrentPage .TotalPages}}
                 <li>
-                    <a href="/domains/log/{{.DomainName}}?page={{add .CurrentPage 1}}" class="inline-flex h-8 items-center justify-center rounded-md border border-gray-300 bg-white px-2.5 text-sm font-medium text-gray-900 shadow-xs transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Next</a>
+                    <a href="/domains/log/{{.DomainName}}?page={{add .CurrentPage 1}}" aria-label="Next page" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 size-8"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"></path></svg></a>
                 </li>
             {{end}}
         </ul>
@@ -365,12 +343,12 @@
 
     <div x-data="{ showSection: false }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
                     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Domain Logs</h1>
-                    <h2 class="text-sm text-gray-500 dark:text-gray-500">View webserver raw access logs for domains.</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">View webserver raw access logs for domains.</p>
                 </div>
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <div class="flex flex-none items-center gap-2">
                 </div>
             </div>
         </header>
@@ -380,14 +358,16 @@
 
 
 <!-- form -->
-<div class="m-6 sm:mx-auto sm:max-w-2xl rounded-md border border-gray-200 bg-white p-6 dark:border-gray-900 dark:bg-raised" id="toAddActive">
-    <form class="mt-8" method="GET">
+<div class="px-4 py-6 sm:px-6 lg:px-8">
+<div class="max-w-2xl rounded-md border border-gray-200 bg-white p-6 dark:border-gray-900 dark:bg-raised" id="toAddActive">
+    <form method="GET">
         <div class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-6">
             <div class="col-span-full">
                 {{if .MySQLIsDown}}
                 {{template "partial_mysql_error" .}}
                 {{else if .Domains}}
-                <select id="domains" class="block w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:[color-scheme:dark]" onchange="redirectToSelectedLogDomain(this, '/domains/log/')">
+                <label for="domains" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Domain</label>
+                <select id="domains" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2.5 py-2 text-sm dark:[color-scheme:dark] mt-2 w-full" onchange="redirectToSelectedLogDomain(this, '/domains/log/')">
                     <option value="" disabled selected>Select domain</option>
                     {{range .Domains}}
                     <option value="{{index . "domain_url"}}" class="punycode">{{index . "domain_url"}}</option>
@@ -403,11 +383,12 @@
                     }
                 </script>
                 {{else}}
-                <p class="text-sm text-gray-500">No domains yet.</p>
+                <p class="text-sm text-gray-500 dark:text-gray-500">No domains yet.</p>
                 {{end}}
             </div>
         </div>
     </form>
+</div>
 </div>
 
 </section>

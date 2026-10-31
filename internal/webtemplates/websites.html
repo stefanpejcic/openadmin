@@ -8,7 +8,7 @@
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 {{$root := .}}
@@ -27,10 +27,10 @@
 </svg>
     <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
                     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Websites</h1>
-                    <h2 class="text-sm text-gray-500 dark:text-gray-500">
+                    <p class="text-sm text-gray-500 dark:text-gray-500">
                         {{if .Sites}}
                             <b>{{len .Sites}}</b> {{if gt (len .Sites) 1}}websites{{else}}website{{end}} in Site Manager across all users.
                         {{else if .MySQLIsDown}}
@@ -38,116 +38,117 @@
                         {{else}}
                             No websites in Site Manager yet.
                         {{end}}
-                    </h2>
+                    </p>
                 </div>
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                    <a @click="showScan = !showScan" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-transparent bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 dark:disabled:bg-blue-800 dark:disabled:text-blue-400 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Scan for Websites</a>
+                <div class="flex flex-none items-center gap-2">
+                    <button type="button" @click="showScan = !showScan" :aria-expanded="showScan.toString()" aria-controls="websites-scan-form" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Scan for websites</button>
                 </div>
             </div>
         </header>
 
-        <form x-show="showScan" x-transition method="POST" action="/websites/scan" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <form x-show="showScan" x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" id="websites-scan-form" method="POST" action="/websites/scan" class="mt-6 flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-start">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div class="grow">
-                <label for="scan_username" class="text-sm font-medium">Username</label>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Finds sites in users' files that aren't in Site Manager yet, leave empty to scan every user.</p>
+                <label for="scan_username" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Username</label>
                 <div class="relative" @click.outside="scanShow = false">
                 <input type="text" name="username" id="scan_username" placeholder="all users" autocomplete="off"
                     x-model="scanQuery" @input.debounce.300ms="searchScanUsers" @focus="scanShow = scanUsers.length > 0" @keydown.escape="scanShow = false"
-                    class="mt-2 relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
-                <ul x-show="scanShow && scanUsers.length > 0" x-cloak class="absolute z-10 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 w-full mt-1 rounded-md shadow-lg max-h-60 overflow-auto">
+                    role="combobox" aria-autocomplete="list" aria-controls="scan-username-options" :aria-expanded="(scanShow && scanUsers.length > 0).toString()" aria-describedby="scan_username_help"
+                    class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2">
+                <ul id="scan-username-options" role="listbox" x-show="scanShow && scanUsers.length > 0" x-cloak class="absolute mt-1 max-h-60 w-full overflow-auto z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
                     <template x-for="user in scanUsers" :key="user">
-                        <li @click="scanQuery = user; scanShow = false" class="px-3 py-2 cursor-pointer text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-blue-600">
+                        <li role="option" @click="scanQuery = user; scanShow = false" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50">
                             <span x-text="user"></span>
                         </li>
                     </template>
                 </ul>
                 </div>
+                <p id="scan_username_help" class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Finds sites in users' files that aren't in Site Manager yet, leave empty to scan every user.</p>
             </div>
-            <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap border p-2.5 text-center text-sm font-medium transition-all duration-100 ease-in-out rounded-md border-transparent bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 dark:disabled:bg-blue-800 dark:disabled:text-blue-400 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Start Scan</button>
+            <button type="submit" class="sm:mt-6 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Start scan</button>
         </form>
     </div>
 
     <div class="space-y-3">
-        <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+        <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
                 <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
-                    <input x-model="searchQuery" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8 shadow-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden" placeholder="Search sites, owners, domains..." type="search">
+                    <input aria-label="Search sites, owners, domains" x-model="searchQuery" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-1.5 pl-8 text-sm" placeholder="Search sites, owners, domains…" type="search">
                     <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                     </div>
                 </div>
                 {{if gt (len .Types) 1}}
-                <div class="flex flex-nowrap shrink-0 items-center gap-1 overflow-x-auto">
-                    <button type="button" @click="typeFilter = ''" :class="typeFilter === '' ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-500/10 dark:text-blue-400' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900/60'" class="shrink-0 cursor-pointer whitespace-nowrap rounded-md border px-2 py-1 text-xs font-medium shadow-xs transition">All</button>
+                <div role="radiogroup" aria-label="Filter by type" class="flex flex-nowrap shrink-0 items-center gap-1 overflow-x-auto p-0.5">
+                    <label class="shrink-0 inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-xs transition hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900/60 dark:has-[:checked]:border-blue-500 dark:has-[:checked]:bg-blue-500/10 dark:has-[:checked]:text-blue-400"><input type="radio" name="websites_type_filter" value="" x-model="typeFilter" class="sr-only">All</label>
                     {{range .Types}}
-                    <button type="button" @click="typeFilter = {{toJSON .Type}}" :class="typeFilter === {{toJSON .Type}} ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-500/10 dark:text-blue-400' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900/60'" class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs font-medium shadow-xs transition">{{siteTypeUse .Type}} {{siteTypeLabel .Type}} <span class="opacity-60">{{.Count}}</span></button>
+                    <label class="shrink-0 inline-flex cursor-pointer select-none items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-xs transition hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:text-blue-700 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900/60 dark:has-[:checked]:border-blue-500 dark:has-[:checked]:bg-blue-500/10 dark:has-[:checked]:text-blue-400"><input type="radio" name="websites_type_filter" value="{{.Type}}" x-model="typeFilter" class="sr-only">{{siteTypeUse .Type}} {{siteTypeLabel .Type}} <span class="opacity-60">{{.Count}}</span></label>
                     {{end}}
                 </div>
                 {{end}}
             </div>
             <div class="relative" x-data="{ open: false }" @click.outside="open = false">
-                <button type="button" @click="open = !open" class="relative items-center justify-center whitespace-nowrap border text-center font-medium transition-all duration-100 ease-in-out ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg> Show Columns</button>
-                <div x-show="open" x-transition class="absolute right-0 z-10 mt-1 w-72 rounded-md border border-gray-200 bg-gray-50 text-sm text-gray-900 shadow-md dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
-                            <ul class="p-2 space-y-1">
+                <button type="button" @click="open = !open" :aria-expanded="open.toString()" aria-controls="websites-columns" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Columns<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg></button>
+                <div x-show="open" x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" id="websites-columns" @keydown.escape="open = false" class="absolute right-0 mt-1 w-72 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
+                            <ul>
                                 <li>
-                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-900">
-                                        <input type="checkbox" x-model="columns.type" class="sr-only peer">
-                                        <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Type</span>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Type</span>
+                                        <input type="checkbox" role="switch" x-model="columns.type" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
                                     </label>
                                 </li>
                                 <li>
-                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-900">
-                                        <input type="checkbox" x-model="columns.owner" class="sr-only peer">
-                                        <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Owner</span>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Owner</span>
+                                        <input type="checkbox" role="switch" x-model="columns.owner" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
                                     </label>
                                 </li>
                                 <li>
-                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-900">
-                                        <input type="checkbox" x-model="columns.version" class="sr-only peer">
-                                        <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Version</span>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Version</span>
+                                        <input type="checkbox" role="switch" x-model="columns.version" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
                                     </label>
                                 </li>
 {{if .GitEnabled}}
                                 <li>
-                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-900">
-                                        <input type="checkbox" x-model="columns.git" class="sr-only peer">
-                                        <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Git</span>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Git</span>
+                                        <input type="checkbox" role="switch" x-model="columns.git" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
                                     </label>
                                 </li>
 {{end}}
                                 <li>
-                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-900">
-                                        <input type="checkbox" x-model="columns.vulns" class="sr-only peer">
-                                        <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Vulnerabilities</span>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Vulnerabilities</span>
+                                        <input type="checkbox" role="switch" x-model="columns.vulns" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
                                     </label>
                                 </li>
                                 {{if .Imunify}}
                                 <li>
-                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-900">
-                                        <input type="checkbox" x-model="columns.imunify" class="sr-only peer">
-                                        <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">ImunifyAV</span>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>ImunifyAV</span>
+                                        <input type="checkbox" role="switch" x-model="columns.imunify" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
                                     </label>
                                 </li>
                                 {{end}}
                                 <li>
-                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-900">
-                                        <input type="checkbox" x-model="columns.speed" class="sr-only peer">
-                                        <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">PageSpeed</span>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>PageSpeed</span>
+                                        <input type="checkbox" role="switch" x-model="columns.speed" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
                                     </label>
                                 </li>
                                 <li>
-                                    <label class="flex cursor-pointer items-center rounded-sm py-1 hover:bg-gray-100 dark:hover:bg-gray-900">
-                                        <input type="checkbox" x-model="columns.created" class="sr-only peer">
-                                        <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-                                        <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">Created</span>
+                                    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between">
+                                        <span>Created</span>
+                                        <input type="checkbox" role="switch" x-model="columns.created" class="peer sr-only">
+                                        <span aria-hidden="true" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
                                     </label>
                                 </li>
                             </ul>
@@ -181,7 +182,7 @@
 {{$suspended := contains $owner "SUSPENDED_"}}
 {{$type := lower .Type}}
 {{$id := .ID}}
-                    <tr x-show="(typeFilter === '' || typeFilter === {{toJSON $type}}) && (searchQuery === '' || {{toJSON (lower (printf "%s %s %s %s %s" .SiteName $owner .Domain .AdminEmail .Type))}}.includes(searchQuery.toLowerCase()))" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if $suspended}}bg-red-50 dark:bg-red-400/10{{end}}">
+                    <tr x-show="(typeFilter === '' || typeFilter === {{toJSON $type}}) && (searchQuery === '' || {{toJSON (lower (printf "%s %s %s %s %s" .SiteName $owner .Domain .AdminEmail .Type))}}.includes(searchQuery.toLowerCase()))" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
 {{template "bulk_row_checkbox" (dict "Key" (printf "%d" .ID) "Label" .SiteName "Skip" .BulkSkip)}}
                         <td class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
                             <div class="flex items-center gap-3">
@@ -190,18 +191,18 @@
                                     <img class="size-4 rounded-full" src="{{$root.FaviconBase}}{{.SiteName}}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
                                 </span>
                                 <div>
-                                    <a href="http://{{.SiteName}}" target="_blank" rel="noopener" class="hover:underline">{{.SiteName}}</a>
-                                    {{if .HostDocroot}}<p class="text-xs font-normal text-gray-500 dark:text-gray-400" title="{{.Docroot}} in the container">{{.HostDocroot}}</p>{{end}}
+                                    <a href="http://{{.SiteName}}" target="_blank" rel="noopener" class="font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50">{{.SiteName}}</a>
+                                    {{if .HostDocroot}}<p class="text-xs font-normal text-gray-500 dark:text-gray-500" title="{{.Docroot}} in the container">{{.HostDocroot}}</p>{{end}}
                                 </div>
                             </div>
                         </td>
                         <td data-col="type" class="p-4 text-sm whitespace-nowrap py-2 text-gray-700 dark:text-gray-300 text-center"><span class="inline-flex" title="{{siteTypeLabel .Type}}" aria-label="{{siteTypeLabel .Type}}">{{siteTypeUse .Type}}</span></td>
                         <td data-col="owner" class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
-                            {{if $owner}}<a href="/users/{{$owner}}" class="hover:underline">{{lastSegment $owner "_"}}</a> {{if $suspended}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-900 ring-1 ring-red-600/20 ring-inset dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">SUSPENDED</span>{{end}}{{else}}<span class="text-gray-400">no owner</span>{{end}}
+                            {{if $owner}}<a href="/users/{{$owner}}" class="font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50">{{lastSegment $owner "_"}}</a> {{if $suspended}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Suspended</span>{{end}}{{else}}<span class="font-normal text-gray-400 dark:text-gray-600">No owner</span>{{end}}
                         </td>
                         <td data-col="version" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left tabular-nums">
-                            <div>{{or .Version "-"}}</div>
-                            {{if .LatestVersion}}<span class="mt-1 inline-flex items-center gap-1 rounded bg-yellow-50 px-1.5 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-400/10 dark:text-yellow-400" title="WordPress {{.LatestVersion}} is available">
+                            <div>{{if .Version}}{{.Version}}{{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}</div>
+                            {{if .LatestVersion}}<span class="mt-1 inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20" title="WordPress {{.LatestVersion}} is available">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg>
                                 {{.LatestVersion}} available
                             </span>{{end}}
@@ -211,18 +212,18 @@
                             <div class="flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="#f05032" class="size-4 shrink-0" aria-hidden="true"><path d="M15.698 7.287 8.712.302a1.03 1.03 0 0 0-1.457 0l-1.45 1.45 1.84 1.84a1.223 1.223 0 0 1 1.55 1.56l1.773 1.774a1.224 1.224 0 0 1 1.267 2.025 1.226 1.226 0 0 1-2.002-1.334L8.58 5.963v4.353a1.226 1.226 0 1 1-1.008-.036V5.887a1.226 1.226 0 0 1-.666-1.608L5.093 2.465l-4.79 4.79a1.03 1.03 0 0 0 0 1.457l6.986 6.986a1.03 1.03 0 0 0 1.457 0l6.953-6.953a1.03 1.03 0 0 0 0-1.457"/></svg>
                                 <span class="font-medium text-gray-900 dark:text-gray-50" title="{{$g.TargetDir}}">{{$g.Name}}</span>
-                                <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">{{$g.Branch}}</span>
-                                {{with $row.GitErrors}}<span class="rounded bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-400/10 dark:text-red-400 cursor-help" title="{{.}}">Error</span>{{end}}
-                                {{if gt (len .) 1}}<span class="text-xs text-gray-500 dark:text-gray-400 cursor-help" title="{{$row.GitOthers}}">+{{sub (len .) 1}} more</span>{{end}}
+                                <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">{{$g.Branch}}</span>
+                                {{with $row.GitErrors}}<span class="cursor-help inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20" title="{{.}}">Error</span>{{end}}
+                                {{if gt (len .) 1}}<span class="text-xs text-gray-500 dark:text-gray-500 cursor-help" title="{{$row.GitOthers}}">+{{sub (len .) 1}} more</span>{{end}}
                             </div>
-                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{if eq $g.Source "remote"}}Remote{{else}}Local{{end}} &middot; {{$g.ModeLabel}}{{if $g.DeployedAgo}} &middot; <span title="{{$g.Deployed}}">deployed {{$g.DeployedAgo}}</span>{{if $g.Commit}} <code>{{$g.Commit}}</code>{{end}}{{else if ne $g.Mode "none"}} &middot; not deployed yet{{end}}</p>
+                            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-500">{{if eq $g.Source "remote"}}Remote{{else}}Local{{end}} &middot; {{$g.ModeLabel}}{{if $g.DeployedAgo}} &middot; <span title="{{$g.Deployed}}">deployed {{$g.DeployedAgo}}</span>{{if $g.Commit}} <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">{{$g.Commit}}</code>{{end}}{{else if ne $g.Mode "none"}} &middot; not deployed yet{{end}}</p>
                             {{else}}<span class="text-gray-400 dark:text-gray-600" title="No Git repository deploys to this website">—</span>{{end}}
                         </td>{{end}}
                         <td data-col="vulns" class="p-4 text-sm whitespace-nowrap py-2 text-left">
                             {{if not .IsWordPress}}
                             <span class="text-gray-400 dark:text-gray-600" title="Only WordPress sites are scanned for vulnerabilities">—</span>
                             {{else if .Vulns}}
-                            <button type="button" @click="openVulns({{.ID}}, {{toJSON .SiteName}})" class="cursor-pointer inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 hover:bg-red-100 dark:bg-red-400/10 dark:text-red-400 dark:hover:bg-red-400/20">
+                            <button type="button" @click="openVulns({{.ID}}, {{toJSON .SiteName}})" class="cursor-pointer hover:bg-red-100 dark:hover:bg-red-400/20 inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                                 <svg class="size-3.5" fill="currentColor" aria-hidden="true"><use href="#ws-warn"></use></svg>
                                 {{.Vulns.Total}} in {{len .Vulns.Components}} {{if gt (len .Vulns.Components) 1}}components{{else}}component{{end}}
                             </button>
@@ -240,22 +241,22 @@
                                 <div>
                                     {{with .Imunify}}
                                     {{if .Scanning}}
-                                    <span class="text-xs font-medium text-blue-600 dark:text-blue-400">Scanning...</span>
+                                    <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 animate-spin"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"></path></svg>Scanning…</span>
                                     {{else if .Total}}
-                                    <a href="/security/imunify/" title="Open ImunifyAV to see and handle the infected files" class="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-400/10 dark:text-red-400"><svg class="size-3.5" fill="currentColor" aria-hidden="true"><use href="#ws-warn"></use></svg>{{.Total}} infected</a>
+                                    <a href="/security/imunify/" title="Open ImunifyAV to see and handle the infected files" class="hover:bg-red-100 dark:hover:bg-red-400/20 inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-3.5" fill="currentColor" aria-hidden="true"><use href="#ws-warn"></use></svg>{{.Total}} infected</a>
                                     {{else if not .ScanDate}}
                                     {{/* no scan yet means nothing is known, not clean */}}
                                     <span class="text-gray-400 dark:text-gray-600" title="ImunifyAV hasn't scanned the owner's files yet">—</span>
                                     {{else}}
                                     <span class="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"><svg class="size-3.5" fill="currentColor" aria-hidden="true"><use href="#ws-check"></use></svg>Clean</span>
                                     {{end}}
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{with .ScanAgo}}<span title="Last scan of the owner's files" class="cursor-help">scanned {{.}}</span>{{else}}never scanned{{end}}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-500">{{with .ScanAgo}}<span title="Last scan of the owner's files" class="cursor-help">scanned {{.}}</span>{{else}}never scanned{{end}}</p>
                                     {{else}}
                                     <span class="text-gray-400 dark:text-gray-600" title="ImunifyAV hasn't scanned the owner's files yet">—</span>
                                     {{end}}
                                 </div>
                                 {{if $owner}}
-                                <button type="button" @click="post('/security/imunify/' + {{toJSON $owner}})" {{if and .Imunify .Imunify.Scanning}}disabled{{end}} title="Scan {{lastSegment $owner "_"}}'s files with ImunifyAV" class="shrink-0 cursor-pointer rounded-md p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-white"><svg class="size-4" fill="currentColor" aria-hidden="true"><use href="#ws-scan"></use></svg></button>
+                                <button type="button" @click="post('/security/imunify/' + {{toJSON $owner}})" {{if and .Imunify .Imunify.Scanning}}disabled{{end}} title="Scan {{lastSegment $owner "_"}}'s files with ImunifyAV" aria-label="Scan {{lastSegment $owner "_"}}'s files with ImunifyAV" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-7 cursor-pointer disabled:pointer-events-none disabled:opacity-40"><svg class="size-4" fill="currentColor" aria-hidden="true"><use href="#ws-scan"></use></svg></button>
                                 {{else}}
                                 <span class="inline-block h-6 w-6 shrink-0" aria-hidden="true"></span>
                                 {{end}}
@@ -264,42 +265,42 @@
                         {{end}}
                         <td data-col="speed" class="p-4 text-sm whitespace-nowrap py-2 text-left">
                             {{with .Speed}}
-                            <div class="flex cursor-pointer gap-2" @mouseenter="showSpeed($el, {{$id}}, {{toJSON .}})" @mouseleave="hideSpeed()">
-                                <div class="flex items-center gap-x-2.5">
-                                <div class="relative" role="progressbar" aria-label="Desktop PageSpeed score" aria-valuenow="{{.Desktop.Score}}" aria-valuemin="0" aria-valuemax="100">
+                            <button type="button" class="flex cursor-pointer gap-2 rounded-md text-left outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" aria-haspopup="dialog" :aria-expanded="(speed !== null && speedSite === {{$id}}).toString()" aria-label="PageSpeed details, desktop score {{.Desktop.Score}}" @mouseenter="showSpeed($el, {{$id}}, {{toJSON .}})" @mouseleave="hideSpeed()" @click="showSpeed($el, {{$id}}, {{toJSON .}}); $nextTick(() => $refs.speedRecheck?.focus())">
+                                <span class="flex items-center gap-x-2.5">
+                                <span class="relative block">
                                     <svg width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform" aria-hidden="true">
-                                        <circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-100 dark:stroke-gray-500/30"></circle>
-                                        <circle r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54 78.54" stroke-dashoffset="{{.RingOffset}}" fill="transparent" class="{{.RingColor}}"></circle>
+                                        <circle r="12" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-200 dark:stroke-gray-800"></circle>
+                                        <circle r="12" cx="14" cy="14" stroke-width="3" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="{{sub 100 .Desktop.Score}}" fill="transparent" class="{{.RingColor}}"></circle>
                                     </svg>
-                                    <div class="absolute inset-0 flex items-center justify-center"><span class="text-[11px] font-semibold text-gray-900 dark:text-gray-50">{{.Desktop.Score}}</span></div>
-                                </div>
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-gray-900 dark:text-gray-50"><span class="text-gray-500">Mobile: </span><span class="font-medium">{{.Mobile.FCP}}</span></span>
-                                    <span class="text-xs text-gray-500">Desktop {{.Desktop.FCP}}</span>
-                                </div>
-                            </div>
+                                    <span class="absolute inset-0 flex items-center justify-center"><span class="text-[11px] font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Desktop.Score}}</span></span>
+                                </span>
+                                </span>
+                                <span class="flex flex-col">
+                                    <span class="text-gray-900 dark:text-gray-50"><span class="text-gray-500 dark:text-gray-500">Mobile </span><span class="font-medium tabular-nums">{{.Mobile.FCP}}</span></span>
+                                    <span class="text-xs tabular-nums text-gray-500 dark:text-gray-500">Desktop {{.Desktop.FCP}}</span>
+                                </span>
+                            </button>
                             {{else}}
-                            <a href="https://pagespeed.web.dev/report?url={{printf "https://%s" .SiteName | urlquery}}" target="_blank" rel="noopener" title="No speed data yet, check on Google PageSpeed Insights" class="inline-flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"><svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#ws-speed"></use></svg></a>
+                            <a href="https://pagespeed.web.dev/report?url={{printf "https://%s" .SiteName | urlquery}}" target="_blank" rel="noopener" title="No speed data yet, check on Google PageSpeed Insights" aria-label="No speed data yet, check on Google PageSpeed Insights" class="inline-flex items-center rounded text-gray-400 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-4" fill="currentColor" aria-hidden="true"><use href="#ws-speed"></use></svg></a>
                             {{end}}
                         </td>
-                        <td data-col="created" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left">{{if .CreatedAgo}}<span title="{{.Created}}" class="cursor-help">{{.CreatedAgo}}</span>{{else}}{{or .Created "-"}}{{end}}</td>
+                        <td data-col="created" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left">{{if .CreatedAgo}}<span title="{{.Created}}" class="cursor-help">{{.CreatedAgo}}</span>{{else if .Created}}{{.Created}}{{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}</td>
                         <td class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-right">
                             <div class="inline-flex items-center gap-1">
                             {{if and .IsWordPress $owner}}
-                            <a href="/websites/login/{{.ID}}" target="_blank" title="Log in to wp-admin as administrator" aria-label="Log in to wp-admin of {{.SiteName}}" class="inline-flex items-center justify-center rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-white"><svg width="16" height="16" fill="currentColor" aria-hidden="true"><use href="#ws-login"></use></svg></a>
+                            <a href="/websites/login/{{.ID}}" target="_blank" title="Log in to wp-admin as administrator" aria-label="Log in to wp-admin of {{.SiteName}}" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8"><svg class="size-4" fill="currentColor" aria-hidden="true"><use href="#ws-login"></use></svg></a>
                             {{else}}
-                            <span class="inline-block size-7" aria-hidden="true"></span>
+                            <span class="inline-block size-8" aria-hidden="true"></span>
                             {{end}}
-                            <button type="button" @click.stop="openMenu($event.currentTarget, {{toJSON .Menu}})" aria-label="Actions for {{.SiteName}}" class="inline-flex cursor-pointer items-center justify-center rounded-md border border-transparent p-1.5 text-gray-900 hover:border-gray-300 hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-800/80 hover:dark:border-gray-700"><svg class="w-5 h-5" fill="currentColor" aria-hidden="true"><use href="#ws-dots"></use></svg></button>
+                            <button type="button" @click.stop="openMenu($event.currentTarget, {{toJSON .Menu}})" aria-label="Actions for {{.SiteName}}" aria-haspopup="menu" :aria-expanded="(menuOpen && menu.id === {{.ID}}).toString()" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 cursor-pointer opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 [@media(hover:none)]:opacity-100"><svg class="size-4" fill="currentColor" aria-hidden="true"><use href="#ws-dots"></use></svg></button>
                             </div>
                         </td>
                     </tr>
 {{end}}
 {{else if .MySQLIsDown}}
-                    <tr><td colspan="10" class="p-6 text-center">{{template "partial_mysql_error" .}}</td></tr>
+                    <tr><td colspan="10" class="px-4 py-8 text-center">{{template "partial_mysql_error" .}}</td></tr>
 {{else}}
-                    <tr><td colspan="10" class="p-6 text-center text-sm">No websites yet. Use <b>Scan for Websites</b> to find sites users installed outside Site Manager.</td></tr>
+                    <tr><td colspan="10" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">No websites yet. Use <span class="font-medium text-gray-900 dark:text-gray-50">Scan for websites</span> to find sites users installed outside Site Manager.</td></tr>
 {{end}}
                 </tbody>
             </table>
@@ -311,38 +312,39 @@
         <input type="hidden" name="id" :value="menu.id">
         <input type="hidden" name="back" value="/websites">
     </form>
-    <div x-show="menuOpen" x-ref="menu" x-cloak @click.outside="menuOpen = false" @keydown.escape.window="menuOpen = false" @scroll.window="menuOpen = false" :style="menuPos" class="fixed z-50 min-w-48 rounded-md border border-gray-200 bg-white p-1 text-left text-gray-900 shadow-xl dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
-        <ul class="py-2 text-sm">
-            <li class="flex"><a :href="'http://' + menu.name" target="_blank" rel="noopener" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Visit site</a></li>
-            <template x-if="menu.wp && menu.owner"><li class="flex"><a :href="'/websites/login/' + menu.id" target="_blank" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Log in to wp-admin</a></li></template>
-            <template x-if="menu.owner"><li class="flex"><a :href="'/login/token/' + menu.login + '?next=' + encodeURIComponent('/website?domain=' + menu.name)" target="_blank" :title="'Log in to OpenPanel as ' + menu.login + ' and open this site in Site Manager'" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Manage as owner</a></li></template>
-            <template x-if="menu.owner"><li class="flex"><a :href="'/users/' + menu.owner" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Owner account</a></li></template>
-            <template x-if="menu.owner && menu.domain"><li class="flex"><a :href="'/domains/vhost/' + menu.owner + '/' + menu.domain" target="_blank" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Edit Virtual Host</a></li></template>
+    <div x-show="menuOpen" x-ref="menu" x-cloak role="menu" @click.outside="menuOpen = false" @keydown.escape.window="closeMenu(true)" @keydown.down.prevent="menuMove(1)" @keydown.up.prevent="menuMove(-1)" @keydown.tab="closeMenu(true)" @scroll.window="menuOpen = false" :style="menuPos" class="fixed min-w-48 text-left z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
+        <ul role="none">
+            <li class="flex" role="none"><a :href="'http://' + menu.name" target="_blank" rel="noopener" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Visit site</a></li>
+            <template x-if="menu.wp && menu.owner"><li class="flex" role="none"><a :href="'/websites/login/' + menu.id" target="_blank" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Log in to wp-admin</a></li></template>
+            <template x-if="menu.owner"><li class="flex" role="none"><a :href="'/login/token/' + menu.login + '?next=' + encodeURIComponent('/website?domain=' + menu.name)" target="_blank" :title="'Log in to OpenPanel as ' + menu.login + ' and open this site in Site Manager'" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Manage as owner</a></li></template>
+            <template x-if="menu.owner"><li class="flex" role="none"><a :href="'/users/' + menu.owner" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Owner account</a></li></template>
+            <template x-if="menu.owner && menu.domain"><li class="flex" role="none"><a :href="'/domains/vhost/' + menu.owner + '/' + menu.domain" target="_blank" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Edit virtual host</a></li></template>
             {{if .GitEnabled}}
-            <template x-if="menu.gitPull"><li class="flex"><button type="button" @click="post('/websites/git/pull')" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Git: pull updates</button></li></template>
-            <template x-if="menu.gitDeploy"><li class="flex"><button type="button" @click="post('/websites/git/deploy')" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Git: deploy</button></li></template>
-            <template x-if="menu.owner"><li class="flex"><a :href="'/login/token/' + menu.login + '?next=' + encodeURIComponent('/website?domain=' + menu.name + '&tab=git')" target="_blank" :title="'Log in to OpenPanel as ' + menu.login + ' and open the Git tab of this site'" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900" x-text="menu.git ? 'Git: manage repositories' : 'Git: set up a repository'"></a></li></template>
+            <template x-if="menu.gitPull"><li class="flex" role="none"><button type="button" @click="post('/websites/git/pull')" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Git: pull updates</button></li></template>
+            <template x-if="menu.gitDeploy"><li class="flex" role="none"><button type="button" @click="post('/websites/git/deploy')" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Git: deploy</button></li></template>
+            <template x-if="menu.owner"><li class="flex" role="none"><a :href="'/login/token/' + menu.login + '?next=' + encodeURIComponent('/website?domain=' + menu.name + '&tab=git')" target="_blank" :title="'Log in to OpenPanel as ' + menu.login + ' and open the Git tab of this site'" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full" x-text="menu.git ? 'Git: manage repositories' : 'Git: set up a repository'"></a></li></template>
             {{end}}
-            <li class="flex"><button type="button" @click="post('/websites/pagespeed')" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Check PageSpeed</button></li>
-            {{if .Imunify}}<template x-if="menu.owner"><li class="flex"><button type="button" @click="post('/security/imunify/' + menu.owner)" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Scan with ImunifyAV</button></li></template>{{end}}
-            <template x-if="menu.wp"><li class="flex"><button type="button" @click="post('/websites/vulnerability')" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">Scan for vulnerabilities</button></li></template>
-            <li class="flex"><button type="button" @click="opConfirm('Detach ' + menu.name + ' from Site Manager? Files and databases are kept.').then(ok => ok && post('/websites/detach'))" class="w-full flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">Detach</button></li>
+            <li class="flex" role="none"><button type="button" @click="post('/websites/pagespeed')" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Check PageSpeed</button></li>
+            {{if .Imunify}}<template x-if="menu.owner"><li class="flex" role="none"><button type="button" @click="post('/security/imunify/' + menu.owner)" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Scan with ImunifyAV</button></li></template>{{end}}
+            <template x-if="menu.wp"><li class="flex" role="none"><button type="button" @click="post('/websites/vulnerability')" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Scan for vulnerabilities</button></li></template>
+            <li role="separator"><div class="-mx-1 my-1 h-px bg-gray-200 dark:bg-gray-800"></div></li>
+            <li class="flex" role="none"><button type="button" @click="opConfirm('Detach ' + menu.name + ' from Site Manager? Files and databases are kept.').then(ok => ok && post('/websites/detach'))" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-red-600 dark:text-red-500 w-full">Detach</button></li>
         </ul>
     </div>
-    <div x-show="speed" x-cloak x-transition.opacity :style="speedPos" style="width:22rem" @mouseenter="clearTimeout(speedTimer)" @mouseleave="hideSpeed()" @scroll.window="speed = null" class="fixed z-50 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-500 shadow-lg dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400">
+    <div x-show="speed" x-cloak x-transition.opacity :style="speedPos" style="width:22rem" role="dialog" aria-label="PageSpeed details" @mouseenter="clearTimeout(speedTimer)" @mouseleave="hideSpeed()" @focusin="clearTimeout(speedTimer)" @focusout="if (!$el.contains($event.relatedTarget)) hideSpeed()" @keydown.escape.window="speed = null" @scroll.window="speed = null" class="fixed z-50 rounded-md border border-gray-200 bg-white p-3 text-sm text-gray-500 shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950 dark:text-gray-500">
         <template x-if="speed">
             <table class="w-full text-xs">
                 <thead>
-                    <tr><td class="p-2"></td><td class="text-end font-medium text-gray-500 dark:text-gray-400">Desktop</td><td class="text-end font-medium text-gray-500 dark:text-gray-400">Mobile</td></tr>
+                    <tr><td class="p-2"></td><td class="text-end font-medium text-gray-500 dark:text-gray-500">Desktop</td><td class="text-end font-medium text-gray-500 dark:text-gray-500">Mobile</td></tr>
                 </thead>
                 <tbody>
-                    <tr><td class="p-2 font-medium text-gray-500 dark:text-gray-400">Performance:</td><td class="text-end font-bold" x-text="speed.desktop.score"></td><td class="text-end font-bold" x-text="speed.mobile.score"></td></tr>
-                    <tr><td class="p-2 font-medium text-gray-500 dark:text-gray-400">First Contentful Paint:</td><td class="text-end font-bold" x-text="speed.desktop.first_contentful_paint"></td><td class="text-end font-bold" x-text="speed.mobile.first_contentful_paint"></td></tr>
-                    <tr><td class="p-2 font-medium text-gray-500 dark:text-gray-400">Speed Index:</td><td class="text-end font-bold" x-text="speed.desktop.speed_index"></td><td class="text-end font-bold" x-text="speed.mobile.speed_index"></td></tr>
-                    <tr><td class="p-2 font-medium text-gray-500 dark:text-gray-400">Time to Interactive:</td><td class="text-end font-bold" x-text="speed.desktop.interactive"></td><td class="text-end font-bold" x-text="speed.mobile.interactive"></td></tr>
+                    <tr><td class="p-2 font-medium text-gray-500 dark:text-gray-500">Performance</td><td class="text-end font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="speed.desktop.score"></td><td class="text-end font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="speed.mobile.score"></td></tr>
+                    <tr><td class="p-2 font-medium text-gray-500 dark:text-gray-500">First contentful paint</td><td class="text-end font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="speed.desktop.first_contentful_paint"></td><td class="text-end font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="speed.mobile.first_contentful_paint"></td></tr>
+                    <tr><td class="p-2 font-medium text-gray-500 dark:text-gray-500">Speed index</td><td class="text-end font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="speed.desktop.speed_index"></td><td class="text-end font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="speed.mobile.speed_index"></td></tr>
+                    <tr><td class="p-2 font-medium text-gray-500 dark:text-gray-500">Time to interactive</td><td class="text-end font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="speed.desktop.interactive"></td><td class="text-end font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="speed.mobile.interactive"></td></tr>
                     <tr>
-                        <td colspan="2" class="p-2 font-medium text-gray-500 dark:text-gray-400" x-text="'Measured at ' + speed.checked"></td>
-                        <td class="p-2 text-end"><button type="button" @click="menu = { id: speedSite }; $nextTick(() => post('/websites/pagespeed'))" class="inline-flex cursor-pointer items-center justify-center whitespace-nowrap border px-2 py-1 text-xs font-medium rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Update</button></td>
+                        <td colspan="2" class="p-2 font-medium text-gray-500 dark:text-gray-500" x-text="'Measured at ' + speed.checked"></td>
+                        <td class="p-2 text-end"><button type="button" x-ref="speedRecheck" @click="menu = { id: speedSite }; $nextTick(() => post('/websites/pagespeed'))" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Recheck</button></td>
                     </tr>
                 </tbody>
             </table>
@@ -350,15 +352,17 @@
     </div>
     {{/* one popup for the page, details load on open so the page doesn't carry every report */}}
     <div x-show="vulnSite" x-cloak x-transition.opacity @keydown.escape.window="vulnSite = 0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="vulnSite = 0" role="dialog" aria-modal="true" aria-labelledby="websites-dialog-1-title" x-trap.noscroll="vulnSite">
-        <div style="max-height:85vh" class="w-full max-w-2xl overflow-y-auto rounded-md border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-900 dark:bg-raised">
-            <div class="mb-4 flex items-start justify-between gap-4">
+        <div style="max-height:85vh" class="flex w-full max-w-2xl flex-col overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">
+            <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4 dark:border-gray-900">
                 <h3 id="websites-dialog-1-title" class="text-base font-semibold text-gray-900 dark:text-gray-50">Vulnerabilities on <span x-text="vulnName"></span></h3>
-                <button type="button" @click="vulnSite = 0" class="cursor-pointer rounded-md p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-900" aria-label="Close">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"></path></svg>
+                <button type="button" @click="vulnSite = 0" class="-my-1 -mr-2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"></path></svg>
                 </button>
             </div>
-            <p x-show="vulnLoading" class="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
-            <div x-show="!vulnLoading" x-html="vulnHTML"></div>
+            <div class="overflow-y-auto px-6 py-4">
+                <p x-show="vulnLoading" class="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4 animate-spin"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"></path></svg>Loading…</p>
+                <div x-show="!vulnLoading" x-html="vulnHTML"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -413,8 +417,20 @@ document.addEventListener('alpine:init', () => {
             const r = el.getBoundingClientRect();
             return 'top:' + (r.bottom + 4) + 'px;left:' + Math.max(8, Math.min(r.left, window.innerWidth - width - 8)) + 'px';
         },
+        menuBtn: null,
+        menuItems() { return [...this.$refs.menu.querySelectorAll('[role="menuitem"]')]; },
+        menuMove(step) {
+            const list = this.menuItems(), i = list.indexOf(document.activeElement);
+            list[(i + step + list.length) % list.length]?.focus();
+        },
+        closeMenu(refocus) {
+            if (!this.menuOpen) return;
+            this.menuOpen = false;
+            if (refocus) this.menuBtn?.focus();
+        },
         openMenu(el, site) {
             if (this.menuOpen && this.menu.id === site.id) { this.menuOpen = false; return; }
+            this.menuBtn = el;
             this.menu = site;
             const r = el.getBoundingClientRect();
             const left = 'left:' + Math.max(8, r.right - 200) + 'px';
@@ -426,6 +442,7 @@ document.addEventListener('alpine:init', () => {
                 if (r.bottom + 4 + h > window.innerHeight && r.top - 4 - h > 0) {
                     this.menuPos = 'top:' + (r.top - 4 - h) + 'px;' + left;
                 }
+                this.menuItems()[0]?.focus({ preventScroll: true });
             });
         },
         post(action) {
@@ -447,9 +464,9 @@ document.addEventListener('alpine:init', () => {
             this.vulnLoading = true;
             try {
                 const r = await fetch('/websites/vulnerabilities/' + id);
-                this.vulnHTML = r.ok ? await r.text() : '<p class="text-sm text-red-600">Failed to load the report.</p>';
+                this.vulnHTML = r.ok ? await r.text() : '<p class="text-sm text-red-600 dark:text-red-500">Failed to load the report.</p>';
             } catch (e) {
-                this.vulnHTML = '<p class="text-sm text-red-600">Failed to load the report.</p>';
+                this.vulnHTML = '<p class="text-sm text-red-600 dark:text-red-500">Failed to load the report.</p>';
             }
             if (this.vulnSite === id) this.vulnLoading = false;
         },
@@ -469,21 +486,21 @@ document.addEventListener('alpine:init', () => {
 {{/* body of the vulnerabilities popup, fetched from /websites/vulnerabilities/{id} */}}
 {{define "websites_vulns"}}
 {{if .Vulns}}
-<p class="mb-4 text-xs text-gray-500 dark:text-gray-400">{{.Vulns.Total}} known {{if gt .Vulns.Total 1}}issues{{else}}issue{{end}}{{if .Vulns.Checked}}, last scanned {{.Vulns.Checked}}{{end}}</p>
+<p class="mb-4 text-xs text-gray-500 dark:text-gray-500">{{.Vulns.Total}} known {{if gt .Vulns.Total 1}}issues{{else}}issue{{end}}{{if .Vulns.Checked}}, last scanned {{.Vulns.Checked}}{{end}}</p>
 <div class="space-y-4 text-left">
 {{range .Vulns.Components}}
 <div>
     <p class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-50">
-        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium capitalize text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{.Kind}}</span>
-        {{if .Link}}<a href="{{.Link}}" target="_blank" rel="noopener" class="hover:underline">{{.Name}}</a>{{else}}{{.Name}}{{end}}
+        <span class="capitalize inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">{{.Kind}}</span>
+        {{if .Link}}<a href="{{.Link}}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50">{{.Name}}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg></a>{{else}}{{.Name}}{{end}}
     </p>
     <ul class="mt-2 space-y-2">
         {{range .Issues}}
         <li class="rounded-md bg-gray-50 p-3 text-sm dark:bg-gray-900">
-            <p class="font-medium text-gray-800 dark:text-gray-200">{{.Name}}</p>
+            <p class="font-medium text-gray-900 dark:text-gray-50">{{.Name}}</p>
             {{if .FixedIn}}<p class="mt-1 text-xs text-gray-600 dark:text-gray-400">Fixed in {{.FixedIn}}, update to fix it.</p>{{end}}
             {{if .Sources}}<p class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400">Source:
-                {{range $src := .Sources}}{{if $src.Link}}{{with vulnSourceLogo $src.Link}}<a href="{{$src.Link}}" target="_blank" rel="noopener" title="{{$src.Name}}" class="inline-flex items-center rounded-md bg-white px-1 py-0.5 transition">{{.}}</a>{{else}}<a href="{{$src.Link}}" target="_blank" rel="noopener" class="text-blue-600 hover:underline dark:text-blue-400">{{$src.Name}}</a>{{end}}{{end}}{{end}}
+                {{range $src := .Sources}}{{if $src.Link}}{{with vulnSourceLogo $src.Link}}<a href="{{$src.Link}}" target="_blank" rel="noopener" title="{{$src.Name}}" aria-label="{{$src.Name}}" class="inline-flex items-center rounded-md bg-white px-1 py-0.5 transition outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">{{.}}</a>{{else}}<a href="{{$src.Link}}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-blue-500 hover:underline hover:underline-offset-4">{{$src.Name}}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg></a>{{end}}{{end}}{{end}}
             </p>{{end}}
         </li>
         {{end}}
@@ -492,6 +509,6 @@ document.addEventListener('alpine:init', () => {
 {{end}}
 </div>
 {{else}}
-<p class="text-sm text-gray-500 dark:text-gray-400">No known vulnerabilities in the last scan.</p>
+<p class="text-sm text-gray-500 dark:text-gray-500">No known vulnerabilities in the last scan.</p>
 {{end}}
 {{end}}

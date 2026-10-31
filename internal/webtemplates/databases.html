@@ -8,7 +8,7 @@
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="databasesPage">
@@ -21,10 +21,10 @@
 </svg>
     <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
                     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Databases</h1>
-                    <h2 class="text-sm text-gray-500 dark:text-gray-500">
+                    <p class="text-sm text-gray-500 dark:text-gray-500">
                         {{if .Databases}}
                             <b>{{len .Databases}}</b> {{if gt (len .Databases) 1}}databases{{else}}database{{end}} across <b>{{.UserCount}}</b> {{if gt .UserCount 1}}users{{else}}user{{end}}, <b>{{.TotalSize}}</b> in total.
                         {{else if .MySQLIsDown}}
@@ -34,18 +34,18 @@
                         {{else}}
                             No databases yet.
                         {{end}}
-                    </h2>
+                    </p>
                 </div>
                 {{if .CheckedAt}}
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                    <a href="{{.Base}}?refresh=1" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Refresh</a>
+                <div class="flex flex-none items-center gap-2">
+                    <a href="{{.Base}}?refresh=1" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Refresh</a>
                 </div>
                 {{end}}
             </div>
             {{if or .Stopped .Failed}}
             <div class="mt-4 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                {{if .Stopped}}<p><span class="font-medium text-gray-900 dark:text-gray-50">Not running, start the service to list databases:</span> {{range $i, $u := .Stopped}}{{if $i}}, {{end}}<a href="/users/{{$u.Username}}" class="text-blue-500 dark:text-blue-500">{{$u.Username}}</a>{{end}}</p>{{end}}
-                {{range .Failed}}<p><span class="font-medium text-red-600 dark:text-red-500">Couldn't list databases for <a href="/users/{{.Username}}" class="underline">{{.Username}}</a>:</span> {{.Reason}}</p>{{end}}
+                {{if .Stopped}}<p><span class="font-medium text-gray-900 dark:text-gray-50">Not running, start the service to list databases:</span> {{range $i, $u := .Stopped}}{{if $i}}, {{end}}<a href="/users/{{$u.Username}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{$u.Username}}</a>{{end}}</p>{{end}}
+                {{range .Failed}}<p><span class="font-medium text-red-600 dark:text-red-500">Couldn't list databases for <a href="/users/{{.Username}}" class="underline underline-offset-4">{{.Username}}</a>:</span> {{.Reason}}</p>{{end}}
             </div>
             {{end}}
         </header>
@@ -53,10 +53,10 @@
 
     <div class="">
         <div class="space-y-3">
-            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
                 <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
                     <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
-                        <input x-model.debounce.150ms="searchQuery" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search by database/owner..." type="search">
+                        <input aria-label="Search by database or owner" x-model.debounce.150ms="searchQuery" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-1.5 pl-8 text-sm" placeholder="Search by database or owner…" type="search">
                         <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
                                 <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path>
@@ -80,9 +80,9 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                         {{range .Databases}}
-                        <tr x-show="searchQuery === '' || '{{jsStr .Name}} {{jsStr .Owner}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                        <tr x-show="searchQuery === '' || '{{jsStr .Name}} {{jsStr .Owner}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
                             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 text-left select-text">{{.Name}}</td>
-                            <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left"><a href="/users/{{.Owner}}" class="text-blue-500 dark:text-blue-500">{{.Owner}}</a></td>
+                            <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left"><a href="/users/{{.Owner}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{.Owner}}</a></td>
                             {{if eq $.Engine "mysql"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left">
                                 <span class="inline-flex items-center gap-x-1.5">{{.TypeIcon}}{{.TypeLabel}}</span>
                             </td>{{end}}
@@ -91,25 +91,25 @@
                             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left tabular-nums">{{.SizeLabel}}</td>
                             {{if eq $.Engine "mysql"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-right">
                                 <div class="inline-flex items-center gap-4">
-                                {{if $.PHPMyAdmin}}<a href="/login/token/{{.Owner}}?next={{printf "/phpmyadmin/?db=%s" .Name}}" target="_blank" title="Open {{.Name}} in phpMyAdmin as {{.Owner}}" class="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline dark:text-blue-500 cursor-pointer"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-pma"/></svg>phpMyAdmin</a>{{end}}
-                                {{if not $.IsReseller}}<a href="/terminal/{{.Owner}}/{{.Type}}?cmd={{.TerminalCommand}}" target="_blank" title="Open {{.Name}} in the {{.TypeLabel}} client of {{.Owner}}" class="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline dark:text-blue-500 cursor-pointer"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-terminal"/></svg>Terminal</a>{{end}}
+                                {{if $.PHPMyAdmin}}<a href="/login/token/{{.Owner}}?next={{printf "/phpmyadmin/?db=%s" .Name}}" target="_blank" title="Open {{.Name}} in phpMyAdmin as {{.Owner}}" class="inline-flex cursor-pointer items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-pma"/></svg>phpMyAdmin</a>{{end}}
+                                {{if not $.IsReseller}}<a href="/terminal/{{.Owner}}/{{.Type}}?cmd={{.TerminalCommand}}" target="_blank" title="Open {{.Name}} in the {{.TypeLabel}} client of {{.Owner}}" class="inline-flex cursor-pointer items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-terminal"/></svg>Terminal</a>{{end}}
                                 <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
-                                    <button type="button" @click="open = !open" class="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline dark:text-blue-500 cursor-pointer"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-export"/></svg>Export</button>
-                                    <form x-show="open" x-cloak method="POST" action="/databases/export" @submit="open = false" class="absolute right-0 z-20 mt-1 w-40 rounded-md border border-gray-200 bg-white p-1 shadow-xl dark:border-gray-800 dark:bg-gray-950">
+                                    <button type="button" @click="open = !open" aria-haspopup="menu" :aria-expanded="open.toString()" class="inline-flex cursor-pointer items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-export"/></svg>Export</button>
+                                    <form x-show="open" x-cloak role="menu" method="POST" action="/databases/export" @submit="open = false" class="absolute right-0 mt-1 w-40 text-left z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
                                         <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                                         <input type="hidden" name="owner" value="{{.Owner}}">
                                         <input type="hidden" name="database" value="{{.Name}}">
-                                        <button type="submit" name="format" value="sql" class="block w-full rounded-md px-2 py-1.5 text-left text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer">SQL (.sql)</button>
-                                        <button type="submit" name="format" value="gzip" class="block w-full rounded-md px-2 py-1.5 text-left text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-900 cursor-pointer">Gzip (.sql.gz)</button>
+                                        <button type="submit" name="format" value="sql" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">SQL (.sql)</button>
+                                        <button type="submit" name="format" value="gzip" role="menuitem" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full">Gzip (.sql.gz)</button>
                                     </form>
                                 </div>
-                                <button type="button" @click="openImport('{{jsStr .Owner}}', '{{jsStr .Name}}')" class="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline dark:text-blue-500 cursor-pointer"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-import"/></svg>Import</button>
+                                <button type="button" @click="openImport('{{jsStr .Owner}}', '{{jsStr .Name}}')" class="inline-flex cursor-pointer items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-import"/></svg>Import</button>
                                 </div>
                             </td>{{end}}
                         </tr>
                         {{else}}
                         <tr>
-                            <td colspan="{{if eq .Engine "mysql"}}6{{else}}4{{end}}" class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">{{if .MySQLIsDown}}Unable to read users from the database.{{else}}No databases found.{{end}}</td>
+                            <td colspan="{{if eq .Engine "mysql"}}6{{else}}4{{end}}" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">{{if .MySQLIsDown}}Unable to read users from the database.{{else}}No databases found.{{end}}</td>
                         </tr>
                         {{end}}
                     </tbody>
@@ -118,19 +118,26 @@
         </div>
     </div>
     <!-- import dialog, the file is streamed straight into the database -->
-    <div x-show="imp.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @keydown.escape.window="closeImport()" role="dialog" aria-modal="true" aria-labelledby="databases-dialog-1-title" x-trap.noscroll="imp.open">
-        <div @click.outside="closeImport()" class="w-full max-w-md rounded-md border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-900 dark:bg-raised">
-            <h3 id="databases-dialog-1-title" class="text-lg font-semibold text-gray-900 dark:text-gray-50">Import into <span x-text="imp.database"></span></h3>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">User <span x-text="imp.owner"></span>. The .sql or .sql.gz file runs against the existing database, tables in the dump replace ones with the same name.</p>
-            <input x-ref="importFile" type="file" accept=".sql,.gz" :disabled="imp.busy" class="mt-4 block w-full text-sm text-gray-900 dark:text-gray-50">
-            <div x-show="imp.busy" class="mt-4">
-                <div class="mb-1 flex justify-between text-xs text-gray-600 dark:text-gray-400"><span x-text="imp.progress < 100 ? 'Uploading...' : 'Importing, this can take a while...'"></span><span x-text="imp.progress + '%'"></span></div>
-                <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800"><div class="h-1.5 rounded-full bg-blue-500" :style="'width: ' + imp.progress + '%'"></div></div>
+    <div x-show="imp.open" x-cloak x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="closeImport()" @keydown.escape.window="closeImport()" role="dialog" aria-modal="true" aria-labelledby="databases-dialog-1-title" x-trap.noscroll="imp.open">
+        <div class="relative w-full max-w-lg overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">
+            <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-900">
+                <h3 id="databases-dialog-1-title" class="text-base font-semibold text-gray-900 dark:text-gray-50">Import into <span x-text="imp.database"></span></h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">User <span x-text="imp.owner"></span>. The .sql or .sql.gz file runs against the existing database, tables in the dump replace ones with the same name.</p>
             </div>
-            <p x-show="imp.error" x-text="imp.error" class="mt-3 text-sm text-red-600 dark:text-red-500"></p>
-            <div class="mt-6 flex justify-end gap-2">
-                <button type="button" @click="closeImport()" :disabled="imp.busy" class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-2 text-sm font-medium cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 disabled:opacity-50">Cancel</button>
-                <button type="button" @click="startImport()" :disabled="imp.busy" class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-2 text-sm font-medium cursor-pointer rounded-md border-transparent bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 dark:disabled:bg-blue-800 dark:disabled:text-blue-400 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 disabled:opacity-50">Import</button>
+            <div class="space-y-4 px-6 py-4">
+                <div>
+                    <label for="database_import_file" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Dump file <span class="font-normal text-gray-500">(.sql or .sql.gz)</span></label>
+                    <input id="database_import_file" x-ref="importFile" type="file" accept=".sql,.gz" :disabled="imp.busy" class="mt-2 block w-full text-sm text-gray-500 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-solid file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-900 file:shadow-xs hover:file:bg-gray-50 dark:file:border-gray-800 dark:file:bg-gray-950 dark:file:text-gray-50 dark:hover:file:bg-gray-900/60">
+                </div>
+                <div x-show="imp.busy">
+                    <div class="mb-1 flex justify-between text-xs text-gray-600 dark:text-gray-400"><span x-text="imp.progress < 100 ? 'Uploading…' : 'Importing, this can take a while…'"></span><span class="tabular-nums" x-text="imp.progress + '%'"></span></div>
+                    <div class="h-1.5 w-full overflow-hidden rounded-full bg-blue-200 dark:bg-blue-500/30" role="progressbar" aria-label="Import progress" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="imp.progress"><div class="h-1.5 rounded-full bg-blue-500" :style="'width: ' + imp.progress + '%'"></div></div>
+                </div>
+                <p x-show="imp.error" x-text="imp.error" class="text-sm text-red-600 dark:text-red-500"></p>
+            </div>
+            <div class="flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end dark:border-gray-900">
+                <button type="button" @click="closeImport()" :disabled="imp.busy" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                <button type="button" @click="startImport()" :disabled="imp.busy" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400"><svg x-show="imp.busy" x-cloak xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4 animate-spin"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"></path></svg><span x-text="imp.busy ? 'Importing…' : 'Import'">Import</span></button>
             </div>
         </div>
     </div>

@@ -221,7 +221,7 @@ func TestAccessLogsRendersEntriesMostRecentFirst(t *testing.T) {
 	if secondIdx > firstIdx {
 		t.Fatalf("expected the most recent entry (/second) to render before /first (reversed order)")
 	}
-	if !strings.Contains(got, "out of 2 rows") {
+	if !strings.Contains(got, `1–2</span> of <span class="font-medium text-gray-900 dark:text-gray-50">2</span>`) {
 		t.Fatalf("expected row count summary, got %s", truncate(got))
 	}
 }

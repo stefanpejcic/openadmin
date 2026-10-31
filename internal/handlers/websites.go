@@ -147,19 +147,13 @@ type pageSpeed struct {
 	Mobile  speedResult `json:"mobile"`
 }
 
-// RingOffset is the stroke-dashoffset of the desktop score ring, the circle is 78.54 around
-func (p *pageSpeed) RingOffset() string {
-	return strconv.FormatFloat(78.54-78.54*float64(p.Desktop.Score)/100, 'f', 2, 64)
-}
-
 // RingColor uses the same thresholds as the user panel's /sites
 func (p *pageSpeed) RingColor() string {
 	switch d := p.Desktop.Score; {
 	case d < 60:
 		return "stroke-red-500"
 	case d < 80:
-		// the user panel uses yellow, output.css only has orange
-		return "stroke-orange-500"
+		return "stroke-yellow-500"
 	case d < 90:
 		return "stroke-blue-500"
 	}
