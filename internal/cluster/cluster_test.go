@@ -10,11 +10,13 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"openadmin/internal/admindb"
+	"openadmin/internal/config"
 )
 
 func TestClassifyKeepsPerServerValuesLocal(t *testing.T) {
@@ -1130,5 +1132,19 @@ func TestStoreHealthWaitsForRepeatedFailures(t *testing.T) {
 	m2.storeHealth(map[string]NodeHealth{"n": {}})
 	if h, _ := m2.nodeHealth("n"); h.Online {
 		t.Fatal("a server never seen online must show offline right away")
+	}
+}
+
+func TestDNSModuleOnReadsEnabledModules(t *testing.T) {
+	orig := config.OpenpanelConfigPath
+	t.Cleanup(func() { config.OpenpanelConfigPath = orig })
+	config.OpenpanelConfigPath = filepath.Join(t.TempDir(), "openpanel.config")
+	os.WriteFile(config.OpenpanelConfigPath, []byte("[DEFAULT]\nenabled_modules=\"domains,dnssec,php\"\n"), 0o644)
+	if dnsModuleOn() {
+		t.Fatal("dnssec isn't the dns module")
+	}
+	os.WriteFile(config.OpenpanelConfigPath, []byte("[DEFAULT]\nenabled_modules=\"domains,dns,php\"\n"), 0o644)
+	if !dnsModuleOn() {
+		t.Fatal("dns module is on")
 	}
 }

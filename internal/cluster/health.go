@@ -102,8 +102,8 @@ func (m *Manager) localHealth() NodeHealth {
 	case err == nil:
 		running := strings.Fields(string(out))
 		for _, svc := range coreServices {
-			// bind only gets started with the first domain
-			if svc == "openpanel_dns" && h.Domains == 0 {
+			// bind only gets started with the first domain, and not at all with the dns module off
+			if svc == "openpanel_dns" && (h.Domains == 0 || !dnsModuleOn()) {
 				continue
 			}
 			if !hasString(running, svc) {
@@ -118,6 +118,17 @@ func (m *Manager) localHealth() NodeHealth {
 		h.Down = append(h.Down, "openpanel_mysql")
 	}
 	return h
+}
+
+// dnsModuleOn is false when the dns module is turned off in OpenPanel, no bind container is expected then
+func dnsModuleOn() bool {
+	mods := config.Load(config.OpenpanelConfigPath).Get("DEFAULT", "enabled_modules", "")
+	for _, m := range strings.Split(strings.Trim(mods, `"`), ",") {
+		if strings.TrimSpace(m) == "dns" {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *Manager) refreshHealth() {

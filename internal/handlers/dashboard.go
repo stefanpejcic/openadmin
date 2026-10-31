@@ -500,15 +500,31 @@ func processCount() string {
 // podman context only. Per-user remote podman contexts are not yet
 // handled here -- see the backlog -- so this undercounts on installs with
 // per-user rootless podman stacks.
+// localContainerCount is every running container on the server, root's from podman and each account's rootless ones by their conmon, which root's podman can't see
 func localContainerCount() int {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "podman", "container", "ls", "-a", "-q").Output()
-	if err != nil {
-		return 0
+	count := 0
+	if out, err := exec.CommandContext(ctx, "podman", "ps", "-q").Output(); err == nil {
+		count = len(strings.Fields(string(out)))
 	}
-	lines := strings.Fields(strings.TrimSpace(string(out)))
-	return len(lines)
+	if out, err := exec.CommandContext(ctx, "ps", "-C", "conmon", "-o", "user=,args=").Output(); err == nil {
+		count += countAccountConmons(string(out))
+	}
+	return count
+}
+
+// countAccountConmons counts conmon lines of non-root users, a podman exec session runs its own conmon and isn't a container
+func countAccountConmons(psOut string) int {
+	n := 0
+	for _, line := range strings.Split(psOut, "\n") {
+		user, args, ok := strings.Cut(strings.TrimSpace(line), " ")
+		if !ok || user == "root" || strings.Contains(args, " --exec ") {
+			continue
+		}
+		n++
+	}
+	return n
 }
 
 // emailCount counts postfix-accounts.cf, the opencli list asks the mailserver for every account's quota which is far too slow for a counter

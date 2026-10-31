@@ -517,3 +517,13 @@ func TestServeOnboardingPageRedirectsResellerToDashboard(t *testing.T) {
 		t.Fatalf("expected redirect to /dashboard, got %q", loc)
 	}
 }
+
+func TestCountAccountConmonsSkipsRootAndExecSessions(t *testing.T) {
+	out := "root     /usr/bin/conmon --api-version 1 -c abc -n caddy\n" +
+		"promobox /usr/bin/conmon --api-version 1 -c def -n apache\n" +
+		"promobox /usr/bin/conmon --api-version 1 -c def -n apache --exec --exec-attach\n" +
+		"hladni   /usr/bin/conmon --api-version 1 -c ghi -n mariadb\n"
+	if got := countAccountConmons(out); got != 2 {
+		t.Fatalf("got %d, want 2", got)
+	}
+}
