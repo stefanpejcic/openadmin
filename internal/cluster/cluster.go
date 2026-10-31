@@ -40,6 +40,8 @@ const (
 	joinCodeTTL    = 30 * time.Minute
 	readTimeout    = 10 * time.Second // most a list or status read waits on one server, writes keep the client's own limit
 	claimTTL       = 60 * time.Second
+	offlineAfter   = 3               // failed health polls in a row before a server counts as offline
+	probeTimeout   = 3 * time.Second // status answers in time even while mysql or podman hang
 )
 
 // Dir holds all cluster state, var so tests can point it at a scratch dir
@@ -114,6 +116,7 @@ type Manager struct {
 
 	healthMu sync.RWMutex
 	health   map[string]NodeHealth
+	fails    map[string]int
 
 	clientMu sync.Mutex
 	clients  map[string]*http.Client

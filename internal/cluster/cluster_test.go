@@ -1107,3 +1107,28 @@ func TestSortDirectionReadsDashPrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestStoreHealthWaitsForRepeatedFailures(t *testing.T) {
+	m := &Manager{}
+	m.storeHealth(map[string]NodeHealth{"n": {Online: true, Version: "2.0.20"}})
+	for i := 1; i < offlineAfter; i++ {
+		m.storeHealth(map[string]NodeHealth{"n": {Error: "context deadline exceeded"}})
+		if h, _ := m.nodeHealth("n"); !h.Online || h.Version != "2.0.20" {
+			t.Fatalf("offline after %d failed polls", i)
+		}
+	}
+	m.storeHealth(map[string]NodeHealth{"n": {Error: "context deadline exceeded"}})
+	if h, _ := m.nodeHealth("n"); h.Online {
+		t.Fatal("still online after offlineAfter failed polls")
+	}
+	m.storeHealth(map[string]NodeHealth{"n": {Online: true}})
+	m.storeHealth(map[string]NodeHealth{"n": {}})
+	if h, _ := m.nodeHealth("n"); !h.Online {
+		t.Fatal("a good poll must reset the failure count")
+	}
+	m2 := &Manager{}
+	m2.storeHealth(map[string]NodeHealth{"n": {}})
+	if h, _ := m2.nodeHealth("n"); h.Online {
+		t.Fatal("a server never seen online must show offline right away")
+	}
+}

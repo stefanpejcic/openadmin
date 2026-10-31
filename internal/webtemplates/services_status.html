@@ -399,6 +399,45 @@ function submitServiceAction(form, loadingMessage, onSettled) {
     </div>
 </div>
 <script>
+// posts one server's restart in the background and waits for that server to report it done
+function restartAndWait(form) {
+    var realName = form.querySelector('input[name="real_name"]').value;
+    var server = form.closest('td') ? (form.closest('table').querySelectorAll('thead th')[form.closest('td').cellIndex] || {}).textContent : '';
+    var label = server ? server.trim() + ': ' : '';
+    return fetch(form.getAttribute('action'), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: new FormData(form),
+        credentials: 'same-origin'
+    }).then(function (response) {
+        if (!response.ok) { throw new Error(); }
+        return new Promise(function (resolve) {
+            var attempts = 0;
+            var timer = opPoll(function () {
+                fetch(serviceStatusBase(form) + '/action-status?real_name=' + encodeURIComponent(realName), { cache: 'no-store' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.done) {
+                            opStop(timer);
+                            resolve({ success: data.success, message: label + data.message });
+                        } else if (++attempts >= 90) {
+                            opStop(timer);
+                            resolve({ success: false, message: label + 'still restarting, refresh the page later.' });
+                        }
+                    })
+                    .catch(function () {
+                        if (++attempts >= 90) {
+                            opStop(timer);
+                            resolve({ success: false, message: label + 'no answer while restarting.' });
+                        }
+                    });
+            }, 2000);
+        });
+    }).catch(function () {
+        return { success: false, message: label + 'failed to reach the server.' };
+    });
+}
+
 // with a column per server, a service that needs a restart on several servers gets one button for all of them
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('tr').forEach(function (row) {
@@ -417,9 +456,18 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!confirm('Restart this service on ' + forms.length + ' servers?')) { return; }
             btn.disabled = true;
             btn.textContent = 'Restarting...';
-            Promise.all(forms.map(function (f) {
-                return fetch(f.action, { method: 'POST', body: new FormData(f), credentials: 'same-origin' });
-            })).then(function () { location.reload(); }, function () { location.reload(); });
+            showToast('Restarting on ' + forms.length + ' servers…', 'loading', true);
+            Promise.all(forms.map(restartAndWait)).then(function (results) {
+                var failed = results.filter(function (r) { return !r.success; });
+                if (failed.length) {
+                    showToast(failed.map(function (r) { return r.message; }).join(' '), 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Restart on all ' + forms.length + ' servers';
+                    return;
+                }
+                showToast('Restarted on all ' + forms.length + ' servers.', 'success');
+                setTimeout(function () { location.reload(); }, 1000);
+            });
         });
         var nameCell = badges[0].closest('tr').querySelector('td:not(.hidden) + td, td:nth-child(3)');
         (row.querySelector('td.font-medium') || nameCell || row.cells[1]).appendChild(btn);

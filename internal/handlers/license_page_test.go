@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"openadmin/internal/admindb"
 	"openadmin/internal/auth"
@@ -88,6 +89,9 @@ func TestServeLicenseGetHTMLAndJSON(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
+	}
+	if strings.Contains(got, "Why upgrade to Enterprise") {
+		t.Fatal("upgrade section shown with a license key")
 	}
 
 	resp2, err := client.Get(srv.URL + "/license?output=json")
@@ -255,5 +259,37 @@ func TestLicenseKeyFromOutput(t *testing.T) {
 		if got := licenseKeyFromOutput(in); got != want {
 			t.Errorf("licenseKeyFromOutput(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestServeLicenseWithoutKeyShowsUpgrade(t *testing.T) {
+	withStubLicenseRunOpenCLI(t, func(args ...string) (string, string, error) {
+		return `{"key": null}`, "", nil
+	})
+	feed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"price":"14.95€ / month","limits":[{"name":"User Accounts","community":"3","enterprise":"Unlimited"}],"sections":[{"title":"Emails","features":["Webmail"]}]}`)
+	}))
+	defer feed.Close()
+	origURL := enterpriseFeaturesURL
+	enterpriseFeaturesURL = feed.URL
+	enterpriseCache, enterpriseFetched = nil, time.Time{}
+	t.Cleanup(func() { enterpriseFeaturesURL = origURL; enterpriseCache, enterpriseFetched = nil, time.Time{} })
+
+	l := &LicensePage{}
+	srv, client := newLicensePageTestServer(t, l)
+	resp, err := client.Get(srv.URL + "/license")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	got := string(body)
+	for _, want := range []string{"Why upgrade to Enterprise", "14.95€ / month", "User Accounts", "Webmail", "</html>"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
+		}
+	}
+	if strings.Contains(got, "License Info:") {
+		t.Fatal("license info box shown without a key")
 	}
 }

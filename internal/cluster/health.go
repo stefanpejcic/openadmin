@@ -58,9 +58,12 @@ func (m *Manager) localHealth() NodeHealth {
 		h.LastSync = st.LastSyncMsg
 		h.LastSyncAt = st.LastSyncAt.Format("2006-01-02 15:04")
 	}
+	mysqlDown := false
 	if m.MySQL != nil {
-		_ = m.MySQL.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&h.Users)
-		_ = m.MySQL.QueryRow(`SELECT COUNT(*) FROM domains`).Scan(&h.Domains)
+		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+		mysqlDown = m.MySQL.QueryRowContext(ctx, `SELECT COUNT(*) FROM users`).Scan(&h.Users) != nil ||
+			m.MySQL.QueryRowContext(ctx, `SELECT COUNT(*) FROM domains`).Scan(&h.Domains) != nil
+		cancel()
 	}
 	if raw, err := os.ReadFile("/proc/loadavg"); err == nil {
 		if f := strings.Fields(string(raw)); len(f) > 0 {
@@ -92,7 +95,11 @@ func (m *Manager) localHealth() NodeHealth {
 	if syscall.Statfs("/", &fs) == nil && fs.Blocks > 0 {
 		h.DiskPct = int((fs.Blocks - fs.Bavail) * 100 / fs.Blocks)
 	}
-	if out, err := exec.Command("podman", "ps", "--format", "{{.Names}}").Output(); err == nil {
+	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "podman", "ps", "--format", "{{.Names}}").Output()
+	switch {
+	case err == nil:
 		running := strings.Fields(string(out))
 		for _, svc := range coreServices {
 			// bind only gets started with the first domain
@@ -103,6 +110,12 @@ func (m *Manager) localHealth() NodeHealth {
 				h.Down = append(h.Down, svc)
 			}
 		}
+	case ctx.Err() != nil:
+		// podman hangs while sentinel or compose restart containers
+		h.Down = append(h.Down, "podman")
+	}
+	if mysqlDown && !hasString(h.Down, "openpanel_mysql") {
+		h.Down = append(h.Down, "openpanel_mysql")
 	}
 	return h
 }
@@ -135,10 +148,7 @@ func (m *Manager) refreshHealth() {
 		}(n)
 	}
 	wg.Wait()
-	m.healthMu.Lock()
-	old := m.health
-	m.health = fresh
-	m.healthMu.Unlock()
+	old := m.storeHealth(fresh)
 	for id, h := range fresh {
 		prev, seen := old[id]
 		switch {
@@ -148,6 +158,27 @@ func (m *Manager) refreshHealth() {
 			Notify("Server back online", h.Name+" ("+h.Address+") answers the master again.", "info")
 		}
 	}
+}
+
+// storeHealth saves a poll and returns the previous one, a server only goes offline after offlineAfter failed polls in a row
+func (m *Manager) storeHealth(fresh map[string]NodeHealth) map[string]NodeHealth {
+	m.healthMu.Lock()
+	defer m.healthMu.Unlock()
+	old := m.health
+	fails := map[string]int{}
+	for id, h := range fresh {
+		if h.Online {
+			continue
+		}
+		fails[id] = m.fails[id] + 1
+		// one slow answer isn't an outage, keep the last good row meanwhile
+		if prev, seen := old[id]; seen && prev.Online && fails[id] < offlineAfter {
+			fresh[id] = prev
+		}
+	}
+	m.fails = fails
+	m.health = fresh
+	return old
 }
 
 func (m *Manager) nodeHealth(id string) (NodeHealth, bool) {

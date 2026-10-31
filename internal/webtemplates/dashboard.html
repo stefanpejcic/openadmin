@@ -453,10 +453,12 @@ document.addEventListener('DOMContentLoaded', function () {
               stat(ICONS.version, s.latest ? 'Update available' : 'OpenPanel version', version, s.latest ? '/server/cluster' : '/settings/updates') +
               (s.unread ? stat(ICONS.bell, 'Unread notifications', s.unread, '/notifications' + only) : '') + sync
             : '';
-        // the error can be long, it goes in the tooltip so the row keeps its shape
-        var stateText = level === 'ok' ? '' : '<a href="/server/cluster" class="hover:underline" title="' + esc(s.error || state) + '">' + esc(state) + '</a>';
-        return '<li class="rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50 flex flex-wrap items-center gap-2 justify-between"><span class="flex items-center gap-2" title="' + esc(state) + '">' + bars(level) + '<span class="font-medium">' + esc(s.name) + (s.master ? ' (master)' : '') + '</span></span>' +
-            '<span class="flex flex-wrap items-center gap-4 text-gray-500 dark:text-gray-500">' + stateText + stats + '</span></li>';
+        // problems get their own line under the server so the name and stats don't move
+        var color = level === 'bad' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400';
+        var detail = s.error && !s.online ? state + ': ' + s.error : state;
+        var stateLine = level === 'ok' || level === 'off' ? '' : '<a href="/server/cluster" class="mt-1 block truncate text-xs hover:underline ' + color + '" title="' + esc(detail) + '">' + esc(detail) + '</a>';
+        return '<li class="rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50"><div class="flex flex-wrap items-center gap-2 justify-between"><span class="flex items-center gap-2" title="' + esc(state) + '">' + bars(level) + '<span class="font-medium">' + esc(s.name) + (s.master ? ' (master)' : '') + (s.paused ? ' (paused)' : '') + '</span></span>' +
+            '<span class="flex flex-wrap items-center gap-4 text-gray-500 dark:text-gray-500">' + stats + '</span></div>' + stateLine + '</li>';
     }
 
     function refresh() {
@@ -853,11 +855,13 @@ const renderNewsItems = (items) => {
             var w = grid.querySelector(':scope > [data-widget="' + id + '"]');
             if (w) { grid.appendChild(w); }
         });
-        // a 2/3 widget followed by two 1/3 ones spans two rows, so those stack in the column next to it
+        // a 2/3 widget followed by the two short 1/3 ones (tasks and cluster) spans two rows so those stack next to it, taller ones would get squeezed
+        var SHORT = { tasks: true, cluster: true };
         var list = widgets();
         list.forEach(function (w, i) {
             var stack = sizeOf(w.dataset.widget) === 2 && list[i + 1] && list[i + 2] &&
-                sizeOf(list[i + 1].dataset.widget) === 1 && sizeOf(list[i + 2].dataset.widget) === 1;
+                sizeOf(list[i + 1].dataset.widget) === 1 && sizeOf(list[i + 2].dataset.widget) === 1 &&
+                SHORT[list[i + 1].dataset.widget] && SHORT[list[i + 2].dataset.widget];
             if (stack) { w.dataset.rows = 2; } else { delete w.dataset.rows; }
         });
         widgets().forEach(function (w) {
