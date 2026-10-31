@@ -153,7 +153,19 @@ func wpLoginLink(userContext, siteName, docroot string) (string, error) {
 	htmlData := filepath.Join(UserHomeDir, userContext, "docker-data", "volumes", userContext+"_html_data", "_data")
 	realPath := filepath.Join(htmlData, rel)
 
-	config, err := os.ReadFile(filepath.Join(realPath, "wp-config.php"))
+	configPath := filepath.Join(realPath, "wp-config.php")
+	config, err := os.ReadFile(configPath)
+	if err != nil && os.IsNotExist(err) {
+		// WordPress security hardening: allow wp-config.php to reside one level above the document root
+		parentPath := filepath.Dir(realPath)
+		if strings.HasPrefix(parentPath, htmlData) {
+			parentConfigPath := filepath.Join(parentPath, "wp-config.php")
+			if parentConfig, parentErr := os.ReadFile(parentConfigPath); parentErr == nil {
+				config = parentConfig
+				err = nil
+			}
+		}
+	}
 	if err != nil {
 		return "", fmt.Errorf("wp-config.php not found in %s", docroot)
 	}
