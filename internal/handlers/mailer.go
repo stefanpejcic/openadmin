@@ -352,7 +352,7 @@ type emailNotificationItem struct {
 
 var emailSeverityStyle = map[string][2]string{
 	"critical": {"Critical", "#dc2626"},
-	"warning":  {"Warning", "#d97706"},
+	"warning":  {"Warning", "#ca8a04"},
 	"resolved": {"Resolved", "#059669"},
 	"info":     {"Info", "#2563eb"},
 }

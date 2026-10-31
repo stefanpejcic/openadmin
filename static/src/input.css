@@ -10,6 +10,7 @@
 @source not "../dist/js/alpinejs3xx.min.js";
 @source not "../dist/js/jquery361.min.js";
 @source not "../dist/js/driverjs131.min.js";
+@source not "../dist/js/alpine-focus.min.js";
 @source not "../vendor";
 
 /* ring colors get built from Go values in users_list, user_detail and websites */
@@ -115,76 +116,57 @@
   }
 }
 
-/* leftover Bootstrap/Tabler class names had no CSS at all, this maps them onto the brandbook look */
 @layer components {
-  .form-group { @apply grid gap-2; }
-  .form-group > label { @apply text-sm leading-none font-medium text-gray-900 dark:text-gray-50; }
-  .form-hint { @apply mt-1.5 block text-xs text-gray-500; }
-  .form-check { @apply inline-flex cursor-pointer items-center gap-2; }
-  .form-check-label { @apply text-sm text-gray-900 dark:text-gray-50; }
-  .form-check-input { @apply size-4 shrink-0 cursor-pointer; }
-
-  /* Tremor switch drawn on the checkbox itself, thumb is a gradient so it works in every browser */
-  .form-switch .form-check-input,
-  .form-check-input[role="switch"] {
-    @apply h-5 w-9 cursor-pointer appearance-none rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-[background-color,background-position] duration-150 dark:bg-gray-950 dark:ring-gray-800;
-    background-image: radial-gradient(circle, #fff 0 7px, transparent 7.5px);
-    background-size: 20px 20px;
-    background-repeat: no-repeat;
-    background-position: left center;
-  }
-  .form-switch .form-check-input:checked,
-  .form-check-input[role="switch"]:checked {
-    @apply bg-blue-500 dark:bg-blue-500 dark:ring-blue-500;
-    background-position: right center;
-  }
-  .form-switch .form-check-input:focus-visible,
-  .form-check-input[role="switch"]:focus-visible {
-    @apply outline-2 outline-offset-2 outline-blue-500;
-  }
-  .form-switch .form-check-input:disabled,
-  .form-check-input[role="switch"]:disabled {
-    @apply cursor-not-allowed opacity-50;
-  }
-
-  .btn {
-    @apply relative inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-center text-sm font-medium whitespace-nowrap text-gray-900 shadow-xs transition-all duration-100 ease-in-out outline-0 outline-offset-2 outline-blue-500 hover:bg-gray-50 focus-visible:outline-2 disabled:pointer-events-none disabled:text-gray-400 disabled:shadow-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600;
-  }
-  .btn-primary { @apply border-transparent bg-blue-500 text-white hover:bg-blue-600 dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600; }
-  .btn-danger { @apply border-transparent bg-red-600 text-white hover:bg-red-700 dark:border-transparent dark:bg-red-700 dark:text-white dark:hover:bg-red-600; }
-  .btn-outline-danger { @apply text-red-600 dark:text-red-500; }
-  .btn-outline-success { @apply text-emerald-700 dark:text-emerald-500; }
-  .btn-outline-warning { @apply text-yellow-700 dark:text-yellow-500; }
-  .btn-list { @apply flex flex-wrap gap-2; }
-
-  .badge { @apply inline-flex items-center gap-x-1 rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap ring-1 ring-inset; }
-  .bg-red-lt { @apply bg-red-50 text-red-900 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20; }
-  .bg-primary-lt { @apply rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-900 dark:bg-blue-400/10 dark:text-blue-400; }
-
-  .card { @apply rounded-md border border-gray-200 bg-white dark:border-gray-900 dark:bg-raised; }
-  .card-body { @apply p-6; }
-  .card-body-scrollable { @apply overflow-y-auto; }
-  .CrawlerStatusCard { @apply rounded-md border border-gray-200 bg-white p-6 dark:border-gray-900 dark:bg-raised; }
-
-  .empty { @apply flex flex-col items-center px-4 py-10 text-center; }
-  .empty-img svg { @apply size-10 text-gray-400 dark:text-gray-600; }
-  .empty-title { @apply mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50; }
-  .empty-subtitle { @apply mt-1 max-w-md text-sm text-gray-500; }
-  .empty-subtitle a { @apply text-blue-500 hover:underline hover:underline-offset-4; }
-  .container-xl { @apply mx-auto w-full max-w-7xl; }
-
-  .text-secondary { @apply text-gray-500; }
-  .text-red { @apply text-red-600 dark:text-red-500; }
-  .fs-sm { @apply text-sm; }
-  .d-flex { @apply flex; }
-  .d-inline-flex { @apply inline-flex; }
-  .d-none { @apply hidden; }
-  .flex-column { @apply flex-col; }
-  .justify-content-center { @apply justify-center; }
-  .align-items-center { @apply items-center; }
-  .align-items-baseline { @apply items-baseline; }
-  .me-auto { @apply me-auto; }
-  .w-100 { @apply w-full; }
-  .lh-1 { @apply leading-none; }
-  .ps-0 { @apply ps-0; }
+  /* thin gray scrollbars for widget lists and panels */
+  .op-scroll { scrollbar-width: thin; scrollbar-color: var(--color-gray-300) transparent; }
+  .dark .op-scroll { scrollbar-color: var(--color-gray-700) transparent; }
 }
+
+/* tour popovers from driver.js in the brandbook look, its stylesheet loads after this one so these go through html */
+html .driver-popover {
+  font-family: var(--font-sans);
+  background-color: var(--color-white);
+  color: var(--color-gray-900);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  padding: 16px;
+  max-width: 320px;
+}
+html .driver-popover-title { font: 600 14px/20px var(--font-sans); color: var(--color-gray-900); }
+html .driver-popover-description { font: 400 14px/20px var(--font-sans); color: var(--color-gray-600); margin-top: 4px; }
+html .driver-popover-progress-text { font: 400 12px/16px var(--font-sans); color: var(--color-gray-500); }
+html .driver-popover-footer { margin-top: 16px; gap: 8px; }
+html .driver-popover-navigation-btns { gap: 8px; }
+html .driver-popover-footer button {
+  font: 500 12px/16px var(--font-sans);
+  text-shadow: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-300);
+  background-color: var(--color-white);
+  color: var(--color-gray-900);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: background-color 100ms;
+}
+html .driver-popover-footer button:hover { background-color: var(--color-gray-50); }
+html .driver-popover-footer .driver-popover-next-btn { border-color: transparent; background-color: var(--color-blue-500); color: var(--color-white); }
+html .driver-popover-footer .driver-popover-next-btn:hover { background-color: var(--color-blue-600); }
+html .driver-popover-footer button:focus-visible, html .driver-popover-close-btn:focus-visible { outline: 2px solid var(--color-blue-500); outline-offset: 2px; }
+html .driver-popover-close-btn { color: var(--color-gray-400); border-radius: var(--radius-sm); }
+html .driver-popover-close-btn:hover { color: var(--color-gray-900); }
+html .driver-popover-arrow-side-left { border-left-color: var(--color-white); }
+html .driver-popover-arrow-side-right { border-right-color: var(--color-white); }
+html .driver-popover-arrow-side-top { border-top-color: var(--color-white); }
+html .driver-popover-arrow-side-bottom { border-bottom-color: var(--color-white); }
+html.dark .driver-popover { background-color: var(--color-raised); color: var(--color-gray-50); border-color: var(--color-gray-900); }
+html.dark .driver-popover-title { color: var(--color-gray-50); }
+html.dark .driver-popover-description { color: var(--color-gray-400); }
+html.dark .driver-popover-footer button { border-color: var(--color-gray-800); background-color: var(--color-gray-950); color: var(--color-gray-50); }
+html.dark .driver-popover-footer button:hover { background-color: var(--color-gray-900); }
+html.dark .driver-popover-footer .driver-popover-next-btn { border-color: transparent; background-color: var(--color-blue-500); color: var(--color-white); }
+html.dark .driver-popover-close-btn:hover { color: var(--color-gray-50); }
+html.dark .driver-popover-arrow-side-left { border-left-color: var(--color-raised); }
+html.dark .driver-popover-arrow-side-right { border-right-color: var(--color-raised); }
+html.dark .driver-popover-arrow-side-top { border-top-color: var(--color-raised); }
+html.dark .driver-popover-arrow-side-bottom { border-bottom-color: var(--color-raised); }

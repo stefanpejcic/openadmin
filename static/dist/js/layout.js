@@ -162,7 +162,8 @@ document.addEventListener("visibilitychange", () => {
 
 // auto-dismiss progress bar of flash messages
     document.addEventListener('DOMContentLoaded', () => {
-        const alertEl = document.getElementById('alert');
+        const flashes = document.querySelectorAll('.op-flash');
+        const alertEl = flashes[0];
         const progressBar = document.getElementById('alert-progress-bar');
         const progressContainer = document.getElementById('alert-progress-container');
 
@@ -182,7 +183,7 @@ document.addEventListener("visibilitychange", () => {
 
                         if (progress >= duration) {
                             clearInterval(interval);
-                            alertEl.remove();
+                            flashes.forEach(el => el.remove());
                             progressContainer.remove();
                         }
                     }
@@ -343,3 +344,51 @@ document.addEventListener('submit', function (e) {
         if (form.requestSubmit) form.requestSubmit(sub || undefined); else form.submit();
     });
 }, true);
+
+// data-dropdown-toggle menus without flowbite: click opens the target under its button, outside click or Esc closes it
+(function () {
+    let open = null;
+    function close() {
+        if (!open) return;
+        open.menu.classList.add('hidden');
+        open.btn.setAttribute('aria-expanded', 'false');
+        open = null;
+    }
+    function place(btn, menu) {
+        const r = btn.getBoundingClientRect();
+        menu.style.position = 'fixed';
+        menu.style.zIndex = '50';
+        menu.style.margin = '0';
+        const w = menu.offsetWidth, h = menu.offsetHeight;
+        let left = r.left;
+        if (left + w > innerWidth - 8) left = Math.max(8, r.right - w);
+        let top = r.bottom + 4;
+        if (top + h > innerHeight - 8 && r.top - h - 4 > 8) top = r.top - h - 4;
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+    }
+    document.querySelectorAll('[data-dropdown-toggle]').forEach(function (btn) {
+        btn.setAttribute('aria-haspopup', 'true');
+        btn.setAttribute('aria-expanded', 'false');
+    });
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-dropdown-toggle]');
+        if (btn) {
+            const menu = document.getElementById(btn.getAttribute('data-dropdown-toggle'));
+            if (!menu) return;
+            e.preventDefault();
+            const same = open && open.menu === menu;
+            close();
+            if (same) return;
+            menu.classList.remove('hidden');
+            place(btn, menu);
+            btn.setAttribute('aria-expanded', 'true');
+            open = { btn: btn, menu: menu };
+            return;
+        }
+        if (open && !open.menu.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) { const b = open.btn; close(); b.focus(); } });
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', function (e) { if (open && !open.menu.contains(e.target)) close(); }, true);
+})();

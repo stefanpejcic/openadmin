@@ -102,7 +102,7 @@ async function backupsUserRunNow() {
     }">
 	<nav aria-label="Tabs" data-orientation="horizontal" dir="ltr">
 		<div style="position: relative;">
-			<ul data-orientation="horizontal" class="flex items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
+			<ul data-orientation="horizontal" class="flex items-center justify-start whitespace-nowrap border-b border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6 op-scroll" dir="ltr">
 
 			<li class="flex">
 				<a @click="tab = 'settings'" :class="tab === 'settings' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
@@ -143,7 +143,7 @@ async function backupsUserRunNow() {
             <form method="POST" action="/backups/user/settings" class="space-y-4">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-                <div class="form-group">
+                <div class="grid gap-2">
                     <label for="schedule_choice">Schedule</label>
                     <select id="schedule_choice" name="schedule_choice" x-model="choice" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded-md border px-3 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 mt-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
                         <option value="disabled" {{if eq .ScheduleChoice "disabled"}}selected{{end}}>Disabled -- user configured</option>
@@ -151,7 +151,7 @@ async function backupsUserRunNow() {
                         <option value="weekly" {{if eq .ScheduleChoice "weekly"}}selected{{end}}>Weekly</option>
                         <option value="monthly" {{if eq .ScheduleChoice "monthly"}}selected{{end}}>Monthly</option>
                     </select>
-                    <small class="form-hint">Daily/Weekly/Monthly all run at 03:00 server time. Fine-tune the exact time later from <a href="/server/crons" class="underline hover:no-underline">Scheduled Actions</a>.</small>
+                    <small class="mt-1.5 block text-xs text-gray-500">Daily/Weekly/Monthly all run at 03:00 server time. Fine-tune the exact time later from <a href="/server/crons" class="underline hover:no-underline">Scheduled Actions</a>.</small>
                 </div>
 
                 <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out rounded-md border-transparent bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 dark:disabled:bg-blue-800 dark:disabled:text-blue-400 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Save</button>
@@ -190,7 +190,7 @@ async function backupsUserRunNow() {
                     <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Where backups are uploaded. Only the selected destination is active in backup.env, the others stay commented out.</p>
                 </div>
                 <div class="md:col-span-2 space-y-4">
-                    <div class="form-group">
+                    <div class="grid gap-2">
                         <label for="destination" class="text-sm font-medium">Destination</label>
                         <select id="destination" name="destination" x-model="destination" class="relative block w-full appearance-none truncate rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 mt-2">
                             <option value="" disabled>Select a destination</option>
@@ -202,13 +202,13 @@ async function backupsUserRunNow() {
                     {{range .BackupEnvForm.Sections}}
                     <div data-section="{{.Name}}" x-show="destination === $el.dataset.section" class="space-y-4">
                         {{range .Fields}}
-                        <div class="form-group">
+                        <div class="grid gap-2">
                             <label for="values_{{.Key}}" class="text-sm font-medium font-mono">{{.Key}}</label>
                             <input type="{{if .Secret}}password{{else}}text{{end}}" id="values_{{.Key}}" name="values[{{.Key}}]" value="{{.Value}}" autocomplete="off" class="relative block w-full appearance-none truncate rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 mt-2">
-                            {{if eq .Key "SSH_HOST_PUBLIC_KEY"}}<small class="form-hint">Read from the server on save when empty or when the host changes, clear it to read it again.</small>{{end}}
+                            {{if eq .Key "SSH_HOST_PUBLIC_KEY"}}<small class="mt-1.5 block text-xs text-gray-500">Read from the server on save when empty or when the host changes, clear it to read it again.</small>{{end}}
                         </div>
                         {{end}}
-                        <small class="form-hint">Empty fields stay commented out in backup.env.</small>
+                        <small class="mt-1.5 block text-xs text-gray-500">Empty fields stay commented out in backup.env.</small>
                     </div>
                     {{end}}
                 </div>
@@ -223,7 +223,7 @@ async function backupsUserRunNow() {
                 </div>
                 <div class="md:col-span-2 space-y-4">
                     {{range .BackupEnvForm.Settings}}
-                    <div class="form-group">
+                    <div class="grid gap-2">
                         <label for="settings_{{.Key}}" class="text-sm font-medium font-mono">{{.Key}}</label>
                         {{if eq .Key "BACKUP_SOURCES"}}
                         <select id="settings_{{.Key}}" name="settings[{{.Key}}]" class="relative block w-full appearance-none truncate rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 mt-2">
@@ -243,11 +243,11 @@ async function backupsUserRunNow() {
                         {{else}}
                         <input type="{{if .Secret}}password{{else}}text{{end}}" id="settings_{{.Key}}" name="settings[{{.Key}}]" value="{{.Value}}" autocomplete="off" class="relative block w-full appearance-none truncate rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 mt-2">
                         {{end}}
-                        {{if eq .Key "NOTIFICATION_URLS"}}<small class="form-hint">Comma-separated notification URLs (email, Slack, etc.), see <a href="https://containrrr.dev/shoutrrr/v0.8/services/overview/" target="_blank" rel="noopener" class="underline">shoutrrr services</a>.</small>
-                        {{else if eq .Key "GZIP_PARALLELISM"}}<small class="form-hint">Blocks compressed in parallel, 0 uses all available threads.</small>
-                        {{else if eq .Key "BACKUP_EXCLUDE_REGEXP"}}<small class="form-hint">Full path to exclude, or a regular expression.</small>
-                        {{else if eq .Key "BACKUP_RETENTION_DAYS"}}<small class="form-hint">Days a backup is kept, old ones are pruned automatically.</small>
-                        {{else if eq .Key "BACKUP_CRON_EXPRESSION"}}<small class="form-hint">Only used by the backup container's own scheduler, central runs follow the Settings tab.</small>
+                        {{if eq .Key "NOTIFICATION_URLS"}}<small class="mt-1.5 block text-xs text-gray-500">Comma-separated notification URLs (email, Slack, etc.), see <a href="https://containrrr.dev/shoutrrr/v0.8/services/overview/" target="_blank" rel="noopener" class="underline">shoutrrr services</a>.</small>
+                        {{else if eq .Key "GZIP_PARALLELISM"}}<small class="mt-1.5 block text-xs text-gray-500">Blocks compressed in parallel, 0 uses all available threads.</small>
+                        {{else if eq .Key "BACKUP_EXCLUDE_REGEXP"}}<small class="mt-1.5 block text-xs text-gray-500">Full path to exclude, or a regular expression.</small>
+                        {{else if eq .Key "BACKUP_RETENTION_DAYS"}}<small class="mt-1.5 block text-xs text-gray-500">Days a backup is kept, old ones are pruned automatically.</small>
+                        {{else if eq .Key "BACKUP_CRON_EXPRESSION"}}<small class="mt-1.5 block text-xs text-gray-500">Only used by the backup container's own scheduler, central runs follow the Settings tab.</small>
                         {{end}}
                     </div>
                     {{end}}
@@ -276,10 +276,10 @@ async function backupsUserRunNow() {
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <input type="hidden" name="mode" value="advanced">
 
-            <div class="form-group">
+            <div class="grid gap-2">
                 <label for="backup_env">Default backup.env</label>
                 <textarea id="backup_env" name="backup_env" rows="24" class="flex min-h-[4rem] w-full rounded-md border px-3 py-1.5 font-mono text-xs shadow-xs outline-none transition-colors text-gray-900 dark:text-gray-50 border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 placeholder-gray-400 dark:placeholder-gray-500 mt-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">{{.BackupEnv}}</textarea>
-                <small class="form-hint">Destination (S3/WebDAV/SSH/etc.), retention, and notification settings. Path: /etc/openpanel/backups/backup.env</small>
+                <small class="mt-1.5 block text-xs text-gray-500">Destination (S3/WebDAV/SSH/etc.), retention, and notification settings. Path: /etc/openpanel/backups/backup.env</small>
             </div>
 
             <div x-data="{ confirmApply: false }" class="space-y-3">

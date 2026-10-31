@@ -82,7 +82,7 @@
         if (!popover || !popover.footer || popover.footer.querySelector('.op-tour-hint')) return;
         var hint = document.createElement('div');
         hint.className = 'op-tour-hint';
-        hint.style.cssText = 'width:100%;font-size:11px;color:#9ca3af;margin-top:6px;text-align:center;';
+        hint.style.cssText = 'width:100%;font-size:11px;color:var(--color-gray-500);margin-top:6px;text-align:center;';
         hint.textContent = '← → steps · ↑ ↓ pages';
         popover.footer.appendChild(hint);
     }

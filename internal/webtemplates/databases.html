@@ -69,27 +69,27 @@
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="databases_table">
                     <thead>
                         <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Database" "Key" "name" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Owner" "Key" "owner" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                            {{if eq .Engine "mysql"}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Type" "Key" "type" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>{{end}}
-                            {{if eq .Engine "postgresql"}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Role" "Key" "role" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                            {{else}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" (index (dict "mysql" "Tables" "mongodb" "Collections") .Engine) "Key" "tables" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>{{end}}
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">{{template "sort_header" (dict "Label" "Size" "Key" "size" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                            {{if eq .Engine "mysql"}}<th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Actions</th>{{end}}
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Database" "Key" "name" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Owner" "Key" "owner" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            {{if eq .Engine "mysql"}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Type" "Key" "type" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>{{end}}
+                            {{if eq .Engine "postgresql"}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Role" "Key" "role" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            {{else}}<th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs tabular-nums">{{template "sort_header" (dict "Label" (index (dict "mysql" "Tables" "mongodb" "Collections") .Engine) "Key" "tables" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>{{end}}
+                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs tabular-nums">{{template "sort_header" (dict "Label" "Size" "Key" "size" "Base" $.Base "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                            {{if eq .Engine "mysql"}}<th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-right">Actions</th>{{end}}
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                         {{range .Databases}}
                         <tr x-show="searchQuery === '' || '{{jsStr .Name}} {{jsStr .Owner}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
-                            <td class="p-4 text-sm relative whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left select-text">{{.Name}}</td>
-                            <td class="p-4 text-sm relative whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left"><a href="/users/{{.Owner}}" class="text-blue-500 dark:text-blue-500">{{.Owner}}</a></td>
-                            {{if eq $.Engine "mysql"}}<td class="p-4 text-sm relative whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left">
+                            <td class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 text-left select-text">{{.Name}}</td>
+                            <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left"><a href="/users/{{.Owner}}" class="text-blue-500 dark:text-blue-500">{{.Owner}}</a></td>
+                            {{if eq $.Engine "mysql"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left">
                                 <span class="inline-flex items-center gap-x-1.5">{{.TypeIcon}}{{.TypeLabel}}</span>
                             </td>{{end}}
-                            {{if eq $.Engine "postgresql"}}<td class="p-4 text-sm relative whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left select-text">{{.Role}}</td>
-                            {{else}}<td class="p-4 text-sm relative whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left tabular-nums">{{.Tables}}</td>{{end}}
-                            <td class="p-4 text-sm relative whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left tabular-nums">{{.SizeLabel}}</td>
-                            {{if eq $.Engine "mysql"}}<td class="p-4 text-sm relative whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-right">
+                            {{if eq $.Engine "postgresql"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left select-text">{{.Role}}</td>
+                            {{else}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left tabular-nums">{{.Tables}}</td>{{end}}
+                            <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left tabular-nums">{{.SizeLabel}}</td>
+                            {{if eq $.Engine "mysql"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-right">
                                 <div class="inline-flex items-center gap-4">
                                 {{if $.PHPMyAdmin}}<a href="/login/token/{{.Owner}}?next={{printf "/phpmyadmin/?db=%s" .Name}}" target="_blank" title="Open {{.Name}} in phpMyAdmin as {{.Owner}}" class="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline dark:text-blue-500 cursor-pointer"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-pma"/></svg>phpMyAdmin</a>{{end}}
                                 {{if not $.IsReseller}}<a href="/terminal/{{.Owner}}/{{.Type}}?cmd={{.TerminalCommand}}" target="_blank" title="Open {{.Name}} in the {{.TypeLabel}} client of {{.Owner}}" class="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline dark:text-blue-500 cursor-pointer"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-terminal"/></svg>Terminal</a>{{end}}
@@ -118,9 +118,9 @@
         </div>
     </div>
     <!-- import dialog, the file is streamed straight into the database -->
-    <div x-show="imp.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @keydown.escape.window="closeImport()">
+    <div x-show="imp.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @keydown.escape.window="closeImport()" role="dialog" aria-modal="true" aria-labelledby="databases-dialog-1-title" x-trap.noscroll="imp.open">
         <div @click.outside="closeImport()" class="w-full max-w-md rounded-md border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-900 dark:bg-raised">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-50">Import into <span x-text="imp.database"></span></h3>
+            <h3 id="databases-dialog-1-title" class="text-lg font-semibold text-gray-900 dark:text-gray-50">Import into <span x-text="imp.database"></span></h3>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">User <span x-text="imp.owner"></span>. The .sql or .sql.gz file runs against the existing database, tables in the dump replace ones with the same name.</p>
             <input x-ref="importFile" type="file" accept=".sql,.gz" :disabled="imp.busy" class="mt-4 block w-full text-sm text-gray-900 dark:text-gray-50">
             <div x-show="imp.busy" class="mt-4">
