@@ -2,7 +2,9 @@
 // resource bar polling in the header, only on pages that show it
 (function () {
 if (!document.getElementById("sse_cpu")) return;
-const cachedData = JSON.parse(localStorage.getItem("sseData") || "{}");
+// a stale or broken cache from an older version must not take the rest of this file down with it
+let cachedData = {};
+try { cachedData = JSON.parse(localStorage.getItem("sseData") || "{}") || {}; } catch (e) { cachedData = {}; }
 
 function formatBytes(bytes) {
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -13,10 +15,15 @@ function formatBytes(bytes) {
 
 // label on the left, value on the right
 function tipRow(label, value) {
-    return `<div style="display:flex;justify-content:space-between;gap:1.5rem;white-space:nowrap"><span>${label}</span><span>${value}</span></div>`;
+    return `<div class="flex justify-between gap-6 py-0.5 whitespace-nowrap"><span class="text-gray-500">${label}</span><span class="font-medium tabular-nums text-gray-900 dark:text-gray-50">${value}</span></div>`;
 }
 
-const tipArrow = `<div class="tooltip-arrow" data-popper-arrow></div>`;
+// heading line for data tooltips with several rows
+function tipTitle(text) {
+    return `<p class="mb-1 font-medium text-gray-900 dark:text-gray-50">${text}</p>`;
+}
+
+const tipArrow = "";
 
 function updateSSEUI(data) {
     if (data.cpu !== undefined) {
@@ -25,11 +32,11 @@ function updateSSEUI(data) {
         if (Array.isArray(data.cpu.servers)) {
             const servers = [...data.cpu.servers].sort((a, b) => b.avg - a.avg);
             document.getElementById("sse_cpu").textContent = (servers.length ? servers[0].avg : 0).toFixed(1) + "%";
-            cpuTooltip.innerHTML = "CPU usage:" + servers.map(s => tipRow(s.name, `${s.avg.toFixed(1)}% (${s.cores} ${s.cores === 1 ? 'core' : 'cores'})`)).join("") + tipArrow;
+            cpuTooltip.innerHTML = tipTitle("CPU usage") + servers.map(s => tipRow(s.name, `${s.avg.toFixed(1)}% (${s.cores} ${s.cores === 1 ? 'core' : 'cores'})`)).join("") + tipArrow;
         } else {
             const cpuValues = Object.values(data.cpu);
             document.getElementById("sse_cpu").textContent = (cpuValues.reduce((a,b)=>a+b,0)/cpuValues.length).toFixed(1) + "%";
-            cpuTooltip.innerHTML = "CPU usage per core:" +
+            cpuTooltip.innerHTML = tipTitle("CPU usage per core") +
                 Object.entries(data.cpu)
                       .sort(([, a], [, b]) => b - a)
                       .map(([core, val]) => tipRow(core.replace(/_/g, ' '), `${val.toFixed(1)}%`))
@@ -43,7 +50,7 @@ function updateSSEUI(data) {
         const memTooltip = document.getElementById("tooltip-sse_memory");
         if (data.memory.servers) {
             const servers = [...data.memory.servers].sort((a, b) => parseFloat(b.ram.percent) - parseFloat(a.ram.percent));
-            memTooltip.innerHTML = "RAM usage:" + servers.map(s => tipRow(s.name, `${s.ram.used} / ${s.ram.total} (${s.ram.percent})`)).join("") + tipArrow;
+            memTooltip.innerHTML = tipTitle("RAM usage") + servers.map(s => tipRow(s.name, `${s.ram.used} / ${s.ram.total} (${s.ram.percent})`)).join("") + tipArrow;
         } else {
             memTooltip.innerHTML = tipRow("RAM", `${mem.ram.used} / ${mem.ram.total} (${mem.ram.percent})`) + tipRow("Swap", `${mem.swap.used} / ${mem.swap.total} (${mem.swap.percent})`) + tipArrow;
         }
@@ -54,7 +61,7 @@ function updateSSEUI(data) {
         const loadTooltip = document.getElementById("tooltip-sse_load");
         if (data.load.servers) {
             const servers = [...data.load.servers].sort((a, b) => b.load1min - a.load1min);
-            loadTooltip.innerHTML = "Load (1, 5, 15 min):" + servers.map(s => tipRow(s.name, `${s.load1min.toFixed(2)} / ${s.load5min.toFixed(2)} / ${s.load15min.toFixed(2)}`)).join("") + tipArrow;
+            loadTooltip.innerHTML = tipTitle("Load (1, 5, 15 min)") + servers.map(s => tipRow(s.name, `${s.load1min.toFixed(2)} / ${s.load5min.toFixed(2)} / ${s.load15min.toFixed(2)}`)).join("") + tipArrow;
         } else {
             loadTooltip.innerHTML = tipRow("Load 1 min", data.load.load1min.toFixed(2)) + tipRow("Load 5 min", data.load.load5min.toFixed(2)) + tipRow("Load 15 min", data.load.load15min.toFixed(2)) + tipArrow;
         }
@@ -71,7 +78,7 @@ function updateSSEUI(data) {
         // a master's first entry is only the number shown in the header
         if (data.disk[0] && data.disk[0].device === "Fullest server") {
             const servers = data.disk.slice(1).sort((a, b) => b.percent - a.percent);
-            diskTooltip.innerHTML = "Disk usage:" + servers.map(d => tipRow(d.device, `${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)`)).join("") + tipArrow;
+            diskTooltip.innerHTML = tipTitle("Disk usage") + servers.map(d => tipRow(d.device, `${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)`)).join("") + tipArrow;
         } else {
             const filteredDisks = data.disk.filter(d => !d.mountpoint.startsWith("/mnt")).sort((a, b) => b.percent - a.percent);
             diskTooltip.innerHTML = filteredDisks.map(d => tipRow(`${d.device} on ${d.mountpoint}`, `${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)`)).join("") + tipArrow;
@@ -81,7 +88,7 @@ function updateSSEUI(data) {
 }
 
 if (Object.keys(cachedData).length) {
-    updateSSEUI(cachedData);
+    try { updateSSEUI(cachedData); } catch (e) { cachedData = {}; localStorage.removeItem("sseData"); }
 }
 
 const resourceIntervals = { cpu: 15 * 1000, memory: 30 * 1000, load: 15 * 60 * 1000, disk: 5 * 60 * 1000 };
@@ -267,7 +274,7 @@ function toggleSidebar(){const root=document.documentElement;const isOpen=root.c
 (function(){const D=document.getElementById('theme-toggle-dark-icon'),L=document.getElementById('theme-toggle-light-icon'),B=document.getElementById('theme-toggle');if(!D||!L||!B)return;(localStorage.getItem('color-theme')==='dark'||(!('color-theme' in localStorage)&&window.matchMedia('(prefers-color-scheme: dark)').matches))?L.classList.remove('hidden'):D.classList.remove('hidden');B.addEventListener('click',function(){D.classList.toggle('hidden');L.classList.toggle('hidden');const t=localStorage.getItem('color-theme'),d=document.documentElement.classList;t?(t==='light'?(d.add('dark'),localStorage.setItem('color-theme','dark')):(d.remove('dark'),localStorage.setItem('color-theme','light'))):(d.contains('dark')?(d.remove('dark'),localStorage.setItem('color-theme','light')):(d.add('dark'),localStorage.setItem('color-theme','dark')))});})();
 
 // tooltips and dismiss buttons for pages that don't load flowbite
-document.addEventListener('DOMContentLoaded',function(){if(typeof window.initTooltips==='function')return;function place(t,tip,p){var r=t.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight,x,y;if(p==='left'){x=r.left-w-8;y=r.top+(r.height-h)/2}else if(p==='right'){x=r.right+8;y=r.top+(r.height-h)/2}else if(p==='bottom'){x=r.left+(r.width-w)/2;y=r.bottom+8}else{x=r.left+(r.width-w)/2;y=r.top-h-8}x=Math.max(8,Math.min(x,innerWidth-w-8));y=Math.max(8,y);tip.style.position='fixed';tip.style.left=x+'px';tip.style.top=y+'px'}document.querySelectorAll('[data-tooltip-target]').forEach(function(t){var tip=document.getElementById(t.getAttribute('data-tooltip-target'));if(!tip)return;tip.style.position='fixed';tip.style.left='0';tip.style.top='0';function show(){tip.style.visibility='visible';tip.style.opacity='1';tip.style.pointerEvents='none';place(t,tip,t.getAttribute('data-tooltip-placement')||'top')}function hide(){tip.style.visibility='hidden';tip.style.opacity='0'}t.addEventListener('mouseenter',show);t.addEventListener('focus',show);t.addEventListener('mouseleave',hide);t.addEventListener('blur',hide)});document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-dismiss-target]');if(!b)return;var sel=b.getAttribute('data-dismiss-target'),el=b.closest(sel)||document.querySelector(sel);if(el){el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(function(){el.style.display='none'},300)}})});
+document.addEventListener('DOMContentLoaded',function(){if(typeof window.initTooltips==='function')return;function place(t,tip,p){var r=t.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight,x,y;if(p==='left'){x=r.left-w-8;y=r.top+(r.height-h)/2}else if(p==='right'){x=r.right+8;y=r.top+(r.height-h)/2}else if(p==='bottom'){x=r.left+(r.width-w)/2;y=r.bottom+8}else{x=r.left+(r.width-w)/2;y=r.top-h-8}x=Math.max(8,Math.min(x,innerWidth-w-8));y=Math.max(8,y);tip.style.position='fixed';tip.style.left=x+'px';tip.style.top=y+'px'}document.querySelectorAll('[data-tooltip-target]').forEach(function(t){var tip=document.getElementById(t.getAttribute('data-tooltip-target'));if(!tip)return;tip.style.position='fixed';tip.style.left='0';tip.style.top='0';var timer;function show(){clearTimeout(timer);tip.style.visibility='visible';tip.style.opacity='1';tip.style.pointerEvents='none';place(t,tip,t.getAttribute('data-tooltip-placement')||'top')}function later(){clearTimeout(timer);timer=setTimeout(show,200)}function hide(){clearTimeout(timer);tip.style.visibility='hidden';tip.style.opacity='0'}t.addEventListener('mouseenter',later);t.addEventListener('focus',show);t.addEventListener('mouseleave',hide);t.addEventListener('blur',hide);t.addEventListener('keydown',function(e){if(e.key==='Escape')hide()})});document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-dismiss-target]');if(!b)return;var sel=b.getAttribute('data-dismiss-target'),el=b.closest(sel)||document.querySelector(sel);if(el){el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(function(){el.style.display='none'},300)}})});
 
 // product tour, driver.js only loads when the tour starts
 (function(){var loading=null;function css(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}function js(src){return new Promise(function(ok,fail){var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=fail;document.head.appendChild(s);});}function load(){if(!loading){css('/static/dist/css/driverjs131.min.css');loading=js('/static/dist/js/driverjs131.min.js').then(function(){return js('/static/dist/js/tour-steps.js');}).then(function(){return js('/static/dist/js/tour.js');});}return loading;}window.OPTour={start:function(f){load().then(function(){window.OPTour.start(f);});},markComplete:function(){var t=document.querySelector('meta[name="csrf-token"]');fetch('/api/tour/complete',{method:'POST',headers:t?{'X-CSRFToken':t.content}:{}}).catch(function(){});}};if(localStorage.getItem('op_tour_active')==='1')load();})();
