@@ -289,7 +289,7 @@ func TestServeLicenseWithoutKeyShowsUpgrade(t *testing.T) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}
 	}
-	if strings.Contains(got, "License Info:") {
+	if strings.Contains(got, "License info") {
 		t.Fatal("license info box shown without a key")
 	}
 }

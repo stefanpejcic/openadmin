@@ -182,7 +182,7 @@ func TestServeModulesGetRendersHTML(t *testing.T) {
 		"DNS",
 		"Docker (Containers)",
 		"Backups",
-		"Save Changes",
+		"Save changes",
 		"</html>",
 	} {
 		if !strings.Contains(got, want) {

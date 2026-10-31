@@ -23,10 +23,10 @@ const usageWarnings = {};
 let usageCores = 0;
 function setUsageWarning(key, text) {
     if (text) usageWarnings[key] = text; else delete usageWarnings[key];
-    const box = $('#usage_warnings').empty();
+    const list = $('#usage_warnings_list').empty();
     const order = ['cpu', 'load', 'ram', 'swap', 'disk'];
-    order.filter(k => usageWarnings[k]).forEach(k => box.append($('<p>').text(usageWarnings[k])));
-    box.toggleClass('hidden', box.children().length === 0);
+    order.filter(k => usageWarnings[k]).forEach(k => list.append($('<p>').text(usageWarnings[k])));
+    $('#usage_warnings').toggleClass('hidden', list.children().length === 0);
 }
 
 function updateHomeUsage(data) {
@@ -37,12 +37,13 @@ function updateHomeUsage(data) {
     $('#current_disk_usage_percentage_also, .home_usage').text(percent + '%');
     setUsageWarning('disk', percent >= 90 ? `Disk / is ${percent}% full. Free up space or add disk before it fills up, services and databases stop when it does.` : '');
 
-    // Donut chart visual
-    const radius = 45, circ = 2 * Math.PI * radius;
-    const offset = circ - (percent / 100) * circ;
+    // ring gauge, thresholds match the usage meters
+    const radius = 28, circ = 2 * Math.PI * radius;
+    const offset = circ - (Math.min(percent, 100) / 100) * circ;
     $('#donut_fill').css('stroke-dashoffset', offset)
-        .removeClass('text-emerald-500 text-yellow-500 text-red-500')
-        .addClass(percent >= 90 ? 'text-red-500' : percent >= 80 ? 'text-yellow-500' : 'text-emerald-500');
+        .removeClass('stroke-blue-500 stroke-yellow-500 stroke-red-500')
+        .addClass(meterStroke(percent));
+    $('#donut').attr('aria-valuenow', percent);
     $('#donut_percent').text(percent + '%');
 
     // Disk info
@@ -52,14 +53,11 @@ function updateHomeUsage(data) {
     $('#disk_used').text(formatDiskSize(home.used));
     $('#disk_free').text(formatDiskSize(home.free));
 
-    // Progress bar
-    $('#tailwind_progress_fill').css('width', percent + '%')
-        .removeClass('bg-red-500 bg-orange-400 bg-emerald-500')
-        .addClass(percent >= 90 ? 'bg-red-500' : percent >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
+}
 
-    // Disk indicator
-    $("#serverduIndicator").removeClass("text-red-500 text-orange-500 text-emerald-500 text-gray-500")
-        .addClass(percent >= 90 ? "text-red-500" : percent >= 80 ? "text-orange-500" : percent < 80 ? "text-gray-500" : "text-gray-500");
+// blue below 70%, yellow from 70%, red from 90%
+function meterStroke(percent) {
+    return percent >= 90 ? 'stroke-red-500' : percent >= 70 ? 'stroke-yellow-500' : 'stroke-blue-500';
 }
 
 function fetchDiskUsage() {
@@ -83,19 +81,43 @@ function updateRamInfo() {
 
 // --- Chart theme ---
 // same grid, text and series colors as charts.js, so ApexCharts follows dark mode too
-const apexColors = { blue: '#3b82f6', emerald: '#10b981', amber: '#f59e0b', cyan: '#06b6d4', orange: '#f97316', pink: '#ec4899' };
+const apexColors = { blue: '#3b82f6', emerald: '#10b981', violet: '#8b5cf6', amber: '#f59e0b', cyan: '#06b6d4', pink: '#ec4899', orange: '#f97316', gray: '#9ca3af' };
+function escapeHtml(v) {
+    return String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+// data tooltip on the popover surface, gray-500 labels and gray-900 tabular values
+function apexTooltip(fmt) {
+    return function ({ series, dataPointIndex, w }) {
+        const x = w.globals.seriesX[0] ? w.globals.seriesX[0][dataPointIndex] : null;
+        const rows = w.globals.seriesNames.map((name, i) => {
+            const v = series[i] ? series[i][dataPointIndex] : null;
+            if (v === null || v === undefined) return '';
+            return '<div class="flex items-center justify-between gap-4"><span class="flex items-center gap-1.5 text-gray-500 dark:text-gray-500"><span class="size-2 rounded-sm" style="background:' + w.globals.colors[i] + '"></span>' + escapeHtml(name) + '</span><span class="font-medium tabular-nums text-gray-900 dark:text-gray-50">' + escapeHtml(fmt ? fmt(v) : v) + '</span></div>';
+        }).join('');
+        const title = x ? '<div class="mb-1 font-medium text-gray-900 dark:text-gray-50">' + new Date(x).toLocaleTimeString() + '</div>' : '';
+        return '<div class="rounded-md border border-gray-200 bg-white p-2 text-xs shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">' + title + '<div class="space-y-1">' + rows + '</div></div>';
+    };
+}
 function apexTheme() {
     const dark = document.documentElement.classList.contains('dark');
     return {
-        chart: { background: 'transparent', foreColor: dark ? '#9ca3af' : '#6b7280', fontFamily: 'Geist, ui-sans-serif, system-ui, sans-serif' },
-        grid: { borderColor: dark ? '#1f2937' : '#e5e7eb' },
-        theme: { mode: dark ? 'dark' : 'light' },
-        tooltip: { theme: dark ? 'dark' : 'light' }
+        chart: { background: 'transparent', foreColor: '#6b7280', fontFamily: 'Geist, ui-sans-serif, system-ui, sans-serif' },
+        grid: { borderColor: dark ? '#1f2937' : '#e5e7eb', xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } } },
+        theme: { mode: dark ? 'dark' : 'light' }
     };
 }
+const apexLegend = { position: 'top', horizontalAlign: 'right', fontSize: '12px', markers: { width: 8, height: 8, size: 4, radius: 2, shape: 'square' } };
 function themed(opts) {
     const t = apexTheme();
-    return { ...opts, chart: { ...opts.chart, ...t.chart }, grid: { ...t.grid, ...opts.grid }, theme: t.theme, tooltip: { ...opts.tooltip, ...t.tooltip } };
+    return {
+        ...opts,
+        chart: { toolbar: { show: false }, zoom: { enabled: false }, ...opts.chart, ...t.chart },
+        grid: { ...t.grid, ...opts.grid },
+        theme: t.theme,
+        legend: { ...apexLegend, ...opts.legend },
+        dataLabels: { enabled: false },
+        tooltip: { shared: true, custom: apexTooltip(opts.tooltipValue), ...opts.tooltip }
+    };
 }
 // recolor charts already on the page when the theme switches
 new MutationObserver(() => {
@@ -112,10 +134,11 @@ function initRamChart() {
             { name: "Total RAM (GB)", data: [] }
         ],
         xaxis: { type: "datetime" },
-        yaxis: { title: { text: "Memory Usage (GB)" }},
-        colors: [apexColors.blue, apexColors.emerald],
-        fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] }},
-        stroke: { curve: 'smooth', width: 2 }
+        yaxis: { title: { text: "Memory (GB)" }},
+        // total is the comparison line, so it's gray and dashed
+        colors: [apexColors.blue, apexColors.gray],
+        fill: { type: "solid", opacity: [0.1, 0] },
+        stroke: { curve: 'smooth', width: 2, dashArray: [0, 4] }
     }));
     chartRam.render();
 }
@@ -138,9 +161,9 @@ function initLoadChart() {
     chartLoad = new ApexCharts(document.getElementById('chart-load'), themed({
         chart: { type: "line", height: 250, animations: { enabled: true }},
         series: [
-            { name: "1 Min Load", data: [] },
-            { name: "5 Min Load", data: [] },
-            { name: "15 Min Load", data: [] }
+            { name: "1 min load", data: [] },
+            { name: "5 min load", data: [] },
+            { name: "15 min load", data: [] }
         ],
         xaxis: {
             type: "datetime",
@@ -149,20 +172,14 @@ function initLoadChart() {
             }
         },
         yaxis: {
-            title: { text: "Server Load" },
+            title: { text: "Load" },
             labels: {
                 formatter: value => parseFloat(value.toFixed(2)).toString()
             }
         },
-        colors: [apexColors.blue, apexColors.emerald, apexColors.amber],
-        tooltip: {
-            x: {
-                formatter: v => new Date(v).toLocaleTimeString()
-            },
-            y: {
-                formatter: value => parseFloat(value.toFixed(2)).toString()
-            }
-        }
+        colors: [apexColors.blue, apexColors.emerald, apexColors.violet],
+        stroke: { curve: 'smooth', width: 2 },
+        tooltipValue: value => parseFloat(value.toFixed(2)).toString()
     }));
     chartLoad.render();
 }
@@ -171,9 +188,9 @@ function initLoadChart() {
 function updateLoadChart(load) {
     const now = Date.now();
     chartLoad.updateSeries([
-        { name: "1 Min Load", data: [...chartLoad.w.config.series[0].data, [now, +load.load1min]] },
-        { name: "5 Min Load", data: [...chartLoad.w.config.series[1].data, [now, +load.load5min]] },
-        { name: "15 Min Load", data: [...chartLoad.w.config.series[2].data, [now, +load.load15min]] }
+        { name: "1 min load", data: [...chartLoad.w.config.series[0].data, [now, +load.load1min]] },
+        { name: "5 min load", data: [...chartLoad.w.config.series[1].data, [now, +load.load5min]] },
+        { name: "15 min load", data: [...chartLoad.w.config.series[2].data, [now, +load.load15min]] }
     ]);
     chartLoad.updateOptions({
         series: chartLoad.w.config.series.map(s => ({ name: s.name, data: s.data.slice(-50) }))
@@ -191,8 +208,8 @@ function initIOChart() {
         ],
         xaxis: { type: 'datetime' },
         yaxis: { title: { text: "MB/s" }},
-        colors: [apexColors.cyan, apexColors.orange],
-        fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] }},
+        colors: [apexColors.blue, apexColors.emerald],
+        fill: { type: "solid", opacity: 0.1 },
         stroke: { curve: 'smooth', width: 2 }
     }));
     chartIO.render();
@@ -237,8 +254,8 @@ function initNetChart() {
         ],
         xaxis: { type: 'datetime' },
         yaxis: { title: { text: "MB/s" }},
-        colors: [apexColors.emerald, apexColors.pink],
-        fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] }},
+        colors: [apexColors.blue, apexColors.emerald],
+        fill: { type: "solid", opacity: 0.1 },
         stroke: { curve: 'smooth', width: 2 }
     }));
     chartNet.render();
@@ -287,21 +304,14 @@ function getServerLoad() {
         const loadPercent = usageCores ? Math.round(l5 / usageCores * 100) : 0;
         setUsageWarning('load', loadPercent >= 90 ? `Load average ${formatDecimal(l5)} is ${loadPercent}% of the ${usageCores} CPU cores, processes are waiting for CPU time.` : '');
 
-        // Load indicator/arrows
+        // trend arrow, 1 min against 5 min
         const diff = l1 - l5;
-        $('#serverloadIndicator, #loadIconColor').removeClass("bg-primary-lt bg-primary bg-warning bg-warning-lt bg-success bg-success-lt");
         const indicator = $('#load-indicator');
         if (diff >= 0.1) {
-            $('#serverloadIndicator').addClass("bg-warning");
-            $('#loadIconColor').addClass("bg-warning-lt");
-            indicator.html('<span class="arrow-up">&#8593;</span>');
+            indicator.html('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><span class="sr-only">rising</span>');
         } else if (diff <= -0.1) {
-            $('#serverloadIndicator').addClass("bg-success");
-            $('#loadIconColor').addClass("bg-success-lt");
-            indicator.html('<span class="arrow-down">&#8595;</span>');
+            indicator.html('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><span class="sr-only">falling</span>');
         } else {
-            $('#serverloadIndicator').addClass("bg-primary");
-            $('#loadIconColor').addClass("bg-primary-lt");
             indicator.html('');
         }
     });
@@ -314,17 +324,24 @@ function fetchCpuUsage() {
         let total = 0, count = 0;
         $.each(data, (core, usage) => {
             total += usage; count++;
-            const load = usage >= 90 ? 'hot' : usage >= 80 ? 'busy' : 'ok';
-            container.append($('<div>').attr('data-load', load).append(`<span>${usage.toFixed(1)}%</span>`));
+            container.append($('<span>').addClass('size-3 rounded-sm ' + coreShade(usage)).attr('title', `Core ${core}: ${usage.toFixed(1)}%`));
         });
         const avg = count ? (total / count).toFixed(1) : 0;
         usageCores = count;
+        container.attr('aria-label', `Per-core CPU load, ${count} cores, ${avg}% on average`);
         setUsageWarning('cpu', avg >= 90 ? `CPU is ${avg}% used. Check Processes for what's using it.` : '');
-        $('#cpu_avg-now').removeClass("text-red-500 text-orange-500 text-emerald-500 text-gray-500")
-            .addClass(avg >= 90 ? "text-red-500" : avg >= 80 ? "text-orange-500" : avg >= 50 ? "text-gray-500" : "text-gray-500")
-            .text(avg + '%');
         $('#cpu_total').text(avg + '%');
     });
+}
+
+// blue 100 to 600 by load, idle cores go gray-800 in dark mode
+function coreShade(usage) {
+    if (usage < 10) return 'bg-blue-100 dark:bg-gray-800';
+    if (usage < 25) return 'bg-blue-200 dark:bg-blue-900';
+    if (usage < 45) return 'bg-blue-300';
+    if (usage < 65) return 'bg-blue-400';
+    if (usage < 85) return 'bg-blue-500';
+    return 'bg-blue-600';
 }
 
 // --- IO + Network ---
@@ -332,39 +349,39 @@ function fetchIO() {
     $.getJSON('/json/io', data => {
         const tbody = $('#io-table-body').empty();
         $.each(data, (disk, stats) => {
-            tbody.append(`<tr>
-                <td class="px-3 py-2">${disk}</td>
-                <td class="px-3 py-2">${stats.read_count}</td>
-                <td class="px-3 py-2">${stats.write_count}</td>
-                <td class="px-3 py-2">${formatBytes(stats.read_bytes)}</td>
-                <td class="px-3 py-2">${formatBytes(stats.write_bytes)}</td>
-                <td class="px-3 py-2">${stats.read_time} ms</td>
-                <td class="px-3 py-2">${stats.write_time} ms</td>
-                <td class="px-3 py-2">${stats.busy_time !== null ? stats.busy_time + ' ms' : '-'}</td>
+            tbody.append(`<tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50">${escapeHtml(disk)}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.read_count}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.write_count}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${formatBytes(stats.read_bytes)}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${formatBytes(stats.write_bytes)}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.read_time} ms</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.write_time} ms</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.busy_time !== null ? stats.busy_time + ' ms' : '<span class="text-gray-400 dark:text-gray-600">–</span>'}</td>
             </tr>`);
         });
         updateIOChart(data);
-    }).fail(() => $('#io-table-body').html('<tr><td colspan="8">Error loading IO data.</td></tr>'));
+    }).fail(() => $('#io-table-body').html('<tr><td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">Couldn\'t load IO data.</td></tr>'));
 }
 
 function fetchNetwork() {
     $.getJSON('/json/network', data => {
         const tbody = $('#network-table-body').empty();
         $.each(data, (nic, stats) => {
-            tbody.append(`<tr>
-                <td class="px-3 py-2">${nic}</td>
-                <td class="px-3 py-2">${formatBytes(stats.bytes_sent)}</td>
-                <td class="px-3 py-2">${formatBytes(stats.bytes_recv)}</td>
-                <td class="px-3 py-2">${stats.packets_sent}</td>
-                <td class="px-3 py-2">${stats.packets_recv}</td>
-                <td class="px-3 py-2">${stats.errin}</td>
-                <td class="px-3 py-2">${stats.errout}</td>
-                <td class="px-3 py-2">${stats.dropin}</td>
-                <td class="px-3 py-2">${stats.dropout}</td>
+            tbody.append(`<tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50">${escapeHtml(nic)}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${formatBytes(stats.bytes_sent)}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${formatBytes(stats.bytes_recv)}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.packets_sent}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.packets_recv}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.errin}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.errout}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.dropin}</td>
+                <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">${stats.dropout}</td>
             </tr>`);
         });
         updateNetChart(data);
-    }).fail(() => $('#network-table-body').html('<tr><td colspan="9">Error loading network data.</td></tr>'));
+    }).fail(() => $('#network-table-body').html('<tr><td colspan="9" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">Couldn\'t load network data.</td></tr>'));
 }
 
 // --- Tab Events ---
@@ -386,7 +403,7 @@ function setupMemoryActions() {
             type: 'POST',
             headers: { 'X-CSRFToken': csrf_token },
             success: res => showToast(res.message, 'success'),
-            error: xhr => showToast(xhr.responseJSON.message, 'error')
+            error: xhr => showToast((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to reach the server.', 'error')
         });
     });
     $('#clear-swap').on('click', function () {
@@ -395,7 +412,7 @@ function setupMemoryActions() {
             type: 'POST',
             headers: { 'X-CSRFToken': csrf_token },
             success: res => showToast(res.message, 'success'),
-            error: xhr => showToast(xhr.responseJSON.message, 'error')
+            error: xhr => showToast((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to reach the server.', 'error')
         });
     });
 }

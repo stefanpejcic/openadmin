@@ -571,7 +571,7 @@ func TestServeUpdatesGetUsesEnvVersionAfterUpdateWithoutRestart(t *testing.T) {
 	if strings.Contains(got, "Start update to 10.1") {
 		t.Fatalf("expected no update button once .env is on the latest version, got %s", truncate(got))
 	}
-	if !strings.Contains(got, `<div id="installed_version" class="relative w-full mt-2">10.1`) {
+	if !strings.Contains(got, `<div id="installed_version" class="relative mt-2 w-full text-sm font-medium text-gray-900 dark:text-gray-50">10.1`) {
 		t.Fatalf("expected installed version from .env, got %s", truncate(got))
 	}
 }

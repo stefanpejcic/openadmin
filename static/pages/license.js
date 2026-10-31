@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const saveButton = document.querySelector('#save_license_btn');
 
         saveButton.disabled = true;
-        saveButton.innerHTML = '<span class="animate-spin h-5 w-5 border-4 border-gray-300 border-t-gray-600 rounded-full inline-block"></span>&nbsp; Validating...';
+        saveButton.innerHTML = "<svg class='size-4 animate-spin' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-opacity='.25' stroke-width='3'></circle><path d='M21 12a9 9 0 0 0-9-9' stroke='currentColor' stroke-width='3' stroke-linecap='round'></path></svg>Validating…";
         alertContainer.innerHTML = '';
 
         fetch('/license/key', {
@@ -27,20 +27,19 @@ document.addEventListener("DOMContentLoaded", function () {
             let alertHtml = '';
 
             if (response.response === "License is invalid" || response.error === "License key validation failed") {
-                alertHtml = `<div class="p-4 sm:p-6 lg:p-8">
-                                <div class='bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md'>
-                                    <p><strong>License key is invalid.</strong> Please verify it on your 
-                                    <a href='https://my.openpanel.com/clientarea.php?action=products' class='text-blue-500 underline' target='_blank'>my.openpanel.com</a> account.</p>
+                alertHtml = `<div class="px-4 pt-6 sm:px-6 lg:px-8">
+                                <div class='flex gap-3 rounded-md bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/70 dark:text-red-500' role='alert'>
+                                    <svg class='remixicon size-5 shrink-0 text-red-500' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z'/></svg>
+                                    <p><strong class='font-medium'>License key is invalid.</strong> Verify it in your <a href='https://my.openpanel.com/clientarea.php?action=products' class='text-red-900 underline underline-offset-4 dark:text-red-500' target='_blank' rel='noopener'>my.openpanel.com</a> account.</p>
                                 </div>
                              </div>`;
             } else {
-                alertHtml = `<div class="p-4 sm:p-6 lg:p-8">
-                                <div class='bg-emerald-100 border-l-4 border-emerald-500 text-emerald-700 p-4 rounded-md'>
-                                    <p>License key saved successfully! 
-                                    <a href="#" id="restartOpenAdmin" class='text-blue-500 underline'>Click here to restart OpenAdmin</a> 
-                                    interface and apply Enterprise features (may take up to 10sec).</p>
+                alertHtml = `<div class="px-4 pt-6 sm:px-6 lg:px-8">
+                                <div class='flex gap-3 rounded-md bg-emerald-50 p-4 text-sm text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-500' role='status'>
+                                    <svg class='remixicon size-5 shrink-0 text-emerald-500' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11.0026 16L18.0737 8.92893L16.6595 7.51472L11.0026 13.1716L8.17421 10.3431L6.75999 11.7574L11.0026 16Z'/></svg>
+                                    <p>License key saved. <a href='#' id='restartOpenAdmin' class='text-emerald-900 underline underline-offset-4 dark:text-emerald-500'>Restart OpenAdmin</a> to apply Enterprise features, it can take up to 10 seconds.</p>
                                 </div>
-                            </div>`;
+                             </div>`;
 
                 setTimeout(verifyLicense, 0);
             }
@@ -72,18 +71,19 @@ document.addEventListener("DOMContentLoaded", function () {
             console.error('Error saving license key:', error);
             saveButton.disabled = false;
             saveButton.innerHTML = 'Save key';
-            alertContainer.innerHTML = `<div class="p-4 sm:p-6 lg:p-8">
-                                            <div class='bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md'>
-                                                <p>License key validation failed. Please check your key and try again.</p>
-                                            </div>
-                                        </div>`;
+            alertContainer.innerHTML = `<div class="px-4 pt-6 sm:px-6 lg:px-8">
+                                <div class='flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500' role='status'>
+                                    <svg class='remixicon size-5 shrink-0 text-yellow-500' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z'/></svg>
+                                    <p>License key validation failed. Check your key and try again.</p>
+                                </div>
+                             </div>`;
         });
     });
 
     document.querySelector('.btn-verify').addEventListener('click', function (event) {
         event.preventDefault();
         this.disabled = true;
-        this.innerHTML = '<span class="animate-spin h-5 w-5 border-4 border-gray-300 border-t-gray-600 rounded-full inline-block"></span>&nbsp; Checking...';
+        this.innerHTML = "<svg class='size-4 animate-spin' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-opacity='.25' stroke-width='3'></circle><path d='M21 12a9 9 0 0 0-9-9' stroke='currentColor' stroke-width='3' stroke-linecap='round'></path></svg>Checking…";
         verifyLicense();
     });
 
@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", function () {
         event.preventDefault();
         const downgradeButton = this;
         downgradeButton.disabled = true;
-        downgradeButton.innerHTML = '<span class="animate-spin h-5 w-5 border-4 border-gray-300 border-t-gray-600 rounded-full inline-block"></span>&nbsp; Working...';
+        downgradeButton.innerHTML = "<svg class='size-4 animate-spin' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-opacity='.25' stroke-width='3'></circle><path d='M21 12a9 9 0 0 0-9-9' stroke='currentColor' stroke-width='3' stroke-linecap='round'></path></svg>Downgrading…";
 
         fetch('/license/delete', {
             method: 'DELETE',
@@ -126,35 +126,35 @@ function verifyLicense() {
         if (!infoContainer) return;
         if (!response.info) {
             infoContainer.textContent = response.error || 'No license information available.';
-            verifyButton.innerHTML = 'Re-Verify';
+            verifyButton.innerHTML = 'Re-verify';
             verifyButton.disabled = false;
             return;
         }
 
         try {
             let infoObject = JSON.parse(response.info);
-            let listHtml = `<ul class='list-disc pl-5 text-gray-700'>` +
-                           Object.keys(infoObject).map(key => `<li><strong>${key}:</strong> ${infoObject[key]}</li>`).join('') +
+            let listHtml = `<ul class='space-y-1'>` +
+                           Object.keys(infoObject).map(key => `<li><span class='font-medium'>${key}</span> ${infoObject[key]}</li>`).join('') +
                            `</ul>`;
             infoContainer.innerHTML = listHtml;
             const dueWarning = licenseDueWarning(infoObject['Next Due Date'], new Date());
             if (dueWarning) {
                 const p = document.createElement('p');
-                p.className = 'mt-3 text-sm text-yellow-700 dark:text-yellow-500';
+                p.className = 'mt-3 text-xs text-yellow-700 dark:text-yellow-500';
                 p.textContent = dueWarning;
                 infoContainer.appendChild(p);
             }
         } catch (e) {
-            infoContainer.innerHTML = `<p class="text-red-600">${response.info}</p>`;
+            infoContainer.innerHTML = `<p class="text-red-600 dark:text-red-500">${response.info}</p>`;
         }
 
         document.querySelector('#license_info').classList.remove('hidden');
-        verifyButton.innerHTML = 'Re-Verify';
+        verifyButton.innerHTML = 'Re-verify';
         verifyButton.disabled = false;
     })
     .catch(error => {
         console.error('Error verifying license:', error);
-        document.querySelector('.btn-verify').innerHTML = 'Re-Verify';
+        document.querySelector('.btn-verify').innerHTML = 'Re-verify';
         document.querySelector('.btn-verify').disabled = false;
     });
 }

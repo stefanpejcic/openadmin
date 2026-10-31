@@ -354,7 +354,7 @@ NGINX_ENABLED="true"
 		`value="1.5" required`, // PHP_FPM CPU stripped of trailing G
 		`value="1" required`,   // PHP_FPM 7.4 CPU stripped, no status
 		`value="2" required`,   // NGINX CPU stripped
-		"PHP Version  8.2", "Status: <b>Latest</b>", "Supported until: 2026-12-31",
+		"PHP version 8.2", "Status: <b class=\"font-medium text-gray-900 dark:text-gray-50\">Latest</b>", "Supported until: 2026-12-31",
 		"NGINX", "</html>",
 	} {
 		if !strings.Contains(got, want) {
@@ -635,7 +635,7 @@ func TestServeDefaultsRendersRecommendations(t *testing.T) {
 		"Number(v) > 0 && Number(v) < 2",
 		"Users on the Standard plan get 2 CPU",
 		"Autostarted services use resources on every new account",
-		`class="col-span-full mt-3 text-sm text-yellow-700 dark:text-yellow-500">5 of 5 sites`,
+		`class="col-span-full mt-3 text-xs text-yellow-700 dark:text-yellow-500">5 of 5 sites`,
 	} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected %q in the page", want)

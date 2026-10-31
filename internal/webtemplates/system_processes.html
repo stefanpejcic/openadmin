@@ -8,7 +8,7 @@
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="{ searchQuery: '', init() {
@@ -19,12 +19,12 @@
   }" x-init="init()">
     <div x-data="{ showSection: false, fileContent: '' }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
                     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Process Manager</h1>
-                    <h2 class="text-sm text-gray-500 dark:text-gray-500">View and manage system processes.</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">View and manage system processes.</p>
                 </div>
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <div class="flex flex-none items-center gap-2 sm:justify-end">
                 </div>
             </div>
         </header>
@@ -32,11 +32,11 @@
 
     <div class="">
         <div class="space-y-3">
-            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
                 <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
 
                     <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-    <input x-model="searchQuery" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8 shadow-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden" placeholder="Search processes..." type="search">
+    <input x-model="searchQuery" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-hidden transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8 shadow-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden" placeholder="Search processes…" aria-label="Search processes" type="search">
 
                         <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
@@ -58,11 +58,11 @@
             <div class="relative overflow-y-auto">
                 {{template "bulk_open" (dict "Table" "#processes_table" "Endpoint" "/server/processes/bulk")}}
 {{if .Hogs}}
-<div class="mx-4 my-3 space-y-1 text-sm text-yellow-700 dark:text-yellow-500">
+<div class="mx-4 my-3 sm:mx-6 lg:mx-8 flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg><div class="space-y-1">
 {{range .Hogs}}<p><b>{{.Name}}</b> (PID {{.PID}}) is using {{printf "%.0f" .CPUPercent}}% CPU and {{printf "%.1f" .MemoryPercent}}% RAM.
-{{if .PanelUser}}It runs in the container of OpenPanel user <a href="/users/{{.PanelUser}}" class="font-medium underline hover:no-underline">{{.PanelUser}}</a>, check their container limits for a misconfiguration or their sites for unusual traffic.
-{{else}}It's a system process, <a href="/server/processes/{{.PID}}/strace" class="font-medium underline hover:no-underline">trace it</a> to see what it's doing or restart its service.{{end}}</p>{{end}}
-</div>
+{{if .PanelUser}}It runs in the container of OpenPanel user <a href="/users/{{.PanelUser}}" class="font-medium underline underline-offset-4">{{.PanelUser}}</a>, check their container limits for a misconfiguration or their sites for unusual traffic.
+{{else}}It's a system process, <a href="/server/processes/{{.PID}}/strace" class="font-medium underline underline-offset-4">trace it</a> to see what it's doing or restart its service.{{end}}</p>{{end}}
+</div></div>
 {{end}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="processes_table">
                     <thead class="">
@@ -101,11 +101,11 @@
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 {{if .Processes}}
 {{range .Processes}}
-                        <tr data-pid="{{.PID}}" data-owner="{{.Owner}}" data-command="{{.Command}}" x-show="searchQuery === '' || $el.dataset.pid.includes(searchQuery) || $el.dataset.owner.toLowerCase().includes(searchQuery.toLowerCase()) || $el.dataset.command.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                        <tr data-pid="{{.PID}}" data-owner="{{.Owner}}" data-command="{{.Command}}" x-show="searchQuery === '' || $el.dataset.pid.includes(searchQuery) || $el.dataset.owner.toLowerCase().includes(searchQuery.toLowerCase()) || $el.dataset.command.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
 {{template "bulk_row_checkbox" (dict "Key" (printf "%v" .PID) "Label" (printf "PID %v" .PID))}}
 
                             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">
-                            <span class="font-medium text-gray-900 dark:text-gray-50 ">{{.PID}}</span> (<a href="/server/processes/{{.PID}}/strace" class="text-blue-500 hover:underline">Trace</a>) (<form method="POST" action="/server/processes/{{.PID}}/kill" class="inline" data-confirm="Kill process {{.PID}}?"><input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><button type="submit" class="text-blue-500 hover:underline">Kill</button></form>)
+                            <span class="font-medium tabular-nums text-gray-900 dark:text-gray-50">{{.PID}}</span> <a href="/server/processes/{{.PID}}/strace" class="ml-2 text-blue-500 hover:underline hover:underline-offset-4">Trace</a> <form method="POST" action="/server/processes/{{.PID}}/kill" class="ml-2 inline" data-confirm="Kill process {{.PID}}?"><input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><button type="submit" class="cursor-pointer rounded-sm text-blue-500 hover:underline hover:underline-offset-4 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Kill</button></form>
                             </td>
 
                             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400">
@@ -118,13 +118,13 @@
 
                             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400">
                                 <div class="flex items-center gap-2">
-                                    <span class="bg-blue-500 dark:bg-blue-500 h-2.5" style="width: {{.CPUPercent}}%"></span>{{.CPUPercent}}
+                                    <span role="meter" aria-label="CPU use of PID {{.PID}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{.CPUPercent}}" class="block h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800"><span class="block h-full rounded-full {{if ge .CPUPercent 90.0}}bg-red-500{{else if ge .CPUPercent 70.0}}bg-yellow-500{{else}}bg-blue-500{{end}}" style="width: {{.CPUPercent}}%"></span></span><span class="tabular-nums">{{.CPUPercent}}</span>
                                 </div>
                             </td>
 
                             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400">
                                 <div class="flex items-center gap-2">
-                                    <span class="bg-blue-500 dark:bg-blue-500 h-2.5" style="width: {{.MemoryPercent}}%"></span>{{printf "%.2f" .MemoryPercent}}
+                                    <span role="meter" aria-label="Memory use of PID {{.PID}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{.MemoryPercent}}" class="block h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800"><span class="block h-full rounded-full {{if ge .MemoryPercent 90.0}}bg-red-500{{else if ge .MemoryPercent 70.0}}bg-yellow-500{{else}}bg-blue-500{{end}}" style="width: {{.MemoryPercent}}%"></span></span><span class="tabular-nums">{{printf "%.2f" .MemoryPercent}}</span>
                                 </div>
                             </td>
 
@@ -134,8 +134,8 @@
 {{end}}
 {{else}}
 <tr>
-    <td colspan="7" class="p-6 text-center">
-        No processes - contact support!
+    <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">
+        No processes found. Contact support if this keeps happening.
     </td>
 </tr>
 {{end}}

@@ -1552,9 +1552,15 @@ func pickerAnchor(page []byte) int {
 		return -1
 	}
 	at := start + rel + len("</h1>")
-	// the subtitle belongs with the title
-	if next := bytes.Index(page[at:], []byte("</h2>")); next >= 0 && next < 600 && !bytes.Contains(page[at:at+next], []byte("</div>")) {
-		at += next + len("</h2>")
+	// the subtitle belongs with the title, it's a <p> on most pages and an <h2> on older ones
+	best, closeLen := -1, 0
+	for _, tag := range []string{"</p>", "</h2>"} {
+		if next := bytes.Index(page[at:], []byte(tag)); next >= 0 && (best < 0 || next < best) {
+			best, closeLen = next, len(tag)
+		}
+	}
+	if best >= 0 && best < 600 && !bytes.Contains(page[at:at+best], []byte("</div>")) {
+		at += best + closeLen
 	}
 	return at
 }

@@ -122,7 +122,7 @@ function downloadLog() {
     })
     .catch(error => {
         console.error('Error downloading log:', error);
-        alert('Error downloading log file.');
+        showToast('Error downloading log file.', 'error');
     });
 }
 
@@ -136,7 +136,8 @@ function truncateLog() {
         }
     })
     .then(response => response.json())
-    .then(data => alert(data.message));
+    .then(data => showToast(data.error || data.message, data.error ? 'error' : 'success'))
+    .catch(() => showToast('Failed to reach the server.', 'error'));
 }
 
 document.addEventListener('DOMContentLoaded', function() {

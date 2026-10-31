@@ -145,7 +145,7 @@ func TestServeAPISettingsGetRendersBasicAuthPanelWhenBasicAuthOn(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "API Access is Disabled because BasicAuth is enabled") {
+	if !strings.Contains(string(body), "API access is disabled because basic auth is enabled") {
 		t.Fatalf("expected the basic-auth-conflict panel, got %s", truncate(string(body)))
 	}
 }

@@ -128,7 +128,7 @@ func TestServeUserBackupsRendersExcludeAccountsTab(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, truncate(body))
 	}
-	for _, want := range []string{"Exclude Accounts", `action="/backups/user/exclusions"`, `value="bob" checked`, `data-user="alice"`, `name="mode" value="form"`, `id="destination"`, "Advanced", "</html>"} {
+	for _, want := range []string{"Exclude accounts", `action="/backups/user/exclusions"`, `value="bob" checked`, `data-user="alice"`, `name="mode" value="form"`, `id="destination"`, "Advanced", "</html>"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(body))
 		}
