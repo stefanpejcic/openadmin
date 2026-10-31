@@ -648,9 +648,22 @@ func TestCombineTasksLinksRemoteOnesThroughTheirServer(t *testing.T) {
 	out := combineTasks([]combinedPage{
 		{"local", "stefan", []byte(`[{"pid":1,"status":"running"}]`)},
 		{"n", "petar", []byte(`[{"pid":2,"status":"running"}]`)},
-	}, func(id, pid string) string { return "/open/" + id + "/" + pid })
-	if out[0]["server"] != "stefan" || out[0]["link"] != nil || out[1]["link"] != "/open/n/2" {
+	}, func(id, href string) string { return "/open/" + id + href })
+	if out[0]["server"] != "stefan" || out[0]["link"] != nil || out[1]["link"] != "/open/n/server/processes/2/strace" || out[1]["node"] != "n" {
 		t.Fatalf("got %v", out)
+	}
+}
+
+func TestCombineTasksShowsASharedCronJobOnce(t *testing.T) {
+	out := combineTasks([]combinedPage{
+		{"local", "stefan", []byte(`[{"status":"scheduled","command":"opencli sentinel","schedule":"*/15 * * * *","time":"in 2m 11s","line_number":45}]`)},
+		{"n", "lazar", []byte(`[{"status":"scheduled","command":"opencli sentinel","schedule":"*/15 * * * *","time":"in 2m 10s","line_number":40},{"status":"scheduled","command":"opencli backup","schedule":"0 3 * * *","time":"in 5h","line_number":41}]`)},
+	}, func(id, href string) string { return "/open/" + id + href })
+	if len(out) != 2 || out[0]["server"] != "stefan, lazar" || out[0]["link"] != nil {
+		t.Fatalf("shared job not merged: %v", out)
+	}
+	if out[1]["server"] != "lazar" || out[1]["link"] != "/open/n/server/crons#41" {
+		t.Fatalf("lazar only job: %v", out)
 	}
 }
 
@@ -943,9 +956,10 @@ func TestRightAnchorPrefersTheHeaderTabs(t *testing.T) {
 	}
 }
 
-func TestCronsAreAPerServerPageWithApply(t *testing.T) {
-	if tablesMerge("/server/crons") || !pickerPage("/server/crons") || !applyPage("/server/crons") || !perServerDefault["/server/crons"] {
-		t.Fatal("crons: no merged table, a picker and an apply box that starts off")
+func TestCronsApplyOnAllServersByDefault(t *testing.T) {
+	// a save finds each job by its command on every server, so applying everywhere is the default
+	if tablesMerge("/server/crons") || !pickerPage("/server/crons") || !applyPage("/server/crons") || perServerDefault["/server/crons"] {
+		t.Fatal("crons: no merged table, a picker and an apply box that starts on")
 	}
 }
 

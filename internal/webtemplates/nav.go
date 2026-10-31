@@ -217,6 +217,7 @@ var modernAreas = []navArea{
 				tabSpec{true, "/server/crons", "Scheduled Actions", strings.HasPrefix(path, "/server/crons")},
 				tabSpec{!c.IsReseller, "/terminal", "Terminal", strings.HasPrefix(path, "/terminal")},
 				tabSpec{!c.IsReseller, "/server/processes", "Process Manager", strings.HasPrefix(path, "/server/processes")},
+				tabSpec{!c.IsReseller, "/tasks", "Tasks", strings.HasPrefix(path, "/tasks")},
 			)
 		}},
 	{label: "System", icon: systemIcon, menuID: "system-menu", show: adminOnly,
@@ -329,6 +330,7 @@ var helpDocs = map[string]string{
 	"/security/disable-admin":        "admin/security/disable-admin",
 	"/server/resource-usage":         "admin/advanced/resource-usage",
 	"/server/crons":                  "admin/advanced/crons",
+	"/tasks":                         "admin/advanced/tasks",
 	"/terminal":                      "admin/advanced/terminal",
 	"/server/processes":              "admin/advanced/processes",
 	"/server/timezone":               "admin/system/timezone",

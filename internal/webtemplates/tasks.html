@@ -40,11 +40,9 @@
                 </div>
             </div>
             <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
-                {{template "bulk_open" (dict "Table" "#tasks_table" "Endpoint" "/tasks/bulk")}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="tasks_table">
                     <thead class="">
                         <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
-{{template "bulk_head_checkbox" .}}
                             <th class="w-full border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 py-1 text-sm sm:text-xs text-left">Command</th>
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Status</th>
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Time</th>
@@ -56,7 +54,6 @@
 {{range .Tasks}}
 {{if eq .Status "running"}}
                         <tr data-command="{{.Command}}" x-show="searchQuery === '' || $el.dataset.command.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
-{{template "bulk_row_checkbox" (dict "Key" (printf "%v" .PID) "Label" .Command)}}
                             <td class="w-full p-4 text-sm relative py-1 text-gray-600 dark:text-gray-400 break-words">
                             {{.Command}}
                             </td>
@@ -73,7 +70,6 @@
                         </tr>
 {{else}}
                         <tr data-command="{{.Command}}" x-show="searchQuery === '' || $el.dataset.command.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 hover:bg-gray-50 hover:dark:bg-gray-900">
-{{template "bulk_row_empty"}}
                             <td class="w-full p-4 text-sm relative py-1 text-gray-600 dark:text-gray-400 break-words">
                             {{.Command}}
                             </td>
@@ -91,15 +87,13 @@
 {{end}}
 {{else}}
 <tr>
-    <td colspan="5" class="p-6 text-center">
+    <td colspan="4" class="p-6 text-center">
         No background tasks are currently running or scheduled.
     </td>
 </tr>
 {{end}}
                     </tbody>
                 </table>
-{{template "bulk_bar" .}}
-</div>
 
                 <div class="fixed inset-x-0 bottom-8 mx-auto flex w-fit items-center"></div>
             </div>
@@ -123,43 +117,135 @@ document.addEventListener('DOMContentLoaded', function () {
     var runningBadge = '<span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">Running</span>';
     var scheduledBadge = '<span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">Scheduled</span>';
 
-    setInterval(function () {
+    var td = 'p-4 text-sm whitespace-nowrap py-1 text-gray-600 dark:text-gray-400';
+    var thClass = 'border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left';
+
+    // the server filter and sort from the merged page's url, kept by every refresh, the other columns sort here too
+    var params = new URLSearchParams(location.search);
+    var sortKey = params.get('sort') || '';
+    var sortDir = params.get('direction') === 'desc' ? 'desc' : 'asc';
+    var onlyNode = params.get('server') || '';
+    var lastTasks = null;
+    var sortable = { Command: 'command', Server: 'server', Status: 'status', Time: 'time' };
+
+    // "in 1h 2m", "4s" and "due now" as seconds
+    function seconds(text) {
+        var total = 0, m, re = /(\d+)\s*([dhms])/g;
+        while ((m = re.exec(text || ''))) total += +m[1] * { d: 86400, h: 3600, m: 60, s: 1 }[m[2]];
+        return total;
+    }
+
+    // running tasks come before scheduled ones when sorting by time, each by its own clock
+    function sortValue(t, key) {
+        if (key === 'time') return (t.status === 'running' ? 0 : 1e9) + seconds(t.time);
+        return String(t[key] || '').toLowerCase();
+    }
+
+    function headers(withServer) {
+        var head = document.querySelector('#tasks_table thead tr');
+        var th = Array.prototype.find.call(head.children, function (c) { return c.textContent.trim() === 'Server'; });
+        if (withServer && !th) {
+            th = document.createElement('th');
+            th.className = thClass;
+            th.textContent = 'Server';
+            head.children[0].after(th);
+        }
+        Array.prototype.forEach.call(head.children, function (c) {
+            var label = c.dataset.label || c.textContent.trim();
+            var key = sortable[label];
+            if (!key) return;
+            c.dataset.label = label;
+            c.dataset.sort = key;
+            var up = sortKey === key && sortDir === 'asc' ? '' : ' opacity-30';
+            var down = sortKey === key && sortDir === 'desc' ? '' : ' opacity-30';
+            c.innerHTML = '<div class="-mx-2 inline-flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>' + label + '</span><div class="-space-y-2">' +
+                '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50' + up + '"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg>' +
+                '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50' + down + '"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg>' +
+                '</div></div>';
+        });
+        return !!th;
+    }
+
+    function render() {
+        var tasks = lastTasks || [];
+        var tbody = document.getElementById('tasks_tbody');
+        var withServer = headers(tasks.some(function (t) { return t.node && t.node !== 'local'; }));
+        if (onlyNode) tasks = tasks.filter(function (t) { return (t.nodes || [t.node]).indexOf(onlyNode) !== -1; });
+        if (sortKey) {
+            tasks = tasks.slice().sort(function (a, b) {
+                var x = sortValue(a, sortKey), y = sortValue(b, sortKey);
+                var c = x < y ? -1 : x > y ? 1 : 0;
+                return sortDir === 'desc' ? -c : c;
+            });
+        }
+        if (!tasks.length) {
+            tbody.innerHTML = '<tr><td colspan="' + (withServer ? 5 : 4) + '" class="p-6 text-center">No background tasks are currently running or scheduled.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = tasks.map(function (t) { return row(t, withServer); }).join('');
+    }
+
+    document.querySelector('#tasks_table thead').addEventListener('click', function (e) {
+        var th = e.target.closest('th[data-sort]');
+        if (!th) return;
+        e.preventDefault();
+        sortDir = sortKey === th.dataset.sort && sortDir === 'asc' ? 'desc' : 'asc';
+        sortKey = th.dataset.sort;
+        params.set('sort', sortKey);
+        params.set('direction', sortDir);
+        history.replaceState(null, '', location.pathname + '?' + params.toString() + location.hash);
+        render();
+    });
+
+    function row(t, withServer) {
+        var remote = t.node && t.node !== 'local';
+        var server = withServer ? '<td class="' + td + '">' + esc(t.server || '') + '</td>' : '';
+        if (t.status === 'running') {
+            var trace = t.link || '/server/processes/' + t.pid + '/strace';
+            var kill = remote
+                ? '<button type="button" class="ml-2 text-blue-500 hover:underline" data-kill-node="' + esc(t.node) + '" data-kill-pid="' + esc(t.pid) + '">Kill</button>'
+                : '<form method="POST" action="/server/processes/' + esc(t.pid) + '/kill" class="inline" onsubmit="return confirm(\'Kill this task?\');"><input type="hidden" name="csrf_token" value="' + esc(csrfToken) + '"><button type="submit" class="ml-2 text-blue-500 hover:underline">Kill</button></form>';
+            return '<tr data-command="' + esc(t.command) + '" class="group hover:bg-gray-50 hover:dark:bg-gray-900">' +
+                '<td class="w-full p-4 text-sm py-1 break-words">' + esc(t.command) + '</td>' + server +
+                '<td class="p-4 text-sm whitespace-nowrap py-1">' + runningBadge + '</td>' +
+                '<td class="' + td + '">' + esc(t.time) + '</td>' +
+                '<td class="' + td + '"><a href="' + esc(trace) + '" class="text-blue-500 hover:underline">Trace</a>' + kill + '</td>' +
+            '</tr>';
+        }
+        var edit = t.link || '/server/crons#' + t.line_number;
+        return '<tr data-command="' + esc(t.command) + '" class="hover:bg-gray-50 hover:dark:bg-gray-900">' +
+            '<td class="w-full p-4 text-sm py-1 text-gray-600 dark:text-gray-400 break-words">' + esc(t.command) + '</td>' + server +
+            '<td class="p-4 text-sm whitespace-nowrap py-1">' + scheduledBadge + '</td>' +
+            '<td class="' + td + '">' + esc(t.time) + '</td>' +
+            '<td class="' + td + '"><a href="' + esc(edit) + '" class="text-blue-500 hover:underline">Edit</a></td>' +
+        '</tr>';
+    }
+
+    // a task on another server is killed through the master, which swaps in that server's csrf token
+    document.getElementById('tasks_tbody').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-kill-node]');
+        if (!btn || !confirm('Kill this task?')) return;
+        fetch('/_cluster/n/' + encodeURIComponent(btn.dataset.killNode) + '/server/processes/' + encodeURIComponent(btn.dataset.killPid) + '/kill', {
+            method: 'POST', headers: { 'X-CSRFToken': csrfToken }, credentials: 'same-origin'
+        }).then(refresh, refresh);
+    });
+
+    function refresh() {
         // no polling from a background tab
         if (document.hidden) return;
-        // rebuilding the rows would drop the ticked checkboxes
-        if (document.querySelector('#tasks_tbody input.bulk-select-box:checked')) return;
-        fetch('/tasks?output=json')
+        // cluster=all is the merged list on a master and the plain one anywhere else
+        fetch('/tasks?output=json&cluster=all')
             .then(function (res) { return res.json(); })
             .then(function (tasks) {
-                var tbody = document.getElementById('tasks_tbody');
-                if (!tasks || !tasks.length) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center">No background tasks are currently running or scheduled.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = tasks.map(function (t) {
-                    if (t.status === 'running') {
-                        return '<tr data-command="' + esc(t.command) + '" class="group hover:bg-gray-50 hover:dark:bg-gray-900">' +
-                            '<td class="w-10 py-4 pl-4 sm:pl-6 pr-2 align-middle"><input type="checkbox" class="bulk-select-box h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800" value="' + esc(t.pid) + '" data-bulk-skip="" @change="bulkToggle($event.target)" aria-label="Select ' + esc(t.command) + '"></td>' +
-                            '<td class="w-full p-4 text-sm py-1 break-words">' + esc(t.command) + '</td>' +
-                            '<td class="p-4 text-sm whitespace-nowrap py-1">' + runningBadge + '</td>' +
-                            '<td class="p-4 text-sm whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">' + esc(t.time) + '</td>' +
-                            '<td class="p-4 text-sm whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">' +
-                                '<a href="/server/processes/' + t.pid + '/strace" class="text-blue-500 hover:underline">Trace</a>' +
-                                '<form method="POST" action="/server/processes/' + t.pid + '/kill" class="inline" onsubmit="return confirm(\'Kill this task?\');"><input type="hidden" name="csrf_token" value="' + esc(csrfToken) + '"><button type="submit" class="ml-2 text-blue-500 hover:underline">Kill</button></form>' +
-                            '</td>' +
-                        '</tr>';
-                    }
-                    return '<tr data-command="' + esc(t.command) + '" class="hover:bg-gray-50 hover:dark:bg-gray-900">' +
-                        '<td class="w-10 py-4 pl-4 sm:pl-6 pr-2"></td>' +
-                        '<td class="w-full p-4 text-sm py-1 text-gray-600 dark:text-gray-400 break-words">' + esc(t.command) + '</td>' +
-                        '<td class="p-4 text-sm whitespace-nowrap py-1">' + scheduledBadge + '</td>' +
-                        '<td class="p-4 text-sm whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">' + esc(t.time) + '</td>' +
-                        '<td class="p-4 text-sm whitespace-nowrap py-1 text-gray-600 dark:text-gray-400"><a href="/server/crons#' + t.line_number + '" class="text-blue-500 hover:underline">Edit</a></td>' +
-                    '</tr>';
-                }).join('');
+                lastTasks = tasks || [];
+                render();
             })
             .catch(function (err) { console.error('Error refreshing tasks:', err); });
-    }, 5000);
+    }
+
+    // the first render repeats a cron job once per server, the merged list shows it once
+    refresh();
+    setInterval(refresh, 5000);
 });
 </script>
 

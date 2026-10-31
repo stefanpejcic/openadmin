@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"html"
 	"io"
 	"net/http"
@@ -106,8 +107,8 @@ func (m *Manager) serveCombined(w http.ResponseWriter, r *http.Request, u *admin
 	var out any
 	switch r.URL.Path {
 	case "/tasks":
-		out = combineTasks(m.allPages(r, u, next, false), func(id, pid string) string {
-			return m.openLink(u.ID, id, "/server/processes/"+pid+"/strace")
+		out = combineTasks(m.allPages(r, u, next, false), func(id, href string) string {
+			return m.openLink(u.ID, id, href)
 		})
 	case "/json/combined_activity":
 		out = combineActivity(m.allPages(r, u, next, false))
@@ -135,8 +136,10 @@ func (m *Manager) serveCombined(w http.ResponseWriter, r *http.Request, u *admin
 	json.NewEncoder(w).Encode(out)
 }
 
-func combineTasks(pages []combinedPage, link func(id, pid string) string) []map[string]any {
+// combineTasks lists every server's tasks with its server and the links to act on it there, a cron job scheduled the same on several servers is one row listing them all
+func combineTasks(pages []combinedPage, link func(id, href string) string) []map[string]any {
 	out := []map[string]any{}
+	shared := map[string]map[string]any{}
 	for _, p := range pages {
 		var tasks []map[string]any
 		if json.Unmarshal(p.body, &tasks) != nil {
@@ -144,9 +147,28 @@ func combineTasks(pages []combinedPage, link func(id, pid string) string) []map[
 		}
 		for _, t := range tasks {
 			t["server"] = p.name
-			if p.id != LocalNode {
+			t["servers"] = []string{p.name}
+			t["nodes"] = []string{p.id}
+			t["node"] = p.id
+			if t["status"] == "scheduled" {
+				// older servers send no schedule, their countdown stands in for it
+				key := fmt.Sprint(t["command"], "\x00", t["schedule"])
+				if t["schedule"] == nil || t["schedule"] == "" {
+					key = fmt.Sprint(t["command"], "\x00", t["time"])
+				}
+				if first, ok := shared[key]; ok {
+					first["servers"] = append(first["servers"].([]string), p.name)
+					first["nodes"] = append(first["nodes"].([]string), p.id)
+					first["server"] = strings.Join(first["servers"].([]string), ", ")
+					continue
+				}
+				shared[key] = t
+				if p.id != LocalNode {
+					t["link"] = link(p.id, fmt.Sprintf("/server/crons#%v", t["line_number"]))
+				}
+			} else if p.id != LocalNode {
 				if pid, err := json.Marshal(t["pid"]); err == nil {
-					t["link"] = link(p.id, strings.Trim(string(pid), `"`))
+					t["link"] = link(p.id, "/server/processes/"+strings.Trim(string(pid), `"`)+"/strace")
 				}
 			}
 			out = append(out, t)

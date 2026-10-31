@@ -200,7 +200,25 @@ func readCronJobs() (jobs []CronJob, fileMissing bool) {
 var (
 	cronScheduleFieldRe = regexp.MustCompile(`^(\d+)_schedule_(\d+)$`)
 	cronLoggingFieldRe  = regexp.MustCompile(`^(\d+)_logging$`)
+	cronCommandFieldRe  = regexp.MustCompile(`^(\d+)_command$`)
 )
+
+// cronLineForCommand is the line of CronFilePath that runs command, 0 when this server has no such job
+func cronLineForCommand(command string) int {
+	raw, err := os.ReadFile(CronFilePath)
+	if err != nil {
+		return 0
+	}
+	for i, line := range strings.Split(string(raw), "\n") {
+		if !isValidCronLine(line) {
+			continue
+		}
+		if parsed, ok := splitCronLine(line); ok && parsed.Command == command {
+			return i + 1
+		}
+	}
+	return 0
+}
 
 func (c *Cronjobs) handlePost(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -208,6 +226,7 @@ func (c *Cronjobs) handlePost(w http.ResponseWriter, r *http.Request) {
 	type cronEdit struct {
 		scheduleParts [5]string
 		logging       bool
+		command       string
 	}
 	edits := map[string]*cronEdit{}
 
@@ -228,6 +247,15 @@ func (c *Cronjobs) handlePost(w http.ResponseWriter, r *http.Request) {
 			if err == nil && i >= 0 && i < 5 {
 				e.scheduleParts[i] = strings.TrimSpace(value)
 			}
+			continue
+		}
+		if m := cronCommandFieldRe.FindStringSubmatch(key); m != nil {
+			e := edits[m[1]]
+			if e == nil {
+				e = &cronEdit{}
+				edits[m[1]] = e
+			}
+			e.command = strings.TrimSpace(value)
 			continue
 		}
 		if m := cronLoggingFieldRe.FindStringSubmatch(key); m != nil {
@@ -254,6 +282,13 @@ func (c *Cronjobs) handlePost(w http.ResponseWriter, r *http.Request) {
 		lineNumber, err := strconv.Atoi(id)
 		if err != nil {
 			continue
+		}
+		// a save applied on other servers finds the job by its command there, the same line number can be another job
+		if e.command != "" {
+			lineNumber = cronLineForCommand(e.command)
+			if lineNumber == 0 {
+				continue
+			}
 		}
 		schedule := strings.Join(e.scheduleParts[:], " ")
 		if err := addOrUpdateCron(lineNumber, schedule, e.logging); err != nil {
