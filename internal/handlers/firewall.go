@@ -160,8 +160,6 @@ func (f *Firewall) ServeFirewallSettings(w http.ResponseWriter, r *http.Request)
 		}, r, "ConfigServer Firewall"))
 		return
 	}
-	// Rendered through the same chrome-wrapped error page used for
-	// 404s/panics elsewhere, rather than a bare 404 string with no
-	// template.
-	renderErrorPage(w, r, "ConfigServer Firewall (CSF) is not available on this system.", http.StatusNotFound)
+	// not installed is a normal state here, so it gets its own page instead of the 404 error page
+	webtemplates.Render(w, "security_csf_not_installed.html", mergeChrome(map[string]interface{}{}, r, "Firewall (Not Installed)"))
 }

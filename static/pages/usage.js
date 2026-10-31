@@ -81,10 +81,31 @@ function updateRamInfo() {
     });
 }
 
+// --- Chart theme ---
+// same grid, text and series colors as charts.js, so ApexCharts follows dark mode too
+const apexColors = { blue: '#3b82f6', emerald: '#10b981', amber: '#f59e0b', cyan: '#06b6d4', orange: '#f97316', pink: '#ec4899' };
+function apexTheme() {
+    const dark = document.documentElement.classList.contains('dark');
+    return {
+        chart: { background: 'transparent', foreColor: dark ? '#9ca3af' : '#6b7280', fontFamily: 'Geist, ui-sans-serif, system-ui, sans-serif' },
+        grid: { borderColor: dark ? '#1f2937' : '#e5e7eb' },
+        theme: { mode: dark ? 'dark' : 'light' },
+        tooltip: { theme: dark ? 'dark' : 'light' }
+    };
+}
+function themed(opts) {
+    const t = apexTheme();
+    return { ...opts, chart: { ...opts.chart, ...t.chart }, grid: { ...t.grid, ...opts.grid }, theme: t.theme, tooltip: { ...opts.tooltip, ...t.tooltip } };
+}
+// recolor charts already on the page when the theme switches
+new MutationObserver(() => {
+    [chartRam, chartLoad, chartIO, chartNet].forEach(c => { if (c) c.updateOptions(apexTheme(), false, false); });
+}).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
 // --- RAM Chart ---
 let chartRam;
 function initRamChart() {
-    chartRam = new ApexCharts(document.getElementById('chart-ram'), {
+    chartRam = new ApexCharts(document.getElementById('chart-ram'), themed({
         chart: { type: "area", height: 250, animations: { enabled: false }},
         series: [
             { name: "Used RAM (GB)", data: [] },
@@ -92,11 +113,10 @@ function initRamChart() {
         ],
         xaxis: { type: "datetime" },
         yaxis: { title: { text: "Memory Usage (GB)" }},
-        colors: ["#007bff", "#28a745"],
+        colors: [apexColors.blue, apexColors.emerald],
         fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] }},
-        stroke: { curve: 'smooth', width: 2 },
-        tooltip: { theme: 'dark' }
-    });
+        stroke: { curve: 'smooth', width: 2 }
+    }));
     chartRam.render();
 }
 
@@ -115,7 +135,7 @@ function updateRamChart(mem) {
 // --- Load Chart ---
 let chartLoad;
 function initLoadChart() {
-    chartLoad = new ApexCharts(document.getElementById('chart-load'), {
+    chartLoad = new ApexCharts(document.getElementById('chart-load'), themed({
         chart: { type: "line", height: 250, animations: { enabled: true }},
         series: [
             { name: "1 Min Load", data: [] },
@@ -134,9 +154,8 @@ function initLoadChart() {
                 formatter: value => parseFloat(value.toFixed(2)).toString()
             }
         },
-        colors: ["#007bff", "#28a745", "#ffc107"],
+        colors: [apexColors.blue, apexColors.emerald, apexColors.amber],
         tooltip: {
-            theme: 'dark',
             x: {
                 formatter: v => new Date(v).toLocaleTimeString()
             },
@@ -144,7 +163,7 @@ function initLoadChart() {
                 formatter: value => parseFloat(value.toFixed(2)).toString()
             }
         }
-    });
+    }));
     chartLoad.render();
 }
 
@@ -164,7 +183,7 @@ function updateLoadChart(load) {
 // --- IO Chart ---
 let chartIO;
 function initIOChart() {
-    chartIO = new ApexCharts(document.getElementById('chart-io'), {
+    chartIO = new ApexCharts(document.getElementById('chart-io'), themed({
         chart: { type: 'area', height: 220, animations: { enabled: false }},
         series: [
             { name: "Read MB/s", data: [] },
@@ -172,11 +191,10 @@ function initIOChart() {
         ],
         xaxis: { type: 'datetime' },
         yaxis: { title: { text: "MB/s" }},
-        colors: ["#00bcd4", "#ff9800"],
+        colors: [apexColors.cyan, apexColors.orange],
         fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] }},
-        stroke: { curve: 'smooth', width: 2 },
-        tooltip: { theme: 'dark' }
-    });
+        stroke: { curve: 'smooth', width: 2 }
+    }));
     chartIO.render();
 }
 let lastIOStats = null;
@@ -211,7 +229,7 @@ function updateIOChart(ioData) {
 // --- Network Chart ---
 let chartNet;
 function initNetChart() {
-    chartNet = new ApexCharts(document.getElementById('chart-net'), {
+    chartNet = new ApexCharts(document.getElementById('chart-net'), themed({
         chart: { type: 'area', height: 220, animations: { enabled: false }},
         series: [
             { name: "Sent MB/s", data: [] },
@@ -219,11 +237,10 @@ function initNetChart() {
         ],
         xaxis: { type: 'datetime' },
         yaxis: { title: { text: "MB/s" }},
-        colors: ["#4caf50", "#e91e63"],
+        colors: [apexColors.emerald, apexColors.pink],
         fill: { type: "gradient", gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 90, 100] }},
-        stroke: { curve: 'smooth', width: 2 },
-        tooltip: { theme: 'dark' }
-    });
+        stroke: { curve: 'smooth', width: 2 }
+    }));
     chartNet.render();
 }
 let lastNetStats = null;
