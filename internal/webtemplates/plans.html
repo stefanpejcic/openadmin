@@ -103,9 +103,9 @@
 {{template "plan_sort_th" (dict "Show" "columns.feature_set" "Col" "feature_set" "Label" "Feature Set" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
 {{template "plan_sort_th" (dict "Show" "columns.user_count" "Col" "user_count" "Label" "Used by" "SortCol" .SortCol "SortDir" .SortDirection "BaseHref" "/plans")}}
 {{if .HasEnterprise}}
-                                <th x-show="columns.upsell" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Upsell</th>
+                                <th x-show="columns.upsell" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-3.5 text-sm text-left">Upsell</th>
 {{end}}
-                                <th id="tour-plans-edit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-right">Edit</th>
+                                <th id="tour-plans-edit" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-3.5 text-sm text-right"><span class="sr-only">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -126,45 +126,44 @@
 {{$skip := "delete"}}{{if eq (toInt (index . "user_count")) 0}}{{$skip = ""}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" (index . "name") "Label" (index . "name") "Skip" $skip)}}
 
-                                <td x-show="columns.id" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400">{{index . "id"}}</td>
+                                <td x-show="columns.id" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 tabular-nums">{{index . "id"}}</td>
 
-                                <td x-show="columns.name" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">{{index . "name"}}</td>
+                                <td x-show="columns.name" class="relative p-4 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left select-text">{{index . "name"}}</td>
 
-                                <td x-show="columns.description" class="p-4 text-xs relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{index . "description"}}</td>
+                                <td x-show="columns.description" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">{{with index . "description"}}{{.}}{{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}</td>
 
-                                <td x-show="columns.ram" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0 flex gap-1 items-center"><span class="icon icon-tabler"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7H21V17H19V15H17V17H15V15H13V17H11V15H9V17H7V15H5V17H3V7ZM2 5C1.44772 5 1 5.44772 1 6V18C1 18.5523 1.44772 19 2 19H22C22.5523 19 23 18.5523 23 18V6C23 5.44772 22.5523 5 22 5H2ZM11 9H5V12H11V9ZM13 9H19V12H13V9Z"/></svg></span> {{$ram := index . "ram"}}{{if or (eq $ram "0 g") (eq $ram "0g") (eq $ram nil)}}&#8734;{{else}}{{rstrip $ram "g"}}{{end}} GB</p></td>
+                                <td x-show="columns.ram" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{$ram := index . "ram"}}{{if or (eq $ram "0 g") (eq $ram "0g") (eq $ram nil)}}&#8734;{{else}}{{sizeLabel $ram}}{{end}}</td>
 
-                                <td x-show="columns.cpu" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0 flex gap-1 items-center"><span class="icon icon-tabler"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18H18V6H6V18ZM14 20H10V22H8V20H5C4.44772 20 4 19.5523 4 19V16H2V14H4V10H2V8H4V5C4 4.44772 4.44772 4 5 4H8V2H10V4H14V2H16V4H19C19.5523 4 20 4.44772 20 5V8H22V10H20V14H22V16H20V19C20 19.5523 19.5523 20 19 20H16V22H14V20ZM8 8H16V16H8V8Z"/></svg></span> {{$cpu := index . "cpu"}}{{if or (eq $cpu "0") (eq $cpu nil)}}&#8734;{{else}}{{$cpu}}{{end}} Core</p></td>
+                                <td x-show="columns.cpu" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{$cpu := index . "cpu"}}{{if or (eq $cpu "0") (eq $cpu nil)}}&#8734;{{else}}{{$cpu}} {{if eq (printf "%v" $cpu) "1"}}core{{else}}cores{{end}}{{end}}</td>
 
-                                <td x-show="columns.disk_limit" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left"><p class="m-0 flex gap-1 items-center"><span class="icon icon-tabler"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M4.50772 2.87597C4.57028 2.37554 4.99568 2 5.5 2H18.5C19.0043 2 19.4297 2.37554 19.4923 2.87597L20.9923 14.876C20.9974 14.9171 21 14.9585 21 15V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V15C3 14.9585 3.00258 14.9171 3.00772 14.876L4.50772 2.87597ZM6.38278 4L5.13278 14H18.8672L17.6172 4H6.38278ZM19 16H5V20H19V16ZM15 17H17V19H15V17ZM13 17H11V19H13V17Z"/></svg></span> {{if eq (index . "disk_limit") "0 GB"}}&#8734;{{else}}{{index . "disk_limit"}}{{end}}</p></td>
+                                <td x-show="columns.disk_limit" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{if eq (index . "disk_limit") "0 GB"}}&#8734;{{else}}{{sizeLabel (index . "disk_limit")}}{{end}}</td>
 
-                                <td x-show="columns.inodes_limit" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">
-                                            <p class="m-0 flex gap-1 items-center"><span class="icon icon-tabler"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5 11H19V5H5V11ZM21 4V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4ZM19 13H5V19H19V13ZM7 15H10V17H7V15ZM7 7H10V9H7V7Z"/></svg></span>
+                                <td x-show="columns.inodes_limit" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">
                                             {{$inodes := index . "inodes_limit"}}
-                                            {{if eq $inodes nil}}&#8734;{{else}}{{$inodesN := toInt $inodes}}{{if eq $inodesN 0}}&#8734;{{else if lt $inodesN 1000000}}{{dotThousands $inodesN}}{{else}}<span title="{{dotThousands $inodesN}}">{{millionsAbbrev $inodesN}}</span>{{end}}{{end}}</p></td>
-                                <td x-show="columns.bandwidth" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">
-                                {{if eq (toInt (index . "bandwidth")) 0}}&#8734;{{else}}{{index . "bandwidth"}} mbits{{end}}
+                                            {{if eq $inodes nil}}&#8734;{{else}}{{$inodesN := toInt $inodes}}{{if eq $inodesN 0}}&#8734;{{else if lt $inodesN 1000000}}{{dotThousands $inodesN}}{{else}}<span title="{{dotThousands $inodesN}}">{{millionsAbbrev $inodesN}}</span>{{end}}{{end}}</td>
+                                <td x-show="columns.bandwidth" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">
+                                {{if eq (toInt (index . "bandwidth")) 0}}&#8734;{{else}}{{index . "bandwidth"}} Mbit/s{{end}}
                                 </td>
 
-                                <td x-show="columns.domains_limit" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                <td x-show="columns.domains_limit" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">
                                 {{if eq (toInt (index . "domains_limit")) 0}}&#8734;{{else}}{{index . "domains_limit"}}{{end}}
                                 </td>
-                                <td x-show="columns.websites_limit" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "websites_limit")) 0}}&#8734;{{else}}{{index . "websites_limit"}}{{end}}</td>
+                                <td x-show="columns.websites_limit" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{if eq (toInt (index . "websites_limit")) 0}}&#8734;{{else}}{{index . "websites_limit"}}{{end}}</td>
 
-                                <td x-show="columns.db_limit" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "db_limit")) 0}}&#8734;{{else}}{{index . "db_limit"}}{{end}}</td>
+                                <td x-show="columns.db_limit" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{if eq (toInt (index . "db_limit")) 0}}&#8734;{{else}}{{index . "db_limit"}}{{end}}</td>
 
-                                <td x-show="columns.email_limit" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "email_limit")) 0}}&#8734;{{else}}{{index . "email_limit"}}{{end}}</td>
+                                <td x-show="columns.email_limit" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{if eq (toInt (index . "email_limit")) 0}}&#8734;{{else}}{{index . "email_limit"}}{{end}}</td>
 
-                                <td x-show="columns.max_email_quota" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (printf "%v" (index . "max_email_quota")) "0"}}&#8734;{{else}}{{index . "max_email_quota"}}{{end}}</td>
+                                <td x-show="columns.max_email_quota" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{if eq (printf "%v" (index . "max_email_quota")) "0"}}&#8734;{{else}}{{sizeLabel (index . "max_email_quota")}}{{end}}</td>
 
-                                <td x-show="columns.max_hourly_email" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "max_hourly_email")) 0}}&#8734;{{else}}{{index . "max_hourly_email"}}{{end}}</td>
+                                <td x-show="columns.max_hourly_email" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{if eq (toInt (index . "max_hourly_email")) 0}}&#8734;{{else}}{{index . "max_hourly_email"}}{{end}}</td>
 
-                                <td x-show="columns.ftp_limit" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if eq (toInt (index . "ftp_limit")) 0}}&#8734;{{else}}{{index . "ftp_limit"}}{{end}}</td>
+                                <td x-show="columns.ftp_limit" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">{{if eq (toInt (index . "ftp_limit")) 0}}&#8734;{{else}}{{index . "ftp_limit"}}{{end}}</td>
 
-                                <td x-show="columns.feature_set" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left select-text"><a href="/features/{{index . "feature_set"}}">{{index . "feature_set"}}</a></td>
+                                <td x-show="columns.feature_set" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left select-text"><a href="/features/{{index . "feature_set"}}">{{index . "feature_set"}}</a></td>
 
 
-                                <td x-show="columns.user_count" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">
+                                <td x-show="columns.user_count" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left tabular-nums">
                                     {{if ne (toInt (index . "user_count")) 0}}
                                         <a href="/users?plan={{index . "name"}}">{{index . "user_count"}}</a>
                                     {{else}}
@@ -173,15 +172,16 @@
                                     </td>
 
 {{if $root.HasEnterprise}}
-                                <td x-show="columns.upsell" class="p-4 text-xs relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">
+                                <td x-show="columns.upsell" class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left select-text">
                                     {{$upsellName := index . "upsell_plan_name"}}
                                     {{$upsellURL := index . "upsell_url"}}
                                     {{if $upsellName}}<div>{{$upsellName}}</div>{{end}}
                                     {{if $upsellURL}}<div class="text-gray-400 dark:text-gray-500">{{$upsellURL}}</div>{{end}}
+                                    {{if not (or $upsellName $upsellURL)}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}
                                 </td>
 {{end}}
 
-                                <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-right">
+                                <td class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-right">
 
     <button type="button" class="plan-menu-btn relative inline-flex items-center justify-center whitespace-nowrap rounded-md border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer" data-plan-id="{{index . "id"}}" data-plan-name="{{index . "name"}}"{{if eq (toInt (index . "user_count")) 0}} data-deletable{{end}} aria-haspopup="menu">
     <svg class="remixicon w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 10.5C3.675 10.5 3 11.175 3 12C3 12.825 3.675 13.5 4.5 13.5C5.325 13.5 6 12.825 6 12C6 11.175 5.325 10.5 4.5 10.5ZM19.5 10.5C18.675 10.5 18 11.175 18 12C18 12.825 18.675 13.5 19.5 13.5C20.325 13.5 21 12.825 21 12C21 11.175 20.325 10.5 19.5 10.5ZM12 10.5C11.175 10.5 10.5 11.175 10.5 12C10.5 12.825 11.175 13.5 12 13.5C12.825 13.5 13.5 12.825 13.5 12C13.5 11.175 12.825 10.5 12 10.5Z"/></svg>

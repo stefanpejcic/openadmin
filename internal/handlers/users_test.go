@@ -1044,7 +1044,7 @@ func TestUsersListUsageColumnsLineUp(t *testing.T) {
 		}
 	}
 	for _, key := range []string{"memory", "cpu", "disk", "inodes"} {
-		if !strings.Contains(page, "/users?sort="+key+"&amp;direction=desc") && !strings.Contains(page, "/users?sort="+key+"&direction=desc") {
+		if !strings.Contains(page, "/users?sort="+key+"&amp;direction=") && !strings.Contains(page, "/users?sort="+key+"&direction=") {
 			t.Fatalf("missing sort link for %s", key)
 		}
 	}

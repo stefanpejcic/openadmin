@@ -128,6 +128,7 @@ var funcMap = template.FuncMap{
 		return locale
 	},
 	"rstrip":    func(s, cutset string) string { return strings.TrimRight(s, cutset) },
+	"sizeLabel": SizeLabel,
 	"toInt": func(v interface{}) int {
 		switch t := v.(type) {
 		case int64:
@@ -484,4 +485,22 @@ func LoadEmailOverrides(logger *log.Logger) {
 			logger.Printf("webtemplates: using custom email template %s", path)
 		}
 	}
+}
+
+// SizeLabel turns plan sizes like "10G", "4g" or "512 M" into "10 GB", "4 GB", "512 MB" so table columns read the same
+func SizeLabel(v interface{}) string {
+	s := strings.TrimSpace(fmt.Sprint(v))
+	if v == nil || s == "" {
+		return ""
+	}
+	n := strings.TrimRight(s, "kKmMgGtTbB ")
+	unit := strings.ToUpper(strings.TrimSpace(s[len(n):]))
+	if _, err := strconv.ParseFloat(n, 64); err != nil {
+		return s
+	}
+	unit = strings.TrimSuffix(unit, "B")
+	if unit == "" {
+		return n
+	}
+	return n + " " + unit + "B"
 }
