@@ -17,9 +17,9 @@
     <div class="">
         <div class="bg-white transition-all dark:bg-gray-950 overflow-hidden">
             <div class="obfuscate">
-<div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 px-6 dark:border-gray-800 dark:bg-gray-950">
+<div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 px-6 pb-4 pt-4 sm:pt-6 lg:pt-8 dark:border-gray-800 dark:bg-gray-950" style="min-height:113px">
     <header>
-        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+        <div class="flex flex-col items-start gap-2 text-center sm:flex-row sm:justify-between sm:text-start">
             <div class="grow" x-data="{
     tourDismissed: false,
     messages: [
@@ -54,13 +54,6 @@
                 {{else}}
                 <h2 class="text-sm font-medium text-slate-500" x-text="message"></h2>
                 {{end}}
-                <!-- shortcuts for the most common reasons to open the dashboard -->
-                <div id="tour-quick-actions" class="mt-3 flex flex-wrap gap-2">
-                    <a href="/user/new" class="inline-flex items-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900">Create User</a>
-                    {{if not .IsReseller}}<a href="/domains#add" class="inline-flex items-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900">Add Domain</a>{{end}}
-                    <a href="/plans/new" class="inline-flex items-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900">New Plan</a>
-                    {{if not .IsReseller}}<a href="/settings/updates" class="inline-flex items-center gap-1.5 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 shadow-sm transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900">Check for Updates</a>{{end}}
-                </div>
             </div>
 
 
@@ -76,6 +69,12 @@
             {{else}}
             <!-- STATISTICS -->
 <dl id="tour-quick-summary" class="flex flex-wrap items-center gap-x-12">
+    <a href="/server/cluster" style="text-decoration:none;">
+    <div>
+        <dt class="font-mono uppercase text-xs md:text-sm">Servers</dt>
+        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.ClusterCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ {{if eq .LicenseType "Enterprise"}}&#8734;{{else}}1{{end}}</span></p></dd>
+    </div>
+    </a>
     <div>
         <dt class="font-mono uppercase text-xs md:text-sm">Containers</dt>
         <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.RunningContainers}}<span class="font-medium text-gray-400 dark:text-gray-600">/ {{if eq .LicenseType "Community"}}100{{else}}&#8734;{{end}}</span></p></dd>
@@ -206,88 +205,330 @@
 {{end}}
 
 
-{{with .Summary}}
-<!-- daily summary, every account's day added up -->
-<div id="daily-summary" class="my-4 relative w-full border p-6 text-left shadow-xs bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 rounded">
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2">
-        <div>
-            <h3 class="font-medium text-gray-900 dark:text-gray-50">Daily Summary</h3>
-            <p class="text-sm/6 text-gray-500 dark:text-gray-500">{{.DayLabel}} &middot; {{.Accounts}} {{if eq .Accounts 1}}account{{else}}accounts{{end}}</p>
-        </div>
-    </div>
-    <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">{{.Headline}}</p>
+<dl id="dashboard-widgets" class="my-4 grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 
-    <dl class="mt-4 flex flex-wrap items-center gap-x-12 gap-y-2">
-        <div>
-            <dt class="font-mono uppercase text-xs md:text-sm">Requests</dt>
-            <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Requests}}</p>{{if .Delta}}<span class="text-sm font-medium {{if .DeltaUp}}text-green-600 dark:text-green-400{{else}}text-red-600 dark:text-red-500{{end}}">{{.Delta}}</span>{{end}}</dd>
-        </div>
-        <div>
-            <dt class="font-mono uppercase text-xs md:text-sm">Visitors</dt>
-            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Visitors}}</p></dd>
-        </div>
-        <div>
-            <dt class="font-mono uppercase text-xs md:text-sm">Data sent</dt>
-            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Sent}}</p></dd>
-        </div>
-        <div>
-            <dt class="font-mono uppercase text-xs md:text-sm">Server errors</dt>
-            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Errors}}</p></dd>
-        </div>
-        <div>
-            <dt class="font-mono uppercase text-xs md:text-sm">WAF blocks</dt>
-            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Blocked}}</p></dd>
-        </div>
-    </dl>
 
-    <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div>
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Needs attention</p>
-            {{if .Attention}}
-            <ul role="list" class="mt-2 divide-y divide-gray-200 dark:divide-gray-800">
-                {{range .Attention}}
-                <li class="py-2 text-sm">
-                    <a href="/users/{{.Username}}" class="font-medium text-indigo-600 dark:text-indigo-400">{{.Username}}</a>
-                    <span class="text-gray-900 dark:text-gray-50">{{.Title}}</span>
-                    {{if .Detail}}<p class="text-gray-500 dark:text-gray-500">{{.Detail}}</p>{{end}}
-                </li>
-                {{end}}
-            </ul>
-            {{if .MoreAttn}}<p class="mt-2 text-sm text-gray-500 dark:text-gray-500">and {{.MoreAttn}} more</p>{{end}}
-            {{else}}
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">Nothing needs attention.</p>
-            {{end}}
-            {{if .LookCount}}<p class="mt-2 text-sm text-gray-500 dark:text-gray-500">{{.LookCount}} {{if eq .LookCount 1}}thing is{{else}}things are{{end}} worth a look on {{.LookAccounts}} {{if eq .LookAccounts 1}}account{{else}}accounts{{end}}.</p>{{end}}
-        </div>
-        <div>
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Busiest websites</p>
-            {{if .Sites}}
-            <ul role="list" class="mt-2 space-y-3">
-                {{range .Sites}}
-                <li class="text-sm">
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="truncate text-gray-900 dark:text-gray-50">{{.Name}} <a href="/users/{{.Username}}" class="text-gray-500 dark:text-gray-500">{{.Username}}</a></span>
-                        <span class="text-gray-500 dark:text-gray-500">{{.Requests}}</span>
-                    </div>
-                    <div class="mt-1 flex w-full items-center" role="progressbar" aria-label="Share of requests">
-                        <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
-                            <div class="h-full flex-col rounded-full bg-blue-500 dark:bg-blue-500" style="width: {{.Share}}%;"></div>
-                        </div>
-                    </div>
-                </li>
-                {{end}}
-            </ul>
-            {{else}}
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">No website had visitors.</p>
-            {{end}}
+
+        <div id="tour-usage-graphs" data-widget="usage" class="flex flex-col">
+<div class="flex flex-1 flex-col">
+    <div id="usage_graphs" class="flex flex-1 flex-col">
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                <div>
+                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Resource Usage</h3>
+                    <p class="text-sm/6 text-gray-500 dark:text-gray-500">CPU &amp; RAM over the last hour.</p>
+                </div>
+                <a href="/server/resource-usage/history" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View history &rarr;</a>
+            </div>
+
+        <div class="flex flex-1 flex-col rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50 mt-2">
+            <div id="dashboard-resource-chart-wrap" class="flex flex-1 flex-col">
+                <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-blue-500 inline-block rounded"></span>CPU %</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-violet-500 inline-block rounded"></span>RAM %</span>
+                </div>
+                <div style="position:relative;min-height:160px;flex:1">
+                    <canvas id="dashboard-resource-chart"></canvas>
+                </div>
+            </div>
+            <p id="dashboard-resource-empty" class="hidden text-sm text-gray-500 dark:text-gray-500 text-center py-6">No resource usage data yet.</p>
         </div>
     </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    fetch('/server/resource-usage/history/data?minutes=60&cluster=all')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            var snapshots = (data && data.snapshots) || [];
+            var perServer = (data && data.per_server) || [];
+            if (perServer.length > 1) {
+                var usageNote = document.querySelector('#tour-usage-graphs p');
+                if (usageNote) { usageNote.textContent = 'CPU (solid) and RAM (dashed) over the last hour.'; }
+            }
+
+            if (!snapshots.length) {
+                document.getElementById('dashboard-resource-chart-wrap').classList.add('hidden');
+                document.getElementById('dashboard-resource-empty').classList.remove('hidden');
+                return;
+            }
+
+            var isDark = document.documentElement.classList.contains('dark') ||
+                         window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            var tickColor = isDark ? '#6b7280' : '#9ca3af';
+
+            var labels = snapshots.map(function (s) { return s.ts.split(' ')[1] || s.ts; });
+
+            // a line per server, lined up from the newest sample like the average
+            var datasets = null;
+            if (perServer.length > 1) {
+                var palette = ['59,130,246', '16,185,129', '245,158,11', '236,72,153', '139,92,246', '20,184,166', '239,68,68', '107,114,128'];
+                datasets = [];
+                document.querySelector('#dashboard-resource-chart-wrap .flex').innerHTML = '';
+                perServer.forEach(function (srv, i) {
+                    var rgb = palette[i % palette.length];
+                    var pad = snapshots.length - srv.snapshots.length;
+                    var at = function (pick) {
+                        return snapshots.map(function (_, j) { var s = srv.snapshots[j - pad]; return s ? pick(s) : null; });
+                    };
+                    var line = { borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false, spanGaps: true, borderColor: 'rgb(' + rgb + ')' };
+                    datasets.push(Object.assign({ label: srv.name + ' CPU %', data: at(function (s) { return s.cpu_pct; }) }, line));
+                    datasets.push(Object.assign({ label: srv.name + ' RAM %', data: at(function (s) { return s.mem.pct; }), borderDash: [4, 3] }, line));
+                    var key = document.createElement('span');
+                    key.className = 'flex items-center gap-1 cursor-pointer';
+                    key.title = 'Show only ' + srv.name;
+                    key.dataset.server = srv.name;
+                    key.innerHTML = '<span class="w-3 h-0.5 inline-block rounded" style="background:rgb(' + rgb + ')"></span>';
+                    key.appendChild(document.createTextNode(srv.name));
+                    document.querySelector('#dashboard-resource-chart-wrap .flex').appendChild(key);
+                });
+            }
+
+            var chart = new Chart(document.getElementById('dashboard-resource-chart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets || [
+                        {
+                            label: 'CPU %',
+                            data: snapshots.map(function (s) { return s.cpu_pct; }),
+                            borderColor: 'rgb(59,130,246)',
+                            backgroundColor: 'rgba(59,130,246,0.10)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false
+                        },
+                        {
+                            label: 'RAM %',
+                            data: snapshots.map(function (s) { return s.mem.pct; }),
+                            borderColor: 'rgb(139,92,246)',
+                            backgroundColor: 'rgba(139,92,246,0.10)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            tension: 0.3,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1f2937' : '#fff',
+                            borderColor: isDark ? '#374151' : '#e5e7eb',
+                            borderWidth: 1,
+                            titleColor: isDark ? '#f9fafb' : '#111827',
+                            bodyColor: isDark ? '#9ca3af' : '#6b7280',
+                            padding: 10
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: tickColor, maxTicksLimit: 6 },
+                            grid: { display: false }
+                        },
+                        y: {
+                            min: 0, max: 100,
+                            ticks: { color: tickColor, callback: function (v) { return v + '%'; } },
+                            grid: { color: gridColor }
+                        }
+                    }
+                }
+            });
+            // clicking a server in the legend shows only its lines, clicking it again brings all back
+            var solo = null;
+            document.querySelectorAll('#dashboard-resource-chart-wrap [data-server]').forEach(function (key) {
+                key.addEventListener('click', function () {
+                    solo = solo === key.dataset.server ? null : key.dataset.server;
+                    chart.data.datasets.forEach(function (ds, i) {
+                        chart.setDatasetVisibility(i, !solo || ds.label.indexOf(solo + ' ') === 0);
+                    });
+                    chart.update();
+                    document.querySelectorAll('#dashboard-resource-chart-wrap [data-server]').forEach(function (k) {
+                        k.style.opacity = !solo || k.dataset.server === solo ? '1' : '.4';
+                    });
+                });
+            });
+        })
+        .catch(function (err) {
+            console.error('Error loading resource usage widget:', err);
+        });
+});
+</script>
+        </div>
+
+{{if not .IsReseller}}
+        <div id="tour-tasks" data-widget="tasks" class="flex flex-col">
+<div class="flex flex-1 flex-col">
+    <div id="tasks_widget" class="flex flex-1 flex-col">
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                <div>
+                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Tasks</h3>
+                    <p class="text-sm/6 text-gray-500 dark:text-gray-500">Currently running background tasks.</p>
+                </div>
+                <a href="/tasks" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View all &rarr;</a>
+            </div>
+
+        <div class="rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50 mt-2 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:208px">
+            <ul id="dashboard-tasks-list" class="hidden divide-y divide-gray-200 dark:divide-gray-800 text-sm"></ul>
+            <p id="dashboard-tasks-empty" class="text-sm text-gray-500 dark:text-gray-500 text-center py-6">No background tasks are currently running.</p>
+        </div>
+    </div>
+</div>
+</div>
+
+{{if and (eq .LicenseType "Enterprise") (not .IsReseller)}}
+        <div id="cluster-health-widget" data-widget="cluster" class="flex flex-col">
+            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
+                <div>
+                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Cluster</h3>
+                    <p id="cluster-health-sub" class="text-sm/6 text-gray-500 dark:text-gray-500">Health of your servers.</p>
+                </div>
+                <a href="/server/cluster" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Manage &rarr;</a>
+            </div>
+            <div class="mt-2 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:208px">
+                <ul id="cluster-health-list" class="hidden space-y-2 text-sm"></ul>
+                <p id="cluster-health-empty" class="flex-1 rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50 text-sm text-gray-500 dark:text-gray-500 text-center py-6">Loading...</p>
+            </div>
+        </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var list = document.getElementById('cluster-health-list');
+    var empty = document.getElementById('cluster-health-empty');
+    var sub = document.getElementById('cluster-health-sub');
+    function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = String(s == null ? '' : s);
+        return d.innerHTML;
+    }
+    // same three bars as the php versions on settings > defaults
+    function bars(level) {
+        var colors = { ok: ['#10b981', '#10b981', '#10b981'], warn: ['#f97316', '#f97316', '#6b7280'], bad: ['#ef4444', '#6b7280', '#6b7280'], off: ['#6b7280', '#6b7280', '#6b7280'] }[level];
+        return '<span style="display:inline-flex;gap:2px;align-items:center">' + colors.map(function (c) {
+            return '<span style="display:inline-block;width:4px;height:14px;border-radius:2px;background:' + c + '"></span>';
+        }).join('') + '</span>';
+    }
+    var ICONS = {
+        domains: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472M3.82 11a13.7 13.7 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5zm6.853 3.472A7 7 0 0 0 13.745 12H11.91a9.3 9.3 0 0 1-.64 1.539 7 7 0 0 1-.597.933M8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855q.26-.487.468-1.068zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.7 13.7 0 0 1-.312 2.5m2.802-3.5a7 7 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7 7 0 0 0-3.072-2.472c.218.284.418.598.597.933M10.855 4a8 8 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4z"/></svg>',
+        version: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/></svg>',
+        bell: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/></svg>',
+        sync: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/></svg>',
+        users: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>'
+    };
+    function stat(icon, label, value, href) {
+        var inner = icon + esc(value);
+        if (href) {
+            return '<a href="' + esc(href) + '" class="flex items-center gap-1 hover:underline" title="' + esc(label) + '">' + inner + '</a>';
+        }
+        return '<span class="flex items-center gap-1" title="' + esc(label) + '">' + inner + '</span>';
+    }
+    function showEmpty(text) {
+        list.classList.add('hidden');
+        empty.classList.remove('hidden');
+        empty.textContent = text;
+    }
+    function row(s) {
+        var state, level;
+        if (s.paused) { state = 'Paused'; level = 'off'; }
+        else if (!s.online) { state = 'Offline'; level = 'bad'; }
+        else if (s.down && s.down.length) { state = 'Down: ' + s.down.join(', '); level = 'bad'; }
+        else if (s.disk_pct >= 90 || s.mem_pct >= 90) { state = 'Needs attention'; level = 'warn'; }
+        else { state = 'Healthy'; level = 'ok'; }
+        // load, ram and disk are in the header already, this is what tells servers apart
+        var version = s.version + (s.updating ? ' (updating)' : s.latest ? ' \u2192 ' + s.latest : '');
+        // each one opens the page to act on, lists filtered to this server
+        var only = '?server=' + encodeURIComponent(s.id);
+        var sync = s.master ? '' : stat(ICONS.sync, s.last_sync || 'Last sync', s.mode === 'follow' ? 'follow' : (s.last_sync_at ? s.last_sync_at.slice(5) : 'never'), '/server/cluster#sync');
+        var stats = s.paused ? ''
+            : s.online
+            ? stat(ICONS.users, 'Users', s.users, '/users' + only) + stat(ICONS.domains, 'Domains', s.domains, '/domains' + only) +
+              stat(ICONS.version, s.latest ? 'Update available' : 'OpenPanel version', version, s.latest ? '/server/cluster' : '/settings/updates') +
+              (s.unread ? stat(ICONS.bell, 'Unread notifications', s.unread, '/notifications' + only) : '') + sync
+            : '';
+        // the error can be long, it goes in the tooltip so the row keeps its shape
+        var stateText = level === 'ok' ? '' : '<a href="/server/cluster" class="hover:underline" title="' + esc(s.error || state) + '">' + esc(state) + '</a>';
+        return '<li class="rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50 flex flex-wrap items-center gap-2 justify-between"><span class="flex items-center gap-2" title="' + esc(state) + '">' + bars(level) + '<span class="font-medium">' + esc(s.name) + (s.master ? ' (master)' : '') + '</span></span>' +
+            '<span class="flex flex-wrap items-center gap-4 text-gray-500 dark:text-gray-500">' + stateText + stats + '</span></li>';
+    }
+
+    function refresh() {
+        fetch('/server/cluster/health', { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+            if (!d) { showEmpty('Cluster status is not available.'); return; }
+            if (d.role === 'slave') {
+                sub.textContent = 'This server is managed by ' + d.master + '.';
+                showEmpty('Sync mode: ' + d.mode + (d.last_sync_msg ? '. Last sync: ' + d.last_sync_msg : '. Not synced yet.'));
+                return;
+            }
+            if (d.role !== 'master' || !d.servers) {
+                sub.textContent = 'This server is standalone.';
+                showEmpty('No other servers yet. Add one from Manage.');
+                return;
+            }
+            var bad = d.servers.filter(function (s) { return !s.paused && (!s.online || (s.down && s.down.length)); }).length;
+            sub.textContent = d.servers.length + ' servers, ' + (bad ? bad + ' with problems' : 'all healthy') + (d.unsynced ? ', ' + d.unsynced + ' unsynced setting(s)' : '') + '.';
+            list.innerHTML = d.servers.map(row).join('');
+            empty.classList.add('hidden');
+            list.classList.remove('hidden');
+        }).catch(function () { showEmpty('Cluster status is not available.'); });
+    }
+    refresh();
+    window.opPoll ? window.opPoll(refresh, 30000) : setInterval(refresh, 30000);
+});
+</script>
 {{end}}
 
-<dl class="my-4 grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function esc(s) {
+        var div = document.createElement('div');
+        div.textContent = String(s);
+        return div.innerHTML;
+    }
 
-    <div id="tour-user-activity" class="">
+    function refreshTasks() {
+        if (document.hidden) return;
+        fetch('/tasks?output=json&cluster=all')
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                var tasks = ((data || []).filter(function (t) { return t.status === 'running'; }));
+                var list = document.getElementById('dashboard-tasks-list');
+                var empty = document.getElementById('dashboard-tasks-empty');
+                if (!tasks.length) {
+                    list.classList.add('hidden');
+                    empty.classList.remove('hidden');
+                    return;
+                }
+                empty.classList.add('hidden');
+                list.classList.remove('hidden');
+                list.innerHTML = tasks.slice(0, 6).map(function (t) {
+                    return '<li class="py-2"><a href="' + (t.link || '/server/processes/' + t.pid + '/strace') + '" class="flex items-center justify-between gap-3 hover:underline">' +
+                        '<span class="truncate font-mono text-xs">' + esc(t.command) + '</span>' +
+                        '<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">' + (t.server ? esc(t.server) + ' &middot; ' : '') + esc(t.time) + '</span>' +
+                    '</a></li>';
+                }).join('');
+            })
+            .catch(function (err) { console.error('Error loading tasks widget:', err); });
+    }
+
+    refreshTasks();
+    setInterval(refreshTasks, 5000);
+    // polls are skipped while the tab is in the background, refresh as soon as it's back
+    document.addEventListener('visibilitychange', refreshTasks);
+});
+</script>
+{{end}}
+
+
+
+    <div id="tour-user-activity" data-widget="activity" class="">
                     <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">User Activity</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Real-time user activity log.</p></div></div>
 
                 <div class="flex flex-1 flex-col gap-2 overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:60vh">
@@ -302,7 +543,7 @@
     </div>
 
 
-        <div id="tour-latest-news" class="">
+        <div id="tour-latest-news" data-widget="news" class="">
 <div>
     <div id="custom_message" class="">
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">Latest News</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">from the OpenPanel blog.</p></div></div>
@@ -314,7 +555,7 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const newsContent = document.getElementById('news-content');
-    const CACHE_KEY = "cachedNews";
+    const CACHE_KEY = "cachedNews2";
     const CACHE_EXPIRY_KEY = "cachedNewsExpiry";
     const CACHE_DURATION = 1000 * 60 * 60 * 6; // 6 hours
 
@@ -332,14 +573,26 @@ document.addEventListener("DOMContentLoaded", function () {
         localStorage.setItem(CACHE_EXPIRY_KEY, Date.now() + CACHE_DURATION);
     };
 
+    // front matter values can be yaml quoted, "a \"b\"" or 'it''s'
+    const unquote = (v) => {
+        if (v.length > 1 && v[0] === '"' && v[v.length - 1] === '"') {
+            try { return JSON.parse(v); } catch (e) { return v.slice(1, -1).replace(/\\"/g, '"'); }
+        }
+        if (v.length > 1 && v[0] === "'" && v[v.length - 1] === "'") {
+            return v.slice(1, -1).replace(/''/g, "'");
+        }
+        return v;
+    };
+
     const fetchRequiredLines = async (fileUrl) => {
         const response = await fetch(fileUrl);
         const text = await response.text();
         const lines = text.split('\n');
-        const title = lines.find(line => line.startsWith('title:'))?.replace('title:', '').trim() || 'No Title';
-        const description = lines.find(line => line.startsWith('description:'))?.replace('description:', '').trim() || '';
-        const slug = lines.find(line => line.startsWith('slug:'))?.replace('slug:', '').trim() || '';
-        const image = lines.find(line => line.startsWith('image:'))?.replace('image:', '').trim() || '';
+        const field = (name) => unquote(lines.find(line => line.startsWith(name + ':'))?.slice(name.length + 1).trim() || '');
+        const title = field('title') || 'No Title';
+        const description = field('description');
+        const slug = field('slug');
+        const image = field('image');
         return { title, description, slug, image };
     };
 
@@ -381,7 +634,7 @@ const renderNewsItems = (items) => {
             const imgElement = document.createElement('img');
             imgElement.src = image;
             imgElement.alt = title;
-            imgElement.classList.add('h-12', 'flex-shrink-0', 'rounded-md', 'object-cover', 'me-3');
+            imgElement.classList.add('news-img', 'h-12', 'flex-shrink-0', 'rounded-md', 'object-cover', 'me-3');
             imgElement.onerror = () => imgLink.remove();
             imgLink.appendChild(imgElement);
             newsItemDiv.appendChild(imgLink);
@@ -439,235 +692,60 @@ const renderNewsItems = (items) => {
 
 
 
-    <div id="tour-system-info" class="">
-                    <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">System Information</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Information about your server configuration.</p></div></div>
+    <div id="tour-system-info" data-widget="info" class="">
+                    <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">System Information</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Information about your server configuration.</p></div><select id="system-info-server" aria-label="Show system information for" class="hidden rounded border border-gray-300 bg-white px-2 py-1.5 font-medium text-gray-600 sm:text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-gray-400"></select></div>
 
 
                     <div class="grid grid-cols-1 gap-2 mt-2">
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                             <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Hostname</span>
                             <span class="font-medium" id="system-hostname"></span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                             <span class="text-sm capitalize text-gray-600 dark:text-gray-400">IPv4 address</span>
-                            <span class="font-medium">{{.PublicIP}}</span>
+                            <span class="font-medium" id="system-ipv4">{{.PublicIP}}</span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                             <span class="text-sm capitalize text-gray-600 dark:text-gray-400">OS</span>
                             <span id="system-os" class="font-medium"></span>
                         </div>
                         <a href="/settings/updates" title="Click to manage Update Preferences">
-                            <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                            <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                                 <span class="text-sm capitalize text-gray-600 dark:text-gray-400">OpenPanel version</span>
                                 <span id="system-openpanel" class="font-medium">{{.PanelVersion}}</span>
                             </div>
                         </a>
                         <a href="/server/timezone" title="Click to manage Server Time settings">
-                            <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                            <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                                 <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Server Time</span>
                                 <span id="server-time" class="font-medium"></span>
                             </div>
                         </a>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                             <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Kernel</span>
                             <span id="system-kernel" class="font-medium"></span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                             <span class="text-sm capitalize text-gray-600 dark:text-gray-400">CPU</span>
                             <span id="system-cpu" class="font-medium truncate"></span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                             <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Uptime</span>
                             <span id="system-uptime" class="font-medium"></span>
                         </div>
                         <a href="/server/processes?sort=pid" title="Click to open Process Manager">
-                            <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                            <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                                 <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Running Processes</span>
                                 <span id="system-processes" class="font-medium"></span>
                             </div>
                         </a>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
                             <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Package Updates</span>
                             <span id="system-packages" class="font-medium"></span>
                         </div>
                     </div>
 
     </div>
-
-
-        <div id="tour-usage-graphs" class="">
-<div>
-    <div id="usage_graphs" class="">
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
-                <div>
-                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Resource Usage</h3>
-                    <p class="text-sm/6 text-gray-500 dark:text-gray-500">CPU &amp; RAM over the last hour.</p>
-                </div>
-                <a href="/server/resource-usage/history" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View history &rarr;</a>
-            </div>
-
-        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50 mt-2">
-            <div id="dashboard-resource-chart-wrap">
-                <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-blue-500 inline-block rounded"></span>CPU %</span>
-                    <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-violet-500 inline-block rounded"></span>RAM %</span>
-                </div>
-                <div style="position:relative;height:160px">
-                    <canvas id="dashboard-resource-chart"></canvas>
-                </div>
-            </div>
-            <p id="dashboard-resource-empty" class="hidden text-sm text-gray-500 dark:text-gray-500 text-center py-6">No resource usage data yet.</p>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    fetch('/server/resource-usage/history/data?minutes=60')
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-            var snapshots = (data && data.snapshots) || [];
-
-            if (!snapshots.length) {
-                document.getElementById('dashboard-resource-chart-wrap').classList.add('hidden');
-                document.getElementById('dashboard-resource-empty').classList.remove('hidden');
-                return;
-            }
-
-            var isDark = document.documentElement.classList.contains('dark') ||
-                         window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-            var tickColor = isDark ? '#6b7280' : '#9ca3af';
-
-            var labels = snapshots.map(function (s) { return s.ts.split(' ')[1] || s.ts; });
-
-            new Chart(document.getElementById('dashboard-resource-chart'), {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'CPU %',
-                            data: snapshots.map(function (s) { return s.cpu_pct; }),
-                            borderColor: 'rgb(59,130,246)',
-                            backgroundColor: 'rgba(59,130,246,0.10)',
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            tension: 0.3,
-                            fill: false
-                        },
-                        {
-                            label: 'RAM %',
-                            data: snapshots.map(function (s) { return s.mem.pct; }),
-                            borderColor: 'rgb(139,92,246)',
-                            backgroundColor: 'rgba(139,92,246,0.10)',
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            tension: 0.3,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: isDark ? '#1f2937' : '#fff',
-                            borderColor: isDark ? '#374151' : '#e5e7eb',
-                            borderWidth: 1,
-                            titleColor: isDark ? '#f9fafb' : '#111827',
-                            bodyColor: isDark ? '#9ca3af' : '#6b7280',
-                            padding: 10
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: tickColor, maxTicksLimit: 6 },
-                            grid: { display: false }
-                        },
-                        y: {
-                            min: 0, max: 100,
-                            ticks: { color: tickColor, callback: function (v) { return v + '%'; } },
-                            grid: { color: gridColor }
-                        }
-                    }
-                }
-            });
-        })
-        .catch(function (err) {
-            console.error('Error loading resource usage widget:', err);
-        });
-});
-</script>
-        </div>
-
-{{if not .IsReseller}}
-        <div id="tour-tasks" class="">
-<div>
-    <div id="tasks_widget" class="">
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
-                <div>
-                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Tasks</h3>
-                    <p class="text-sm/6 text-gray-500 dark:text-gray-500">Currently running background tasks.</p>
-                </div>
-                <a href="/tasks" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View all &rarr;</a>
-            </div>
-
-        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50 mt-2">
-            <ul id="dashboard-tasks-list" class="hidden divide-y divide-gray-200 dark:divide-gray-800 text-sm"></ul>
-            <p id="dashboard-tasks-empty" class="text-sm text-gray-500 dark:text-gray-500 text-center py-6">No background tasks are currently running.</p>
-        </div>
-    </div>
-</div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    function esc(s) {
-        var div = document.createElement('div');
-        div.textContent = String(s);
-        return div.innerHTML;
-    }
-
-    function refreshTasks() {
-        if (document.hidden) return;
-        fetch('/tasks?output=json')
-            .then(function (res) { return res.json(); })
-            .then(function (data) {
-                var tasks = ((data || []).filter(function (t) { return t.status === 'running'; }));
-                var list = document.getElementById('dashboard-tasks-list');
-                var empty = document.getElementById('dashboard-tasks-empty');
-                if (!tasks.length) {
-                    list.classList.add('hidden');
-                    empty.classList.remove('hidden');
-                    return;
-                }
-                empty.classList.add('hidden');
-                list.classList.remove('hidden');
-                list.innerHTML = tasks.slice(0, 6).map(function (t) {
-                    return '<li class="py-2"><a href="/server/processes/' + t.pid + '/strace" class="flex items-center justify-between gap-3 hover:text-indigo-600 dark:hover:text-indigo-400">' +
-                        '<span class="truncate font-mono text-xs">' + esc(t.command) + '</span>' +
-                        '<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">' + esc(t.time) + '</span>' +
-                    '</a></li>';
-                }).join('');
-            })
-            .catch(function (err) { console.error('Error loading tasks widget:', err); });
-    }
-
-    refreshTasks();
-    setInterval(refreshTasks, 5000);
-    // polls are skipped while the tab is in the background, refresh as soon as it's back
-    document.addEventListener('visibilitychange', refreshTasks);
-});
-</script>
-{{end}}
-
 
 </dl>
 
@@ -682,12 +760,185 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 </div>
 
+{{if not .IsReseller}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script>
+// dashboard layout saved on the admin's account: widget order, width, collapsed widgets and the header buttons
+(function () {
+    var saved = {{if .Layout}}{{.Layout}}{{else}}null{{end}};
+    var layout = Object.assign({ order: [], size: {}, collapsed: {} }, saved || {});
+    var grid = document.getElementById('dashboard-widgets');
+    if (!grid) { return; }
+    // default arrangement, a saved order or width replaces it
+    var DEFAULT_ORDER = ['usage', 'tasks', 'cluster', 'activity', 'info', 'news'];
+    var DEFAULT_SIZE = { tasks: 1, usage: 2, cluster: 1, activity: 1, info: 1, news: 1 };
+    var DEFAULT_COLLAPSED = {};
+    function isCollapsed(id) { return id in layout.collapsed ? !!layout.collapsed[id] : !!DEFAULT_COLLAPSED[id]; }
+    // widgets with their own collapse button
+    var OWN_COLLAPSE = { summary: true };
+    function sizeOf(id) { return Number(layout.size[id] || DEFAULT_SIZE[id] || 1); }
+
+    function widgets() { return Array.prototype.slice.call(grid.querySelectorAll(':scope > [data-widget]')); }
+
+    function save(body) {
+        var token = document.querySelector('meta[name="csrf-token"]');
+        return fetch('/dashboard/layout', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': token ? token.content : '' },
+            body: JSON.stringify(body || layout)
+        }).catch(function () {});
+    }
+
+    // width goes by a style rule so phones keep one column
+    var style = document.createElement('style');
+    style.textContent = '@media (min-width:768px){#dashboard-widgets>[data-size="2"],#dashboard-widgets>[data-size="3"]{grid-column:span 2}}' +
+        '@media (min-width:1024px){#dashboard-widgets>[data-size="2"]{grid-column:span 2}#dashboard-widgets>[data-size="3"]{grid-column:span 3}#dashboard-widgets>[data-rows="2"]{grid-row:span 2}}' +
+        // move and width controls show on hover, with a dashed outline so it's clear which widget they belong to
+        '#dashboard-widgets>[data-widget]:hover{outline:1px dashed #9ca3af;outline-offset:3px;border-radius:1px}' +
+        // tools float over the top right corner so the hidden ones don't squeeze the title
+        '#dashboard-widgets>[data-widget]{position:relative}' +
+        '#dashboard-widgets>[data-widget] .widget-tools{visibility:hidden;position:absolute;top:0;right:32px;z-index:5;padding:2px 4px;border-radius:.375rem}' +
+        '#dashboard-widgets>[data-widget]:hover .widget-tools,#dashboard-widgets.sorting .widget-tools{visibility:visible}' +
+        '[data-widget] .widget-hidden{display:none!important}' +
+        // wider news gets bigger pictures
+        '@media (min-width:1024px){#dashboard-widgets>[data-widget="news"][data-size="2"] .news-img{height:6rem}#dashboard-widgets>[data-widget="news"][data-size="3"] .news-img{height:8rem}}';
+    document.head.appendChild(style);
+
+    function header(w) {
+        var h = w.querySelector('h3');
+        return h ? (h.closest('.pb-2') || h.parentElement) : null;
+    }
+
+    // collapsing hides everything but the widget's title row
+    function setCollapsed(w, on) {
+        var head = header(w);
+        if (!head) { return; }
+        var keep = head;
+        while (keep && keep !== w) {
+            Array.prototype.forEach.call(keep.parentElement.children, function (sib) {
+                if (sib !== keep && sib.tagName !== 'SCRIPT' && !sib.classList.contains('widget-tools')) { sib.classList.toggle('widget-hidden', on); }
+            });
+            keep = keep.parentElement;
+        }
+        var btn = w.querySelector('.widget-chevron');
+        if (btn) { btn.style.transform = on ? 'rotate(180deg)' : ''; btn.title = on ? 'Expand' : 'Collapse'; }
+    }
+
+    function addChevron(w) {
+        var head = header(w);
+        if (!head || head.querySelector('.widget-chevron')) { return; }
+        // links like View all sit next to the title, the right side is for the collapse button
+        var h3 = head.querySelector('h3');
+        Array.prototype.forEach.call(head.querySelectorAll(':scope > a'), function (a) {
+            h3.style.display = 'inline';
+            a.classList.add('ml-2');
+            h3.parentElement.insertBefore(a, h3.nextSibling);
+        });
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'widget-chevron shrink-0 rounded p-1 text-gray-500 cursor-pointer';
+        btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg>';
+        btn.addEventListener('click', function () {
+            var id = w.dataset.widget;
+            var on = !isCollapsed(id);
+            if (on === !!DEFAULT_COLLAPSED[id]) { delete layout.collapsed[id]; } else { layout.collapsed[id] = on; }
+            setCollapsed(w, on);
+            save();
+        });
+        head.appendChild(btn);
+    }
+
+    function apply() {
+        (layout.order.length ? layout.order : DEFAULT_ORDER).forEach(function (id) {
+            var w = grid.querySelector(':scope > [data-widget="' + id + '"]');
+            if (w) { grid.appendChild(w); }
+        });
+        // a 2/3 widget followed by two 1/3 ones spans two rows, so those stack in the column next to it
+        var list = widgets();
+        list.forEach(function (w, i) {
+            var stack = sizeOf(w.dataset.widget) === 2 && list[i + 1] && list[i + 2] &&
+                sizeOf(list[i + 1].dataset.widget) === 1 && sizeOf(list[i + 2].dataset.widget) === 1;
+            if (stack) { w.dataset.rows = 2; } else { delete w.dataset.rows; }
+        });
+        widgets().forEach(function (w) {
+            var size = sizeOf(w.dataset.widget);
+            if (size > 1) { w.dataset.size = size; } else { delete w.dataset.size; }
+            if (OWN_COLLAPSE[w.dataset.widget]) { addTools(w); return; }
+            addChevron(w);
+            addTools(w);
+            setCollapsed(w, isCollapsed(w.dataset.widget));
+        });
+    }
+
+    var SIZE_BTN = 'cursor-pointer rounded border border-gray-300 px-1.5 py-0.5 text-xs dark:border-gray-700';
+    function markSize(bar, id) {
+        bar.querySelectorAll('[data-size-btn]').forEach(function (b) {
+            var on = Number(b.dataset.sizeBtn) === sizeOf(id);
+            b.style.fontWeight = on ? '700' : '';
+            b.style.borderColor = on ? '#4f46e5' : '';
+        });
+    }
+
+    // drag handle and widths, next to the collapse button
+    function addTools(w) {
+        var head = header(w);
+        if (!head || head.querySelector('.widget-tools')) { return; }
+        var id = w.dataset.widget;
+        var bar = document.createElement('span');
+        bar.className = 'widget-tools flex items-center gap-1 bg-white dark:bg-gray-950';
+        var move = document.createElement('span');
+        move.className = 'widget-drag cursor-pointer rounded px-1 text-gray-500';
+        move.title = 'Drag to move';
+        move.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>';
+        bar.appendChild(move);
+        [1, 2, 3].forEach(function (n) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = SIZE_BTN;
+            b.dataset.sizeBtn = n;
+            b.title = n === 3 ? 'Full width' : n + '/3 width';
+            b.textContent = n + '/3';
+            b.addEventListener('click', function () {
+                if (n === (DEFAULT_SIZE[id] || 1)) { delete layout.size[id]; } else { layout.size[id] = n; }
+                apply(); markSize(bar, id); save();
+            });
+            bar.appendChild(b);
+        });
+        markSize(bar, id);
+        w.appendChild(bar);
+    }
+
+    window.Sortable && Sortable.create(grid, {
+        draggable: '[data-widget]', handle: '.widget-drag', animation: 150,
+        onStart: function () { grid.classList.add('sorting'); },
+        onEnd: function () {
+            grid.classList.remove('sorting');
+            layout.order = widgets().map(function (w) { return w.dataset.widget; });
+            save();
+        }
+    });
+
+    // the layout is saved as soon as it changes, this brings back the default one
+    if (saved) {
+        var reset = document.createElement('button');
+        reset.type = 'button';
+        reset.className = 'mt-2 cursor-pointer text-xs text-gray-500 hover:underline dark:text-gray-400';
+        reset.textContent = 'Reset dashboard layout';
+        reset.addEventListener('click', function () { save({}).then(function () { location.reload(); }); });
+        grid.parentElement.insertBefore(reset, grid.nextSibling);
+    }
+
+    apply();
+})();
+</script>
+{{end}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 
 <script src="/static/pages/dashboard.js" defer="defer"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-    fetch('/json/system')
+    function loadSystemInfo(node) {
+    const base = node ? '/_cluster/n/' + encodeURIComponent(node) : '';
+    fetch(base + '/json/system')
         .then(response => response.json())
         .then(data => {
             document.getElementById('system-hostname').textContent = data.hostname;
@@ -705,6 +956,29 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(error => {
             console.error('Error fetching system info:', error);
         });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+    loadSystemInfo('');
+    // a master picks whose details these are, numbers like uptime or the kernel don't add up
+    fetch('/server/cluster/health', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).then(d => {
+        const sel = document.getElementById('system-info-server');
+        if (!sel || !d || d.role !== 'master' || !d.servers) return;
+        d.servers.forEach(s => {
+            const o = document.createElement('option');
+            o.value = s.master ? '' : s.id;
+            o.textContent = s.name;
+            o.dataset.address = s.address || '';
+            o.disabled = !s.online;
+            sel.appendChild(o);
+        });
+        sel.classList.remove('hidden');
+        sel.addEventListener('change', () => {
+            loadSystemInfo(sel.value);
+            const ip = document.getElementById('system-ipv4');
+            if (ip) ip.textContent = sel.selectedOptions[0].dataset.address;
+        });
+    }).catch(() => {});
 });
 
 function formatUptime(seconds) {
@@ -721,9 +995,11 @@ function formatUptime(seconds) {
     else return `${pluralize(Math.floor(seconds / day), 'day')}, ${pluralize(Math.floor((seconds % day) / hour), 'hour')}`;
 }
 
+let fakeTimeCounter;
 function startFakeTimeCounter(startTime) {
     let startDate = new Date(startTime);
-    setInterval(() => {
+    clearInterval(fakeTimeCounter);
+    fakeTimeCounter = setInterval(() => {
         startDate.setSeconds(startDate.getSeconds() + 1);
         document.getElementById('server-time').textContent = startDate.toLocaleString();
     }, 1000);

@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/sha256"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -19,6 +21,7 @@ import (
 	"openadmin/internal/apidocs"
 	"openadmin/internal/auth"
 	"openadmin/internal/bootstrap"
+	"openadmin/internal/cluster"
 	"openadmin/internal/config"
 	"openadmin/internal/handlers"
 	"openadmin/internal/license"
@@ -33,6 +36,48 @@ import (
 const defaultMemoryLimit = 64 << 20
 
 func main() {
+	// prints a join code so a server can be added to a cluster from ssh too
+	if len(os.Args) > 1 && os.Args[1] == "cluster-join-code" {
+		code, err := cluster.GenerateJoinCode(adminPortAtStartup())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println(code)
+		return
+	}
+
+	// opencli on a master uses this to list slaves, find where an account lives and run commands there
+	if len(os.Args) > 2 && os.Args[1] == "cluster-exec" {
+		cluster.CLILicensed = license.CachedValid
+		os.Exit(clusterExec(os.Args[2:]))
+	}
+
+	// install script runs this to add the new server to the master named in the invite
+	if len(os.Args) > 2 && os.Args[1] == "cluster-enroll" {
+		name := ""
+		if len(os.Args) > 3 {
+			name = os.Args[3]
+		}
+		port := adminPortAtStartup()
+		self := ""
+		if ip := detectPublicIP(); ip != "Unknown" {
+			self = "https://" + net.JoinHostPort(ip, port)
+		}
+		res, err := cluster.Enroll(os.Args[2], port, self, name)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Added to %s as %s.\n", res.Master, res.Name)
+		if res.SyncErr != "" {
+			fmt.Fprintln(os.Stderr, "Settings sync failed: "+res.SyncErr)
+		} else if res.Synced != "" {
+			fmt.Println("Settings synced: " + res.Synced)
+		}
+		return
+	}
+
 	// opencli api list, prints the endpoints and exits before anything starts
 	if len(os.Args) > 1 && os.Args[1] == "api-endpoints" {
 		base := "https://localhost:2087"
@@ -294,7 +339,6 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mailer := &handlers.Mailer{PublicIP: d.PublicIP, Logger: d.Logger}
 	processManager := &handlers.ProcessManager{Sessions: sessions}
 	tasks := &handlers.Tasks{Sessions: sessions}
-	slave := &handlers.Slave{Sessions: sessions}
 	imunify := &handlers.Imunify{Sessions: sessions, MySQL: d.MySQL}
 	imunifyScan := &handlers.ImunifyScan{MySQL: d.MySQL, Sessions: sessions}
 	waf := &handlers.WAF{Sessions: sessions, MySQL: d.MySQL}
@@ -527,8 +571,6 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /api/server/memory/drop-swap", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(serverUtils.HandleDropSwapCache)))
 	mux.HandleFunc("GET /api/server/processes", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerProcesses.ServeProcesses)))
 	mux.HandleFunc("POST /api/server/processes/{pid}/{action}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerProcesses.ServeProcessAction)))
-	mux.HandleFunc("GET /api/server/node", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerOps.ServeNode)))
-	mux.HandleFunc("POST /api/server/node", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerOps.ServeNode)))
 	mux.HandleFunc("POST /api/server/root-password", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPISuperAdmin(apiServerOps.ServeRootPassword)))
 	mux.HandleFunc("POST /api/server/reboot", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPISuperAdmin(apiServerOps.ServeReboot)))
 	mux.HandleFunc("GET /api/server/reboot/status", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(reboot.ServeRebootStatus)))
@@ -619,6 +661,9 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	mux.HandleFunc("GET /{$}", auth.RequireLogin(sessions, authOpts, dash.ServeDashboard))
 	mux.HandleFunc("GET /dashboard", auth.RequireLogin(sessions, authOpts, dash.ServeDashboard))
+	mux.HandleFunc("POST /dashboard/layout", auth.RequireLogin(sessions, authOpts, dash.HandleLayout))
+	mux.HandleFunc("GET /dashboard/summary", auth.RequireLogin(sessions, authOpts, dash.ServeSummary))
+	handlers.ChromeSummaryAttention = dash.SummaryNeedsAttention
 	mux.HandleFunc("POST /api/quickstart/dismiss", auth.RequireLogin(sessions, authOpts, dash.HandleQuickStartDismiss))
 	mux.HandleFunc("GET /onboarding", auth.RequireLogin(sessions, authOpts, dash.ServeOnboardingPage))
 	mux.HandleFunc("GET /json/system", auth.RequireLogin(sessions, authOpts, dash.ServeSystemInfo))
@@ -917,8 +962,6 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /server/processes/{pid}/{action}", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcessAction))
 	mux.HandleFunc("POST /server/processes/{pid}/{action}", auth.RequireAdmin(sessions, authOpts, processManager.ServeProcessAction))
 	mux.HandleFunc("GET /tasks", auth.RequireAdmin(sessions, authOpts, tasks.ServeTasks))
-	mux.HandleFunc("GET /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
-	mux.HandleFunc("POST /server/node", auth.RequireAdmin(sessions, authOpts, slave.ServeNode))
 	mux.HandleFunc("GET /security/imunify/", auth.RequireLogin(sessions, authOpts, imunify.ServeImunifyGUI))
 	mux.HandleFunc("GET /security/imunify/assets/static/{filename...}", auth.RequireLogin(sessions, authOpts, imunify.ServeImunifyStatic))
 	mux.HandleFunc("POST /security/imunify/install", auth.RequireAdmin(sessions, authOpts, imunify.ServeImunifyInstall))
@@ -1005,6 +1048,40 @@ func newHandler(d appDeps) (http.Handler, error) {
 
 	handlers.BulkRoutes(mux, sessions, authOpts, users, domains)
 
+	licensed := func() bool { return d.LicenseChecker != nil && d.LicenseChecker.Valid() }
+	clusterManager := &cluster.Manager{
+		Sessions: sessions, DB: d.AdminDB, MySQL: d.MySQL, Licensed: licensed, AdminPort: d.AdminPortValue,
+		DashboardLayout: func(userID int64) string { return handlers.DashboardLayoutJSON(d.AdminDB, userID) },
+		PublicIP:        d.PublicIP, Hostname: d.ServerHostname, Version: d.PanelVersion, ValidateSessionIP: d.ValidateSessionIP,
+		Notifications: handlers.ClusterNotifications, LatestSource: handlers.ClusterLatestVersion,
+		Summaries:  handlers.ClusterSummaries(d.MySQL),
+		DashCounts: handlers.ClusterDashCounts(d.MySQL),
+	}
+	clusterManager.RunBackground()
+	clusterManager.ResumeMoves()
+	handlers.ChromeClusterSwitcher = clusterManager.SwitcherTag
+	handlers.ChromeClusterCount = clusterManager.ClusterCount
+	handlers.ClusterManager = clusterManager
+	clusterPage := &handlers.Cluster{Sessions: sessions, Manager: clusterManager, Licensed: licensed}
+	clusterAdmin := func(h http.HandlerFunc) http.HandlerFunc { return auth.RequireAdmin(sessions, authOpts, h) }
+	mux.HandleFunc("GET /server/cluster", clusterAdmin(clusterPage.ServePage))
+	mux.HandleFunc("GET /server/cluster/health", clusterAdmin(clusterPage.ServeHealth))
+	mux.HandleFunc("GET /server/cluster/diff", clusterAdmin(clusterPage.ServeDiff))
+	mux.HandleFunc("POST /server/cluster/join-code", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleJoinCode)))
+	mux.HandleFunc("POST /server/cluster/invite", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleInvite)))
+	mux.HandleFunc("POST /server/cluster/add", clusterAdmin(clusterPage.SuperAdmin(clusterPage.RequireLicense(clusterPage.HandleAdd))))
+	mux.HandleFunc("POST /server/cluster/remove", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleRemove)))
+	mux.HandleFunc("POST /server/cluster/sync", clusterAdmin(clusterPage.SuperAdmin(clusterPage.RequireLicense(clusterPage.HandleSync))))
+	mux.HandleFunc("POST /server/cluster/pull", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandlePull)))
+	mux.HandleFunc("POST /server/cluster/settings", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleSlaveSettings)))
+	mux.HandleFunc("POST /server/cluster/rollback", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleRollback)))
+	mux.HandleFunc("POST /server/cluster/leave", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleLeave)))
+	mux.HandleFunc("POST /server/cluster/pause", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandlePause)))
+	mux.HandleFunc("POST /server/cluster/promote", clusterAdmin(clusterPage.SuperAdmin(clusterPage.RequireLicense(clusterPage.HandlePromote))))
+	mux.HandleFunc("POST /server/cluster/update", clusterAdmin(clusterPage.SuperAdmin(clusterPage.RequireLicense(clusterPage.HandleUpdate))))
+	mux.HandleFunc("POST /server/cluster/move", clusterAdmin(clusterPage.SuperAdmin(clusterPage.RequireLicense(clusterPage.HandleMove))))
+	mux.HandleFunc("POST /server/cluster/move/{id}/{action}", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleMoveFinish)))
+
 	csrfMiddleware := csrf.Protect(deriveCSRFKey(d.SecretKey),
 		csrf.FieldName("csrf_token"),
 		csrf.RequestHeader("X-CSRFToken"),
@@ -1044,6 +1121,9 @@ func newHandler(d appDeps) (http.Handler, error) {
 			next.ServeHTTP(w, csrf.PlaintextHTTPRequest(r))
 		})
 	}
+
+	// inside gzip so proxied pages get compressed for the browser, outside csrf and sessions since the target server runs its own
+	handler = clusterManager.Middleware(handler)
 
 	handler = handlers.GzipMiddleware(handler)
 
@@ -1115,4 +1195,38 @@ func adminPortAtStartup() string {
 		return "2087"
 	}
 	return port
+}
+
+// clusterExec is "servers", "find user|domain NAME" or "run all|SERVER -- opencli args"
+func clusterExec(args []string) int {
+	fail := func(err error) int {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	switch {
+	case args[0] == "servers":
+		for _, name := range cluster.Servers() {
+			fmt.Println(name)
+		}
+		return 0
+	case args[0] == "find" && len(args) == 3:
+		names, err := cluster.Find(args[1], args[2])
+		if err != nil {
+			return fail(err)
+		}
+		for _, name := range names {
+			fmt.Println(name)
+		}
+		return 0
+	case args[0] == "run" && len(args) > 3 && args[2] == "--":
+		results, err := cluster.Exec(args[1], args[3:])
+		if err != nil {
+			return fail(err)
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(results); err != nil {
+			return fail(err)
+		}
+		return 0
+	}
+	return fail(errors.New("usage: openadmin cluster-exec servers | find user|domain NAME | run all|SERVER -- COMMAND [ARGS]"))
 }

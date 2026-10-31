@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"openadmin/internal/auth"
+	"openadmin/internal/cluster"
 	"openadmin/internal/webtemplates"
 )
 
@@ -247,6 +248,11 @@ func (g *General) ServeGeneral(w http.ResponseWriter, r *http.Request) {
 		"ForceDomainIsDomain": isDomain(forceDomain),
 		"SSLCurrentSetting":   generalSSLStatus(forceDomain),
 		"DevMode":             devModeStr,
+	}
+	if ClusterManager != nil {
+		if st := ClusterManager.State(); st.Role == cluster.RoleSlave {
+			data["ClusterMaster"] = st.MasterName
+		}
 	}
 
 	if r.URL.Query().Get("output") == "json" {

@@ -150,6 +150,7 @@
                                 </div>
                             </div>
                         </th>
+                        <th x-show="hasServers" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Server</th>
                         <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                             <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                 <span>Quota</span>
@@ -165,17 +166,18 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 
-                    <template x-for="[email, quota, pct] in sortedEmails" :key="email">
+                    <template x-for="[email, quota, pct, nodeId, server, openLink] in sortedEmails" :key="email">
                         <tr x-show="searchQuery === '' || email.toLowerCase().includes(searchQuery.toLowerCase())"
                             class="group hover:bg-gray-50 hover:dark:bg-gray-900 [&_td:last-child]:pr-4 [&_td:first-child]:pl-4">
 
                             <td class="w-10 py-4 pl-4 sm:pl-6 pr-2 align-middle">
                                 <input type="checkbox" class="bulk-select-box h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800"
-                                       :value="email" data-bulk-skip="" :checked="!!bulkSelected[email]" @change="bulkToggle($event.target)" :aria-label="'Select ' + email">
+                                       :value="(nodeId ? 'cluster:' + nodeId + ':' : '') + email" data-bulk-skip="" :checked="!!bulkSelected[(nodeId ? 'cluster:' + nodeId + ':' : '') + email]" @change="bulkToggle($event.target)" :aria-label="'Select ' + email">
                             </td>
 
                             <!-- Email -->
                             <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" x-text="email"></td>
+                            <td x-show="hasServers" class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" x-text="server"></td>
 
                             <!-- Quota + progress bar -->
                             <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[180px]">
@@ -194,7 +196,7 @@
 
                             <!-- Webmail -->
                             <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                                <a :href="'/emails/webmail/' + email" target="_blank"
+                                <a :href="openLink || '/emails/webmail/' + email" target="_blank"
                                    :title="'Open webmail for ' + email"
                                    class="inline-flex items-center text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18h-7a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v7.5" /><path d="M3 6l9 6l9 -6" /><path d="M15 18h6" /><path d="M18 15l3 3l-3 3" /></svg>
@@ -434,20 +436,34 @@ function emailsApp() {
         },
         emails: EMAIL_DATA,
         init() {
-            if (!EMAIL_USAGE_PENDING) return;
-            fetch('/emails/accounts?output=json')
-                .then(r => r.ok ? r.json() : null)
-                .then(data => {
-                    if (!data || !Array.isArray(data.emails)) return;
-                    const usage = Object.fromEntries(data.emails.map(e => [e.email, e.quota]));
-                    this.emails = this.emails.map(([email, quota, pct]) => {
-                        const q = usage[email];
-                        if (q === undefined) return [email, quota, pct];
-                        const m = q.match(/\[(\d+)%\]/);
-                        return [email, q, m ? parseInt(m[1], 10) : 0];
-                    });
-                })
-                .catch(() => {});
+            // other servers report their own usage, this server's page already has it unless it was still pending
+            const nodes = [...new Set(this.emails.map(e => e[3] || ''))];
+            nodes.forEach(node => {
+                if (!node && !EMAIL_USAGE_PENDING) return;
+                fetch(this.nodeBase(node) + '/emails/accounts?output=json')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(data => {
+                        if (!data || !Array.isArray(data.emails)) return;
+                        const usage = Object.fromEntries(data.emails.map(e => [e.email, e.quota]));
+                        this.emails = this.emails.map(row => {
+                            const q = usage[row[0]];
+                            if (q === undefined || (row[3] || '') !== node) return row;
+                            const m = q.match(/\[(\d+)%\]/);
+                            const next = [...row];
+                            next[1] = q;
+                            next[2] = m ? parseInt(m[1], 10) : 0;
+                            return next;
+                        });
+                    })
+                    .catch(() => {});
+            });
+        },
+        get hasServers() { return this.emails.some(e => e[4]); },
+        nodeBase(node) { return node ? '/_cluster/n/' + encodeURIComponent(node) : ''; },
+        // actions on another server's address go through the master
+        apiUrl(email, path) {
+            const row = this.emails.find(e => e[0] === email);
+            return this.nodeBase(row ? row[3] : '') + path;
         },
 
         sortBy: 'email',
@@ -556,7 +572,7 @@ function emailsApp() {
             let errors = 0;
             for (const email of targets) {
                 try {
-                    const r = await fetch('/emails/api/update-password', {
+                    const r = await fetch(this.apiUrl(email, '/emails/api/update-password'), {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
                         body: JSON.stringify({email, password: this.newPassword})
@@ -581,7 +597,7 @@ function emailsApp() {
                     ? {email, quota: this.quotaValue}
                     : {email};
                 try {
-                    const r = await fetch(url, {
+                    const r = await fetch(this.apiUrl(email, url), {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
                         body: JSON.stringify(body)
@@ -602,7 +618,7 @@ function emailsApp() {
             let errors = 0;
             for (const email of targets) {
                 try {
-                    const r = await fetch('/emails/api/restrict', {
+                    const r = await fetch(this.apiUrl(email, '/emails/api/restrict'), {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
                         body: JSON.stringify({email, action: this.restrictAction, type: this.restrictType})
@@ -620,7 +636,7 @@ function emailsApp() {
             this.deleteLoading = true;
             this.deleteMsg = '';
             try {
-                const r = await fetch('/emails/api/delete', {
+                const r = await fetch(this.apiUrl(this.activeEmail, '/emails/api/delete'), {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.getCsrf()},
                     body: JSON.stringify({emails: [this.activeEmail]})

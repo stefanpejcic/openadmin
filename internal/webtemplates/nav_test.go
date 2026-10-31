@@ -99,7 +99,6 @@ func TestBuildModernNavServerAndSystem(t *testing.T) {
 		"/terminal":              "Server",
 		"/tasks":                 "Server",
 		"/server/timezone":       "System",
-		"/server/node":           "System",
 		"/user/import":           "Backups",
 		"/users/alice":           "Accounts",
 		"/settings/updates/log":  "Settings",

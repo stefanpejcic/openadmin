@@ -201,6 +201,9 @@ func compareVersionTags(a, b string) int {
 	return 0
 }
 
+// ClusterLatestVersion lets the servers table offer an update when one exists
+func ClusterLatestVersion() string { return getLatestVersion() }
+
 // getLatestVersion checks Docker Hub first (numeric version-tag sort,
 // distinct from fetchDockerTags' string sort above), falling back to the
 // usage API, then finally "0.0.0".

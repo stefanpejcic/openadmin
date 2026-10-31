@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+        <h1 class="mb-1 text-xl font-bold">Multi-Server</h1>
+        <h2 class="text-sm font-medium text-slate-500">
+            {{if eq .Role "master"}}This server is the master, it manages the servers below.
+            {{else if eq .Role "slave"}}This server is managed by {{.MasterName}}.
+            {{else}}This server is standalone.{{end}}
+        </h2>
+    </div>
+
+{{$input := "relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"}}
+{{$btn := "cursor-pointer relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600"}}
+{{$btnPlain := "cursor-pointer relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60"}}
+{{$label := "text-sm leading-none text-gray-900 dark:text-gray-50 font-medium"}}
+{{$h2 := "scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50"}}
+{{$p := "mt-1 text-sm leading-6 text-gray-500"}}
+
+  <div class="m-8">
+
+{{$sep := "mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"}}
+{{$section := "grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3"}}
+{{$th := "border-b border-gray-200 dark:border-gray-800 pr-4 py-1 text-xs font-semibold text-left text-gray-900 dark:text-gray-50 whitespace-nowrap"}}
+{{$td := "border-b border-gray-200 dark:border-gray-800 pr-4 py-2 text-sm align-top"}}
+
+{{if and .NoTwoFA (eq .Role "master")}}
+<p data-cluster-bottom class="mb-6 rounded bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-gray-800/50 dark:text-yellow-400">This login can reach root on every server in the cluster. Turn on <a class="underline" href="/security/2fa">two-factor authentication</a> for it.</p>
+{{end}}
+
+{{if eq .Role "slave"}}
+<div class="{{$section}}">
+    <div>
+        <h2 class="{{$h2}}">Sync from master</h2>
+        <p class="{{$p}}">License, ports, domains and SSL never sync.</p>
+    </div>
+    <div class="md:col-span-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-4 text-sm">
+            <div><span class="block text-xs text-gray-500">Master</span>{{.MasterName}}</div>
+            <div><span class="block text-xs text-gray-500">Mode</span>{{if eq .Mode "follow"}}Follow master{{else}}Manual{{end}}</div>
+            <div><span class="block text-xs text-gray-500">Last sync</span>{{if .LastSyncMsg}}{{.LastSyncAt.Format "2006-01-02 15:04"}}<br><span class="text-xs text-gray-500">{{.LastSyncMsg}}</span>{{else}}Never{{end}}</div>
+        </div>
+        {{if .PreviewError}}<p class="text-sm text-red-600">{{.PreviewError}}</p>
+        {{else if .Changes}}
+        <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead><tr><th class="{{$th}}">Setting</th><th class="{{$th}}">Here</th><th class="{{$th}}">On master</th></tr></thead>
+            <tbody>
+            {{range .Changes}}<tr><td class="{{$td}} break-all">{{.Key}}{{if .Pinned}} <b>(pinned)</b>{{end}}</td><td class="{{$td}} break-all">{{.Old}}</td><td class="{{$td}} break-all">{{.New}}</td></tr>{{end}}
+            </tbody>
+        </table>
+        </div>
+        {{else}}<p class="text-sm text-gray-500">In sync with the master.</p>{{end}}
+
+        <form method="post" action="/server/cluster/pull" class="mt-4 flex flex-wrap items-center gap-4">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <label class="text-sm"><input type="checkbox" name="group_secrets" {{if .GroupSecrets}}checked{{end}}> SMTP, captcha, AI and Cloudflare keys</label>
+            <label class="text-sm"><input type="checkbox" name="group_ns" {{if .GroupNS}}checked{{end}}> Nameservers</label>
+            <button class="{{$btn}}" type="submit">Sync from master</button>
+        </form>
+        <form method="post" action="/server/cluster/rollback" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button class="{{$btnPlain}}" type="submit" onclick="return confirm('Restore settings from the last backup?')">Undo last sync</button>
+        </form>
+    </div>
+</div>
+
+<div class="{{$sep}}"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="{{$section}}">
+    <div>
+        <h2 class="{{$h2}}">Sync mode</h2>
+        <p class="{{$p}}">Follow picks up master changes within 5 minutes. Pinned settings stay local.</p>
+    </div>
+    <div class="md:col-span-2">
+        <form method="post" action="/server/cluster/settings" class="grid gap-4">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div>
+                <label class="{{$label}}" for="mode">Mode</label>
+                <select class="{{$input}} mt-2" name="mode" id="mode">
+                    <option value="manual" {{if eq .Mode "manual"}}selected{{end}}>Manual</option>
+                    <option value="follow" {{if eq .Mode "follow"}}selected{{end}}>Follow master</option>
+                </select>
+            </div>
+            <div>
+                <label class="{{$label}}" for="pinned">Pinned settings, one per line (like openpanel:USERS.session_duration)</label>
+                <textarea class="{{$input}} mt-2" name="pinned" id="pinned" rows="4">{{.Pinned}}</textarea>
+            </div>
+            <div class="flex flex-wrap items-center gap-4">
+                <label class="text-sm"><input type="checkbox" name="group_secrets" {{if .GroupSecrets}}checked{{end}}> SMTP, captcha, AI and Cloudflare keys</label>
+                <label class="text-sm"><input type="checkbox" name="group_ns" {{if .GroupNS}}checked{{end}}> Nameservers</label>
+            </div>
+            <div><button class="{{$btn}}" type="submit">Save</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="{{$sep}}"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="{{$section}} pb-6">
+    <div>
+        <h2 class="{{$h2}}">Leave cluster</h2>
+        <p class="{{$p}}">Makes this server standalone, nothing else changes.</p>
+    </div>
+    <div class="md:col-span-2">
+        <form method="post" action="/server/cluster/leave">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button class="{{$btnPlain}}" type="submit" onclick="return confirm('Leave the cluster? The master will show this server as offline until removed there.')">Leave cluster</button>
+        </form>
+    </div>
+</div>
+
+{{else}}
+
+{{if not .Licensed}}
+<p class="mb-6 rounded bg-gray-50 p-3 text-sm dark:bg-gray-800/50">Managing other servers requires a valid Enterprise license. This server can still join a master.</p>
+{{end}}
+
+{{if eq .Role "master"}}
+<div class="{{$section}}">
+    <div>
+        <h2 class="{{$h2}}">Servers</h2>
+        <p class="{{$p}}">{{len .Health}} servers in this cluster.</p>
+    </div>
+    <div class="md:col-span-2 overflow-x-auto">
+        <table class="w-full">
+            <thead><tr><th class="{{$th}}">Server</th><th class="{{$th}}">Users</th><th class="{{$th}}">Load</th><th class="{{$th}}">RAM</th><th class="{{$th}}">Disk</th><th class="{{$th}}">Version</th><th class="{{$th}}"></th></tr></thead>
+            <tbody>
+            {{range .Health}}
+            <tr>
+                <td class="{{$td}}">
+                    <span class="flex items-center gap-2 font-medium whitespace-nowrap"><span style="flex:none;display:inline-flex;gap:2px;align-items:center" title="{{if .Paused}}Paused{{else if not .Online}}Offline{{else if .Down}}Service down{{else}}Healthy{{end}}">{{if .Paused}}<span style="width:4px;height:14px;border-radius:2px;background:#6b7280"></span><span style="width:4px;height:14px;border-radius:2px;background:#6b7280"></span><span style="width:4px;height:14px;border-radius:2px;background:#6b7280"></span>{{else if or (not .Online) .Down}}<span style="width:4px;height:14px;border-radius:2px;background:#ef4444"></span><span style="width:4px;height:14px;border-radius:2px;background:#6b7280"></span><span style="width:4px;height:14px;border-radius:2px;background:#6b7280"></span>{{else}}<span style="width:4px;height:14px;border-radius:2px;background:#10b981"></span><span style="width:4px;height:14px;border-radius:2px;background:#10b981"></span><span style="width:4px;height:14px;border-radius:2px;background:#10b981"></span>{{end}}</span>{{.Name}}</span>
+                    <span class="block text-xs text-gray-500">{{.Address}}{{if .Master}} · master{{end}}{{if .Paused}} · paused{{end}}</span>
+                    {{if .Paused}}{{else if not .Online}}<span class="block text-xs text-red-600 break-all">{{.Error}}</span>{{else if .Down}}<span class="block text-xs text-red-600">Down: {{range .Down}}{{.}} {{end}}</span>{{end}}
+                </td>
+                {{if .Online}}
+                <td class="{{$td}}">{{.Users}}</td>
+                <td class="{{$td}} whitespace-nowrap">{{printf "%.2f" .Load}}{{if .CPUs}} <span class="text-xs text-gray-500">/ {{.CPUs}}</span>{{end}}</td>
+                <td class="{{$td}}"><span class="block text-xs">{{.MemPct}}%</span><span class="block bg-gray-200 dark:bg-gray-800" style="width:4.5rem;height:.25rem;border-radius:9999px;overflow:hidden"><span style="display:block;height:100%;width:{{.MemPct}}%;background:{{if ge .MemPct 90}}#dc2626{{else if ge .MemPct 75}}#d97706{{else}}#4f46e5{{end}}"></span></span></td>
+                <td class="{{$td}}"><span class="block text-xs">{{.DiskPct}}%</span><span class="block bg-gray-200 dark:bg-gray-800" style="width:4.5rem;height:.25rem;border-radius:9999px;overflow:hidden"><span style="display:block;height:100%;width:{{.DiskPct}}%;background:{{if ge .DiskPct 90}}#dc2626{{else if ge .DiskPct 75}}#d97706{{else}}#4f46e5{{end}}"></span></span></td>
+                <td class="{{$td}} whitespace-nowrap">{{.Version}}
+                    {{if .Updating}}<span class="block text-xs text-gray-500">Updating...</span>
+                    {{else if .Latest}}<form method="post" action="/server/cluster/update">
+                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <button class="cursor-pointer block text-xs text-indigo-600 hover:underline dark:text-indigo-400" type="submit" onclick="return confirm('Update {{.Name}} to {{.Latest}}? Its services restart when it finishes.')">Update to {{.Latest}}</button>
+                    </form>{{end}}
+                </td>
+                {{else}}
+                <td class="{{$td}} text-gray-500" colspan="5">{{if .Paused}}Paused, left out of lists and settings applied to all servers{{else}}Offline{{end}}</td>
+                {{end}}
+                <td class="{{$td}} whitespace-nowrap">{{if .Paused}}
+                    <form method="post" action="/server/cluster/pause" style="display:inline;margin-right:.6rem">
+                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <input type="hidden" name="action" value="resume">
+                        <button class="cursor-pointer align-middle text-indigo-600 dark:text-indigo-400" type="submit" title="Resume" aria-label="Resume"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/></svg></button>
+                    </form>
+                    <form method="post" action="/server/cluster/remove" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <button class="cursor-pointer align-middle text-red-600" type="submit" title="Remove from the cluster" aria-label="Remove" onclick="return confirm('Remove {{.Name}} from the cluster? Nothing on that server is deleted.')"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0"/></svg></button>
+                    </form>
+                {{else if not .Master}}
+                    <button type="button" class="cursor-pointer text-sm text-indigo-600 hover:underline dark:text-indigo-400" style="margin-right:.6rem" onclick="clusterSwitchTo('{{.ID}}')">Open</button>
+                    <form method="post" action="/server/cluster/promote" style="display:inline;margin-right:.6rem">
+                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <button class="cursor-pointer text-sm text-indigo-600 hover:underline dark:text-indigo-400" type="submit" onclick="return confirm('Make {{.Name}} the master? This server becomes a slave, and you manage the cluster from {{.Name}} using its own admin login. Make sure you have that login first.')">Make master</button>
+                    </form>
+                    <form method="post" action="/server/cluster/pause" style="display:inline;margin-right:.6rem">
+                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <input type="hidden" name="action" value="pause">
+                        <button class="cursor-pointer align-middle text-indigo-600 dark:text-indigo-400" type="submit" title="Pause: leave this server out of lists and of settings applied to all servers until you resume it" aria-label="Pause"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/></svg></button>
+                    </form>
+                    <form method="post" action="/server/cluster/remove" style="display:inline">
+                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                        <input type="hidden" name="id" value="{{.ID}}">
+                        <button class="cursor-pointer align-middle text-red-600" type="submit" title="Remove from the cluster" aria-label="Remove" onclick="return confirm('Remove {{.Name}} from the cluster? Nothing on that server is deleted.')"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0"/></svg></button>
+                    </form>{{end}}
+                </td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="{{$sep}}"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="{{$section}}" id="add">
+    <div>
+        <h2 class="{{$h2}}">Add server</h2>
+        <p class="{{$p}}">Generate a join code under System &gt; Multi-Server on the other server. It's valid for 30 minutes.</p>
+    </div>
+    <div class="md:col-span-2">
+        <form method="post" action="/server/cluster/add" class="grid gap-4 sm:grid-cols-2">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div>
+                <label class="{{$label}}" for="add_url">Address</label>
+                <input class="{{$input}} mt-2" name="url" id="add_url" required placeholder="https://203.0.113.10:2087" autocomplete="off">
+            </div>
+            <div>
+                <label class="{{$label}}" for="add_name">Name (optional)</label>
+                <input class="{{$input}} mt-2" name="name" id="add_name" autocomplete="off">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="{{$label}}" for="add_code">Join code</label>
+                <input class="{{$input}} mt-2" name="code" id="add_code" required autocomplete="off">
+            </div>
+            <div><button class="{{$btn}}" type="submit">Add server</button></div>
+        </form>
+        <div class="mt-6 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <p class="{{$p}} mb-3">New server? Install OpenPanel on it with this command and it joins here on its own, with settings synced. One server per command, valid for 24 hours.</p>
+            {{if .Invite}}
+            <label class="{{$label}}" for="install_cmd">Install command</label>
+            <input class="{{$input}} mt-2 mb-4 font-mono" readonly value="bash &lt;(curl -sSL https://openpanel.org) --key=YOUR_ENTERPRISE_KEY --join-cluster={{.Invite}}" onclick="this.select()" id="install_cmd">
+            {{end}}
+            <form method="post" action="/server/cluster/invite">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <button class="{{$btnPlain}}" type="submit">Generate install command</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="{{$sep}}"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="{{$section}}" id="sync">
+    <div>
+        <h2 class="{{$h2}}">Sync settings</h2>
+        <p class="{{$p}}">Catches up servers that missed changes or were edited directly. License, ports, domains and SSL never sync.</p>
+        {{if .Unsynced}}<p class="mt-2 text-sm font-medium text-yellow-600">{{.Unsynced}} changed since last sync</p>{{end}}
+    </div>
+    <div class="md:col-span-2">
+        <form method="post" action="/server/cluster/sync" class="grid gap-4">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead><tr><th class="{{$th}}"></th><th class="{{$th}}">Server</th><th class="{{$th}}">Mode</th><th class="{{$th}}">Last sync</th><th class="{{$th}}">Differences</th></tr></thead>
+                <tbody>
+                {{range .Health}}{{if not (or .Master .Paused)}}
+                <tr>
+                    <td class="{{$td}}" style="width:1.5rem"><input type="checkbox" name="nodes" value="{{.ID}}" aria-label="Sync {{.Name}}" checked></td>
+                    <td class="{{$td}} font-medium whitespace-nowrap">{{.Name}}</td>
+                    <td class="{{$td}} whitespace-nowrap">{{if eq .Mode "follow"}}Follow{{else if .Online}}Manual{{else}}-{{end}}</td>
+                    <td class="{{$td}}">{{if .LastSyncAt}}<span class="whitespace-nowrap">{{.LastSyncAt}}</span><span class="block text-xs text-gray-500">{{.LastSync}}</span>{{else}}Never{{end}}</td>
+                    <td class="{{$td}} whitespace-nowrap"><button type="button" class="cursor-pointer text-sm text-indigo-600 hover:underline dark:text-indigo-400" data-diff="{{.ID}}">Loading...</button></td>
+                </tr>
+                <tr id="diff-row-{{.ID}}" class="hidden"><td colspan="5" class="pb-2"><div id="diff-{{.ID}}" class="overflow-x-auto rounded bg-gray-50 p-3 text-sm dark:bg-gray-800/50"></div></td></tr>
+                {{end}}{{end}}
+                </tbody>
+            </table>
+            </div>
+            <div class="flex flex-wrap items-center gap-4">
+                <label class="text-sm"><input type="checkbox" name="group_secrets" id="group_secrets"> SMTP, captcha, AI and Cloudflare keys</label>
+                <label class="text-sm"><input type="checkbox" name="group_ns" id="group_ns"> Nameservers</label>
+            </div>
+            <div><button class="{{$btn}}" type="submit" onclick="return confirm('Sync settings to the selected servers? OpenPanel and OpenAdmin restart on each server that changes.')">Sync to selected</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="{{$sep}}"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+<div class="{{$section}}" id="move">
+    <div>
+        <h2 class="{{$h2}}">Move account</h2>
+        <p class="{{$p}}">Copies the account, then waits for you to delete the source once DNS has moved.</p>
+    </div>
+    <div class="md:col-span-2">
+        <form method="post" action="/server/cluster/move" class="grid gap-4 sm:grid-cols-3">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div>
+                <label class="{{$label}}" for="move_from">From</label>
+                <select class="{{$input}} mt-2" name="from" id="move_from" required>
+                    {{range .Servers}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+                </select>
+            </div>
+            <div>
+                <label class="{{$label}}" for="move_account">Account</label>
+                <select class="{{$input}} mt-2" name="account" id="move_account" required></select>
+            </div>
+            <div>
+                <label class="{{$label}}" for="move_to">To</label>
+                <select class="{{$input}} mt-2" name="to" id="move_to" required>
+                    <option value="" disabled selected>Select server</option>
+                    {{range .Servers}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+                </select>
+            </div>
+            <div class="sm:col-span-3">
+                <label class="{{$label}}" for="move_reseller">If the account belongs to a reseller</label>
+                <select class="{{$input}} mt-2" name="reseller" id="move_reseller">
+                    <option value="copy">Copy its reseller to the new server</option>
+                    <option value="drop">Leave it without a reseller</option>
+                </select>
+            </div>
+            <div class="sm:col-span-3 flex flex-wrap items-center gap-4">
+                <label class="text-sm"><input type="checkbox" name="live" checked> Live: stop the account for the final copy and forward its websites until DNS moves</label>
+                <button class="{{$btn}}" type="submit" onclick="return confirm('Start moving this account?')">Start move</button>
+            </div>
+        </form>
+
+        {{if .Jobs}}
+        <div class="mt-6 overflow-x-auto">
+        <table class="w-full">
+            <thead><tr><th class="{{$th}}">Account</th><th class="{{$th}}">Route</th><th class="{{$th}}">Status</th><th class="{{$th}}"></th></tr></thead>
+            <tbody>
+            {{range .Jobs}}
+            <tr>
+                <td class="{{$td}}">{{.Account}}</td>
+                <td class="{{$td}}">{{.FromName}} &rarr; {{.ToName}}{{if .Live}} (live){{end}}</td>
+                <td class="{{$td}}">{{.Step}}{{if .Error}}<br><span class="text-xs text-red-600 break-all">{{.Error}}</span>{{end}}
+                    {{if .Log}}<details class="mt-1"><summary class="cursor-pointer text-xs text-gray-500">Log</summary><pre class="mt-1 max-h-60 overflow-auto text-xs whitespace-pre-wrap">{{.Log}}</pre></details>{{end}}</td>
+                <td class="{{$td}}">{{if eq .Status "copied"}}
+                    <form method="post" action="/server/cluster/move/{{.ID}}/finalize" class="mb-1">
+                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                        <button class="{{$btn}}" type="submit" onclick="return confirm('Delete {{.Account}} from {{.FromName}}? Do this only after DNS points at {{.ToName}}.')">Delete from source</button>
+                    </form>
+                    <form method="post" action="/server/cluster/move/{{.ID}}/cancel">
+                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                        <button class="{{$btnPlain}}" type="submit" onclick="return confirm('Delete the copy of {{.Account}} from {{.ToName}}?')">Cancel, delete copy</button>
+                    </form>{{end}}
+                </td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+        </div>
+        {{end}}
+    </div>
+</div>
+
+{{end}}
+
+{{if and .Licensed (ne .Role "master")}}
+<div class="{{$section}} pb-6" id="add">
+    <div>
+        <h2 class="{{$h2}}">Add server</h2>
+        <p class="{{$p}}">Generate a join code under System &gt; Multi-Server on the other server. It's valid for 30 minutes.</p>
+    </div>
+    <div class="md:col-span-2">
+        <form method="post" action="/server/cluster/add" class="grid gap-4 sm:grid-cols-2">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div>
+                <label class="{{$label}}" for="add_url">Address</label>
+                <input class="{{$input}} mt-2" name="url" id="add_url" required placeholder="https://203.0.113.10:2087" autocomplete="off">
+            </div>
+            <div>
+                <label class="{{$label}}" for="add_name">Name (optional)</label>
+                <input class="{{$input}} mt-2" name="name" id="add_name" autocomplete="off">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="{{$label}}" for="add_code">Join code</label>
+                <input class="{{$input}} mt-2" name="code" id="add_code" required autocomplete="off">
+            </div>
+            <div><button class="{{$btn}}" type="submit">Add server</button></div>
+        </form>
+        <div class="mt-6 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <p class="{{$p}} mb-3">New server? Install OpenPanel on it with this command and it joins here on its own, with settings synced. One server per command, valid for 24 hours.</p>
+            {{if .Invite}}
+            <label class="{{$label}}" for="install_cmd">Install command</label>
+            <input class="{{$input}} mt-2 mb-4 font-mono" readonly value="bash &lt;(curl -sSL https://openpanel.org) --key=YOUR_ENTERPRISE_KEY --join-cluster={{.Invite}}" onclick="this.select()" id="install_cmd">
+            {{end}}
+            <form method="post" action="/server/cluster/invite">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <button class="{{$btnPlain}}" type="submit">Generate install command</button>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{if ne .Role "master"}}
+{{if .Licensed}}<div class="{{$sep}}"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>{{end}}
+<div class="{{$section}} pb-6">
+    <div>
+        <h2 class="{{$h2}}">Join a cluster</h2>
+        <p class="{{$p}}">Generate a code here and paste it into Add server on the master.</p>
+    </div>
+    <div class="md:col-span-2">
+        {{if .JoinCode}}
+        <label class="{{$label}}" for="join_code">Join code, valid for 30 minutes</label>
+        <input class="{{$input}} mt-2 mb-4" readonly value="{{.JoinCode}}" onclick="this.select()" id="join_code">
+        {{end}}
+        <form method="post" action="/server/cluster/join-code">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button class="{{$btnPlain}}" type="submit">Generate join code</button>
+        </form>
+    </div>
+</div>
+{{end}}
+{{end}}
+
+  </div>
+
+{{if eq .Role "master"}}
+<script>
+(function () {
+    var accounts = {
+        {{range .Servers}}{{.ID}}: [{{range .Accounts}}{{.}},{{end}}],
+        {{end}}
+    };
+    var from = document.getElementById('move_from');
+    var account = document.getElementById('move_account');
+    function fill() {
+        account.innerHTML = '<option value="" disabled selected>Select account</option>';
+        (accounts[from.value] || []).forEach(function (a) {
+            var o = document.createElement('option');
+            o.value = o.textContent = a;
+            account.appendChild(o);
+        });
+    }
+    if (from) { from.addEventListener('change', fill); fill(); }
+    // an account can't move to the server it's already on
+    var to = document.getElementById('move_to');
+    function blockSameServer() {
+        Array.prototype.forEach.call(to.options, function (o) {
+            o.disabled = !o.value || o.value === from.value;
+        });
+        if (to.value === from.value) { to.selectedIndex = 0; }
+    }
+    if (from && to) { from.addEventListener('change', blockSameServer); blockSameServer(); }
+
+    // colors tell what a sync does to the slave: red struck out is removed, green is added or raised, orange is lowered
+    var DIFF = { removed: '#dc2626', added: '#16a34a', lowered: '#ea580c', changed: '#2563eb' };
+    function piece(text, color, strike) {
+        var el = document.createElement('span');
+        el.textContent = text;
+        el.style.color = color;
+        if (strike) { el.style.textDecoration = 'line-through'; }
+        return el;
+    }
+    function legend() {
+        var el = document.createElement('div');
+        el.className = 'pb-2 mb-1 flex flex-wrap gap-4 text-xs border-b border-gray-200 dark:border-gray-800';
+        [['removed', 'removed or turned off', true], ['added', 'added, increased or turned on', false], ['lowered', 'decreased', false], ['changed', 'changed', false]].forEach(function (l) {
+            el.appendChild(piece(l[1], DIFF[l[0]], l[2]));
+        });
+        return el;
+    }
+    var ON = ['yes', 'on', 'true', '1', 'enabled', 'enable'], OFF = ['no', 'off', 'false', '0', 'disabled', 'disable'];
+    function flag(v) {
+        v = String(v).trim().toLowerCase();
+        return ON.indexOf(v) >= 0 ? true : OFF.indexOf(v) >= 0 ? false : null;
+    }
+    function changeLine(c) {
+        var line = document.createElement('div');
+        line.className = 'py-1 break-all';
+        var key = document.createElement('span');
+        key.className = 'font-mono text-xs';
+        key.textContent = c.key + ': ';
+        line.appendChild(key);
+        var oldV = c.old || '', newV = c.new || '';
+        var a = parseFloat(oldV), b = parseFloat(newV);
+        var numeric = oldV !== '' && newV !== '' && !isNaN(a) && !isNaN(b) && String(a) === oldV.trim() && String(b) === newV.trim();
+        var list = function (v) { return v.split(',').map(function (x) { return x.trim(); }).filter(Boolean); };
+        if (oldV.indexOf(',') >= 0 && newV.indexOf(',') >= 0) {
+            // comma lists like enabled_modules only show what was added or removed, order alone isn't a change worth reading
+            var before = list(oldV), after = list(newV);
+            var gone = before.filter(function (x) { return after.indexOf(x) < 0; });
+            var added = after.filter(function (x) { return before.indexOf(x) < 0; });
+            if (!gone.length && !added.length) {
+                line.appendChild(piece('only the order changed', '#6b7280', false));
+            }
+            gone.forEach(function (x, i) {
+                line.appendChild(piece(x, DIFF.removed, true));
+                line.appendChild(document.createTextNode(i < gone.length - 1 || added.length ? ', ' : ''));
+            });
+            added.forEach(function (x, i) {
+                line.appendChild(piece('+' + x, DIFF.added, false));
+                if (i < added.length - 1) { line.appendChild(document.createTextNode(', ')); }
+            });
+        } else if (newV === '') {
+            line.appendChild(piece(oldV, DIFF.removed, true));
+        } else if (oldV === '') {
+            line.appendChild(piece(newV, DIFF.added, false));
+        } else if (flag(oldV) !== null && flag(newV) !== null && flag(oldV) !== flag(newV)) {
+            // switched on is green like something added, switched off is red like something removed
+            var on = flag(newV);
+            line.appendChild(piece(oldV, '#6b7280', true));
+            line.appendChild(document.createTextNode(' \u2192 '));
+            line.appendChild(piece(newV, on ? DIFF.added : DIFF.removed, false));
+        } else {
+            var kind = numeric ? (b > a ? 'added' : 'lowered') : 'changed';
+            line.appendChild(piece(oldV, '#6b7280', true));
+            line.appendChild(document.createTextNode(' \u2192 '));
+            line.appendChild(piece(newV + (numeric ? (b > a ? ' \u25B2' : ' \u25BC') : ''), DIFF[kind], false));
+        }
+        if (c.pinned) {
+            line.style.opacity = '.55';
+            line.appendChild(document.createTextNode(' (pinned, kept)'));
+        }
+        return line;
+    }
+
+    document.querySelectorAll('[data-diff]').forEach(function (btn) {
+        var id = btn.getAttribute('data-diff');
+        var row = document.getElementById('diff-row-' + id);
+        var box = document.getElementById('diff-' + id);
+        function load() {
+            btn.textContent = 'Loading...';
+            var q = '/server/cluster/diff?node=' + encodeURIComponent(id);
+            if (document.getElementById('group_secrets').checked) { q += '&secrets=1'; }
+            if (document.getElementById('group_ns').checked) { q += '&ns=1'; }
+            fetch(q, { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+                box.textContent = '';
+                if (d.error) { btn.textContent = 'Unavailable'; box.textContent = d.error; return; }
+                var changes = d.changes || [];
+                btn.textContent = changes.length ? changes.length + ' to review' : 'In sync';
+                if (!changes.length) { box.textContent = 'In sync.'; row.classList.add('hidden'); }
+                if (changes.length) { box.appendChild(legend()); }
+                changes.forEach(function (c) { box.appendChild(changeLine(c)); });
+            }).catch(function (e) { btn.textContent = 'Unavailable'; box.textContent = String(e); });
+        }
+        btn.addEventListener('click', function () { row.classList.toggle('hidden'); });
+        ['group_secrets', 'group_ns'].forEach(function (g) { document.getElementById(g).addEventListener('change', load); });
+        load();
+    });
+})();
+</script>
+{{end}}
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

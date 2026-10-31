@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"openadmin/internal/cluster"
 	"openadmin/internal/paneldb"
 )
 
@@ -23,6 +24,10 @@ const summaryLookbackDays = 7
 
 // userSummary is the part of OpenPanel's saved summary JSON the dashboard needs
 type userSummary struct {
+	// where this account lives when a master adds up several servers, not part of the saved file
+	Server string `json:"-"`
+	Link   string `json:"-"`
+
 	Username     string `json:"username"`
 	Date         string `json:"date"`
 	PrevRequests int    `json:"prev_requests"`
@@ -45,6 +50,8 @@ type userSummary struct {
 
 // summaryFinding is one account's problem on the widget
 type summaryFinding struct {
+	Server   string
+	Link     string
 	Username string
 	Title    string
 	Detail   string
@@ -52,6 +59,8 @@ type summaryFinding struct {
 
 // summarySite is one website on the busiest list
 type summarySite struct {
+	Server   string
+	Link     string
 	Name     string
 	Username string
 	Requests string
@@ -72,11 +81,15 @@ type serverSummary struct {
 	Delta     string
 	DeltaUp   bool
 	Attention []summaryFinding
+	// more than one when a master adds up its members
+	Servers int
 	// accounts with something worth a look, only counted
 	LookCount    int
 	LookAccounts int
 	MoreAttn     int
 	Sites        []summarySite
+	// findings before the list is cut to 8, the collapsed widget shows this count
+	AttentionTotal int
 }
 
 // summaryEnabled is the summary module being on in OpenPanel, the widget only shows then
@@ -89,6 +102,78 @@ var (
 	serverSummaryMu    sync.Mutex
 	serverSummaryCache = map[string]*ttlCache[*serverSummary]{}
 )
+
+// ClusterManager is set on every server, a master uses it to add up its members
+var ClusterManager *cluster.Manager
+
+type clusterSummaries struct {
+	Day   string        `json:"day"`
+	Found []userSummary `json:"found"`
+}
+
+// ClusterSummaries is this server's part of a master's combined summary
+func ClusterSummaries(db *sql.DB) func() any {
+	return func() any {
+		users, err := paneldb.ListUsernames(db, "")
+		if err != nil {
+			return clusterSummaries{}
+		}
+		day, found := collectUserSummaries(users, time.Now())
+		return clusterSummaries{Day: day, Found: found}
+	}
+}
+
+// cachedClusterSummary adds up every member's newest day, a member that hasn't reported that day yet stays out rather than mixing days
+func cachedClusterSummary(db *sql.DB, userID int64) *serverSummary {
+	key := fmt.Sprintf("cluster:%d", userID)
+	serverSummaryMu.Lock()
+	c, ok := serverSummaryCache[key]
+	if !ok {
+		c = &ttlCache[*serverSummary]{ttl: 5 * time.Minute}
+		serverSummaryCache[key] = c
+	}
+	serverSummaryMu.Unlock()
+	return c.get(func() *serverSummary {
+		parts := []clusterSummaries{}
+		if users, err := paneldb.ListUsernames(db, ""); err == nil {
+			day, found := collectUserSummaries(users, time.Now())
+			for i := range found {
+				found[i].Server = ClusterManager.Hostname
+			}
+			parts = append(parts, clusterSummaries{Day: day, Found: found})
+		}
+		ClusterManager.CallAll("summaries", func(id, name string, raw json.RawMessage) {
+			var p clusterSummaries
+			if json.Unmarshal(raw, &p) != nil {
+				return
+			}
+			for i := range p.Found {
+				p.Found[i].Server = name
+				p.Found[i].Link = ClusterManager.OpenLink(userID, id, "/users/"+p.Found[i].Username)
+			}
+			parts = append(parts, p)
+		})
+		newest := ""
+		for _, p := range parts {
+			if p.Day > newest && len(p.Found) > 0 {
+				newest = p.Day
+			}
+		}
+		var found []userSummary
+		servers := 0
+		for _, p := range parts {
+			if p.Day == newest && len(p.Found) > 0 {
+				found = append(found, p.Found...)
+				servers++
+			}
+		}
+		out := summarizeDay(newest, found)
+		if out != nil {
+			out.Servers = servers
+		}
+		return out
+	})
+}
 
 // cachedServerSummary is the summary for everyone, or only owner's accounts when owner is a reseller
 func cachedServerSummary(db *sql.DB, owner string) *serverSummary {
@@ -119,6 +204,11 @@ func loadUserSummary(username, date string) (userSummary, bool) {
 
 // buildServerSummary adds up the newest day any of these accounts has a summary for, nil when none do
 func buildServerSummary(users []string, now time.Time) *serverSummary {
+	day, found := collectUserSummaries(users, now)
+	return summarizeDay(day, found)
+}
+
+func collectUserSummaries(users []string, now time.Time) (string, []userSummary) {
 	var day string
 	var found []userSummary
 	for i := 1; i <= summaryLookbackDays && len(found) == 0; i++ {
@@ -132,6 +222,10 @@ func buildServerSummary(users []string, now time.Time) *serverSummary {
 			}
 		}
 	}
+	return day, found
+}
+
+func summarizeDay(day string, found []userSummary) *serverSummary {
 	if len(found) == 0 {
 		return nil
 	}
@@ -146,6 +240,8 @@ func buildServerSummary(users []string, now time.Time) *serverSummary {
 	type site struct {
 		name, user string
 		requests   int
+		server     string
+		link       string
 	}
 	var sites []site
 	lookAccounts := map[string]bool{}
@@ -157,7 +253,7 @@ func buildServerSummary(users []string, now time.Time) *serverSummary {
 			errors += w.ServerErrors
 			blocked += w.WAFBlocked
 			if w.Requests > 0 {
-				sites = append(sites, site{w.Name, s.Username, w.Requests})
+				sites = append(sites, site{w.Name, s.Username, w.Requests, s.Server, s.Link})
 			}
 		}
 		if s.PrevRequests < 0 {
@@ -167,7 +263,7 @@ func buildServerSummary(users []string, now time.Time) *serverSummary {
 		}
 		for _, it := range s.Attention {
 			// plugin names come from WordPress already entity encoded, the template escapes them again
-			out.Attention = append(out.Attention, summaryFinding{Username: s.Username, Title: html.UnescapeString(it.Title), Detail: html.UnescapeString(it.Detail)})
+			out.Attention = append(out.Attention, summaryFinding{Server: s.Server, Link: s.Link, Username: s.Username, Title: html.UnescapeString(it.Title), Detail: html.UnescapeString(it.Detail)})
 		}
 		if len(s.Look) > 0 {
 			out.LookCount += len(s.Look)
@@ -195,10 +291,11 @@ func buildServerSummary(users []string, now time.Time) *serverSummary {
 		sites = sites[:5]
 	}
 	for _, s := range sites {
-		out.Sites = append(out.Sites, summarySite{Name: s.name, Username: s.user, Requests: commaNum(s.requests), Share: max(s.requests*100/sites[0].requests, 1)})
+		out.Sites = append(out.Sites, summarySite{Server: s.server, Link: s.link, Name: s.name, Username: s.user, Requests: commaNum(s.requests), Share: max(s.requests*100/sites[0].requests, 1)})
 	}
 
 	// the widget only lists the first few, the rest are a count
+	out.AttentionTotal = len(out.Attention)
 	if len(out.Attention) > 8 {
 		out.MoreAttn = len(out.Attention) - 8
 		out.Attention = out.Attention[:8]

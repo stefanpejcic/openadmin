@@ -5,6 +5,7 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
 	"os"
 	"strings"
@@ -90,6 +91,15 @@ var (
 	ChromeOpenpanelRestartFlagPath = "/root/openpanel_restart_needed"
 	ChromeOpenadminRestartFlagPath = "/root/openadmin_restart_needed"
 )
+
+// ChromeClusterSwitcher returns the script tag for the server switcher, empty unless this server is a master
+var ChromeClusterSwitcher = func() string { return "" }
+
+// ChromeSummaryAttention says if the daily summary has issues, set by main since it needs the dashboard's database
+var ChromeSummaryAttention func(r *http.Request) bool
+
+// ChromeClusterCount is how many servers the dashboard shows, a standalone server is one
+var ChromeClusterCount = func() int { return 1 }
 
 // InitChromeSiteInfo records the server-wide values computed once at
 // startup. modulesConfigPath is the openpanel.config path passed to
@@ -178,11 +188,25 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 		RestartMessages:     restartMessages,
 		TourShow:            tourShow,
 		CustomCSSEnabled:    chromeSite.CustomCSSEnabled,
+		ClusterSwitcher:     template.HTML(ChromeClusterSwitcher()),
+		ClusterCount:        ChromeClusterCount(),
 		MenuStyle:           currentMenuStyle(),
 	}
 	if c.MenuStyle == "modern" {
 		c.NavItems, c.PageTabs = webtemplates.BuildModernNav(&c)
 		c.HelpDoc, c.HelpPart = webtemplates.HelpDocFor(c.PageTabs, c.CurrentPath)
+	}
+	// these pages share a tab bar in both menu styles
+	c.SummaryTab = summaryEnabled()
+	if tabs := webtemplates.DashboardTabs(&c); tabs != nil {
+		if c.SummaryTab && ChromeSummaryAttention != nil {
+			c.SummaryAttention = ChromeSummaryAttention(r)
+			tabs = webtemplates.DashboardTabs(&c)
+		}
+		c.PageTabs = tabs
+		c.HelpDoc, c.HelpPart = webtemplates.HelpDocFor(c.PageTabs, c.CurrentPath)
+	}
+	if c.MenuStyle == "modern" {
 		for i, item := range c.NavItems {
 			if item.Active && c.AreaLabel == "" {
 				c.AreaLabel, c.AreaHref = item.Label, item.Href
@@ -236,6 +260,8 @@ func mergeChrome(data map[string]interface{}, r *http.Request, title string) map
 	data["RestartMessages"] = c.RestartMessages
 	data["TourShow"] = c.TourShow
 	data["CustomCSSEnabled"] = c.CustomCSSEnabled
+	data["ClusterSwitcher"] = c.ClusterSwitcher
+	data["ClusterCount"] = c.ClusterCount
 	data["MenuStyle"] = c.MenuStyle
 	data["NavItems"] = c.NavItems
 	data["PageTabs"] = c.PageTabs

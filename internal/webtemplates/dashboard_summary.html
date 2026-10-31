@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+{{with .Summary}}
+<!-- every account's day added up, page header like the other pages and the two lists as widgets -->
+<div class="border-b border-gray-200 bg-gray-50 p-4 px-6 dark:border-gray-800 dark:bg-gray-950" style="min-height:113px">
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="grow">
+            <h1 class="mb-1 text-xl font-bold">Daily Summary</h1>
+            <p class="text-sm/6 text-gray-500 dark:text-gray-500">{{.DayLabel}}{{if gt .Servers 1}} &middot; {{.Servers}} servers{{end}} &middot; {{.Accounts}} {{if eq .Accounts 1}}account{{else}}accounts{{end}}{{if .AttentionTotal}} &middot; <span class="font-medium text-amber-600 dark:text-amber-500">{{.AttentionTotal}} {{if eq .AttentionTotal 1}}needs{{else}}need{{end}} attention</span>{{end}}</p>
+            <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{.Headline}}</p>
+        </div>
+    <dl class="flex flex-wrap items-center gap-x-12 gap-y-2">
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">Requests</dt>
+            <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Requests}}</p>{{if .Delta}}<span class="text-sm font-medium {{if .DeltaUp}}text-green-600 dark:text-green-400{{else}}text-red-600 dark:text-red-500{{end}}">{{.Delta}}</span>{{end}}</dd>
+        </div>
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">Visitors</dt>
+            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Visitors}}</p></dd>
+        </div>
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">Data sent</dt>
+            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Sent}}</p></dd>
+        </div>
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">Server errors</dt>
+            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Errors}}</p></dd>
+        </div>
+        <div>
+            <dt class="font-mono uppercase text-xs md:text-sm">WAF blocks</dt>
+            <dd class="mt-1.5"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Blocked}}</p></dd>
+        </div>
+    </dl>
+    </header>
+</div>
+
+<!-- sections like the settings pages: title and note on the left, content on the right -->
+<div class="p-4 px-6">
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Needs attention</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Issues found on accounts that day, each links to the account.</p>
+        </div>
+        <div class="md:col-span-2">
+            {{if .Attention}}
+            <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Attention}}
+                <li class="py-2 text-sm">
+                    <a href="{{if .Link}}{{.Link}}{{else}}/users/{{.Username}}{{end}}" class="font-medium text-indigo-600 dark:text-indigo-400">{{.Username}}</a>{{if .Server}} <span class="text-xs text-gray-500 dark:text-gray-500">{{.Server}}</span>{{end}}
+                    <span class="text-gray-900 dark:text-gray-50">{{.Title}}</span>
+                    {{if .Detail}}<p class="text-gray-500 dark:text-gray-500">{{.Detail}}</p>{{end}}
+                </li>
+                {{end}}
+            </ul>
+            {{if .MoreAttn}}<p class="mt-2 text-sm text-gray-500 dark:text-gray-500">and {{.MoreAttn}} more</p>{{end}}
+            {{else}}
+            <p class="text-sm text-gray-500 dark:text-gray-500">Nothing needs attention.</p>
+            {{end}}
+            {{if .LookCount}}<p class="mt-2 text-sm text-gray-500 dark:text-gray-500">{{.LookCount}} {{if eq .LookCount 1}}thing is{{else}}things are{{end}} worth a look on {{.LookAccounts}} {{if eq .LookAccounts 1}}account{{else}}accounts{{end}}.</p>{{end}}
+        </div>
+    </div>
+
+    <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Busiest websites</h2>
+            <p class="mt-1 text-sm leading-6 text-gray-500">Websites with the most requests that day.</p>
+        </div>
+        <div class="md:col-span-2">
+            {{if .Sites}}
+            <ul role="list" class="space-y-3">
+                {{range .Sites}}
+                <li class="text-sm">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="truncate text-gray-900 dark:text-gray-50">{{.Name}} <a href="{{if .Link}}{{.Link}}{{else}}/users/{{.Username}}{{end}}" class="text-gray-500 dark:text-gray-500">{{.Username}}</a></span>
+                        <span class="text-gray-500 dark:text-gray-500">{{.Requests}}</span>
+                    </div>
+                    <div class="mt-1 flex w-full items-center" role="progressbar" aria-label="Share of requests">
+                        <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
+                            <div class="h-full flex-col rounded-full bg-blue-500 dark:bg-blue-500" style="width: {{.Share}}%;"></div>
+                        </div>
+                    </div>
+                </li>
+                {{end}}
+            </ul>
+            {{else}}
+            <p class="text-sm text-gray-500 dark:text-gray-500">No website had visitors.</p>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{else}}
+<div class="border-b border-gray-200 bg-gray-50 p-4 px-6 dark:border-gray-800 dark:bg-gray-950">
+    <h1 class="mb-1 text-xl font-bold">Daily Summary</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-500">No daily summary yet. Summaries are saved each day at 06:15 for the day before, for accounts that have the summary feature.</p>
+</div>
+{{end}}
+    </main>
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>

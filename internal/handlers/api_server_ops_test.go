@@ -18,8 +18,6 @@ func newAPIServerOpsMux(a *APIServerOps) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/server/timezone", a.ServeTimezone)
 	mux.HandleFunc("POST /api/server/timezone", a.ServeTimezone)
-	mux.HandleFunc("GET /api/server/node", a.ServeNode)
-	mux.HandleFunc("POST /api/server/node", a.ServeNode)
 	mux.HandleFunc("POST /api/server/root-password", a.ServeRootPassword)
 	mux.HandleFunc("POST /api/server/reboot", a.ServeReboot)
 	return mux
@@ -99,74 +97,6 @@ func withScratchAPIAdminConfig(t *testing.T) {
 	orig := config.AdminConfigPath
 	config.AdminConfigPath = filepath.Join(dir, "admin.ini")
 	t.Cleanup(func() { config.AdminConfigPath = orig })
-}
-
-func TestAPIServeNodeGetEmptyConfig(t *testing.T) {
-	withScratchAPIAdminConfig(t)
-
-	a := &APIServerOps{}
-	srv := httptest.NewServer(newAPIServerOpsMux(a))
-	defer srv.Close()
-
-	resp, err := http.Get(srv.URL + "/api/server/node")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	var body map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&body)
-	if body["default_node"] != "" || body["ssh_valid"] != nil {
-		t.Fatalf("unexpected body: %+v", body)
-	}
-}
-
-func TestAPIServeNodePostSkipsSaveOnSSHValidationFailure(t *testing.T) {
-	withScratchAPIAdminConfig(t)
-
-	orig := slaveValidateSSHConnection
-	slaveValidateSSHConnection = func(node, key string) (bool, string) { return false, "connection refused" }
-	t.Cleanup(func() { slaveValidateSSHConnection = orig })
-
-	a := &APIServerOps{}
-	srv := httptest.NewServer(newAPIServerOpsMux(a))
-	defer srv.Close()
-
-	resp, err := http.Post(srv.URL+"/api/server/node", "application/json",
-		strings.NewReader(`{"default_node":"root@1.2.3.4","default_ssh_key_path":"/root/.ssh/id_rsa"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", resp.StatusCode)
-	}
-	body, _ := io.ReadAll(resp.Body)
-	if !strings.Contains(string(body), "SSH validation failed: connection refused") {
-		t.Fatalf("unexpected error message: %s", body)
-	}
-}
-
-func TestAPIServeNodePostSavesWithoutSSHFields(t *testing.T) {
-	withScratchAPIAdminConfig(t)
-
-	a := &APIServerOps{}
-	srv := httptest.NewServer(newAPIServerOpsMux(a))
-	defer srv.Close()
-
-	resp, err := http.Post(srv.URL+"/api/server/node", "application/json", strings.NewReader(`{"default_node":"root@5.6.7.8"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
-	}
-
-	cfg := config.Load(config.AdminConfigPath)
-	if cfg.Get("CLUSTERING", "default_node", "") != "root@5.6.7.8" {
-		t.Fatalf("expected default_node saved, got %+v", cfg)
-	}
 }
 
 // --- root password ---

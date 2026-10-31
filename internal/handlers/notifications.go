@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"openadmin/internal/auth"
+	"openadmin/internal/cluster"
 	"openadmin/internal/webtemplates"
 )
 
@@ -287,6 +288,19 @@ func notificationMatches(e Notification, query, status, severity, category strin
 }
 
 // ServeView handles GET /notifications.
+// ClusterNotifications is what the master shows for this server on its own /notifications
+func ClusterNotifications() []cluster.NotificationBrief {
+	entries, err := readNotifications()
+	if err != nil {
+		return nil
+	}
+	out := make([]cluster.NotificationBrief, 0, len(entries))
+	for _, e := range entries {
+		out = append(out, cluster.NotificationBrief{Time: e.Time, Severity: e.Severity, Title: e.Title, Message: e.Message, Unread: e.Unread()})
+	}
+	return out
+}
+
 func (n *Notifications) ServeView(w http.ResponseWriter, r *http.Request) {
 	entries, err := readNotifications()
 	if err != nil {

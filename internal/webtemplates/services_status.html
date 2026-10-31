@@ -39,6 +39,11 @@ document.addEventListener('alpine:init', () => {
     });
 });
 
+// a row of another server posts through the master, its status has to be asked for the same way
+function serviceStatusBase(form) {
+    return (form.getAttribute('action') || '/services').replace(/\/$/, '');
+}
+
 function restartAdminService(form) {
     showToast('OpenAdmin is restarting, please wait…', 'loading', true);
 
@@ -46,6 +51,7 @@ function restartAdminService(form) {
         method: 'POST',
         body: new FormData(form)
     }).catch(function () {});
+    const statusUrl = serviceStatusBase(form) + '/admin/status';
 
     let timeout = 60;
     let timer;
@@ -53,7 +59,7 @@ function restartAdminService(form) {
 
     function checkAdminStatus() {
         $.ajax({
-            url: '/services/admin/status',
+            url: statusUrl,
             method: 'GET',
             cache: false,
             success: function (response) {
@@ -105,7 +111,7 @@ function submitServiceAction(form, loadingMessage, onSettled) {
     let timer;
 
     function poll() {
-        fetch('/services/action-status?real_name=' + encodeURIComponent(realName), { cache: 'no-store' })
+        fetch(serviceStatusBase(form) + '/action-status?real_name=' + encodeURIComponent(realName), { cache: 'no-store' })
             .then(function (response) { return response.json(); })
             .then(function (data) {
                 if (!data.done) {
@@ -392,6 +398,34 @@ function submitServiceAction(form, loadingMessage, onSettled) {
     {{template "chrome_after_main" .}}
     </div>
 </div>
+<script>
+// with a column per server, a service that needs a restart on several servers gets one button for all of them
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('tr').forEach(function (row) {
+        var badges = Array.prototype.filter.call(row.querySelectorAll('span'), function (s) { return s.textContent.trim() === 'RESTART NEEDED'; });
+        if (badges.length < 2) { return; }
+        var forms = Array.prototype.filter.call(row.querySelectorAll('form'), function (f) {
+            var a = f.querySelector('input[name="action"]');
+            return a && a.value === 'restart' && Array.prototype.some.call(f.parentElement.querySelectorAll('span'), function (s) { return s.textContent.trim() === 'RESTART NEEDED'; });
+        });
+        if (forms.length < 2) { return; }
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'mt-1 block cursor-pointer text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400';
+        btn.textContent = 'Restart on all ' + forms.length + ' servers';
+        btn.addEventListener('click', function () {
+            if (!confirm('Restart this service on ' + forms.length + ' servers?')) { return; }
+            btn.disabled = true;
+            btn.textContent = 'Restarting...';
+            Promise.all(forms.map(function (f) {
+                return fetch(f.action, { method: 'POST', body: new FormData(f), credentials: 'same-origin' });
+            })).then(function () { location.reload(); }, function () { location.reload(); });
+        });
+        var nameCell = badges[0].closest('tr').querySelector('td:not(.hidden) + td, td:nth-child(3)');
+        (row.querySelector('td.font-medium') || nameCell || row.cells[1]).appendChild(btn);
+    });
+});
+</script>
 {{template "chrome_scripts_bottom" .}}
 </body>
 </html>

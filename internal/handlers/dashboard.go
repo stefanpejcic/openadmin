@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -65,6 +66,8 @@ type dashboardPageData struct {
 	Flashes []auth.Flash
 	// nil when the summary module is off or no account has a saved summary yet
 	Summary *serverSummary
+	// the admin's saved widget order, sizes, collapsed widgets and header buttons, "null" when never changed
+	Layout template.JS
 }
 
 // onboardingPageData is the shape webtemplates/onboarding.html renders
@@ -151,6 +154,15 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		RunningContainers: <-containers,
 		MailCount:         emailCount(),
 	}
+	if ClusterManager != nil && ClusterManager.IsMaster() {
+		other := clusterCountsCache.get(otherMembersCounts)
+		data.UserCount += other.UserCount
+		data.PlanCount += other.PlanCount
+		data.SiteCount += other.SiteCount
+		data.DomainCount += other.DomainCount
+		data.RunningContainers += other.RunningContainers
+		data.MailCount += other.MailCount
+	}
 
 	if wantJSON {
 		writeJSON(w, data)
@@ -160,8 +172,144 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		Chrome:             buildChrome(r, "Dashboard"),
 		dashboardAdminData: data,
 		Flashes:            auth.PopFlashes(w, r, d.Sessions),
-		Summary:            d.summary(""),
+		Layout:             d.layout(r),
 	})
+}
+
+// pageSummary is the daily summary this admin or reseller sees
+func (d *Dashboard) pageSummary(r *http.Request) *serverSummary {
+	u := auth.CurrentUser(r)
+	if u != nil && u.Role == "reseller" {
+		return d.summary(u.Username)
+	}
+	return d.adminSummary(r)
+}
+
+// ServeSummary handles GET /dashboard/summary, the daily summary on a tab of its own
+func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
+	s := d.pageSummary(r)
+	// opening it clears the tab's mark until a newer day's summary comes in
+	if u := auth.CurrentUser(r); u != nil && s != nil && d.AdminDB != nil {
+		_ = d.AdminDB.SetPref(u.ID, summarySeenPref, s.Date)
+	}
+	webtemplates.Render(w, "dashboard_summary.html", dashboardPageData{
+		Chrome:  buildChrome(r, "Daily Summary"),
+		Flashes: auth.PopFlashes(w, r, d.Sessions),
+		Summary: s,
+	})
+}
+
+const summarySeenPref = "summary_seen"
+
+// SummaryNeedsAttention puts the orange dot on the Daily Summary tab
+func (d *Dashboard) SummaryNeedsAttention(r *http.Request) bool {
+	if !summaryEnabled() {
+		return false
+	}
+	s := d.pageSummary(r)
+	if s == nil || s.AttentionTotal == 0 {
+		return false
+	}
+	if u := auth.CurrentUser(r); u != nil && d.AdminDB != nil {
+		if seen, _ := d.AdminDB.Pref(u.ID, summarySeenPref); seen == s.Date {
+			return false
+		}
+	}
+	return true
+}
+
+const layoutPref = "dashboard_layout"
+
+// layout is the saved dashboard layout, it was checked to be a json object when saved
+func (d *Dashboard) layout(r *http.Request) template.JS {
+	u := auth.CurrentUser(r)
+	if u == nil {
+		return "null"
+	}
+	return template.JS(DashboardLayoutJSON(d.AdminDB, u.ID))
+}
+
+// DashboardLayoutJSON is an admin's saved layout, a cluster master also puts it into the dashboards of its other servers
+func DashboardLayoutJSON(db *admindb.DB, userID int64) string {
+	if db == nil {
+		return "null"
+	}
+	v, err := db.Pref(userID, layoutPref)
+	if err != nil || v == "" {
+		return "null"
+	}
+	return v
+}
+
+// HandleLayout handles POST /dashboard/layout, an empty object resets to the default layout
+func (d *Dashboard) HandleLayout(w http.ResponseWriter, r *http.Request) {
+	u := auth.CurrentUser(r)
+	if u == nil || d.AdminDB == nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	var layout map[string]any
+	if err := json.NewDecoder(io.LimitReader(r.Body, 16<<10)).Decode(&layout); err != nil {
+		http.Error(w, "bad layout", http.StatusBadRequest)
+		return
+	}
+	value := ""
+	if len(layout) > 0 {
+		// stored re-encoded so only clean json ever reaches the page
+		raw, err := json.Marshal(layout)
+		if err != nil {
+			http.Error(w, "bad layout", http.StatusBadRequest)
+			return
+		}
+		value = string(raw)
+	}
+	if err := d.AdminDB.SetPref(u.ID, layoutPref, value); err != nil {
+		http.Error(w, "could not save the layout", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+var clusterCountsCache = &ttlCache[dashboardAdminData]{ttl: 30 * time.Second}
+
+// otherMembersCounts is what the other servers add to a master's dashboard numbers
+func otherMembersCounts() dashboardAdminData {
+	var total dashboardAdminData
+	ClusterManager.CallAll("dash_counts", func(_, _ string, raw json.RawMessage) {
+		var c dashboardAdminData
+		if json.Unmarshal(raw, &c) != nil {
+			return
+		}
+		total.UserCount += c.UserCount
+		total.PlanCount += c.PlanCount
+		total.SiteCount += c.SiteCount
+		total.DomainCount += c.DomainCount
+		total.RunningContainers += c.RunningContainers
+		total.MailCount += c.MailCount
+	})
+	return total
+}
+
+// ClusterDashCounts is this server's part of a master's dashboard numbers
+func ClusterDashCounts(db *sql.DB) func() any {
+	return func() any {
+		counts, err := paneldb.GetCounts(db)
+		if err != nil {
+			return dashboardAdminData{}
+		}
+		return dashboardAdminData{
+			UserCount: counts.UserCount, PlanCount: counts.PlanCount, SiteCount: counts.SiteCount, DomainCount: counts.DomainCount,
+			RunningContainers: containerCountCache.get(localContainerCount), MailCount: emailCount(),
+		}
+	}
+}
+
+// adminSummary adds up all members on a master
+func (d *Dashboard) adminSummary(r *http.Request) *serverSummary {
+	if u := auth.CurrentUser(r); u != nil && summaryEnabled() && ClusterManager != nil && ClusterManager.IsMaster() {
+		return cachedClusterSummary(d.MySQL, u.ID)
+	}
+	return d.summary("")
 }
 
 // summary is the combined daily summary for the widget, owner scopes it to a reseller's accounts
@@ -282,7 +430,6 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 		Chrome:                buildChrome(r, "Reseller Dashboard"),
 		dashboardResellerData: data,
 		Flashes:               auth.PopFlashes(w, r, d.Sessions),
-		Summary:               d.summary(user.Username),
 	})
 }
 

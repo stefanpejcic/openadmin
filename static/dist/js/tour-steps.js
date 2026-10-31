@@ -26,8 +26,40 @@ window.TOUR_STEPS = [
         path: '/dashboard',
         element: '#tour-quick-summary',
         title: 'Quick Summary',
-        description: 'A live summary of your current Accounts, Domains, Packages and more.',
+        description: 'A live summary of your current Servers, Containers, Accounts, Domains, Packages and more, added up over all servers on a multi-server master.',
         side: 'bottom',
+        align: 'start'
+    },
+    {
+        path: '/dashboard',
+        element: '#page-tabs',
+        title: 'Dashboard tabs',
+        description: 'Notifications, the Daily Summary of all accounts and your License are tabs next to the Dashboard. An orange exclamation mark on Daily Summary means something needs attention.',
+        side: 'bottom',
+        align: 'start'
+    },
+    {
+        path: '/dashboard',
+        element: '#tour-usage-graphs',
+        title: 'Widgets',
+        description: 'Hover over a widget to drag it to another place or make it 1/3, 2/3 or full width, and use the arrow to collapse it. Your layout is saved on your account. On a multi-server master, each server gets its own line in Resource Usage, click a server name to show only that one.',
+        side: 'bottom',
+        align: 'start'
+    },
+    {
+        path: '/dashboard',
+        element: '#tour-tasks',
+        title: 'Tasks',
+        description: 'Background tasks running right now, like backups or imports, on every server of the cluster.',
+        side: 'left',
+        align: 'start'
+    },
+    {
+        path: '/dashboard',
+        element: '#cluster-health-widget',
+        title: 'Cluster',
+        description: 'Every server of your multi-server cluster with its health, users, domains, version and unread notifications. Click a value to open that page filtered to the server.',
+        side: 'left',
         align: 'start'
     },
     {
@@ -42,7 +74,7 @@ window.TOUR_STEPS = [
         path: '/dashboard',
         element: '#tour-latest-news',
         title: 'Latest News',
-        description: 'Articles from the OpenPanel blog — mostly new major features, or tips and tricks. Click Dismiss to hide this widget for good.',
+        description: 'Articles from the OpenPanel blog — mostly new major features, or tips and tricks.',
         side: 'top',
         align: 'start'
     },
