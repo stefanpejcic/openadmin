@@ -116,10 +116,86 @@
   }
 }
 
-@layer components {
-  /* thin gray scrollbars for widget lists and panels */
-  .op-scroll { scrollbar-width: thin; scrollbar-color: var(--color-gray-300) transparent; }
-  .dark .op-scroll { scrollbar-color: var(--color-gray-700) transparent; }
+@layer base {
+  /* thin gray scrollbars everywhere, color inherits down from html */
+  html { scrollbar-color: var(--color-gray-300) transparent; }
+  html.dark { scrollbar-color: var(--color-gray-700) transparent; }
+  * { scrollbar-width: thin; }
+}
+
+/* Safari ignores scrollbar-color so it gets the webkit version */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background-color: var(--color-gray-300); border: 2px solid transparent; border-radius: 9999px; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--color-gray-400); }
+  .dark ::-webkit-scrollbar-thumb { background-color: var(--color-gray-700); }
+  .dark ::-webkit-scrollbar-thumb:hover { background-color: var(--color-gray-600); }
+}
+
+/* every single select gets the Planner chevron, unlayered so px-* utilities can't eat the arrow's room */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 24 24' fill='%239ca3af' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem 1rem;
+  cursor: pointer;
+}
+.dark select:not([multiple]):not([size]) { background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 24 24' fill='%236b7280' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z'/%3e%3c/svg%3e"); }
+select:not([multiple]):not([size]):disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* browsers with customizable select draw the open list like the brandbook menu, the rest keep their native list */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]),
+  select:not([multiple]):not([size])::picker(select) { appearance: base-select; }
+  select:not([multiple]):not([size])::picker-icon { display: none; }
+  select:not([multiple]):not([size])::picker(select) {
+    margin-block: 4px;
+    padding: 4px;
+    max-height: min(20rem, 50vh);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    background-color: var(--color-white);
+    color: var(--color-gray-900);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.025), 0 8px 10px -6px rgb(0 0 0 / 0.025), 0 4px 12px rgb(0 0 0 / 0.06);
+    font-family: var(--font-sans);
+  }
+  .dark select:not([multiple]):not([size])::picker(select) {
+    border-color: var(--color-gray-800);
+    background-color: var(--color-gray-950);
+    color: var(--color-gray-50);
+  }
+  select:not([multiple]):not([size]) option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--color-gray-900);
+    cursor: pointer;
+  }
+  .dark select:not([multiple]):not([size]) option { color: var(--color-gray-50); }
+  select:not([multiple]):not([size]) option:hover,
+  select:not([multiple]):not([size]) option:focus-visible { background-color: var(--color-gray-100); outline: none; }
+  .dark select:not([multiple]):not([size]) option:hover,
+  .dark select:not([multiple]):not([size]) option:focus-visible { background-color: var(--color-gray-900); }
+  select:not([multiple]):not([size]) option:checked { font-weight: 500; }
+  select:not([multiple]):not([size]) option:disabled { color: var(--color-gray-400); cursor: not-allowed; }
+  select:not([multiple]):not([size]) option::checkmark {
+    order: 1;
+    margin-left: auto;
+    content: "";
+    width: 1rem;
+    height: 1rem;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3csvg viewBox='0 0 24 24' fill='black' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z'/%3e%3c/svg%3e") center / contain no-repeat;
+  }
+  select:not([multiple]):not([size]) optgroup { padding-top: 4px; font-size: 0.75rem; font-weight: 500; color: var(--color-gray-500); }
+  select:not([multiple]):not([size]) optgroup legend { padding: 6px 8px 2px; }
 }
 
 /* tour popovers from driver.js in the brandbook look, its stylesheet loads after this one so these go through html */
