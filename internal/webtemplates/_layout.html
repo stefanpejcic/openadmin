@@ -56,7 +56,7 @@
       .dark .op-help th{color:var(--color-gray-50)}
     </style>
     <script>(function(){const sidebarState=sessionStorage.getItem('sidebarOpen');const isMobile=window.innerWidth<768;let isOpen=sidebarState===null?!isMobile:sidebarState==='true';if(isOpen){document.documentElement.classList.add('sidebar-open');}else{document.documentElement.classList.remove('sidebar-open');}})();</script>
-    <style>#sidebar{display:none;width:16rem}#header,#no_margin_for_iframe{margin-left:0;transition:margin .2s ease-in-out}.sidebar-open #sidebar{display:block}.sidebar-open #header,.sidebar-open #no_margin_for_iframe{margin-left:16rem}@media (max-width:767px){.sidebar-open #header,.sidebar-open #no_margin_for_iframe{margin-left:0}} html.sidebar-open button[onclick="toggleSidebar()"] {cursor: w-resize;} html:not(.sidebar-open) button[onclick="toggleSidebar()"] {cursor: e-resize;}</style>
+    <style>#sidebar{display:none;width:16rem}#header,#no_margin_for_iframe{margin-left:0;transition:margin .15s cubic-bezier(0.16,1,0.3,1)}.sidebar-open #sidebar{display:block}.sidebar-open #header,.sidebar-open #no_margin_for_iframe{margin-left:16rem}@media (max-width:767px){.sidebar-open #header,.sidebar-open #no_margin_for_iframe{margin-left:0}} html.sidebar-open button[onclick="toggleSidebar()"] {cursor: w-resize;} html:not(.sidebar-open) button[onclick="toggleSidebar()"] {cursor: e-resize;}</style>
 
     <script>(function(){let a=0;function u(){document.body.style.cursor=a>0?"progress":"default"}const f=window.fetch;window.fetch=async function(...args){a++;u();try{return await f.apply(this,args)}finally{a--;u()}};const X=window.XMLHttpRequest;function C(){const x=new X();x.addEventListener("loadstart",()=>{a++;u()});x.addEventListener("loadend",()=>{a--;u()});return x}window.XMLHttpRequest=C})();</script>
     <link rel="stylesheet" href="{{asset "/static/dist/output.css"}}">
@@ -88,22 +88,23 @@
                             <div data-sidebar="group-content" class="w-full text-sm">
                                 <form x-data="searchDropdown()" x-init="init()" @click.away="closeDropdown()" action="./" method="get" autocomplete="off" novalidate="">
                                   <div class="relative w-full [&>input]:sm:py-1.5">
-                                    <input type="search" x-model="query" @input.debounce.300ms="handleInput()" autofocus id="searchInput" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 pl-8" placeholder="Search...">
+                                    <input type="search" x-model="query" @input.debounce.300ms="handleInput()" autofocus id="searchInput" aria-label="Search pages, users and websites" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 pl-8" placeholder="Search...">
                                     <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                                       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor">
                                         <path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/>
                                       </svg>
                                     </div>
-                                    <ul x-show="dropdownOpen" x-transition class="absolute z-50 overflow-hidden rounded-md shadow-xl shadow-black/[2.5%] min-w-48 bg-white dark:bg-raised text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800" style="top: 100%; width: 100%; right: 0px; overflow-x: hidden; overflow-y: overlay; max-height: 90vh;" id="filteredDropdown">
+                                    <ul x-show="dropdownOpen" x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" role="listbox" aria-label="Search results" class="absolute mt-1 min-w-48 overflow-hidden z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950 text-gray-900 dark:text-gray-50" style="top: 100%; width: 100%; right: 0px; overflow-x: hidden; overflow-y: overlay; max-height: 90vh;" id="filteredDropdown">
                                       <template x-for="item in filteredItems" :key="item.id">
-                                        <li class="p-1 hover:bg-gray-200 hover:dark:bg-gray-500 border-b border-gray-200 dark:border-gray-800">
-                                          <h3 class="m-0" x-html="item.html"></h3>
+                                        <li :role="item.heading ? 'presentation' : 'option'" :class="item.heading ? 'px-2 pt-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-500' : 'rounded px-2 py-1.5 text-sm transition-colors hover:bg-gray-100 focus-within:bg-gray-100 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900'">
+                                          <template x-if="item.heading"><span x-text="item.heading"></span></template>
+                                          <template x-if="!item.heading"><div x-html="item.html"></div></template>
                                         </li>
                                       </template>
                                     </ul>
                                   </div>
                                 </form>
-                                <script>function searchDropdown(){return{query:'',dropdownOpen:false,filteredItems:[],isReseller:false,PERSON_FILL:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 22C4 17.5817 7.58172 14 12 14C16.4183 14 20 17.5817 20 22H4ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13Z"/></svg>',PERSON_FILL_X:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 14.252V22H4C4 17.5817 7.58172 14 12 14C12.6906 14 13.3608 14.0875 14 14.252ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13ZM19 16.5858L21.1213 14.4645L22.5355 15.8787L20.4142 18L22.5355 20.1213L21.1213 21.5355L19 19.4142L16.8787 21.5355L15.4645 20.1213L17.5858 18L15.4645 15.8787L16.8787 14.4645L19 16.5858Z"/></svg>',async fetchJSON(url){try{const r=await fetch(url),d=await r.json();return Array.isArray(d)?d:[]}catch{return[]}},async handleInput(){const s=this.query.toLowerCase(),items=[],pagesReq=this.isReseller?[]:await this.fetchJSON('/search/pages'),usersReq=await this.fetchJSON('/search/users'),websitesReq=this.isReseller?[]:await this.fetchJSON('/search/websites');pagesReq.forEach(item=>{const n=item?.name??'',l=item?.link??'#',d=item?.description??'',a=item?.area??'',k=(item?.keywords??[]).join(' ');if([n,a,k].join(' ').toLowerCase().includes(s))items.push({id:`page-${l}`,html:`<a class="dropdown-item flex w-full" href="${l}">${a?a+' › ':''}${n}<br><p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${d}</p></a>`})});usersReq.forEach(n=>{if(!n)return;let srv='';const lm=n.match(/^(.*) \(([^()]+)\)$/);if(lm&&window.clusterGo){n=lm[1];srv=lm[2]};const sus=n.toLowerCase().includes('suspended'),icon=sus?this.PERSON_FILL_X:this.PERSON_FILL;if(n.toLowerCase().startsWith('suspended_')){const dn=n.split('_').pop();items.push({id:`user-${n}`,html:`<a class="flex text-red-600 dark:text-red-500" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${dn}</span></a>`})}else if(n.toLowerCase().includes(s)){const go=srv?` onclick="event.preventDefault();window.clusterGo('${srv}',this.getAttribute('href'))"`:'';items.push({id:`user-${n}-${srv}`,html:`<div class="flex justify-between items-center w-full"><a class="flex" href="/users/${n}"${go}>${icon} &nbsp;<span class="text-sm">${n}${srv?`<span class="block text-xs text-gray-500">${srv}</span>`:''}</span></a><a href="/login/token/${n}"${go} title="Login as ${n} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center border p-1 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet" class="align-middle"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/></g></svg></a></div>`})}});websitesReq.forEach(row=>{const n=Array.isArray(row)?row[0]:'';if(n&&n.toLowerCase().includes(s))items.push({id:`website-${n}`,html:`<a class="flex dropdown-item" href="/domains/${n}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM9.71002 19.6674C8.74743 17.6259 8.15732 15.3742 8.02731 13H4.06189C4.458 16.1765 6.71639 18.7747 9.71002 19.6674ZM10.0307 13C10.1811 15.4388 10.8778 17.7297 12 19.752C13.1222 17.7297 13.8189 15.4388 13.9693 13H10.0307ZM19.9381 13H15.9727C15.8427 15.3742 15.2526 17.6259 14.29 19.6674C17.2836 18.7747 19.542 16.1765 19.9381 13ZM4.06189 11H8.02731C8.15732 8.62577 8.74743 6.37407 9.71002 4.33256C6.71639 5.22533 4.458 7.8235 4.06189 11ZM10.0307 11H13.9693C13.8189 8.56122 13.1222 6.27025 12 4.24799C10.8778 6.27025 10.1811 8.56122 10.0307 11ZM14.29 4.33256C15.2526 6.37407 15.8427 8.62577 15.9727 11H19.9381C19.542 7.8235 17.2836 5.22533 14.29 4.33256Z"/></svg> &nbsp;${n}</a>`})});this.filteredItems=items;this.dropdownOpen=items.length>0},closeDropdown(){this.dropdownOpen=false},init(){this.isReseller={{if .IsReseller}}true{{else}}false{{end}}}}}</script>
+                                <script>function searchDropdown(){return{query:'',dropdownOpen:false,filteredItems:[],isReseller:false,PERSON_FILL:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 22C4 17.5817 7.58172 14 12 14C16.4183 14 20 17.5817 20 22H4ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13Z"/></svg>',PERSON_FILL_X:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 14.252V22H4C4 17.5817 7.58172 14 12 14C12.6906 14 13.3608 14.0875 14 14.252ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13ZM19 16.5858L21.1213 14.4645L22.5355 15.8787L20.4142 18L22.5355 20.1213L21.1213 21.5355L19 19.4142L16.8787 21.5355L15.4645 20.1213L17.5858 18L15.4645 15.8787L16.8787 14.4645L19 16.5858Z"/></svg>',async fetchJSON(url){try{const r=await fetch(url),d=await r.json();return Array.isArray(d)?d:[]}catch{return[]}},async handleInput(){const s=this.query.toLowerCase(),items=[],pagesReq=this.isReseller?[]:await this.fetchJSON('/search/pages'),usersReq=await this.fetchJSON('/search/users'),websitesReq=this.isReseller?[]:await this.fetchJSON('/search/websites');pagesReq.forEach(item=>{const n=item?.name??'',l=item?.link??'#',d=item?.description??'',a=item?.area??'',k=(item?.keywords??[]).join(' ');if([n,a,k].join(' ').toLowerCase().includes(s))items.push({id:`page-${l}`,html:`<a class="block w-full rounded outline-hidden" href="${l}">${a?a+' › ':''}${n}<span class="mt-0.5 block text-xs text-gray-500">${d}</span></a>`})});usersReq.forEach(n=>{if(!n)return;let srv='';const lm=n.match(/^(.*) \(([^()]+)\)$/);if(lm&&window.clusterGo){n=lm[1];srv=lm[2]};const sus=n.toLowerCase().includes('suspended'),icon=sus?this.PERSON_FILL_X:this.PERSON_FILL;if(n.toLowerCase().startsWith('suspended_')){const dn=n.split('_').pop();items.push({id:`user-${n}`,html:`<a class="flex text-red-600 dark:text-red-500" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${dn}</span></a>`})}else if(n.toLowerCase().includes(s)){const go=srv?` onclick="event.preventDefault();window.clusterGo('${srv}',this.getAttribute('href'))"`:'';items.push({id:`user-${n}-${srv}`,html:`<div class="flex justify-between items-center w-full"><a class="flex" href="/users/${n}"${go}>${icon} &nbsp;<span class="text-sm">${n}${srv?`<span class="block text-xs text-gray-500">${srv}</span>`:''}</span></a><a href="/login/token/${n}"${go} title="Login as ${n} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center border p-1 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet" class="align-middle"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/></g></svg></a></div>`})}});websitesReq.forEach(row=>{const n=Array.isArray(row)?row[0]:'';if(n&&n.toLowerCase().includes(s))items.push({id:`website-${n}`,html:`<a class="flex dropdown-item" href="/domains/${n}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM9.71002 19.6674C8.74743 17.6259 8.15732 15.3742 8.02731 13H4.06189C4.458 16.1765 6.71639 18.7747 9.71002 19.6674ZM10.0307 13C10.1811 15.4388 10.8778 17.7297 12 19.752C13.1222 17.7297 13.8189 15.4388 13.9693 13H10.0307ZM19.9381 13H15.9727C15.8427 15.3742 15.2526 17.6259 14.29 19.6674C17.2836 18.7747 19.542 16.1765 19.9381 13ZM4.06189 11H8.02731C8.15732 8.62577 8.74743 6.37407 9.71002 4.33256C6.71639 5.22533 4.458 7.8235 4.06189 11ZM10.0307 11H13.9693C13.8189 8.56122 13.1222 6.27025 12 4.24799C10.8778 6.27025 10.1811 8.56122 10.0307 11ZM14.29 4.33256C15.2526 6.37407 15.8427 8.62577 15.9727 11H19.9381C19.542 7.8235 17.2836 5.22533 14.29 4.33256Z"/></svg> &nbsp;${n}</a>`})});const heads={page:'Pages',user:'Users',website:'Websites'},grouped=[];let last='';items.forEach(it=>{const k=it.id.split('-')[0];if(k!==last&&heads[k]){grouped.push({id:'head-'+k,heading:heads[k]});last=k}grouped.push(it)});this.filteredItems=grouped;this.dropdownOpen=items.length>0},closeDropdown(){this.dropdownOpen=false},init(){this.isReseller={{if .IsReseller}}true{{else}}false{{end}}}}}</script>
                         </div>
                     </div>
 
@@ -113,7 +114,7 @@
                                 <li><a data-active="{{if or (hasPrefix .CurrentPath "/dashboard") (eq .CurrentPath "/")}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/dashboard"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-[18px] shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M21 20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V9.48907C3 9.18048 3.14247 8.88917 3.38606 8.69972L11.3861 2.47749C11.7472 2.19663 12.2528 2.19663 12.6139 2.47749L20.6139 8.69972C20.8575 8.88917 21 9.18048 21 9.48907V20ZM19 19V9.97815L12 4.53371L5 9.97815V19H19Z"/></svg>Dashboard</span></a></li>
                                 {{if not .IsReseller}}
                                 <li><a id="tour-notifications-link" data-active="{{if hasPrefix .CurrentPath "/notifications"}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/notifications"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13.3414 4C13.1203 4.62556 13 5.29873 13 6H5V20H19V12C19.7013 12 20.3744 11.8797 21 11.6586V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V5C3 4.44772 3.44772 4 4 4H13.3414ZM19 8C20.1046 8 21 7.10457 21 6C21 4.89543 20.1046 4 19 4C17.8954 4 17 4.89543 17 6C17 7.10457 17.8954 8 19 8ZM19 10C16.7909 10 15 8.20914 15 6C15 3.79086 16.7909 2 19 2C21.2091 2 23 3.79086 23 6C23 8.20914 21.2091 10 19 10Z"/></svg>Notifications</span>{{if .UnreadNotifications}}<span class="inline-flex size-5 items-center justify-center rounded bg-blue-100 text-sm font-medium text-blue-600 sm:text-xs dark:bg-blue-500/10 dark:text-blue-500">{{if gt .UnreadNotifications 30}}20+{{else}}{{.UnreadNotifications}}{{end}}</span>{{end}}</a></li>
-                                <li id="tour-recent-menu" x-data="{ open: true, active: false }" class="relative"><button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer"><div class="flex items-center gap-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5.82843 6.99955L8.36396 9.53509L6.94975 10.9493L2 5.99955L6.94975 1.0498L8.36396 2.46402L5.82843 4.99955H13C17.4183 4.99955 21 8.58127 21 12.9996C21 17.4178 17.4183 20.9996 13 20.9996H4V18.9996H13C16.3137 18.9996 19 16.3133 19 12.9996C19 9.68584 16.3137 6.99955 13 6.99955H5.82843Z"/></svg> Recent</div><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600 rotate-180" :class="{ 'rotate-180': open }"><path d="M12 16L6 10H18L12 16Z"></path></svg></button><ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent"><div id="recent-list" class="relative z-40 overflow-hidden min-w-48 text-gray-900 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade"></div></ul></li>
+                                <li id="tour-recent-menu" x-data="{ open: true, active: false }" class="relative"><button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer"><div class="flex items-center gap-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5.82843 6.99955L8.36396 9.53509L6.94975 10.9493L2 5.99955L6.94975 1.0498L8.36396 2.46402L5.82843 4.99955H13C17.4183 4.99955 21 8.58127 21 12.9996C21 17.4178 17.4183 20.9996 13 20.9996H4V18.9996H13C16.3137 18.9996 19 16.3133 19 12.9996C19 9.68584 16.3137 6.99955 13 6.99955H5.82843Z"/></svg> Recent</div><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600 rotate-180" :class="{ 'rotate-180': open }"><path d="M12 16L6 10H18L12 16Z"></path></svg></button><ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent"><div id="recent-list" class="relative z-40 overflow-hidden min-w-48 text-gray-900 will-change-[transform,opacity]"></div></ul></li>
                                 <script>function saveRecentPage(){const M=5,r=document.title?.trim();if(!r)return;const p=r.split(']'),t=p.length>1?p.slice(-1)[0].trim():r;if(!t||t.toLowerCase()==='untitled')return;const u=window.location.pathname+window.location.search+window.location.hash;let a=JSON.parse(localStorage.getItem("recent_pages")||"[]"),e=a.find(i=>i.url===u);if(!e||!e.pinned){a=a.filter(i=>i.url!==u||i.pinned);a.unshift({title:t,url:u,pinned:false})}localStorage.setItem("recent_pages",JSON.stringify([...a.filter(i=>i.pinned),...a.filter(i=>!i.pinned).slice(0,M)]))}saveRecentPage();</script>
                                 <script>function loadRecentPages(){const l=document.getElementById('recent-list');l.innerHTML='';let r=JSON.parse(localStorage.getItem("recent_pages")||"[]");const b=document.createElement('span');b.className='absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800';l.appendChild(b);r.forEach((item)=>{const li=document.createElement('li');li.className='relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50';const a=document.createElement('a');a.href=item.url;a.textContent=item.title;const btn=document.createElement('button');btn.innerHTML=item.pinned?'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M22.3126 10.1753L20.8984 11.5895L20.1913 10.8824L15.9486 15.125L15.2415 18.6606L13.8273 20.0748L9.58466 15.8321L4.63492 20.7819L3.2207 19.3677L8.17045 14.4179L3.92781 10.1753L5.34202 8.76107L8.87756 8.05396L13.1202 3.81132L12.4131 3.10422L13.8273 1.69L22.3126 10.1753Z"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M13.8273 1.69L22.3126 10.1753L20.8984 11.5895L20.1913 10.8824L15.9486 15.125L15.2415 18.6606L13.8273 20.0748L9.58466 15.8321L4.63492 20.7819L3.2207 19.3677L8.17045 14.4179L3.92781 10.1753L5.34202 8.76107L8.87756 8.05396L13.1202 3.81132L12.4131 3.10422L13.8273 1.69ZM14.5344 5.22554L9.86358 9.89637L7.0417 10.4607L13.5418 16.9609L14.1062 14.139L18.7771 9.46818L14.5344 5.22554Z"/></svg>';btn.className='ml-auto';btn.title=item.pinned?'Unpin':'Pin';btn.style.cssText='background:none;border:none;cursor:pointer';btn.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();item.pinned=!item.pinned;localStorage.setItem("recent_pages",JSON.stringify(r));loadRecentPages()});li.appendChild(a);li.appendChild(btn);l.appendChild(li)})}loadRecentPages();</script>
                                 <script>
@@ -145,11 +146,11 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
         <li>
-            <a aria-current="page" data-active="{{if and (hasPrefix .CurrentPath "/user") (not (hasPrefix .CurrentPath "/user/import"))}}true{{else}}false{{end}}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded-md data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow-sm data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/users">
+            <a {{if and (hasPrefix .CurrentPath "/user") (not (hasPrefix .CurrentPath "/user/import"))}}aria-current="page" {{end}}data-active="{{if and (hasPrefix .CurrentPath "/user") (not (hasPrefix .CurrentPath "/user/import"))}}true{{else}}false{{end}}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded-md data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow-sm data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/users">
                 <div class="absolute left-4 top-1/2 h-5 w-px -translate-y-1/2 bg-blue-500 dark:bg-blue-500" aria-hidden="true"></div>
                 Users
             </a>
@@ -201,7 +202,7 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
         <li><a data-active="{{if hasPrefix .CurrentPath "/plans"}}true{{else}}false{{end}}" class="relative flex gap-2 rounded-md py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 data-[active=true]:rounded-md data-[active=true]:bg-white data-[active=true]:text-blue-600 data-[active=true]:shadow-sm data-[active=true]:ring-1 data-[active=true]:ring-gray-200 data-[active=true]:dark:bg-gray-900 data-[active=true]:dark:text-blue-500 data-[active=true]:dark:ring-gray-800 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500"
             href="/plans">User Packages</a></li>
@@ -224,7 +225,7 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
         <li>
@@ -301,7 +302,7 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
         <li>
@@ -354,7 +355,7 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
         <!-- General Settings -->
@@ -448,7 +449,7 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
         {{if not .IsReseller}}
@@ -510,7 +511,7 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
         <!-- User Backups -->
@@ -551,7 +552,7 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
         <!-- CSF -->
@@ -629,7 +630,7 @@
         </svg>
     </button>
 
-    <ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent">
+    <ul x-show="open || active" x-transition:enter="transition-opacity duration-150 ease-accordion" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity duration-100 ease-accordion" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="relative space-y-1 border-l border-transparent">
         <div class="absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800"></div>
 
         <!-- Resource Usage -->
@@ -759,24 +760,16 @@
     <!-- Popup Menu (Initially hidden) -->
     <div dir="ltr" id="popup-menu" :class="{ 'hidden': !isOpen }" class="hidden">
         <!-- Popup Menu Content -->
-        <div data-side="top" data-align="start" role="menu" aria-orientation="vertical" data-state="open" dir="ltr" class="relative z-50 overflow-hidden rounded-md border p-1 shadow-xl shadow-black/[2.5%] min-w-48 bg-white dark:bg-raised text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade" tabindex="-1" data-orientation="vertical">
+        <div data-side="top" data-align="start" role="menu" aria-orientation="vertical" data-state="open" dir="ltr" class="relative z-50 min-w-48 overflow-hidden rounded-md border border-gray-200 bg-white p-1 text-sm text-gray-900 shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50" tabindex="-1" data-orientation="vertical">
             <!-- Content inside Popup -->
             <div class="px-2 py-2 text-xs font-medium tracking-wide text-gray-500 dark:text-gray-500">OpenPanel {{.PanelVersion}}</div>
             <div role="separator" aria-orientation="horizontal" class="-mx-1 my-1 h-px border-t border-gray-200 dark:border-gray-800"></div>
 
             <div role="group">
-                <span
-                    role="menuitem"
-                    class="flex justify-between group/DropdownMenuItem relative select-none items-center rounded-md py-1.5 pl-2 pr-1 outline-none transition-colors data-[state=checked]:font-semibold sm:text-sm text-gray-900 dark:text-gray-50"
-                >
-                    <span>Theme:</span>
-
-<button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-md text-sm p-2.5 cursor-pointer">
-    <svg id="theme-toggle-dark-icon" class="remixicon hidden w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.3807 2.01886C9.91573 3.38768 9 5.3369 9 7.49999C9 11.6421 12.3579 15 16.5 15C18.6631 15 20.6123 14.0843 21.9811 12.6193C21.6613 17.8537 17.3149 22 12 22C6.47715 22 2 17.5228 2 12C2 6.68514 6.14629 2.33869 11.3807 2.01886Z"/></svg>
-    <svg id="theme-toggle-light-icon" class="remixicon hidden w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12C18 15.3137 15.3137 18 12 18ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM11 1H13V4H11V1ZM11 20H13V23H11V20ZM3.51472 4.92893L4.92893 3.51472L7.05025 5.63604L5.63604 7.05025L3.51472 4.92893ZM16.9497 18.364L18.364 16.9497L20.4853 19.0711L19.0711 20.4853L16.9497 18.364ZM19.0711 3.51472L20.4853 4.92893L18.364 7.05025L16.9497 5.63604L19.0711 3.51472ZM5.63604 16.9497L7.05025 18.364L4.92893 20.4853L3.51472 19.0711L5.63604 16.9497ZM23 11V13H20V11H23ZM4 11V13H1V11H4Z"/></svg>
-</button>
-
-                </span>
+                <div class="flex items-center justify-between gap-3 rounded px-2 py-1.5 text-sm text-gray-900 dark:text-gray-50">
+                    <span id="theme-toggle-label">Dark mode</span>
+                    <button id="theme-toggle" type="button" role="switch" aria-checked="false" aria-labelledby="theme-toggle-label" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 aria-checked:bg-blue-500 aria-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:aria-checked:bg-blue-500 dark:aria-checked:ring-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></button>
+                </div>
             </div>
 
             <div role="group">
@@ -789,9 +782,7 @@
             <div role="group">
                 <span role="menuitem" x-data="{ on: OPRecent.shown() }" @click="on = !on; OPRecent.set(on)" class="flex cursor-pointer justify-between relative select-none items-center rounded-md py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
                     <span>Recent links</span>
-                    <button type="button" role="switch" :aria-checked="on.toString()" aria-label="Show recent links in the menu" class="relative mr-1.5 inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors" :class="on ? 'bg-blue-600 dark:bg-blue-500' : 'bg-gray-300 dark:bg-gray-950'">
-                        <span class="inline-block size-4 rounded-full bg-white shadow-sm transition-transform" :class="on ? 'translate-x-4' : 'translate-x-0.5'"></span>
-                    </button>
+                    <button type="button" role="switch" :aria-checked="on.toString()" aria-label="Show recent links in the menu" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 aria-checked:bg-blue-500 aria-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:aria-checked:bg-blue-500 dark:aria-checked:ring-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></button>
                 </span>
             </div>
             {{end}}
@@ -855,7 +846,7 @@
                     tabindex="-1"
                     data-orientation="vertical"
                 >
-                    Community Forums
+                    Community forums
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="24"
@@ -904,9 +895,9 @@
 <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1">
     {{range .NavItems}}
     {{if .Section}}
-    <li class="px-2 pt-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-500">{{.Section}}</li>
+    <li class="px-2 pt-3 text-xs font-medium text-gray-500 dark:text-gray-500">{{.Section}}</li>
     {{end}}
-    <li><a id="{{.MenuID}}" data-active="{{if .Active}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="{{.Href}}"><span class="flex items-center gap-x-2.5">{{.Icon}}{{.Label}}</span>{{if .Alert}}<span title="{{.AlertTitle}}" class="ml-auto size-2 shrink-0 rounded-full {{if eq .Alert "error"}}bg-red-500{{else}}bg-orange-500{{end}}"></span>{{end}}</a></li>
+    <li><a id="{{.MenuID}}" data-active="{{if .Active}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="{{.Href}}"><span class="flex items-center gap-x-2.5">{{.Icon}}{{.Label}}</span>{{if .Alert}}<span title="{{.AlertTitle}}" class="ml-auto size-2 shrink-0 rounded-full {{if eq .Alert "error"}}bg-red-500{{else}}bg-yellow-500{{end}}"></span>{{end}}</a></li>
     {{end}}
 </ul>
 {{end}}
@@ -915,16 +906,16 @@
 {{if .PageTabs}}
 <div x-data="{ helpOpen: false }">
 <nav id="page-tabs" aria-label="Page sections" class="flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-950 sm:px-6 lg:px-8">
-    <ul class="-mb-px flex min-w-0 gap-x-6 overflow-x-auto text-sm">
+    <ul class="-mb-px flex min-w-0 overflow-x-auto text-sm">
         {{range .PageTabs}}
         <li class="shrink-0">
             <a href="{{.Href}}" {{if .Active}}aria-current="page"{{end}}
-               class="inline-flex border-b-2 py-3 font-medium transition {{if .Active}}border-blue-500 text-blue-500 dark:border-blue-500 dark:text-blue-500{{else}}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300{{end}}">{{.Label}}{{if .Dot}}<svg title="Needs attention" aria-label="Needs attention" xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="remixicon ml-1.5 self-center text-yellow-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg>{{end}}</a>
+               class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-[current=page]:border-blue-500 aria-[current=page]:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-[current=page]:border-blue-500 dark:aria-[current=page]:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">{{.Label}}{{if .Dot}}<svg title="Needs attention" aria-label="Needs attention" xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="remixicon ml-1.5 self-center text-yellow-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg>{{end}}</a>
         </li>
         {{end}}
     </ul>
     {{if .HelpDoc}}
-    <button type="button" id="page-help-button" data-doc="{{.HelpDoc}}" data-part="{{.HelpPart}}" @click="helpOpen = !helpOpen; if (helpOpen) OPPageHelp.load($refs.helpBody, $el.dataset.doc, $el.dataset.part)" :aria-expanded="helpOpen" class="flex shrink-0 cursor-pointer items-center gap-x-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-expanded:bg-gray-100 aria-expanded:text-gray-900 sm:w-fit dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 dark:aria-expanded:bg-gray-800/80 dark:aria-expanded:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><span class="w-full text-left sm:w-fit">Documentation</span></button>
+    <button type="button" id="page-help-button" data-doc="{{.HelpDoc}}" data-part="{{.HelpPart}}" @click="helpOpen = !helpOpen; if (helpOpen) OPPageHelp.load($refs.helpBody, $el.dataset.doc, $el.dataset.part)" :aria-expanded="helpOpen" class="flex shrink-0 cursor-pointer items-center gap-x-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-expanded:bg-gray-100 aria-expanded:text-gray-900 sm:w-fit dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 dark:aria-expanded:bg-gray-800/80 dark:aria-expanded:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="remixicon size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM13 13.3551V14H11V12.5C11 11.9477 11.4477 11.5 12 11.5C12.8284 11.5 13.5 10.8284 13.5 10C13.5 9.17157 12.8284 8.5 12 8.5C11.2723 8.5 10.6656 9.01823 10.5288 9.70577L8.56731 9.31346C8.88637 7.70919 10.302 6.5 12 6.5C13.933 6.5 15.5 8.067 15.5 10C15.5 11.5855 14.4457 12.9248 13 13.3551Z"/></svg><span>Documentation</span></button>
     {{end}}
 </nav>
 {{if .HelpDoc}}
@@ -932,7 +923,7 @@
     <div class="mx-auto max-w-4xl rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-raised">
         <div class="mb-4 flex items-center justify-between gap-4 border-b border-gray-200 pb-3 dark:border-gray-800">
             <span class="inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 dark:text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13 21V23H11V21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H9C10.1947 3 11.2671 3.52375 12 4.35418C12.7329 3.52375 13.8053 3 15 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H13ZM20 19V5H15C13.8954 5 13 5.89543 13 7V19H20ZM11 19V7C11 5.89543 10.1046 5 9 5H4V19H11Z"/></svg>Documentation</span>
-            <a href="https://openpanel.com/docs/{{.HelpDoc}}/" target="_blank" rel="noopener" class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-500">Open on openpanel.com ↗</a>
+            <a href="https://openpanel.com/docs/{{.HelpDoc}}/" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 text-sm font-medium text-blue-500 hover:underline hover:underline-offset-4">Open on openpanel.com ↗<svg class="remixicon size-3.5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>
         </div>
         <div x-ref="helpBody" class="op-help overflow-y-auto text-sm text-gray-700 dark:text-gray-300">Loading documentation...</div>
     </div>
@@ -946,9 +937,9 @@
         <header id="header" class="sticky top-0 z-10 flex justify-between items-center h-16 shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-950">
 
             <div class="flex justify-between items-center">
-                <button id="sidebar_toggle_button" onclick="toggleSidebar()" class="group inline-flex rounded-md p-1.5 hover:bg-gray-200/50 hover:dark:bg-gray-900 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-[18px] shrink-0 text-gray-700 dark:text-gray-300 cusrsor-pointer" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H21ZM7 5H4V19H7V5ZM20 5H9V19H20V5Z"/></svg>
-                <span class="sr-only">Toggle Sidebar</span>
+                <button id="sidebar_toggle_button" type="button" onclick="toggleSidebar()" class="group inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-[18px] shrink-0 text-gray-700 dark:text-gray-300 cursor-pointer" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H21ZM7 5H4V19H7V5ZM20 5H9V19H20V5Z"/></svg>
+                <span class="sr-only">Toggle sidebar</span>
                 </button>
                 <div class="mr-2 h-4 w-px bg-gray-200 dark:bg-gray-800"></div>
                 <nav aria-label="Breadcrumb" class="ml-2">
@@ -958,75 +949,75 @@
 
                     {{if and (eq .MenuStyle "modern") .AreaLabel}}
                     <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="{{.AreaHref}}">{{.AreaLabel}}</a></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
                     {{else}}{{if or (or (or (eq .Title "Users") (eq .Title "Resellers")) (eq .Title "Administrators")) (or (contains .Title "SUSPENDED_") (contains .Title "User:"))}}
 
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Users</span></div></li>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Users</span></div></li>
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (contains .Title "Change Password for Administrator") (contains .Title "Rename Administrator")}}
                     <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="/administrators">Administrators</a></li>
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (contains .Title "Change Password for Reseller") (contains .Title "Rename Reseller")}}
                     <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="/resellers">Resellers</a></li>
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if contains .Title "Access Log"}}
 
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Domains</span></div></li>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Domains</span></div></li>
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if hasPrefix .CurrentPath "/domains"}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Domains</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Domains</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (hasPrefix .CurrentPath "/settings/updates/log") (hasPrefix .CurrentPath "/services/")}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Services</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Services</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if hasPrefix .CurrentPath "/settings/"}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Settings</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Settings</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (hasPrefix .CurrentPath "/plans") (hasPrefix .CurrentPath "/features")}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Plans</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Plans</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
 
                     {{else if hasPrefix .CurrentPath "/services"}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Services</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Services</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
 
                     {{else if hasPrefix .CurrentPath "/security/"}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Security</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Security</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if hasPrefix .CurrentPath "/emails"}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Emails</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Emails</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
 
 
                     {{else if or (hasPrefix .CurrentPath "/server/") (hasPrefix .CurrentPath "/terminal")}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Server</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Server</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (or (hasPrefix .CurrentPath "/backups") (hasPrefix .CurrentPath "/user/import")) (or (hasPrefix .CurrentPath "/import/cpanel") (hasPrefix .CurrentPath "/import/cyberpanel"))}}
-                    <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Backups</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                    <li class="flex"><div class="flex items-center"><span class="text-gray-500 dark:text-gray-400">Backups</span></div></li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-400 dark:text-gray-600" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
 
                     {{end}}
                     {{end}}
 
                     <li class="flex">
-                        <div class="flex items-center"><a class="text-gray-900 dark:text-gray-50" href="{{.CurrentPath}}">{{if eq .Title "Users"}}OpenPanel{{else}}
+                        <div class="flex items-center"><a aria-current="page" class="text-gray-900 dark:text-gray-50" href="{{.CurrentPath}}">{{if eq .Title "Users"}}OpenPanel{{else}}
 
                 {{if contains .Title "SUSPENDED_"}}
                 {{lastSegment .Title "_"}}
@@ -1048,7 +1039,7 @@
             </div>
         </header>
 
-            <!-- Flowbite toasts -->
+            <!-- toasts -->
             <style>
                 /* center toasts below the sm breakpoint, desktop keeps bottom-right */
                 @media (max-width: 639.98px) {
@@ -1056,8 +1047,8 @@
                     #toast-container > * { width: 100%; }
                 }
             </style>
-            <div id="toast-container" class="fixed sm:bottom-10 sm:right-10 flex flex-col items-center space-y-2 z-50 overflow-y-hidden"></div>
-            <!-- END Flowbite toasts -->
+            <div id="toast-container" class="fixed bottom-4 z-50 flex flex-col gap-3 sm:bottom-6 sm:right-6 sm:w-96"></div>
+            <!-- END toasts -->
 {{end}}
 
 {{define "chrome_restart_needed"}}
@@ -1066,17 +1057,17 @@
   <style>@keyframes swing { 0% { transform: rotate(0deg); } 20% { transform: rotate(15deg); } 40% { transform: rotate(-10deg); } 60% { transform: rotate(5deg); } 80% { transform: rotate(-5deg); } 100% { transform: rotate(0deg); } } .animate-swing { animation: swing 1s ease-in-out;}</style>
 
         {{range .RestartMessages}}
-<a href="{{if not $.IsReseller}}/services{{else}}#{{end}}">
-    <span data-tooltip-target="tooltip-restart-bar" data-tooltip-placement="left" class="inline-flex items-center gap-2.5 rounded-md bg-blue-500 px-2.5 py-2 text-xs font-medium text-white dark:bg-blue-900">
+<a href="{{if not $.IsReseller}}/services{{else}}#{{end}}" class="rounded-md outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+    <span data-tooltip-target="tooltip-restart-bar" data-tooltip-placement="left" class="inline-flex items-center gap-2.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 ring-1 ring-blue-500/20 ring-inset dark:bg-blue-500/10 dark:text-blue-400">
         <span class="inline-flex items-center gap-1.5" x-data="{ swing: false }" x-init="swing = true">
             <svg :class="swing ? 'animate-swing' : ''" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M12 2C16.9706 2 21 6.04348 21 11.0314V20H3V11.0314C3 6.04348 7.02944 2 12 2ZM9.5 21H14.5C14.5 22.3807 13.3807 23.5 12 23.5C10.6193 23.5 9.5 22.3807 9.5 21Z"></path></svg>
             <span class="hidden md:flex">
-            {{if contains . "both OpenPanel and OpenAdmin"}}2 services need{{else if or (contains . "Pending changes for OpenPanel UI") (contains . "Pending changes for OpenAdmin")}}1 service needs{{end}} restart!
+            {{if contains . "both OpenPanel and OpenAdmin"}}2 services need{{else if or (contains . "Pending changes for OpenPanel UI") (contains . "Pending changes for OpenAdmin")}}1 service needs{{end}} a restart
             </span>
         </span>
     </span>
 </a>
-<div id="tooltip-restart-bar" role="tooltip" class="absolute z-10 invisible inline-block transition-opacity duration-300 opacity-0 tooltip rounded-md bg-gray-900 px-2.5 py-1.5 text-sm font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900">
+<div id="tooltip-restart-bar" role="tooltip" class="absolute z-10 invisible inline-block w-max max-w-60 transition-opacity duration-150 opacity-0 tooltip rounded-md bg-gray-900 px-2.5 py-1.5 text-sm font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900">
     {{.}}
 </div>
         {{end}}
@@ -1126,43 +1117,10 @@
 <span id="placeholder-for-backend-notifications">
 
 {{if .Flashes}}
-
-<div id="alert-progress-container" class="hidden h-0.5 w-full bg-blue-100 dark:bg-blue-900">
-    <div id="alert-progress-bar" class="h-full bg-blue-500 dark:bg-blue-500 transition-all duration-100 ease-linear" style="width: 0%"></div>
+{{/* layout.js turns these into toasts, the plain list only shows if that script is missing */}}
+<div id="op-flashes" hidden class="border-b border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:px-6 dark:border-blue-900 dark:bg-blue-950/70 dark:text-blue-400">
+    {{range .Flashes}}{{if .Message}}<p data-category="{{.Category}}">{{if contains .Message "as there are users assigned to it."}}Cannot delete the plan, it's in use by these users: {{extractUsersList .Message}}{{else}}{{.Message}}{{end}}</p>{{end}}{{end}}
 </div>
-
-    {{range $i, $flash := .Flashes}}
-    {{if .Message}}
-
-<div id="alert{{if $i}}-{{$i}}{{end}}" class="op-flash flex items-center gap-3 border-b border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:px-6 dark:border-blue-900 dark:bg-blue-950/70 dark:text-blue-400" role="alert">
-  <svg class="remixicon size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z"/></svg>
-  <span class="sr-only">Notification</span>
-<div class="font-medium">
-  {{if contains .Message "as there are users assigned to it."}}
-    Cannot delete the plan - it is currently in use by the following users:
-        {{extractUsersList .Message}}
-    {{else}}
-  {{.Message}}
-    {{end}}
-</div>
-
-
-
-  <button type="button" class="ms-auto inline-flex size-8 shrink-0 items-center justify-center rounded-md text-blue-900/70 transition hover:bg-blue-100 hover:text-blue-900 dark:text-blue-400/80 dark:hover:bg-blue-900/40 dark:hover:text-blue-300 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" data-dismiss-target="#alert{{if $i}}-{{$i}}{{end}}" aria-label="Close">
-    <span class="sr-only">Dismiss</span>
-    <svg class="remixicon w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"/></svg>
-  </button>
-</div>
-    {{end}}
-
-    {{end}}
-
-
-
-
-
-
-
 {{end}}
 </span>
 {{end}}
@@ -1173,23 +1131,23 @@
   <div
     x-show="showHelp"
     x-cloak
-    x-transition
+    x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
     @keydown.escape.window="if (showHelp) showHelp = false"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
     role="dialog" aria-modal="true" aria-labelledby="shortcuts-title"
   >
     <div
       @click.outside="showHelp = false"
-      class="w-full max-w-md rounded-md border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-900 dark:bg-raised"
+      x-trap.noscroll="showHelp" class="w-full max-w-lg rounded-md border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-900 dark:bg-raised"
     >
       <h2 id="shortcuts-title" class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-50">
-        Keyboard Shortcuts
+        Keyboard shortcuts
       </h2>
 
       <ul class="space-y-2">
         <template x-for="(url, combo) in shortcuts" :key="combo">
           <li class="flex items-center justify-between gap-6 text-sm">
-            <kbd class="inline-flex h-5 min-w-5 items-center justify-center rounded border border-gray-200 bg-gray-50 px-1.5 font-mono text-[11px] font-medium text-gray-600 shadow-xs dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400" x-text="combo"></kbd>
+            <kbd class="inline-flex h-5 min-w-5 items-center justify-center rounded border border-gray-200 bg-gray-50 px-1 font-mono text-[11px] font-medium text-gray-600 shadow-xs dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400" x-text="combo"></kbd>
             <span class="truncate text-gray-500" x-text="url"></span>
           </li>
         </template>
@@ -1215,57 +1173,20 @@
 {{end}}
 
 {{define "macro_tooltip"}}
-<label class="flex justify-between pb-2 text-sm leading-none text-gray-900 dark:text-gray-50 font-medium flex items-center gap-1" for="{{.ID}}" x-data="{tooltip: false}">
-    <span>{{.Label}}: {{if .Required}}<span class="text-red-500 dark:text-red-500">*</span>{{end}}</span>
-    <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM13 13.3551V14H11V12.5C11 11.9477 11.4477 11.5 12 11.5C12.8284 11.5 13.5 10.8284 13.5 10C13.5 9.17157 12.8284 8.5 12 8.5C11.2723 8.5 10.6656 9.01823 10.5288 9.70577L8.56731 9.31346C8.88637 7.70919 10.302 6.5 12 6.5C13.933 6.5 15.5 8.067 15.5 10C15.5 11.5855 14.4457 12.9248 13 13.3551Z"/></svg>
-        <div x-show="tooltip" x-transition class="absolute z-10 mt-2 w-64 text-sm rounded-md bg-gray-900 px-2.5 py-1.5 font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900" style="top: 100%; left: 0;">{{.Description}}
-        </div>
-    </span>
-</label>
+{{/* field label with an info button, the hint opens on hover and keyboard focus via layout.js tooltips */}}
+<div class="flex items-center gap-1 pb-2">
+    <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="{{.ID}}">{{.Label}}{{if .Required}} <span class="text-red-500 dark:text-red-500" aria-hidden="true">*</span>{{end}}</label>
+    {{if .Description}}<button type="button" data-tooltip-target="tip-{{.ID}}" aria-describedby="tip-{{.ID}}" aria-label="About {{.Label}}" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-5 text-gray-400 dark:text-gray-600"><svg class="remixicon size-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 7H13V9H11V7ZM11 11H13V17H11V11Z"/></svg></button>
+    <div id="tip-{{.ID}}" role="tooltip" class="absolute z-50 invisible inline-block w-max max-w-60 transition-opacity duration-150 opacity-0 tooltip rounded-md bg-gray-900 px-2.5 py-1.5 text-sm font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900">{{.Description}}</div>{{end}}
+</div>
 {{end}}
 
 {{define "partial_mysql_error"}}
-<div
-    class="p-6 flex items-center justify-center rounded-md border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800"
->
-    <div class="text-center">
-        <svg
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            fill="currentColor"
-            aria-hidden="true"
-            class="remixicon mx-auto size-7 text-gray-400 dark:text-gray-600"
-        >
-            <path d="M3 12H7V21H3V12ZM17 8H21V21H17V8ZM10 2H14V21H10V2Z"></path>
-        </svg>
-        <p class="mt-2 font-medium text-gray-900 dark:text-gray-50">Is MySQL running?</p>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">Error Establishing a Database Connection</p>
-        <div class="mt-8 sm:flex sm:items-center sm:justify-center gap-x-3">
-            <a
-                href="/services"
-                class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none w-full sm:w-fit rounded-md border-transparent bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 dark:disabled:bg-blue-800 dark:disabled:text-blue-400 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"
-                >View Service Status</a
-            ><a
-                href="https://openpanel.com/docs/articles/databases/error-establishing-a-database-connection"
-                target="_blank"
-                class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none mt-2 w-full gap-1 sm:mt-0 sm:w-fit rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"
-                >Troubleshooting Guide<svg
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    fill="currentColor"
-                    aria-hidden="true"
-                    class="remixicon size-5 shrink-0"
-                >
-                    <path
-                        d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"
-                    ></path></svg
-            ></a>
-        </div>
+<div class="flex gap-3 rounded-md bg-red-50 p-4 text-left text-sm text-red-900 dark:bg-red-950/70 dark:text-red-500" role="alert">
+    <svg class="remixicon size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"/></svg>
+    <div>
+        <p class="font-medium">Is MySQL running?</p>
+        <p class="mt-1">OpenAdmin can't connect to the database, so this list can't load. Check the <a href="/services" class="underline underline-offset-4">service status</a> or read the <a href="https://openpanel.com/docs/articles/databases/error-establishing-a-database-connection" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 underline underline-offset-4">troubleshooting guide<svg class="remixicon size-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>.</p>
     </div>
 </div>
 {{end}}
@@ -1281,13 +1202,11 @@
 
 {{define "plan_column_toggle"}}
 <li>
-    <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900">
-        <label class="inline-flex items-center w-full cursor-pointer">
-            <input type="checkbox" x-model="columns.{{.Col}}" x-on:change="saveColumns" class="sr-only peer">
-            <div class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 after:absolute after:top-0.5 after:left-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform after:duration-150 after:content-[''] peer-checked:after:translate-x-4 rtl:peer-checked:after:-translate-x-4"></div>
-            <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">{{.Label}}</span>
-        </label>
-    </div>
+    <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50 w-full justify-between gap-3">
+        <span>{{.Label}}</span>
+        <input type="checkbox" role="switch" x-model="columns.{{.Col}}" x-on:change="saveColumns" class="peer sr-only">
+        <span class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500" aria-hidden="true"><span class="size-4 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50"></span></span>
+    </label>
 </li>
 {{end}}
 

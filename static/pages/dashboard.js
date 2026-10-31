@@ -88,6 +88,7 @@ function updateUserActivityTable() {
         },
         error: function (error) {
             console.error('Error fetching user activity:', error);
+            $('#shouldbehidden').text("Couldn't load user activity.").show();
         }
     });
 }

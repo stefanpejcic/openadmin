@@ -221,7 +221,7 @@ func TestServeResourceUsagePageRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(got))
 	}
-	for _, want := range []string{"Resource Usage", "Load", "CPU", "RAM", "Disk", "Network", "</html>"} {
+	for _, want := range []string{"Resource usage", "Load", "CPU", "RAM", "Disk", "Network", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}

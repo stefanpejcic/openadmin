@@ -6,7 +6,7 @@
 {{end}}
 
 {{define "bulk_head_checkbox"}}
-<th scope="col" class="w-10 whitespace-nowrap border-b pl-4 sm:pl-6 pr-2 py-3.5 text-left border-gray-200 dark:border-gray-800">{{template "bulk_head_input" .}}</th>
+<th scope="col" class="w-10 whitespace-nowrap border-b border-gray-200 py-2.5 pr-2 pl-4 text-left dark:border-gray-800">{{template "bulk_head_input" .}}</th>
 {{end}}
 
 {{define "bulk_head_input"}}
@@ -17,7 +17,7 @@
 
 {{/* dict "Key" row key, "Label" for screen readers, "Skip" comma-separated action keys this row can't run, "*" for all, optional "Bar" a bg class for a stripe on the row's left edge */}}
 {{define "bulk_row_checkbox"}}
-<td class="w-10 py-4 pl-4 sm:pl-6 pr-2 align-middle{{if .Bar}} relative{{end}}">
+<td class="w-10 py-2.5 pr-2 pl-4 align-middle{{if .Bar}} relative{{end}}">
     {{if .Bar}}<div class="absolute inset-y-0 left-0 w-1 {{.Bar}}"></div>{{end}}
     <input type="checkbox" class="bulk-select-box h-4 w-4"
         value="{{.Key}}" data-bulk-skip="{{.Skip}}"
@@ -28,36 +28,37 @@
 {{/* dict "Key" action key, "Input" a BulkInput, the value field of the confirm step */}}
 {{define "bulk_value_input"}}{{$key := .Key}}{{with .Input}}
 {{if eq .Type "select"}}
-<select x-model="bulkValue" data-bulk-input="{{$key}}" required class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
+<select x-model="bulkValue" data-bulk-input="{{$key}}" required class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1.5 text-sm">
     {{range .Options}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
 </select>
 {{else}}
 <input x-model="bulkValue" data-bulk-input="{{$key}}" required type="{{or .Type "text"}}"{{if .Min}} min="{{.Min}}"{{end}}{{if .Max}} max="{{.Max}}"{{end}}{{if .Step}} step="{{.Step}}"{{end}}{{if .Pattern}} pattern="{{.Pattern}}"{{end}} placeholder="{{.Placeholder}}"{{if .Hint}} title="{{.Hint}}"{{end}}{{if eq .Type "password"}} autocomplete="new-password"{{end}}
-    class="{{if eq .Type "number"}}w-20{{else}}w-64{{end}} rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 shadow-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
+    class="{{if eq .Type "number"}}w-20{{else}}w-64{{end}} block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1.5 text-sm">
 {{end}}
 {{if .Hint}}<span class="hidden text-xs text-gray-500 dark:text-gray-400 sm:inline">{{.Hint}}</span>{{end}}
 {{end}}{{end}}
 
 {{/* a row with nothing to select still needs its cell */}}
-{{define "bulk_row_empty"}}<td class="w-10 py-4 pl-4 sm:pl-6 pr-2"></td>{{end}}
+{{define "bulk_row_empty"}}<td class="w-10 py-2.5 pr-2 pl-4"></td>{{end}}
 
 {{/* the page data, uses .BulkActions */}}
 {{define "bulk_bar"}}
 <script src="/static/dist/js/bulk-actions.js"></script>
 <div x-show="bulkCount > 0" style="height: 6rem" aria-hidden="true"></div>
-<div x-show="bulkCount > 0" x-cloak x-transition id="bulk-actions-bar" :style="bulkBarStyle"
+<div x-show="bulkCount > 0" x-cloak x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" id="bulk-actions-bar" :style="bulkBarStyle"
     x-init="bulkPlaceBar()"
     class="fixed bottom-0 z-40 flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-gray-800 dark:bg-gray-950 sm:flex-row sm:items-center sm:justify-between sm:px-6">
 
-    <div x-show="!bulkConfirming" class="text-sm font-medium text-gray-900 dark:text-gray-50">
-        <span x-text="bulkCount"></span> selected
-        <button type="button" class="ms-2 text-xs text-blue-600 hover:underline dark:text-blue-300" @click="bulkClear()">Clear</button>
+    <div x-show="!bulkConfirming" class="flex items-center gap-2 text-sm">
+        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium tabular-nums text-gray-900 dark:bg-gray-800 dark:text-gray-50" x-text="bulkCount"></span>
+        <span class="font-medium text-gray-900 dark:text-gray-50">selected</span>
+        <button type="button" class="ml-1 rounded text-xs text-gray-500 hover:text-gray-900 hover:underline dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" @click="bulkClear()">Clear</button>
     </div>
     <div x-show="!bulkConfirming" class="flex flex-wrap items-center gap-2">
         {{range .BulkActions}}{{if .Usable}}
         <button type="button" data-bulk-action="{{.Key}}" :disabled="bulkRunning" :style="bulkRunning ? 'opacity: .5; pointer-events: none' : ''" @click="{{if .Modal}}bulkOpenModal({{toJSON .Key}}, {{toJSON .Modal}}){{else}}bulkStart({{toJSON .Key}}, {{if .Input}}{{toJSON .Input.Initial}}{{else}}''{{end}}, {{if and .Input .Input.Fields}}{{toJSON (index .Input.Fields 0).Key}}{{else}}''{{end}}){{end}}"
             {{if .Icon}}title="{{.Label}}" aria-label="{{.Label}}"{{end}}
-            class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-1.5 text-center text-sm font-medium shadow-xs transition-all duration-100 ease-in-out {{if .Danger}}border-transparent bg-red-600 text-white hover:bg-red-700{{else}}border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60{{end}}">
+            class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs {{if .Danger}}border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400{{else}}border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600{{end}}">
             {{if .Icon}}{{.IconSVG}}<span class="hidden sm:inline">{{.Label}}</span>{{else}}{{.Label}}{{end}}
         </button>
         {{end}}{{end}}
@@ -67,7 +68,7 @@
         <div class="text-sm font-medium text-gray-900 dark:text-gray-50">
             {{range .BulkActions}}
             <div x-show="bulkConfirming === {{toJSON .Key}}" class="flex flex-wrap items-center gap-2">
-                <span {{if .Danger}}class="text-red-600 dark:text-red-400"{{end}}>{{.Confirm}}</span>
+                <span {{if .Danger}}class="text-red-600 dark:text-red-500"{{end}}>{{.Confirm}}</span>
                 <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300"><span x-text="bulkPending.length"></span> selected</span>
             </div>
             {{end}}
@@ -80,7 +81,7 @@
             <template x-if="bulkConfirming === {{toJSON $key}}">
                 <div class="flex flex-wrap items-center gap-2">
                     {{if .Fields}}
-                    <select x-model="bulkField" @change="bulkValue = {{toJSON .FieldInitials}}[bulkField] || ''" aria-label="What to change" class="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
+                    <select x-model="bulkField" @change="bulkValue = {{toJSON .FieldInitials}}[bulkField] || ''" aria-label="What to change" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1.5 text-sm">
                         {{range .Fields}}<option value="{{.Key}}">{{.Label}}</option>{{end}}
                     </select>
                     {{range .Fields}}
@@ -94,15 +95,15 @@
                 </div>
             </template>
             {{end}}{{end}}{{end}}
-            <button type="button" @click="bulkCancel()" :disabled="bulkRunning" :style="bulkRunning ? 'opacity: .5; pointer-events: none' : ''" class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-1.5 text-center text-sm font-medium transition-all duration-100 ease-in-out rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+            <button type="button" @click="bulkCancel()" :disabled="bulkRunning" :style="bulkRunning ? 'opacity: .5; pointer-events: none' : ''" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">
                 Cancel
             </button>
             <button type="submit" :disabled="bulkRunning"
-                :class="[{{range .BulkActions}}{{if .Danger}}{{toJSON .Key}},{{end}}{{end}}].includes(bulkConfirming) ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-500 hover:bg-blue-600'"
-                class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-3 py-1.5 text-center text-sm font-medium text-white shadow-xs transition-all duration-100 ease-in-out ">
+                :class="[{{range .BulkActions}}{{if .Danger}}{{toJSON .Key}},{{end}}{{end}}].includes(bulkConfirming) ? 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'"
+                class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 border-transparent px-2.5 py-1.5 text-xs text-white shadow-xs">
                 <svg xmlns="http://www.w3.org/2000/svg" x-show="bulkRunning" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20Z"/></svg>
                 <span x-show="!bulkRunning">Confirm</span>
-                <span x-show="bulkRunning">Running...</span>
+                <span x-show="bulkRunning">Running…</span>
             </button>
         </div>
     </form>

@@ -50,9 +50,11 @@ type dashboardResellerData struct {
 	MaxAccounts     string
 	CurrentAccounts string
 	AccountsPercent string
+	AccountsMeter   string `json:"-"`
 	CurrentDiskGB   string
 	MaxDiskGB       string
 	DiskPercent     string
+	DiskMeter       string `json:"-"`
 	AllowedPlans    []string
 }
 
@@ -109,6 +111,19 @@ func blocksToGB(blocks interface{}) string {
 
 // dashboardPercent computes current/max*100, rounded to 1 decimal, or 0 if
 // either side is zero/not a number (e.g. max == "unlimited").
+// meterFillClass colors a usage meter, blue below 70%, yellow from 70%, red from 90%
+func meterFillClass(pct string) string {
+	p, _ := strconv.ParseFloat(pct, 64)
+	switch {
+	case p >= 90:
+		return "bg-red-500"
+	case p >= 70:
+		return "bg-yellow-500"
+	default:
+		return "bg-blue-500"
+	}
+}
+
 func dashboardPercent(current, max string) string {
 	c, cerr := strconv.ParseFloat(current, 64)
 	m, merr := strconv.ParseFloat(max, 64)
@@ -421,6 +436,8 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 		DiskPercent:     dashboardPercent(currentDiskGB, maxDiskGB),
 		AllowedPlans:    allowedPlans,
 	}
+	data.AccountsMeter = meterFillClass(data.AccountsPercent)
+	data.DiskMeter = meterFillClass(data.DiskPercent)
 
 	if wantJSON {
 		writeJSON(w, data)
