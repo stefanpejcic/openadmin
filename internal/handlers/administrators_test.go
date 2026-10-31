@@ -271,7 +271,7 @@ func TestServeEditFormRendersHTML(t *testing.T) {
 		action string
 		want   []string
 	}{
-		{"rename", []string{"Rename Administrator: bob", "New Username", "</html>"}},
+		{"rename", []string{"Rename Administrator: bob", "New username", "</html>"}},
 		{"password", []string{"Change Password for bob", "generatePassword", "</html>"}},
 	} {
 		resp, err := client.Get(srv.URL + "/administrators/" + tc.action + "/bob")

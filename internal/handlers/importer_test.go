@@ -281,7 +281,7 @@ func TestServeImportFromBackupGETListsLogs(t *testing.T) {
 		"Account Imports",
 		"a.log",
 		"Completed",
-		"Import Account",
+		"Import account",
 		"</html>",
 	} {
 		if !strings.Contains(got, want) {

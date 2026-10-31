@@ -9,10 +9,12 @@ function updatePublicIP(username, ip) {
 
         const span = document.createElement('span');
         span.title = "Dedicated IP";
+        span.setAttribute('role', 'img');
+        span.setAttribute('aria-label', 'Dedicated IP');
         span.className = "flex size-4 shrink-0 items-center justify-center rounded-full bg-blue-500 ring-2 ring-white dark:bg-blue-500 dark:ring-raised";
 
         span.innerHTML = `
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-2.5 text-white dark:text-white"><path d="M11.9998 17L6.12197 20.5902L7.72007 13.8906L2.48926 9.40983L9.35479 8.85942L11.9998 2.5L14.6449 8.85942L21.5104 9.40983L16.2796 13.8906L17.8777 20.5902L11.9998 17Z"></path></svg>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-2.5 text-white"><path d="M11.9998 17L6.12197 20.5902L7.72007 13.8906L2.48926 9.40983L9.35479 8.85942L11.9998 2.5L14.6449 8.85942L21.5104 9.40983L16.2796 13.8906L17.8777 20.5902L11.9998 17Z"></path></svg>
         `;
 
         element.appendChild(span);
@@ -52,11 +54,9 @@ fetch('/json/user_activity_status')
 
       if (isActive) {
         const dot = document.createElement('span');
-        dot.classList.add('user-status-dot');
-        dot.textContent = '●';
-        dot.style.color = 'green';
-        dot.style.fontSize = '0.9rem';
-        dot.style.verticalAlign = 'middle';
+        dot.className = 'user-status-dot inline-block size-2 rounded-full bg-emerald-500';
+        dot.setAttribute('role', 'img');
+        dot.setAttribute('aria-label', 'Online');
         onlineCell.appendChild(dot);
       }
     });
@@ -69,8 +69,9 @@ fetch('/json/user_activity_status')
 (function () {
   const tip = document.getElementById('row-tooltip');
   if (!tip) return;
-  let current = null;
+  let current = null, timer = null;
   function show(el) {
+    clearTimeout(timer);
     current = el;
     tip.textContent = el.dataset.tip;
     tip.classList.remove('invisible', 'opacity-0');
@@ -85,18 +86,25 @@ fetch('/json/user_activity_status')
     tip.style.top = Math.max(8, y) + 'px';
   }
   function hide() {
+    clearTimeout(timer);
     current = null;
     tip.classList.add('invisible', 'opacity-0');
   }
   document.addEventListener('mouseover', e => {
     const el = e.target.closest && e.target.closest('[data-tip]');
-    if (el !== current) el ? show(el) : hide();
+    if (el === current) return;
+    if (!el) return hide();
+    // pointer gets a short delay, keyboard focus opens right away
+    hide();
+    current = el;
+    timer = setTimeout(() => show(el), 200);
   });
   document.addEventListener('focusin', e => {
     const el = e.target.closest && e.target.closest('[data-tip]');
     if (el) show(el);
   });
   document.addEventListener('focusout', hide);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
   addEventListener('scroll', hide, true);
 })();
 
