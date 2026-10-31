@@ -95,7 +95,7 @@ func TestServeCustomCodeGetCommunityHidesEnterpriseFields(t *testing.T) {
 	if strings.Contains(got, `name="custom_css"`) {
 		t.Fatalf("expected Enterprise-only fields hidden on Community, got %s", truncate(got))
 	}
-	for _, want := range []string{`name="post_update"`, "Custom Code", "</html>"} {
+	for _, want := range []string{`name="post_update"`, "Custom code", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}

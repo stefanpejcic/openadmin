@@ -218,7 +218,7 @@ func TestPlansNewFormRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	if !strings.Contains(string(body), "New Package") {
+	if !strings.Contains(string(body), "New package") {
 		t.Fatalf("expected the new-plan form, got %s", truncate(string(body)))
 	}
 }

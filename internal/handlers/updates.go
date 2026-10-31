@@ -481,5 +481,5 @@ func (u *Updates) ServeUpdates(w http.ResponseWriter, r *http.Request) {
 		"ShowUpdateNow": compareVersionTags(latestVersion, panelVersion) > 0,
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, u.Sessions),
-	}, r, "Update Settings"))
+	}, r, "Update settings"))
 }

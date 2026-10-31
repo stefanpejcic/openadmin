@@ -1036,7 +1036,7 @@ func (wf *WAF) ServeWAFDomains(w http.ResponseWriter, r *http.Request) {
 		"Users":         wafUsersOf(domains, owners),
 		"Flashes":       auth.PopFlashes(w, r, wf.Sessions),
 		"WAFTab":        "domains",
-	}, r, "Web Firewall Domains"))
+	}, r, "Web firewall domains"))
 }
 
 // ServeWAFTargetRules handles GET/POST /security/waf/rules/{target}, target is a domain or a username
@@ -1075,7 +1075,7 @@ func (wf *WAF) ServeWAFTargetRules(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{"kind": kind, "target": target, "domains": rows})
 		return
 	}
-	webtemplates.Render(w, "security_coraza_target.html", mergeChrome(data, r, "Web Firewall Rules: "+target))
+	webtemplates.Render(w, "security_coraza_target.html", mergeChrome(data, r, "Web firewall rules: "+target))
 }
 
 func (wf *WAF) handleTargetRulesPOST(w http.ResponseWriter, r *http.Request, kind string, domains []string) {
@@ -1241,7 +1241,7 @@ func (wf *WAF) ServeWAFLogs(w http.ResponseWriter, r *http.Request) {
 	if kind != "server" {
 		owner = owners[domains[0]]
 	}
-	title := "Web Firewall Logs"
+	title := "Web firewall logs"
 	if target != "" {
 		title += ": " + target
 	}

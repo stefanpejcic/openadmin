@@ -208,7 +208,7 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 		_ = d.AdminDB.SetPref(u.ID, summarySeenPref, s.Date)
 	}
 	webtemplates.Render(w, "dashboard_summary.html", dashboardPageData{
-		Chrome:  buildChrome(r, "Daily Summary"),
+		Chrome:  buildChrome(r, "Daily summary"),
 		Flashes: auth.PopFlashes(w, r, d.Sessions),
 		Summary: s,
 	})
@@ -216,7 +216,7 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 
 const summarySeenPref = "summary_seen"
 
-// SummaryNeedsAttention puts the orange dot on the Daily Summary tab
+// SummaryNeedsAttention puts the orange dot on the Daily summary tab
 func (d *Dashboard) SummaryNeedsAttention(r *http.Request) bool {
 	if !summaryEnabled() {
 		return false
@@ -1254,7 +1254,7 @@ func loadResourceUsageSnapshots(minutes int) []json.RawMessage {
 func (d *Dashboard) ServeResourceUsagePage(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "system_resources.html", mergeChrome(map[string]interface{}{
 		"Flashes": auth.PopFlashes(w, r, d.Sessions),
-	}, r, "Resource Usage"))
+	}, r, "Resource usage"))
 }
 
 // ServeResourceUsageHistory handles GET /server/resource-usage/history.
@@ -1287,7 +1287,7 @@ func (d *Dashboard) ServeResourceUsageHistory(w http.ResponseWriter, r *http.Req
 		"PeriodLabel":   resourceUsagePeriodLabel(minutes),
 		"View":          view,
 		"Flashes":       auth.PopFlashes(w, r, d.Sessions),
-	}, r, "Resource Usage History"))
+	}, r, "Resource usage history"))
 }
 
 // ServeResourceUsageHistoryData handles GET

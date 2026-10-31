@@ -145,7 +145,7 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 			"DomainName":  "",
 			"CSRFToken":   csrf.Token(r),
 			"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-		}, r, "DNS Zone Editor"))
+		}, r, "DNS zone editor"))
 		return
 	}
 
@@ -252,7 +252,7 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 		"HasTmpFileContent": hasTmpFileContent,
 		"CSRFToken":         csrf.Token(r),
 		"Flashes":           auth.PopFlashes(w, r, h.Sessions),
-	}, r, "DNS Zone Editor"))
+	}, r, "DNS zone editor"))
 }
 
 // defaultBackupTimestamp formats the current time as YYYYMMDDHHMMSS;

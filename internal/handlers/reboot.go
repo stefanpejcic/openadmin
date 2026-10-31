@@ -55,7 +55,7 @@ func currentBootID() string {
 // ServeReboot handles GET/POST /server/reboot.
 func (rb *Reboot) ServeReboot(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(RebootDisableFlagPath); err == nil {
-		http.Error(w, "Server Reboot access is disabled.", http.StatusForbidden)
+		http.Error(w, "Server reboot access is disabled.", http.StatusForbidden)
 		return
 	}
 
@@ -82,7 +82,7 @@ func (rb *Reboot) ServeReboot(w http.ResponseWriter, r *http.Request) {
 		"BootID":        currentBootID(),
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, rb.Sessions),
-	}, r, "Server Reboot"))
+	}, r, "Server reboot"))
 }
 
 // ServeRebootStatus handles GET /server/reboot/status.

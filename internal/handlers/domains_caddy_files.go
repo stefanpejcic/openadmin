@@ -66,7 +66,7 @@ func (h *CaddyFileEditor) ServeEditCaddyFile(w http.ResponseWriter, r *http.Requ
 			"DomainName":  "",
 			"CSRFToken":   csrf.Token(r),
 			"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-		}, r, "Edit Domain Caddyfile"))
+		}, r, "Edit domain Caddyfile"))
 		return
 	}
 
@@ -159,5 +159,5 @@ func (h *CaddyFileEditor) ServeEditCaddyFile(w http.ResponseWriter, r *http.Requ
 		"HasTmpFileContent": hasTmpFileContent,
 		"CSRFToken":         csrf.Token(r),
 		"Flashes":           auth.PopFlashes(w, r, h.Sessions),
-	}, r, "Edit Domain Caddyfile"))
+	}, r, "Edit domain Caddyfile"))
 }

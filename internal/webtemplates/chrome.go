@@ -7,7 +7,7 @@ import "html/template"
 // Page-specific data structs embed this so templates can access both the
 // page's own fields and the chrome fields through the same dot.
 type Chrome struct {
-	// SummaryTab shows the Daily Summary tab, SummaryAttention its orange dot
+	// SummaryTab shows the Daily summary tab, SummaryAttention its orange dot
 	SummaryTab       bool
 	SummaryAttention bool
 

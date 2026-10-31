@@ -90,7 +90,7 @@ func (h *VHostFileEditor) ServeEditVHostFile(w http.ResponseWriter, r *http.Requ
 			"DomainName":  "",
 			"CSRFToken":   csrf.Token(r),
 			"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-		}, r, "Edit Domain VirtualHosts file"))
+		}, r, "Edit domain VirtualHosts file"))
 		return
 	}
 
@@ -146,5 +146,5 @@ func (h *VHostFileEditor) ServeEditVHostFile(w http.ResponseWriter, r *http.Requ
 		"BindContent": bindContent,
 		"CSRFToken":   csrf.Token(r),
 		"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-	}, r, "Edit Domain VirtualHosts file"))
+	}, r, "Edit domain VirtualHosts file"))
 }

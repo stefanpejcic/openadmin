@@ -184,7 +184,7 @@ func (s *ServerUtils) ServeRootPassword(w http.ResponseWriter, r *http.Request) 
 	}
 
 	webtemplates.Render(w, "root_password.html", rootPasswordPageData{
-		Chrome:    buildChrome(r, "Root Password"),
+		Chrome:    buildChrome(r, "Root password"),
 		CSRFToken: csrf.Token(r),
 		Flashes:   auth.PopFlashes(w, r, s.Sessions),
 	})
@@ -263,7 +263,7 @@ func (s *ServerUtils) ServeDemoMode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "demo_mode.html", demoModePageData{
-		Chrome:    buildChrome(r, "Demo Mode"),
+		Chrome:    buildChrome(r, "Demo mode"),
 		DemoMode:  config.Openpanel().Get("PANEL", "demo_mode", "off"),
 		CSRFToken: csrf.Token(r),
 		Flashes:   auth.PopFlashes(w, r, s.Sessions),

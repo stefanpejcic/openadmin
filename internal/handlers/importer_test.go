@@ -172,7 +172,7 @@ func TestServeImportUserRendersPlans(t *testing.T) {
 	}
 	got := string(body)
 	for _, want := range []string{
-		"Import Account from backup",
+		"Import account from backup",
 		"Backup file",
 		"Backup type",
 		"No plans available.",
@@ -278,7 +278,7 @@ func TestServeImportFromBackupGETListsLogs(t *testing.T) {
 	}
 	got := string(body)
 	for _, want := range []string{
-		"Account Imports",
+		"Account imports",
 		"a.log",
 		"Completed",
 		"Import account",
@@ -634,7 +634,7 @@ func TestServeImportTransferGETListsLogs(t *testing.T) {
 	}
 	got := string(body)
 	for _, want := range []string{
-		"Review Account Transfers",
+		"Review account transfers",
 		"x.log",
 		"Completed",
 		"</html>",

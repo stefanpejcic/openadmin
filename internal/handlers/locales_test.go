@@ -318,7 +318,7 @@ func TestServeLocalesGetRendersHTML(t *testing.T) {
 	resp.Body.Close()
 	got := string(body)
 	for _, want := range []string{
-		"Languages (Locales)",
+		"Languages (locales)",
 		"en-us",
 		"fr-fr",
 		"Set as default",

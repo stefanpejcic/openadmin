@@ -101,7 +101,7 @@ func TestServeRebootGetShowsForm(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{`name="reboot_type"`, "Server Reboot", "</html>"} {
+	for _, want := range []string{`name="reboot_type"`, "Server reboot", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}

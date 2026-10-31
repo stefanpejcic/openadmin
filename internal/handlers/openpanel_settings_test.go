@@ -422,7 +422,7 @@ func TestServeOpenpanelSettingsWarnsWhenFileSizesExceedContainerRAM(t *testing.T
 		t.Fatalf("expected the 2 GB limit checked on all 4 size fields, got %d", n)
 	}
 	if !strings.Contains(string(body), "more than the 2 GB RAM limit of the OpenPanel container") || !strings.Contains(string(body), `href="/services/limits"`) {
-		t.Fatal("expected the warning text with a link to Service Limits")
+		t.Fatal("expected the warning text with a link to Service limits")
 	}
 	if !strings.Contains(string(body), "Trash is never purged") || !strings.Contains(string(body), `href="/server/crons"`) {
 		t.Fatal("expected the auto-purge trash hints")

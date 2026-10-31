@@ -638,7 +638,7 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 		"Emails":               totalCount,
 		"EmailStorageLocation": emailStorageLocation,
 		"Flashes":              auth.PopFlashes(w, r, e.Sessions),
-	}, r, "Email Settings"))
+	}, r, "Email settings"))
 }
 
 // runEmailsCmd is a 30s-timeout subprocess wrapper shared by the
@@ -894,7 +894,7 @@ func (e *Emails) ServeEmailsQueue(w http.ResponseWriter, r *http.Request) {
 		"Queue":            queue,
 		"QueueIDs":         queueIDs,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
-	}, r, "Email Queue"))
+	}, r, "Email queue"))
 }
 
 // ServeEmailsQueueAction handles POST /emails/queue/action.
@@ -979,17 +979,17 @@ func (e *Emails) ServeEmailsReports(w http.ResponseWriter, r *http.Request) {
 		renderGzip(w, r, "emails_mailserver_not_installed_with_header.html", mergeChrome(map[string]interface{}{
 			"Flashes":    flashes,
 			"Installing": emailsInstallRunning(),
-		}, r, "Email Reports"))
+		}, r, "Email reports"))
 	case "stopped":
 		renderGzip(w, r, "emails_mailserver_stopped_with_header.html", mergeChrome(map[string]interface{}{
 			"Flashes": flashes,
-		}, r, "Email Reports"))
+		}, r, "Email reports"))
 	default:
 		_, err := os.Stat(EmailsReportsIndexFile)
 		renderGzip(w, r, "emails_reports.html", mergeChrome(map[string]interface{}{
 			"Flashes":      flashes,
 			"ReportsExist": err == nil,
-		}, r, "Email Reports"))
+		}, r, "Email reports"))
 	}
 }
 

@@ -537,7 +537,7 @@ func (s *Services) ServeEdit(w http.ResponseWriter, r *http.Request) {
 		"Data":      string(pretty),
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, s.Sessions),
-	}, r, "Edit Services"))
+	}, r, "Edit services"))
 }
 
 // --- /service/{action}/{name} (a second, narrower control endpoint) ---

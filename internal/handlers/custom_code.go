@@ -140,5 +140,5 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 		"WPThemes":          fileContents["wp_themes"],
 		"WPPlugins":         fileContents["wp_plugins"],
 	}
-	webtemplates.Render(w, "settings_custom_code.html", mergeChrome(data, r, "Custom Code"))
+	webtemplates.Render(w, "settings_custom_code.html", mergeChrome(data, r, "Custom code"))
 }

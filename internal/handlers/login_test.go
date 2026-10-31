@@ -312,7 +312,7 @@ func TestLoginWithTwoFAFlow(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "Two-Factor Authentication") {
+	if !strings.Contains(string(body), "Two-factor authentication") {
 		t.Fatalf("expected to land on the 2FA page, got %q", truncate(string(body)))
 	}
 

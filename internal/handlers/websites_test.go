@@ -357,7 +357,7 @@ func TestWebsitesGit(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status %d: %s", resp.StatusCode, page)
 	}
-	for _, want := range []string{`data-col="git"`, ">blog-theme<", "+1 more", "blog-plugin (dev)", `title="blog-plugin: boom"`, "deployed ", ">abcdef1</code>",`data-bulk-action="git_deploy"`} {
+	for _, want := range []string{`data-col="git"`, ">blog-theme<", "+1 more", "blog-plugin (dev)", `title="blog-plugin: boom"`, "deployed ", ">abcdef1</code>", `data-bulk-action="git_deploy"`} {
 		if !strings.Contains(page, want) && !strings.Contains(page, html.EscapeString(want)) {
 			t.Errorf("page missing %q", want)
 		}

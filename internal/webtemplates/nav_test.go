@@ -29,7 +29,7 @@ func TestBuildModernNavAdmin(t *testing.T) {
 	c := &Chrome{CurrentPath: "/domains/dns", IsAdmin: true, LicenseType: "Enterprise", EnabledModules: []string{"dns"}}
 	items, tabs := BuildModernNav(c)
 
-	if got := labels(items); got != "Accounts,Hosting Plans,Domains,Websites,Databases,Emails,Backups,Services,Security,Server,System,Settings,License & Support" {
+	if got := labels(items); got != "Accounts,Hosting plans,Domains,Websites,Databases,Emails,Backups,Services,Security,Server,System,Settings,License & Support" {
 		t.Errorf("unexpected sidebar: %s", got)
 	}
 	for _, i := range items {
@@ -41,7 +41,7 @@ func TestBuildModernNavAdmin(t *testing.T) {
 		}
 	}
 	got, active := tabLabels(tabs)
-	if got != "Domains,DNS Zone Editor,DNS Cluster,Rate Limiting,Zone Templates,Domain Templates,VirtualHost Templates" || active != "DNS Zone Editor" {
+	if got != "Domains,DNS zone editor,DNS Cluster,Rate limiting,Zone templates,Domain templates,VirtualHost Templates" || active != "DNS zone editor" {
 		t.Errorf("unexpected domain tabs: %s (active %s)", got, active)
 	}
 }
@@ -52,18 +52,18 @@ func TestBuildModernNavGating(t *testing.T) {
 	if strings.Contains(labels(items), "Emails") {
 		t.Error("did not expect Emails without Enterprise")
 	}
-	if got, _ := tabLabels(tabs); got != "Domains,Rate Limiting,Domain Templates,VirtualHost Templates" {
+	if got, _ := tabLabels(tabs); got != "Domains,Rate limiting,Domain templates,VirtualHost Templates" {
 		t.Errorf("unexpected domain tabs without dns/Enterprise: %s", got)
 	}
 }
 
 func TestBuildModernNavReseller(t *testing.T) {
 	items, tabs := BuildModernNav(&Chrome{CurrentPath: "/security/2fa", IsReseller: true, LicenseType: "Enterprise"})
-	if got := labels(items); got != "Accounts,Hosting Plans,Domains,Databases,Emails,Backups,Services,Security,Server,Settings" {
+	if got := labels(items); got != "Accounts,Hosting plans,Domains,Databases,Emails,Backups,Services,Security,Server,Settings" {
 		t.Errorf("unexpected reseller sidebar: %s", got)
 	}
 	got, active := tabLabels(tabs)
-	if got != "Users,Reseller Account,Two-Factor Authentication,Passkeys" || active != "Two-Factor Authentication" {
+	if got != "Users,Reseller account,Two-factor authentication,Passkeys" || active != "Two-factor authentication" {
 		t.Errorf("unexpected reseller tabs: %s (active %s)", got, active)
 	}
 	for _, it := range items {
@@ -76,12 +76,12 @@ func TestBuildModernNavReseller(t *testing.T) {
 // resellers only get the scoped pages in each area
 func TestBuildModernNavResellerTabs(t *testing.T) {
 	cases := map[string]string{
-		"/domains":              "Domains,DNS Zone Editor,Rate Limiting",
-		"/emails/queue":         "Accounts,Queue,Email Deliverability",
+		"/domains":              "Domains,DNS zone editor,Rate limiting",
+		"/emails/queue":         "Accounts,Queue,Email deliverability",
 		"/databases/mongodb":    "MySQL,PostgreSQL,MongoDB",
-		"/user/import":          "Import Account",
-		"/security/waf/domains": "Web Firewall (Coraza),ImunifyAV",
-		"/server/crons":         "Resource Usage,Scheduled Actions",
+		"/user/import":          "Import account",
+		"/security/waf/domains": "Web firewall (Coraza),ImunifyAV",
+		"/server/crons":         "Resource usage,Scheduled actions",
 		"/settings/locales":     "Locales",
 	}
 	for path, want := range cases {
@@ -127,12 +127,12 @@ func TestBuildModernNavSingleTabKeepsBarForDocs(t *testing.T) {
 func TestBuildModernNavSystemStartsWithServerTime(t *testing.T) {
 	items, tabs := BuildModernNav(&Chrome{CurrentPath: "/server/ssh", IsAdmin: true})
 	got, _ := tabLabels(tabs)
-	if !strings.HasPrefix(got, "Server Time,Root Password") {
-		t.Errorf("expected Server Time as the first System tab, got %s", got)
+	if !strings.HasPrefix(got, "Server time,Root password") {
+		t.Errorf("expected Server time as the first System tab, got %s", got)
 	}
 	for _, i := range items {
 		if i.Label == "System" && i.Href != "/server/timezone" {
-			t.Errorf("expected the System link to open Server Time, got %s", i.Href)
+			t.Errorf("expected the System link to open Server time, got %s", i.Href)
 		}
 	}
 }

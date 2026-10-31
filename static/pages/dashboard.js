@@ -67,7 +67,7 @@ function updateUserActivityTable() {
                                     </span>
                                 </a>
                                 <div class="min-w-0">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-50"><a href="/users/${username}#activity" class="hover:underline hover:underline-offset-4" title="Click to view the Activity Log">${ip}</a></p>
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-50"><a href="/users/${username}#activity" class="hover:underline hover:underline-offset-4" title="Click to view the Activity log">${ip}</a></p>
                                     <p class="text-xs text-gray-600 dark:text-gray-400 truncate">${userAndActivity.replace(/user (\w+)/i, 'User <strong>$1</strong>')}</p>
                                 </div>
                             </div>

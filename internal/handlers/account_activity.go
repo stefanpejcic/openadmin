@@ -92,7 +92,7 @@ func (a *AccountActivity) Serve(listURL string) http.HandlerFunc {
 		}
 
 		webtemplates.Render(w, "account_activity.html", accountActivityPageData{
-			Chrome:     buildChrome(r, "Activity Log: "+username),
+			Chrome:     buildChrome(r, "Activity log: "+username),
 			Username:   username,
 			Entries:    entries[start:end],
 			Total:      len(entries),

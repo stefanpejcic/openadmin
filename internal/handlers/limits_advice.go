@@ -11,7 +11,7 @@ import (
 	"openadmin/internal/paneldb"
 )
 
-// limitsHost is what the Service Limits recommendations are based on
+// limitsHost is what the Service limits recommendations are based on
 type limitsHost struct {
 	Cores          int
 	RAMGB          float64

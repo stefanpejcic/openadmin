@@ -375,7 +375,7 @@ func (p *Plans) ServeEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "plan_edit.html", editPlanPageData{
-		Chrome:        buildChrome(r, "Edit Plan"),
+		Chrome:        buildChrome(r, "Edit plan"),
 		PlanID:        planID,
 		Plan:          plan,
 		FeatureSets:   fetchFeatureSets(auth.CurrentUser(r)),

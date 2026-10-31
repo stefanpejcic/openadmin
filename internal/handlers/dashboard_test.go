@@ -268,7 +268,7 @@ func TestServeResourceUsageHistoryRendersHTMLAndJSON(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(got))
 	}
-	for _, want := range []string{"Resource Usage History", "Last 1 hour", `"cpu_pct":42`, "</html>"} {
+	for _, want := range []string{"Resource usage history", "Last 1 hour", `"cpu_pct":42`, "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}

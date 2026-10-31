@@ -69,7 +69,7 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 			"Username":    "",
 			"CSRFToken":   csrf.Token(r),
 			"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-		}, r, "Edit Main Webserver Configuration"))
+		}, r, "Edit main webserver configuration"))
 		return
 	}
 
@@ -122,5 +122,5 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 		"ConfContent": confContent,
 		"CSRFToken":   csrf.Token(r),
 		"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-	}, r, "Edit Main Webserver Configuration"))
+	}, r, "Edit main webserver configuration"))
 }

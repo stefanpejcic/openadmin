@@ -508,7 +508,7 @@ func TestServeUpdatesGetRendersHTML(t *testing.T) {
 	resp.Body.Close()
 	got := string(body)
 	for _, want := range []string{
-		"Update Settings",
+		"Update settings",
 		"10.0",
 		"10.5",
 		"Start update to 10.5",

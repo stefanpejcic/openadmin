@@ -350,7 +350,7 @@ NGINX_ENABLED="true"
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(got))
 	}
 	for _, want := range []string{
-		"Edit Defaults", "Nginx", "MariaDB",
+		"Edit defaults", "Nginx", "MariaDB",
 		`value="1.5" required`, // PHP_FPM CPU stripped of trailing G
 		`value="1" required`,   // PHP_FPM 7.4 CPU stripped, no status
 		`value="2" required`,   // NGINX CPU stripped
@@ -430,7 +430,7 @@ func TestServeDefaultsFilesGetAndPost(t *testing.T) {
 	}
 
 	got := string(body)
-	for _, want := range []string{"Edit Defaults", "docker-compose.yml", "new-env-content", "old-compose", "</html>"} {
+	for _, want := range []string{"Edit defaults", "docker-compose.yml", "new-env-content", "old-compose", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected rendered page to contain %q, got %s", want, truncate(got))
 		}

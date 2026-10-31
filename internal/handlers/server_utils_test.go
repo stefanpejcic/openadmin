@@ -122,7 +122,7 @@ func TestTimezoneServeShowsCurrentAndAvailable(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"Europe/Belgrade", "America/New_York", "Change TimeZone", "</html>"} {
+	for _, want := range []string{"Europe/Belgrade", "America/New_York", "Change timezone", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
@@ -213,7 +213,7 @@ func TestDemoModeRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"Demo Mode", "</html>"} {
+	for _, want := range []string{"Demo mode", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
@@ -234,7 +234,7 @@ func TestRootPasswordRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"Change Root Password", "name=\"password\"", "</html>"} {
+	for _, want := range []string{"Change root password", "name=\"password\"", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}

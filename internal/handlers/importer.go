@@ -296,7 +296,7 @@ func (im *Importer) ServeImportFromBackup(w http.ResponseWriter, r *http.Request
 	webtemplates.Render(w, "users_import_list_import_logs.html", mergeChrome(map[string]interface{}{
 		"LogFiles": importLogsFor(r),
 		"Flashes":  auth.PopFlashes(w, r, im.Sessions),
-	}, r, "Account Imports"))
+	}, r, "Account imports"))
 }
 
 // serveImportLog is shared by ServeViewTransferImportLog and

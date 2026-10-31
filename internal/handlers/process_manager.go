@@ -265,9 +265,9 @@ func (p *ProcessManager) ServeProcesses(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	title := "Process Manager"
+	title := "Process manager"
 	if sortProvided {
-		title = fmt.Sprintf("Process Manager (sort by %s)", sortBy)
+		title = fmt.Sprintf("Process manager (sort by %s)", sortBy)
 	}
 
 	webtemplates.Render(w, "system_processes.html", mergeChrome(map[string]interface{}{
@@ -307,7 +307,7 @@ func (p *ProcessManager) ServeProcessAction(w http.ResponseWriter, r *http.Reque
 			"PID":       pid,
 			"CSRFToken": csrf.Token(r),
 			"Flashes":   auth.PopFlashes(w, r, p.Sessions),
-		}, r, "Process Manager"))
+		}, r, "Process manager"))
 
 	case "kill":
 		if r.Method != http.MethodPost {

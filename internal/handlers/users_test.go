@@ -501,7 +501,7 @@ func TestServeCreateUserGetRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(got))
 	}
-	for _, want := range []string{"Create User Account", "Starter", "Webserver", "Database type", "</html>"} {
+	for _, want := range []string{"Create user account", "Starter", "Webserver", "Database type", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}

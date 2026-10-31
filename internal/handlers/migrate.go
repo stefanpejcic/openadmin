@@ -96,7 +96,7 @@ func (m *Migrate) ServeMigrate(w http.ResponseWriter, r *http.Request) {
 		"MigrateStarted": migrateStarted,
 		"CSRFToken":      csrf.Token(r),
 		"Flashes":        auth.PopFlashes(w, r, m.Sessions),
-	}, r, "Server Migration"))
+	}, r, "Server migration"))
 }
 
 // ServeMigrateStatus handles GET /server/migrate/status.
@@ -131,11 +131,11 @@ func (m *Migrate) ServeMigrateLogs(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "users_import_import_users.html", mergeChrome(map[string]interface{}{
 		"LogFiles":     listLogFilesWithStatus(MigrateLogDir),
 		"Flashes":      auth.PopFlashes(w, r, m.Sessions),
-		"PageTitle":    "Server Migration Logs",
+		"PageTitle":    "Server migration logs",
 		"PageSubtitle": "View running and past server migration logs.",
 		"LogURLPrefix": "/server/migrate/logs/",
 		"BackURL":      "/server/migrate",
-	}, r, "Server Migration Logs"))
+	}, r, "Server migration logs"))
 }
 
 // ServeMigrateLog handles GET /server/migrate/logs/{log_filename}.

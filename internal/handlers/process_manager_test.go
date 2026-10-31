@@ -196,7 +196,7 @@ func TestServeProcessesRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
 	}
-	for _, want := range []string{"Process Manager", "Pid", "Owner", "Priority", "CPU %", "Memory %", "Command", "</html>"} {
+	for _, want := range []string{"Process manager", "Pid", "Owner", "Priority", "CPU %", "Memory %", "Command", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -281,7 +281,7 @@ func TestServeProcessActionStraceNonStreamRendersPage(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	for _, want := range []string{"strace -p", "1234", "Process Manager", "</html>"} {
+	for _, want := range []string{"strace -p", "1234", "Process manager", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}

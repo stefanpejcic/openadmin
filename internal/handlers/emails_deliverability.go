@@ -216,7 +216,7 @@ func (e *Emails) ServeDeliverability(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	webtemplates.Render(w, "emails_deliverability.html", deliverabilityPageData{
-		Chrome:    buildChrome(r, "Email Deliverability"),
+		Chrome:    buildChrome(r, "Email deliverability"),
 		CSRFToken: csrf.Token(r),
 		Flashes:   auth.PopFlashes(w, r, e.Sessions),
 	})

@@ -52,5 +52,5 @@ func (d *DNSTemplates) ServeDNSZoneTemplates(w http.ResponseWriter, r *http.Requ
 		"ZoneTemplateIPv6": ipv6,
 		"CSRFToken":        csrf.Token(r),
 		"Flashes":          auth.PopFlashes(w, r, d.Sessions),
-	}, r, "DNS Zone Templates"))
+	}, r, "DNS zone templates"))
 }

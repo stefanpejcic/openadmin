@@ -102,7 +102,7 @@ func TestAccessLogsListsDomainsWhenNoneGiven(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"Domain Logs", "example.com", "</html>"} {
+	for _, want := range []string{"Domain logs", "example.com", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}

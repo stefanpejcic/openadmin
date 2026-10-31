@@ -196,7 +196,7 @@ func TestServeIndexGroupsLogs(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"OpenAdmin Access Log", "OpenPanel Access Log", "Syslog", "Log Viewer", "</html>"} {
+	for _, want := range []string{"OpenAdmin Access Log", "OpenPanel Access Log", "Syslog", "Log viewer", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}
@@ -215,7 +215,7 @@ func TestServeEditLogsGetDefault(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	for _, want := range []string{"<textarea", "Edit Log Paths", "</html>"} {
+	for _, want := range []string{"<textarea", "Edit log paths", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -467,7 +467,7 @@ func TestServeUpdateLogsSettingsListsGlob(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	for _, want := range []string{"2026-01-01.log", "Update Logs Viewer", "</html>"} {
+	for _, want := range []string{"2026-01-01.log", "Update logs viewer", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -538,7 +538,7 @@ func TestServeCrashlogsSettingsAndRawView(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	for _, want := range []string{"crash1.txt", "Crash Logs Viewer", "</html>"} {
+	for _, want := range []string{"crash1.txt", "Crash logs viewer", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}

@@ -812,7 +812,7 @@ func (d *Defaults) ServeDefaultsFiles(w http.ResponseWriter, r *http.Request) {
 		"Compose":   fileContents["compose"],
 		"Autostart": fileContents["autostart"],
 		"Flashes":   auth.PopFlashes(w, r, d.Sessions),
-	}, r, "Edit Defaults"))
+	}, r, "Edit defaults"))
 }
 
 func (d *Defaults) handleDefaultsFilesPreview(w http.ResponseWriter, r *http.Request) {

@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-// thresholdHost is what the Resource Usage recommendations are based on
+// thresholdHost is what the Resource usage recommendations are based on
 type thresholdHost struct {
 	Cores                 int
 	RAMGB, SwapGB, DiskGB float64
