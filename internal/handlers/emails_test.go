@@ -610,7 +610,7 @@ func TestServeEmailsAccountsRendersHTMLNotInstalled(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Emails", "No emails yet.", "Not Installed", `action="/emails/install"`, "</html>"} {
+	for _, want := range []string{"Emails", "No emails yet.", "isn't installed", `action="/emails/install"`, "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -676,7 +676,7 @@ func TestServeEmailsQueueRendersHTMLNotInstalled(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Email Queue", "Not Installed", `action="/emails/install"`, "</html>"} {
+	for _, want := range []string{"Email Queue", "isn't installed", `action="/emails/install"`, "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -731,7 +731,7 @@ func TestServeEmailsReportsRendersHTMLAllBranches(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Email Reports", "email server is not installed", "</html>"} {
+	for _, want := range []string{"Email Reports", "the mail server isn't installed", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("not_installed: expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -749,7 +749,7 @@ func TestServeEmailsReportsRendersHTMLAllBranches(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Not Running", "</html>"} {
+	for _, want := range []string{"Mail server isn't running", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("stopped: expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -766,7 +766,7 @@ func TestServeEmailsReportsRendersHTMLAllBranches(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"No reports yet. Reports are generated every 24h.", "</html>"} {
+	for _, want := range []string{"No reports yet", "Reports are generated every 24 hours.", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("running: expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -894,7 +894,7 @@ func TestServeEmailsSettingsRendersHTMLRunning(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Email Settings", "MailServer Status", "Relay Hosts", "relay.example.com", "</html>"} {
+	for _, want := range []string{"Email Settings", "Mail server status", "Relay hosts", "relay.example.com", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}

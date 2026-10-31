@@ -128,7 +128,7 @@ func TestNotificationsUpdateAvailableLinksToUpdateNow(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), `<a href="/settings/updates#update-now" class="ml-1 text-blue-600 underline">Update Now</a>`) {
+	if !strings.Contains(string(body), `<a href="/settings/updates#update-now" class="ml-1 text-blue-500 hover:underline hover:underline-offset-4">Update Now</a>`) {
 		t.Fatalf("expected Update Now link, got %s", truncate(string(body)))
 	}
 }
@@ -319,7 +319,7 @@ func TestNotificationsViewDetailTogglesNeedNoAlpinePerRow(t *testing.T) {
 	if n := strings.Count(page, `class="nt-switch`); n != 4 {
 		t.Fatalf("expected a toggle for each of the 4 notifications, got %d", n)
 	}
-	for _, want := range []string{"Display Processes", "Show Partitions", "Show details", "PID 1 bash", "/dev/sda1 95%", "mysqld", "more text"} {
+	for _, want := range []string{"Show processes", "Show partitions", "Show details", "PID 1 bash", "/dev/sda1 95%", "mysqld", "more text"} {
 		if !strings.Contains(page, want) {
 			t.Fatalf("expected %q on the page", want)
 		}
@@ -353,11 +353,11 @@ func TestNotificationsViewFiltersAndPages(t *testing.T) {
 		resp.Body.Close()
 		return string(body)
 	}
-	// each row has its title twice, in the row and as the bulk checkbox label
+	// each unread row has its title five times: the row, the bulk checkbox label and the acknowledge, snooze and delete button labels
 	rows := func(got string) int {
-		return (strings.Count(got, "Routine check") + strings.Count(got, "Disk failing")) / 2
+		return (strings.Count(got, "Routine check") + strings.Count(got, "Disk failing")) / 5
 	}
-	if got := get(""); rows(got) != 100 || !strings.Contains(got, "Page 1 of 3") {
+	if got := get(""); rows(got) != 100 || !strings.Contains(got, `aria-current="page" class="inline-flex size-8`) || !strings.Contains(got, `aria-label="Next page"`) {
 		t.Errorf("first page should hold 100 of 250, got %d", rows(got))
 	}
 	if got := get("?page=3"); rows(got) != 50 {

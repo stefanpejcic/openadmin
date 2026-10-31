@@ -181,7 +181,7 @@ func TestServeDomainLimitsRawModeRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Editing file:", PostfwdConfigPath, "id=limit_stefan_stefan_rs", "</html>"} {
+	for _, want := range []string{"Editing file", PostfwdConfigPath, "id=limit_stefan_stefan_rs", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
