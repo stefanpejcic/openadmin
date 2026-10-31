@@ -63,8 +63,8 @@ var openpanelIntFields = []string{
 // openpanelStringFields lists the plain-string fields (those not in
 // openpanelIntFields above, and not the "weakpass" checkbox).
 var openpanelStringFields = []string{
-	"brand_name", "logo", "favicon", "ns1", "ns2", "ns3", "ns4",
-	"menu_style", "avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
+	"brand_name", "logo", "logo_dark", "favicon", "ns1", "ns2", "ns3", "ns4",
+	"menu_style", "ui_theme", "login_layout", "avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
 	"permit_username_change_by_user", "permit_subdomain_sharing",
 	"twofa_nag", "twofa_enforce", "how_to_guides", "onboarding", "found_a_bug_link", "ip_county_flag",
 	"validate_ip_address_cookie",
@@ -98,6 +98,8 @@ type openpanelRule struct {
 
 var openpanelValidValues = map[string]openpanelRule{
 	"menu_style":                      {kind: openpanelEnum, options: []string{"classic", "modern"}},
+	"ui_theme":                        {kind: openpanelEnum, options: []string{"modern", "classic"}},
+	"login_layout":                    {kind: openpanelEnum, options: []string{"card", "split"}},
 	"avatar_type":                     {kind: openpanelEnum, options: []string{"gravatar", "icon", "letter"}},
 	"resource_usage_charts_mode":      {kind: openpanelEnum, options: []string{"one", "two", "none"}},
 	"activity_items_per_page":         {kind: openpanelNonNegativeInt},
@@ -223,7 +225,7 @@ func validateOpenpanelValue(key, value string) (normalized string, ok bool, errM
 // belongs to.
 func openpanelSectionForKey(key string) string {
 	switch key {
-	case "brand_name", "logo", "favicon", "ns1", "ns2", "ns3", "ns4", "logout_url":
+	case "brand_name", "logo", "logo_dark", "favicon", "ns1", "ns2", "ns3", "ns4", "logout_url":
 		return "DEFAULT"
 	}
 	if strings.HasPrefix(key, "mysql_") {
@@ -232,7 +234,7 @@ func openpanelSectionForKey(key string) string {
 	if strings.HasPrefix(key, "filemanager_") || key == "autopurge_trash" {
 		return "FILES"
 	}
-	if key == "terminal_timeout" || key == "menu_style" || key == "applications_dashboard_items" {
+	if key == "terminal_timeout" || key == "menu_style" || key == "ui_theme" || key == "login_layout" || key == "applications_dashboard_items" {
 		return "PANEL"
 	}
 	switch key {

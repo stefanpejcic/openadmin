@@ -169,6 +169,8 @@ func TestOpenpanelSectionForKey(t *testing.T) {
 		"autopurge_trash":              "FILES",
 		"terminal_timeout":             "PANEL",
 		"menu_style":                   "PANEL",
+		"ui_theme":                     "PANEL",
+		"login_layout":                 "PANEL",
 		"applications_dashboard_items": "PANEL",
 		"login_ratelimit":              "USERS",
 	}
@@ -552,5 +554,89 @@ func TestServeOpenpanelSettingsAISectionSavesAndRenders(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("page missing %q", want)
 		}
+	}
+}
+
+func TestValidateOpenpanelValueUITheme(t *testing.T) {
+	for _, v := range []string{"modern", "classic"} {
+		if _, ok, _ := validateOpenpanelValue("ui_theme", v); !ok {
+			t.Errorf("ui_theme %q should be valid", v)
+		}
+	}
+	if _, ok, msg := validateOpenpanelValue("ui_theme", "retro"); ok || !strings.Contains(msg, "not a valid value") {
+		t.Fatalf("expected retro rejected, got ok=%v msg=%q", ok, msg)
+	}
+}
+
+func TestServeOpenpanelSettingsUIThemeSavesAndRenders(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[PANEL]\nmenu_style=modern\n"), 0644)
+
+	o := &OpenpanelSettings{}
+	srv, client := newOpenpanelSettingsTestServer(t, o)
+
+	// no key yet, so the panel's default (modern) is the selected option
+	resp, err := client.Get(srv.URL + "/settings/open-panel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	for _, want := range []string{`name="ui_theme"`, `value="modern" selected="selected">Modern`, `value="classic" >Classic`} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("page missing %q", want)
+		}
+	}
+
+	form := validOpenpanelForm()
+	form.Set("ui_theme", "classic")
+	resp, err = client.PostForm(srv.URL+"/settings/open-panel", form)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "Configuration saved successfully.") {
+		t.Fatalf("expected success flash, got %s", truncate(string(body)))
+	}
+	if !strings.Contains(string(body), `value="classic" selected="selected">Classic`) {
+		t.Fatal("classic not selected after saving it")
+	}
+	saved, _ := os.ReadFile(OpenpanelSettingsConfigPath)
+	if !strings.Contains(string(saved), "[PANEL]") || !strings.Contains(string(saved), "ui_theme=classic") {
+		t.Fatalf("ui_theme=classic not saved under [PANEL]: %q", saved)
+	}
+	// the panel reads ui_theme at startup, so saving has to ask for a restart
+	if _, err := os.Stat(OpenpanelSettingsRestartFlagPath); err != nil {
+		t.Fatalf("expected restart flag written, err=%v", err)
+	}
+
+	form.Set("ui_theme", "retro")
+	resp, err = client.PostForm(srv.URL+"/settings/open-panel", form)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "is not a valid value for ui_theme") {
+		t.Fatalf("expected a validation flash, got %s", truncate(string(body)))
+	}
+	saved, _ = os.ReadFile(OpenpanelSettingsConfigPath)
+	if !strings.Contains(string(saved), "ui_theme=classic") {
+		t.Fatalf("rejected value replaced the saved theme: %q", saved)
+	}
+}
+
+func TestOpenpanelLoginLayoutValues(t *testing.T) {
+	for _, v := range []string{"card", "split"} {
+		if _, ok, _ := validateOpenpanelValue("login_layout", v); !ok {
+			t.Errorf("login_layout %q should be valid", v)
+		}
+	}
+	if _, ok, msg := validateOpenpanelValue("login_layout", "full"); ok || !strings.Contains(msg, "not a valid value") {
+		t.Errorf("login_layout full should be rejected, got ok=%v msg=%q", ok, msg)
+	}
+	if got := openpanelSectionForKey("login_layout"); got != "PANEL" {
+		t.Errorf("login_layout goes under %s, want PANEL", got)
 	}
 }
