@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
                              </div>`;
             } else {
                 alertHtml = `<div class="p-4 sm:p-6 lg:p-8">
-                                <div class='bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md'>
+                                <div class='bg-emerald-100 border-l-4 border-emerald-500 text-emerald-700 p-4 rounded-md'>
                                     <p>License key saved successfully! 
                                     <a href="#" id="restartOpenAdmin" class='text-blue-500 underline'>Click here to restart OpenAdmin</a> 
                                     interface and apply Enterprise features (may take up to 10sec).</p>
@@ -140,7 +140,7 @@ function verifyLicense() {
             const dueWarning = licenseDueWarning(infoObject['Next Due Date'], new Date());
             if (dueWarning) {
                 const p = document.createElement('p');
-                p.className = 'mt-3 text-sm text-amber-600 dark:text-amber-500';
+                p.className = 'mt-3 text-sm text-yellow-700 dark:text-yellow-500';
                 p.textContent = dueWarning;
                 infoContainer.appendChild(p);
             }

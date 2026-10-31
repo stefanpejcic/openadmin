@@ -41,8 +41,8 @@ function updateHomeUsage(data) {
     const radius = 45, circ = 2 * Math.PI * radius;
     const offset = circ - (percent / 100) * circ;
     $('#donut_fill').css('stroke-dashoffset', offset)
-        .removeClass('text-green-500 text-yellow-500 text-red-500')
-        .addClass(percent >= 90 ? 'text-red-500' : percent >= 80 ? 'text-yellow-500' : 'text-green-500');
+        .removeClass('text-emerald-500 text-yellow-500 text-red-500')
+        .addClass(percent >= 90 ? 'text-red-500' : percent >= 80 ? 'text-yellow-500' : 'text-emerald-500');
     $('#donut_percent').text(percent + '%');
 
     // Disk info
@@ -54,8 +54,8 @@ function updateHomeUsage(data) {
 
     // Progress bar
     $('#tailwind_progress_fill').css('width', percent + '%')
-        .removeClass('bg-red-500 bg-orange-400 bg-green-500')
-        .addClass(percent >= 90 ? 'bg-red-500' : percent >= 80 ? 'bg-orange-500' : 'bg-green-500');
+        .removeClass('bg-red-500 bg-orange-400 bg-emerald-500')
+        .addClass(percent >= 90 ? 'bg-red-500' : percent >= 80 ? 'bg-orange-500' : 'bg-emerald-500');
 
     // Disk indicator
     $("#serverduIndicator").removeClass("text-red-500 text-orange-500 text-emerald-500 text-gray-500")
@@ -297,8 +297,8 @@ function fetchCpuUsage() {
         let total = 0, count = 0;
         $.each(data, (core, usage) => {
             total += usage; count++;
-            const color = usage >= 90 ? 'crimson' : usage >= 80 ? 'antiquewhite' : '#f0f8ff';
-            container.append($('<div>').css('background-color', color).append(`<span>${usage.toFixed(1)}%</span>`));
+            const load = usage >= 90 ? 'hot' : usage >= 80 ? 'busy' : 'ok';
+            container.append($('<div>').attr('data-load', load).append(`<span>${usage.toFixed(1)}%</span>`));
         });
         const avg = count ? (total / count).toFixed(1) : 0;
         usageCores = count;

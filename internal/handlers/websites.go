@@ -163,7 +163,7 @@ func (p *pageSpeed) RingColor() string {
 	case d < 90:
 		return "stroke-blue-500"
 	}
-	return "stroke-green-500"
+	return "stroke-emerald-500"
 }
 
 var pageSpeedCache fileCache[*pageSpeed]

@@ -456,7 +456,7 @@ type mergeOptions struct {
 // filterSelect sits next to the page's own filters, the page reloads with ?server= so the backend does the filtering, window. is needed since URL inside an inline handler means document.URL
 func (o mergeOptions) filterSelect() string {
 	var b strings.Builder
-	b.WriteString(`<select aria-label="Filter by server" onchange="var u=new window.URL(window.location.href);this.value?u.searchParams.set('server',this.value):u.searchParams.delete('server');u.searchParams.delete('page');window.location.href=u.href" class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 font-medium text-gray-600 sm:w-fit sm:text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-gray-400">`)
+	b.WriteString(`<select aria-label="Filter by server" onchange="var u=new window.URL(window.location.href);this.value?u.searchParams.set('server',this.value):u.searchParams.delete('server');u.searchParams.delete('page');window.location.href=u.href" class="w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 font-medium text-gray-600 sm:w-fit sm:text-xs dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400">`)
 	b.WriteString(`<option value="">All servers</option>`)
 	for _, e := range o.servers {
 		selected := ""
@@ -470,8 +470,8 @@ func (o mergeOptions) filterSelect() string {
 }
 
 const (
-	filterButtonClass = "flex w-full items-center gap-x-1.5 whitespace-nowrap rounded border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-700 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed cursor-pointer list-none"
-	filterMenuClass   = "absolute z-10 mt-1 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 rounded-lg w-48 p-2 space-y-1"
+	filterButtonClass = "flex w-full items-center gap-x-1.5 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1.5 font-medium text-gray-600 hover:bg-gray-50 sm:w-fit sm:text-xs dark:border-gray-800 dark:text-gray-400 hover:dark:bg-gray-900 border-dashed cursor-pointer list-none"
+	filterMenuClass   = "absolute z-10 mt-1 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 rounded-md w-48 p-2 space-y-1"
 	filterChevron     = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 text-gray-500 sm:size-4"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg>`
 )
 
@@ -489,7 +489,7 @@ func dropdown(label string, items []dropItem) string {
 		if it.selected {
 			mark = ` font-semibold`
 		}
-		b.WriteString(`<li><a class="block px-2 py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600 truncate` + mark + `" href="` + html.EscapeString(it.href) + `">` + html.EscapeString(it.label) + `</a></li>`)
+		b.WriteString(`<li><a class="block px-2 py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-900 truncate` + mark + `" href="` + html.EscapeString(it.href) + `">` + html.EscapeString(it.label) + `</a></li>`)
 	}
 	b.WriteString(`</ul></details>`)
 	return b.String()
@@ -561,7 +561,7 @@ func (o mergeOptions) serverHeader() string {
 		}
 		return ""
 	}
-	return `<div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>Server</span><div class="-space-y-2">` +
+	return `<div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>Server</span><div class="-space-y-2">` +
 		`<a href="` + html.EscapeString(o.descLink) + `">` + fmt.Sprintf(sortUpIcon, dim("desc")) + `</a>` +
 		`<a href="` + html.EscapeString(o.ascLink) + `">` + fmt.Sprintf(sortDownIcon, dim("asc")) + `</a></div></div>`
 }
@@ -1016,7 +1016,7 @@ func (m *Manager) transferPicker(page []byte, account, activeID string) []byte {
 	}
 	at += end + 1
 	var b strings.Builder
-	fmt.Fprintf(&b, `<div id="cluster-transfer" class="mb-4" data-account="%s" data-from="%s"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="cluster-transfer-to">Destination</label><div class="relative w-full mt-2"><select id="cluster-transfer-to" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"><option value="">Another server over SSH</option>`, html.EscapeString(account), html.EscapeString(activeID))
+	fmt.Fprintf(&b, `<div id="cluster-transfer" class="mb-4" data-account="%s" data-from="%s"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="cluster-transfer-to">Destination</label><div class="relative w-full mt-2"><select id="cluster-transfer-to" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"><option value="">Another server over SSH</option>`, html.EscapeString(account), html.EscapeString(activeID))
 	add := func(id, name string, online bool) {
 		if id == activeID {
 			return
@@ -1036,7 +1036,7 @@ func (m *Manager) transferPicker(page []byte, account, activeID string) []byte {
 		}
 		add(n.ID, n.Name, online)
 	}
-	b.WriteString(`</select></div><div id="cluster-transfer-member" class="mt-4" style="display:none"><label class="text-sm font-medium" for="cluster-transfer-reseller">If the account belongs to a reseller</label><select id="cluster-transfer-reseller" class="mt-2 mb-3 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"><option value="copy">Copy its reseller to the new server</option><option value="drop">Leave it without a reseller</option></select><label class="flex items-center gap-2 text-sm"><input type="checkbox" id="cluster-transfer-live" checked> Live: stop the account for the final copy and forward its websites until DNS moves</label><button type="button" id="cluster-transfer-start" class="mt-3 relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 cursor-pointer">Start move</button><p id="cluster-transfer-result" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></p></div></div>`)
+	b.WriteString(`</select></div><div id="cluster-transfer-member" class="mt-4" style="display:none"><label class="text-sm font-medium" for="cluster-transfer-reseller">If the account belongs to a reseller</label><select id="cluster-transfer-reseller" class="mt-2 mb-3 relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"><option value="copy">Copy its reseller to the new server</option><option value="drop">Leave it without a reseller</option></select><label class="flex items-center gap-2 text-sm"><input type="checkbox" id="cluster-transfer-live" checked> Live: stop the account for the final copy and forward its websites until DNS moves</label><button type="button" id="cluster-transfer-start" class="mt-3 relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-xs border-transparent text-white dark:text-gray-900 bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 cursor-pointer">Start move</button><p id="cluster-transfer-result" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></p></div></div>`)
 	out := make([]byte, 0, len(page)+b.Len())
 	out = append(out, page[:at]...)
 	out = append(out, b.String()...)
@@ -1097,7 +1097,7 @@ func insertServerPicker(page []byte, at int, m *Manager, path, activeID string, 
 	}
 	var b strings.Builder
 	b.WriteString(`<div class="mb-4"><label class="flex items-center h-5 text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="cluster_server">Server</label><div class="relative w-full mt-2">`)
-	b.WriteString(`<select id="cluster_server" onchange="window.location.href=this.value" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">`)
+	b.WriteString(`<select id="cluster_server" onchange="window.location.href=this.value" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">`)
 	b.WriteString(option(LocalNode, m.displayName(), true))
 	for _, n := range m.LiveNodes() {
 		online := true
@@ -1393,7 +1393,7 @@ func beforeSubmit(page []byte, form *regexp.Regexp, piece string) []byte {
 // scanServerSelect is the server choice next to the username on the website scan form
 func (m *Manager) scanServerSelect() string {
 	var b strings.Builder
-	b.WriteString(`<div><label for="scan_server" class="text-sm font-medium">Server</label><select name="cluster_server" id="scan_server" class="mt-2 block rounded border px-2.5 py-2 shadow-sm sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"><option value="">All servers</option>`)
+	b.WriteString(`<div><label for="scan_server" class="text-sm font-medium">Server</label><select name="cluster_server" id="scan_server" class="mt-2 block rounded-md border px-2.5 py-2 shadow-xs sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"><option value="">All servers</option>`)
 	fmt.Fprintf(&b, `<option value="%s">%s</option>`, LocalNode, html.EscapeString(m.displayName()))
 	for _, n := range m.LiveNodes() {
 		fmt.Fprintf(&b, `<option value="%s">%s</option>`, html.EscapeString(n.ID), html.EscapeString(n.Name))

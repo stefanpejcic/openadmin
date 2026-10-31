@@ -99,7 +99,7 @@ const mailReportDocTemplate = `<!doctype html>
 <link rel="stylesheet" href="/static/dist/output.css">
 <script defer src="/static/dist/js/alpinejs3xx.min.js"></script>
 </head>
-<body class="h-full bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white">
+<body class="h-full bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white">
 %s
 </body>
 </html>

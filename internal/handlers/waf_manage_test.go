@@ -379,7 +379,7 @@ func TestServeWAFDomainsAndLogsSort(t *testing.T) {
 
 	_, page := wafGetBody(t, client, srv.URL+"/security/waf/domains?sort=domain&direction=desc")
 	// both test domains have no level line, so standard: 2 of 3 dots filled each
-	if n := strings.Count(page, "size-1.5 rounded-full bg-indigo-600"); n != 4 {
+	if n := strings.Count(page, "size-1.5 rounded-full bg-blue-500"); n != 4 {
 		t.Fatalf("expected 4 filled level dots, got %d", n)
 	}
 	if strings.Index(page, ">shop.example.org<") > strings.Index(page, ">example.com<") {

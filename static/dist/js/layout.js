@@ -270,3 +270,76 @@ document.addEventListener('DOMContentLoaded',function(){if(typeof window.initToo
 
 // product tour, driver.js only loads when the tour starts
 (function(){var loading=null;function css(h){var l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}function js(src){return new Promise(function(ok,fail){var s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=fail;document.head.appendChild(s);});}function load(){if(!loading){css('/static/dist/css/driverjs131.min.css');loading=js('/static/dist/js/driverjs131.min.js').then(function(){return js('/static/dist/js/tour-steps.js');}).then(function(){return js('/static/dist/js/tour.js');});}return loading;}window.OPTour={start:function(f){load().then(function(){window.OPTour.start(f);});},markComplete:function(){var t=document.querySelector('meta[name="csrf-token"]');fetch('/api/tour/complete',{method:'POST',headers:t?{'X-CSRFToken':t.content}:{}}).catch(function(){});}};if(localStorage.getItem('op_tour_active')==='1')load();})();
+
+// branded stand-in for window.confirm, resolves true or false
+window.opConfirm = function (message, opts) {
+    opts = opts || {};
+    const text = String(message || '').trim();
+    const verb = (text.match(/^(delete|remove|kill|disable|clear|leave|detach|stop|reset|drop|terminate|restart|cancel)\b/i) || [])[1];
+    const danger = opts.danger !== undefined ? opts.danger : !!verb;
+    const okLabel = opts.ok || (verb ? verb.charAt(0).toUpperCase() + verb.slice(1).toLowerCase() : 'Continue');
+    const btn = 'relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium shadow-xs transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2';
+    const okClass = danger
+        ? 'border-transparent bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600'
+        : 'border-transparent bg-blue-500 text-white hover:bg-blue-600';
+    const icon = danger
+        ? '<span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-500"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2h.01"/></svg></span>'
+        : '';
+    return new Promise(function (resolve) {
+        const prev = document.activeElement;
+        const wrap = document.createElement('div');
+        wrap.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4';
+        wrap.setAttribute('role', 'alertdialog');
+        wrap.setAttribute('aria-modal', 'true');
+        wrap.setAttribute('aria-labelledby', 'op-confirm-title');
+        wrap.setAttribute('aria-describedby', 'op-confirm-text');
+        wrap.innerHTML =
+            '<div class="w-full max-w-md rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">' +
+            '<div class="flex gap-4 px-6 pt-6">' + icon + '<div class="min-w-0">' +
+            '<h2 id="op-confirm-title" class="text-base font-semibold text-gray-900 dark:text-gray-50"></h2>' +
+            '<p id="op-confirm-text" class="mt-1 text-sm break-words text-gray-500 dark:text-gray-500"></p></div></div>' +
+            '<div class="mt-6 flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end dark:border-gray-900">' +
+            '<button type="button" data-act="cancel" class="' + btn + ' border-gray-300 bg-white text-gray-900 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>' +
+            '<button type="button" data-act="ok" class="' + btn + ' ' + okClass + '"></button></div></div>';
+        wrap.querySelector('#op-confirm-title').textContent = opts.title || (danger ? 'Are you sure?' : 'Please confirm');
+        wrap.querySelector('#op-confirm-text').textContent = text;
+        const ok = wrap.querySelector('[data-act=ok]');
+        const cancel = wrap.querySelector('[data-act=cancel]');
+        ok.textContent = okLabel;
+        function close(result) {
+            document.removeEventListener('keydown', onKey, true);
+            wrap.remove();
+            if (prev && prev.focus) prev.focus();
+            resolve(result);
+        }
+        function onKey(e) {
+            if (e.key === 'Escape') { e.preventDefault(); close(false); }
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                (document.activeElement === ok ? cancel : ok).focus();
+            }
+        }
+        ok.addEventListener('click', function () { close(true); });
+        cancel.addEventListener('click', function () { close(false); });
+        wrap.addEventListener('mousedown', function (e) { if (e.target === wrap) close(false); });
+        document.addEventListener('keydown', onKey, true);
+        document.body.appendChild(wrap);
+        (danger ? cancel : ok).focus();
+    });
+};
+
+// data-confirm on a form or its submit button asks before the form goes out
+document.addEventListener('submit', function (e) {
+    const form = e.target;
+    const sub = e.submitter;
+    const msg = (sub && sub.getAttribute('data-confirm')) || form.getAttribute('data-confirm');
+    if (!msg) return;
+    if (form.__opConfirmed) { form.__opConfirmed = false; return; }
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    window.opConfirm(msg).then(function (yes) {
+        if (!yes) return;
+        form.__opConfirmed = true;
+        if (form.requestSubmit) form.requestSubmit(sub || undefined); else form.submit();
+    });
+}, true);

@@ -1,21 +1,21 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+<div class="op-page-header px-4 pt-4 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
     <header>
         <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
             <div class="grow">
-                <h1 class="mb-1 text-xl font-bold">Podman</h1>
+                <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Podman</h1>
             </div>
         </div>
     </header>
@@ -41,8 +41,8 @@ function podmanCSRFToken() {
 // submitServiceAction in services_status.html. id is the image's full ID
 // for a delete, or the repository:tag ref to pull for a pull (which also
 // covers a not-yet-downloaded stack image, since that has no ID yet).
-function podmanImageAction(action, id, loadingMessage, confirmMessage) {
-    if (confirmMessage && !confirm(confirmMessage)) return;
+async function podmanImageAction(action, id, loadingMessage, confirmMessage) {
+    if (confirmMessage && !(await opConfirm(confirmMessage))) return;
 
     showToast(loadingMessage, 'loading', true);
 
@@ -146,8 +146,8 @@ function podmanCheckImageUpdate(ref) {
 // unused image", or "check every image for updates", then polls
 // /services/podman/images/bulk-status, updating the loading toast's text
 // with live progress until it's done.
-function podmanBulkAction(action, loadingLabel, confirmMessage) {
-    if (confirmMessage && !confirm(confirmMessage)) return;
+async function podmanBulkAction(action, loadingLabel, confirmMessage) {
+    if (confirmMessage && !(await opConfirm(confirmMessage))) return;
 
     fetch('/services/podman/images/bulk/' + action, {
         method: 'POST',
@@ -263,7 +263,7 @@ function podmanPollBulkStatus(loadingLabel) {
     }">
 	<nav aria-label="Tabs" data-orientation="horizontal" dir="ltr">
 		<div style="position: relative;">
-			<ul data-orientation="horizontal" class="flex bg-gray-50 dark:bg-gray-950 items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
+			<ul data-orientation="horizontal" class="flex items-center justify-start whitespace-nowrap border-b [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden border-gray-200 dark:border-gray-800 pt-6 gap-x-4 px-4 sm:px-6" dir="ltr">
 
 			<li class="flex">
 				<a @click="tab = 'info'" :class="tab === 'info' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="group relative flex shrink-0 select-none items-center justify-center cursor-pointer" role="tab">
@@ -303,23 +303,23 @@ function podmanPollBulkStatus(loadingLabel) {
 
     <!-- INFO -->
     <div x-show="tab === 'info'" role="tabpanel">
-        <pre class="w-full overflow-x-auto rounded border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4 text-xs text-gray-800 dark:text-gray-200 whitespace-pre">{{.Info}}</pre>
+        <pre class="w-full overflow-x-auto rounded-md border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4 text-xs text-gray-800 dark:text-gray-200 whitespace-pre">{{.Info}}</pre>
     </div>
 
     <!-- IMAGES -->
     <div x-show="tab === 'images'" x-cloak role="tabpanel">
         <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-                <input x-model="searchImages" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search images..." type="search">
+                <input x-model="searchImages" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search images..." type="search">
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button type="button" onclick="podmanBulkAction('check-updates', 'Checking images for updates', '')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Check all for updates</button>
-                <button type="button" onclick="podmanBulkAction('check-vulnerabilities', 'Checking images for vulnerabilities', '')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Check all for vulnerabilities</button>
-                <button type="button" onclick="podmanBulkAction('pull-missing', 'Downloading missing stack images', 'Pull every stack image that is not yet downloaded into the shared store?')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Download all</button>
-                <button type="button" onclick="podmanBulkAction('delete-unused', 'Removing unused images', 'Delete every currently unused image (0 system and 0 user containers)?\n\nThis cannot be undone.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-1.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-red-600 dark:text-red-500 bg-white dark:bg-gray-950 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">Delete unused</button>
+                <button type="button" onclick="podmanBulkAction('check-updates', 'Checking images for updates', '')" class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-1.5 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Check all for updates</button>
+                <button type="button" onclick="podmanBulkAction('check-vulnerabilities', 'Checking images for vulnerabilities', '')" class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-1.5 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Check all for vulnerabilities</button>
+                <button type="button" onclick="podmanBulkAction('pull-missing', 'Downloading missing stack images', 'Pull every stack image that is not yet downloaded into the shared store?')" class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-1.5 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Download all</button>
+                <button type="button" onclick="podmanBulkAction('delete-unused', 'Removing unused images', 'Delete every currently unused image (0 system and 0 user containers)?\n\nThis cannot be undone.')" class="relative inline-flex items-center justify-center whitespace-nowrap border px-3 py-1.5 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-red-600 hover:bg-red-50 dark:border-gray-800 dark:bg-gray-950 dark:text-red-500 dark:hover:bg-red-950/40 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Delete unused</button>
             </div>
         </div>
 
@@ -350,16 +350,16 @@ function podmanPollBulkStatus(loadingLabel) {
                             <td class="p-4 text-sm py-2.5">
                                 <div class="flex flex-wrap items-center gap-1">
                                     {{if .NotDownloaded}}
-                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-amber-50 text-amber-800 ring-amber-600/30 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20">Not downloaded</span>
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Not downloaded</span>
                                     {{else}}
                                         {{if gt .SystemContainers 0}}
-                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">{{.SystemContainers}} system</span>
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">{{.SystemContainers}} system</span>
                                         {{end}}
                                         {{if gt .UserContainers 0}}
-                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">{{.UserContainers}} user</span>
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">{{.UserContainers}} user</span>
                                         {{end}}
                                         {{if and (eq .SystemContainers 0) (eq .UserContainers 0)}}
-                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Unused</span>
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Unused</span>
                                         {{end}}
                                     {{end}}
                                 </div>
@@ -368,16 +368,16 @@ function podmanPollBulkStatus(loadingLabel) {
                             <td class="p-4 text-sm py-2.5">
                                 <div class="flex items-center justify-end gap-2">
                                     {{if .NotDownloaded}}
-                                    <button type="button" onclick="podmanImageAction('pull', '{{.Repository | jsStr}}:{{.Tag | jsStr}}', 'Pulling {{.Repository | jsStr}}:{{.Tag | jsStr}}…', '')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Pull</button>
+                                    <button type="button" onclick="podmanImageAction('pull', '{{.Repository | jsStr}}:{{.Tag | jsStr}}', 'Pulling {{.Repository | jsStr}}:{{.Tag | jsStr}}…', '')" class="relative inline-flex items-center justify-center whitespace-nowrap border px-2 py-1 text-center text-xs font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Pull</button>
                                     {{else if and (ne .Repository "<none>") (ne .Tag "<none>")}}
                                         {{if not .UpdateChecked}}
-                                        <button type="button" onclick="podmanCheckImageUpdate('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Check</button>
+                                        <button type="button" onclick="podmanCheckImageUpdate('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="relative inline-flex items-center justify-center whitespace-nowrap border px-2 py-1 text-center text-xs font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Check</button>
                                         {{else if .UpdateAvailable}}
-                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Update available</span>
-                                        <button type="button" onclick="podmanImageAction('pull', '{{.Repository | jsStr}}:{{.Tag | jsStr}}', 'Pulling {{.Repository | jsStr}}:{{.Tag | jsStr}}…', 'Update {{.Repository | jsStr}}:{{.Tag | jsStr}}?\n\nThis re-pulls the image from the registry. It will NOT change any containers already running from it -- after the pull finishes, stop/remove and re-create (down/up) the containers using this image to actually apply the update.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 hover:bg-amber-100 dark:hover:bg-amber-400/20 cursor-pointer">Update</button>
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Update available</span>
+                                        <button type="button" onclick="podmanImageAction('pull', '{{.Repository | jsStr}}:{{.Tag | jsStr}}', 'Pulling {{.Repository | jsStr}}:{{.Tag | jsStr}}…', 'Update {{.Repository | jsStr}}:{{.Tag | jsStr}}?\n\nThis re-pulls the image from the registry. It will NOT change any containers already running from it -- after the pull finishes, stop/remove and re-create (down/up) the containers using this image to actually apply the update.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded-md border px-2 py-1 text-center text-xs font-medium shadow-xs transition-all duration-100 ease-in-out border-yellow-300 dark:border-yellow-800 text-yellow-900 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-400/10 hover:bg-yellow-100 dark:hover:bg-yellow-400/20 cursor-pointer">Update</button>
                                         {{else}}
-                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Up to date</span>
-                                        <button type="button" onclick="podmanCheckImageUpdate('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 cursor-pointer">Recheck</button>
+                                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Up to date</span>
+                                        <button type="button" onclick="podmanCheckImageUpdate('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="relative inline-flex items-center justify-center whitespace-nowrap border px-2 py-1 text-center text-xs font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Recheck</button>
                                         {{end}}
                                     {{else}}
                                     <span class="text-gray-400 dark:text-gray-600">—</span>
@@ -389,18 +389,18 @@ function podmanPollBulkStatus(loadingLabel) {
                                     {{if or .NotDownloaded (eq .Repository "<none>") (eq .Tag "<none>")}}
                                     <span class="text-gray-400 dark:text-gray-600">—</span>
                                     {{else if not .VulnChecked}}
-                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-800 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-500 dark:ring-gray-400/20">Not checked</span>
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Not checked</span>
                                     {{else if gt .VulnCount 0}}
                                     <button type="button" @click="openVulnModal('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 hover:bg-red-100 dark:hover:bg-red-400/20 cursor-pointer">{{.VulnCount}} HIGH/CRITICAL</button>
                                     {{else}}
-                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Clean</span>
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Clean</span>
                                     {{end}}
                                 </div>
                             </td>
                             <td class="p-4 text-sm py-2.5">
                                 <div class="flex items-center justify-end gap-2">
                                     {{if and (not .NotDownloaded) (eq .SystemContainers 0) (eq .UserContainers 0)}}
-                                    <button type="button" onclick="podmanImageAction('delete', '{{.FullID | jsStr}}', 'Deleting {{.Repository | jsStr}}:{{.Tag | jsStr}}…', 'Delete image {{.Repository | jsStr}}:{{.Tag | jsStr}} ({{.ID}})?\n\nThis cannot be undone.')" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2 py-1 text-center text-xs font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-red-600 dark:text-red-500 bg-white dark:bg-gray-950 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer">Delete</button>
+                                    <button type="button" onclick="podmanImageAction('delete', '{{.FullID | jsStr}}', 'Deleting {{.Repository | jsStr}}:{{.Tag | jsStr}}…', 'Delete image {{.Repository | jsStr}}:{{.Tag | jsStr}} ({{.ID}})?\n\nThis cannot be undone.')" class="relative inline-flex items-center justify-center whitespace-nowrap border px-2 py-1 text-center text-xs font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-red-600 hover:bg-red-50 dark:border-gray-800 dark:bg-gray-950 dark:text-red-500 dark:hover:bg-red-950/40 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Delete</button>
                                     {{else}}
                                     <span class="text-gray-400 dark:text-gray-600">—</span>
                                     {{end}}
@@ -421,7 +421,7 @@ function podmanPollBulkStatus(loadingLabel) {
     <div x-show="tab === 'volumes'" x-cloak role="tabpanel">
         <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-                <input x-model="searchVolumes" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search volumes..." type="search">
+                <input x-model="searchVolumes" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search volumes..." type="search">
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                 </div>
@@ -462,7 +462,7 @@ function podmanPollBulkStatus(loadingLabel) {
     <div x-show="tab === 'networks'" x-cloak role="tabpanel">
         <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-                <input x-model="searchNetworks" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8" placeholder="Search networks..." type="search">
+                <input x-model="searchNetworks" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search networks..." type="search">
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                 </div>
@@ -538,10 +538,10 @@ function podmanPollBulkStatus(loadingLabel) {
 
     <!-- Vulnerability details modal -->
     <template x-if="vulnModalOpen">
-        <div class="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm" @click="vulnModalOpen = false"></div>
+        <div class="fixed inset-0 z-30 bg-black/30" @click="vulnModalOpen = false"></div>
     </template>
     <div x-show="vulnModalOpen" x-cloak x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="w-full sm:max-w-3xl flex flex-col rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" style="max-height:80vh" @click.stop>
+        <div class="w-full sm:max-w-3xl flex flex-col rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl p-6" style="max-height:80vh" @click.stop>
             <div class="flex items-center justify-between mb-4 shrink-0">
                 <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Vulnerabilities -- <span x-text="vulnModalRef"></span></h3>
                 <button @click="vulnModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition cursor-pointer">
@@ -572,7 +572,7 @@ function podmanPollBulkStatus(loadingLabel) {
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2 text-sm">
                                     <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1"
-                                          :class="v.severity === 'CRITICAL' ? 'bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20' : 'bg-amber-50 text-amber-800 ring-amber-600/30 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20'"
+                                          :class="v.severity === 'CRITICAL' ? 'bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20' : 'bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20'"
                                           x-text="v.severity"></span>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-2 text-sm text-gray-600 dark:text-gray-400" x-text="v.package"></td>
@@ -610,7 +610,7 @@ function podmanPollBulkStatus(loadingLabel) {
      for data-sort-size). */}}
 {{define "podman_sort_th"}}
 <th scope="col" class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
-    <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+    <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
         <span>{{.Label}}</span>
         <div class="-space-y-2">
             <a @click="sortTable('{{.TbodyID}}', '{{.StateVar}}', '{{.Key}}', 'desc')" class="cursor-pointer"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50" :class="{{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'desc' ? 'opacity-30' : ''"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>

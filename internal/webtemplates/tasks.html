@@ -1,23 +1,23 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="{ searchQuery: '' }">
-    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">Tasks</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Background tasks, running now or scheduled via <a href="/server/crons" class="text-blue-500 hover:underline">cron</a>. Refreshes automatically.</h2>
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Tasks</h1>
+                    <h2 class="text-sm text-gray-500 dark:text-gray-500">Background tasks, running now or scheduled via <a href="/server/crons" class="text-blue-500 hover:underline">cron</a>. Refreshes automatically.</h2>
                 </div>
             </div>
         </header>
@@ -28,7 +28,7 @@
             <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
                 <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
                     <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
-    <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 pl-8" placeholder="Search tasks..." type="search">
+    <input x-model="searchQuery" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8 shadow-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden" placeholder="Search tasks..." type="search">
                         <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
                                 <path
@@ -61,14 +61,14 @@
                             {{.Command}}
                             </td>
                             <td class="p-4 text-sm relative whitespace-nowrap py-1">
-                            <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">Running</span>
+                            <span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Running</span>
                             </td>
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
                             {{.Time}}
                             </td>
                             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
                             <a href="/server/processes/{{.PID}}/strace" class="text-blue-500 hover:underline">Trace</a>
-                            <form method="POST" action="/server/processes/{{.PID}}/kill" class="inline" onsubmit="return confirm('Kill this task?');"><input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><button type="submit" class="ml-2 text-blue-500 hover:underline">Kill</button></form>
+                            <form method="POST" action="/server/processes/{{.PID}}/kill" class="inline" data-confirm="Kill this task?"><input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><button type="submit" class="ml-2 text-blue-500 hover:underline">Kill</button></form>
                             </td>
                         </tr>
 {{else}}
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     var csrfToken = {{.CSRFToken}};
-    var runningBadge = '<span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">Running</span>';
+    var runningBadge = '<span class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Running</span>';
     var scheduledBadge = '<span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">Scheduled</span>';
 
     setInterval(function () {
@@ -139,13 +139,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 tbody.innerHTML = tasks.map(function (t) {
                     if (t.status === 'running') {
                         return '<tr data-command="' + esc(t.command) + '" class="group hover:bg-gray-50 hover:dark:bg-gray-900">' +
-                            '<td class="w-10 py-4 pl-4 sm:pl-6 pr-2 align-middle"><input type="checkbox" class="bulk-select-box h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800" value="' + esc(t.pid) + '" data-bulk-skip="" @change="bulkToggle($event.target)" aria-label="Select ' + esc(t.command) + '"></td>' +
+                            '<td class="w-10 py-4 pl-4 sm:pl-6 pr-2 align-middle"><input type="checkbox" class="bulk-select-box h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-800 dark:bg-gray-800" value="' + esc(t.pid) + '" data-bulk-skip="" @change="bulkToggle($event.target)" aria-label="Select ' + esc(t.command) + '"></td>' +
                             '<td class="w-full p-4 text-sm py-1 break-words">' + esc(t.command) + '</td>' +
                             '<td class="p-4 text-sm whitespace-nowrap py-1">' + runningBadge + '</td>' +
                             '<td class="p-4 text-sm whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">' + esc(t.time) + '</td>' +
                             '<td class="p-4 text-sm whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">' +
                                 '<a href="/server/processes/' + t.pid + '/strace" class="text-blue-500 hover:underline">Trace</a>' +
-                                '<form method="POST" action="/server/processes/' + t.pid + '/kill" class="inline" onsubmit="return confirm(\'Kill this task?\');"><input type="hidden" name="csrf_token" value="' + esc(csrfToken) + '"><button type="submit" class="ml-2 text-blue-500 hover:underline">Kill</button></form>' +
+                                '<form method="POST" action="/server/processes/' + t.pid + '/kill" class="inline" data-confirm="Kill this task?"><input type="hidden" name="csrf_token" value="' + esc(csrfToken) + '"><button type="submit" class="ml-2 text-blue-500 hover:underline">Kill</button></form>' +
                             '</td>' +
                         '</tr>';
                     }

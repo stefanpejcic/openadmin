@@ -1,34 +1,34 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="rateLimits()" x-init="init()">
 
   <!-- Page header -->
-  <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+  <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
       <header>
           <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
               <div class="grow">
-                  <h1 class="mb-1 text-xl font-bold">Email Rate Limits</h1>
-                  <h2 class="text-sm font-medium text-slate-500">Manage per-domain hourly send limits via <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">postfwd</code></h2>
+                  <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Email Rate Limits</h1>
+                  <h2 class="text-sm text-gray-500 dark:text-gray-500">Manage per-domain hourly send limits via <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded-md text-xs">postfwd</code></h2>
               </div>
 
 
               <div class="hidden items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                <a href="?mode=gui" class="cursor-pointer px-3 py-1.5 rounded text-sm font-medium">GUI</a>
-                <a href="?mode=raw" class="cursor-pointer px-3 py-1.5 rounded text-sm font-medium">Raw</a>
+                <a href="?mode=gui" class="cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium">GUI</a>
+                <a href="?mode=raw" class="cursor-pointer px-3 py-1.5 rounded-md text-sm font-medium">Raw</a>
               </div>
 
               <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                <a @click="panel = panel === 'restore' ? '' : 'restore'" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Restore from plan</a>
-                <a @click="panel = panel === 'remove' ? '' : 'remove'" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60">Remove rules</a>
+                <a @click="panel = panel === 'restore' ? '' : 'restore'" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Restore from plan</a>
+                <a @click="panel = panel === 'remove' ? '' : 'remove'" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Remove rules</a>
               </div>
           </div>
       </header>
@@ -37,13 +37,13 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div class="col-span-full sm:col-span-2">
             <label for="restore_user" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Restore limits for</label>
-            <select id="restore_user" x-model="selectedUser" class="mt-2 block w-full rounded border px-2.5 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+            <select id="restore_user" x-model="selectedUser" class="mt-2 block w-full rounded-md border px-2.5 py-2 shadow-xs outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
               <option value="">All users</option>
               {{range .Usernames}}<option value="{{.}}">{{.}}</option>{{end}}
             </select>
           </div>
           <div class="col-span-full flex items-end sm:col-span-2">
-            <button type="button" @click="restore()" :disabled="$store.page.busy" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800">Restore</button>
+            <button type="button" @click="restore()" :disabled="$store.page.busy" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Restore</button>
           </div>
         </div>
         <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">Rewrites the hourly limit of every domain from its owner's plan, custom limits set here are replaced.</p>
@@ -53,13 +53,13 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div class="col-span-full sm:col-span-2">
             <label for="remove_user" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Remove rules for</label>
-            <select id="remove_user" x-model="selectedUserDelete" @change="removeArmed = false" class="mt-2 block w-full rounded border px-2.5 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+            <select id="remove_user" x-model="selectedUserDelete" @change="removeArmed = false" class="mt-2 block w-full rounded-md border px-2.5 py-2 shadow-xs outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
               <option value="">All users</option>
               {{range .Usernames}}<option value="{{.}}">{{.}}</option>{{end}}
             </select>
           </div>
           <div class="col-span-full flex items-end sm:col-span-2">
-            <button type="button" @click="removeRules()" :disabled="$store.page.busy" :class="removeArmed ? 'relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer border-transparent bg-red-600 text-white hover:bg-red-700 disabled:opacity-50' : 'relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60'" x-text="removeArmed ? 'Click again to confirm' : 'Remove'"></button>
+            <button type="button" @click="removeRules()" :disabled="$store.page.busy" :class="removeArmed ? 'relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-xs transition-all duration-100 ease-in-out cursor-pointer border-transparent bg-red-600 text-white hover:bg-red-700 disabled:opacity-50' : 'relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-xs transition-all duration-100 ease-in-out cursor-pointer border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60'" x-text="removeArmed ? 'Click again to confirm' : 'Remove'"></button>
           </div>
         </div>
         <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">Domains without a rule can send any number of emails until the rules are restored from their plan.</p>
@@ -74,16 +74,16 @@
       <div>
         <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Editing file:</span><span class="ml-2 text-xs text-gray-400 font-mono">{{.PostfwdCF}}</span>
       </div>
-      <span class="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-2 py-0.5 rounded">
+      <span class="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-2 py-0.5 rounded-md">
         Edit with care
       </span>
     </div>
     <form action="/emails/domain-limits/save-raw" method="POST">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
       <textarea name="raw_content" class="w-full font-mono text-xs text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 p-4 focus:outline-none resize-y min-h-[90vh]" spellcheck="false" autocomplete="off">{{.RawContent}}</textarea>
-      <div class="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <a href="?mode=gui" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 cursor-pointer">Cancel</a>
-        <button type="submit" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save & Reload postfwd</button>
+      <div class="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+        <a href="?mode=gui" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap border p-2 text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none cursor-pointer rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Cancel</a>
+        <button type="submit" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-transparent bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 dark:disabled:bg-blue-800 dark:disabled:text-blue-400 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Save & Reload postfwd</button>
       </div>
     </form>
   </div>
@@ -94,13 +94,13 @@
     <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
       <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
         <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-          <input x-model="search" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8" placeholder="Search domains or users..." type="search" />
+          <input x-model="search" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden" placeholder="Search domains or users..." type="search" />
           <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
           </div>
         </div>
         {{if .Usernames}}
-        <select x-model="owner" aria-label="Filter by user" class="rounded border px-2.5 py-1.5 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+        <select x-model="owner" aria-label="Filter by user" class="rounded-md border px-2.5 py-1.5 shadow-xs outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
           <option value="">All users</option>
           {{range .Usernames}}<option value="{{.}}">{{.}}</option>{{end}}
         </select>
@@ -136,11 +136,11 @@
               <div class="flex items-center gap-2">
                 <span x-show="current !== null" class="tabular-nums font-semibold" :class="usageColor()" x-text="current"></span>
                 <span x-show="current === null" class="text-gray-400" title="postfwd has no counter for this user yet">-</span>
-                <div x-show="current !== null" class="h-1.5 w-20 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div x-show="current !== null" class="h-1.5 w-20 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
                   <div class="h-full rounded-full" :class="usageBarColor()" :style="`width: ${Math.min(100, Math.round(current / limit * 100))}%`"></div>
                 </div>
                 <span x-show="hitLimit()" @click="toggleHits()" title="Limit was hit, click to show the mail log lines"
-                      class="cursor-pointer inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Limit hit</span>
+                      class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 cursor-pointer">Limit hit</span>
               </div>
             </td>
             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">
@@ -148,7 +148,7 @@
               <template x-if="editing">
                 <input type="number" x-model.number="editLimit" min="1" max="100000" @keydown.enter="saveLimit()" @keydown.escape="cancelEdit()"
                        x-ref="editInput" x-init="$nextTick(() => $refs.editInput && $refs.editInput.focus())"
-                       class="w-24 rounded border px-2 py-1 text-sm shadow-sm outline-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
+                       class="w-24 rounded-md border px-2 py-1 text-sm shadow-xs outline-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
               </template>
             </td>
             <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-mono text-xs">{{.ID}}</td>
@@ -175,7 +175,7 @@
                 <p class="mb-1 text-xs font-medium text-gray-900 dark:text-gray-50">Last <span x-text="$store.page.hits.lines.length"></span> limit hits from the mail log</p>
                 <div class="max-h-64 space-y-1 overflow-y-auto">
                   <template x-for="line in $store.page.hits.lines" :key="line">
-                    <div class="font-mono text-xs bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 break-all" x-text="line"></div>
+                    <div class="font-mono text-xs bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-800 break-all" x-text="line"></div>
                   </template>
                 </div>
               </div>
@@ -198,7 +198,7 @@
     <div class="flex flex-col items-center justify-center py-6 text-center">
       <p class="text-gray-500 dark:text-gray-400 font-medium">No rate-limit rules configured</p>
       <p class="text-sm text-gray-400 dark:text-gray-500 mt-1 mb-4">Generate rules from your users' plan settings</p>
-      <button type="button" @click="selectedUser = ''; restore()" :disabled="$store.page.busy" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800">Generate rules from plans</button>
+      <button type="button" @click="selectedUser = ''; restore()" :disabled="$store.page.busy" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Generate rules from plans</button>
     </div>
     {{end}}
   </div>
@@ -295,7 +295,7 @@ function ruleRow({ id, domain, username, limit, current }) {
       const pct = this.current / this.limit;
       if (pct >= 1) return 'text-red-600 dark:text-red-400';
       if (pct >= 0.8) return 'text-yellow-600 dark:text-yellow-400';
-      return 'text-green-600 dark:text-green-400';
+      return 'text-emerald-600 dark:text-emerald-400';
     },
 
     usageBarColor() {
@@ -303,7 +303,7 @@ function ruleRow({ id, domain, username, limit, current }) {
       const pct = this.current / this.limit;
       if (pct >= 1) return 'bg-red-500';
       if (pct >= 0.8) return 'bg-yellow-400';
-      return 'bg-green-500';
+      return 'bg-emerald-500';
     },
 
     async toggleHits() {

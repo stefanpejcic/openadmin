@@ -1,6 +1,140 @@
-/* static/src/input.css */
+/* build: npx @tailwindcss/cli@4.1.6 -i static/src/input.css -o static/dist/output.css --minify */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@source "../../internal/webtemplates";
+@source "../pages";
+@source "../../internal/handlers/*.go";
+@source "../../internal/cluster/*.go";
+@source "../dist/js";
+@source not "../dist/js/alpinejs3xx.min.js";
+@source not "../dist/js/jquery361.min.js";
+@source not "../dist/js/driverjs131.min.js";
+@source not "../vendor";
+
+/* ring colors get built from Go values in users_list, user_detail and websites */
+@source inline("{dark:,}stroke-{red,orange,yellow,emerald,blue,gray}-500");
+
 @custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: "Geist";
+  src: url("fonts/Geist-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("fonts/GeistMono-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --color-gray-925: #050814;
+  --color-raised: #090E1A;
+  --ease-snappy: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-accordion: cubic-bezier(0.87, 0, 0.13, 1);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+  /* v4 borders default to currentColor, Planner expects gray */
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+  .dark *, .dark ::after, .dark ::before, .dark ::backdrop, .dark ::file-selector-button {
+    border-color: var(--color-gray-800, currentColor);
+  }
+  /* native checkboxes and radios pick up the brand blue */
+  input[type="checkbox"], input[type="radio"] {
+    accent-color: var(--color-blue-500);
+  }
+  [x-cloak] {
+    display: none !important;
+  }
+}
+
+/* leftover Bootstrap/Tabler class names had no CSS at all, this maps them onto the brandbook look */
+@layer components {
+  .form-group { @apply grid gap-2; }
+  .form-group > label { @apply text-sm leading-none font-medium text-gray-900 dark:text-gray-50; }
+  .form-hint { @apply mt-1.5 block text-xs text-gray-500; }
+  .form-check { @apply inline-flex cursor-pointer items-center gap-2; }
+  .form-check-label { @apply text-sm text-gray-900 dark:text-gray-50; }
+  .form-check-input { @apply size-4 shrink-0 cursor-pointer; }
+
+  /* Tremor switch drawn on the checkbox itself, thumb is a gradient so it works in every browser */
+  .form-switch .form-check-input,
+  .form-check-input[role="switch"] {
+    @apply h-5 w-9 cursor-pointer appearance-none rounded-full bg-gray-200 shadow-inner ring-1 ring-black/5 ring-inset transition-[background-color,background-position] duration-150 dark:bg-gray-950 dark:ring-gray-800;
+    background-image: radial-gradient(circle, #fff 0 7px, transparent 7.5px);
+    background-size: 20px 20px;
+    background-repeat: no-repeat;
+    background-position: left center;
+  }
+  .form-switch .form-check-input:checked,
+  .form-check-input[role="switch"]:checked {
+    @apply bg-blue-500 dark:bg-blue-500 dark:ring-blue-500;
+    background-position: right center;
+  }
+  .form-switch .form-check-input:focus-visible,
+  .form-check-input[role="switch"]:focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-500;
+  }
+  .form-switch .form-check-input:disabled,
+  .form-check-input[role="switch"]:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  .btn {
+    @apply relative inline-flex items-center justify-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-center text-sm font-medium whitespace-nowrap text-gray-900 shadow-xs transition-all duration-100 ease-in-out outline-0 outline-offset-2 outline-blue-500 hover:bg-gray-50 focus-visible:outline-2 disabled:pointer-events-none disabled:text-gray-400 disabled:shadow-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600;
+  }
+  .btn-primary { @apply border-transparent bg-blue-500 text-white hover:bg-blue-600 dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600; }
+  .btn-danger { @apply border-transparent bg-red-600 text-white hover:bg-red-700 dark:border-transparent dark:bg-red-700 dark:text-white dark:hover:bg-red-600; }
+  .btn-outline-danger { @apply text-red-600 dark:text-red-500; }
+  .btn-outline-success { @apply text-emerald-700 dark:text-emerald-500; }
+  .btn-outline-warning { @apply text-yellow-700 dark:text-yellow-500; }
+  .btn-list { @apply flex flex-wrap gap-2; }
+
+  .badge { @apply inline-flex items-center gap-x-1 rounded-md px-2 py-1 text-xs font-medium whitespace-nowrap ring-1 ring-inset; }
+  .bg-red-lt { @apply bg-red-50 text-red-900 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20; }
+  .bg-primary-lt { @apply rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-900 dark:bg-blue-400/10 dark:text-blue-400; }
+
+  .card { @apply rounded-md border border-gray-200 bg-white dark:border-gray-900 dark:bg-raised; }
+  .card-body { @apply p-6; }
+  .card-body-scrollable { @apply overflow-y-auto; }
+  .CrawlerStatusCard { @apply rounded-md border border-gray-200 bg-white p-6 dark:border-gray-900 dark:bg-raised; }
+
+  .empty { @apply flex flex-col items-center px-4 py-10 text-center; }
+  .empty-img svg { @apply size-10 text-gray-400 dark:text-gray-600; }
+  .empty-title { @apply mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50; }
+  .empty-subtitle { @apply mt-1 max-w-md text-sm text-gray-500; }
+  .empty-subtitle a { @apply text-blue-500 hover:underline hover:underline-offset-4; }
+  .container-xl { @apply mx-auto w-full max-w-7xl; }
+
+  .text-secondary { @apply text-gray-500; }
+  .text-red { @apply text-red-600 dark:text-red-500; }
+  .fs-sm { @apply text-sm; }
+  .d-flex { @apply flex; }
+  .d-inline-flex { @apply inline-flex; }
+  .d-none { @apply hidden; }
+  .flex-column { @apply flex-col; }
+  .justify-content-center { @apply justify-center; }
+  .align-items-center { @apply items-center; }
+  .align-items-baseline { @apply items-baseline; }
+  .me-auto { @apply me-auto; }
+  .w-100 { @apply w-full; }
+  .lh-1 { @apply leading-none; }
+  .ps-0 { @apply ps-0; }
+}

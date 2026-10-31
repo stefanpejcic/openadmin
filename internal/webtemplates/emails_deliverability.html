@@ -1,23 +1,23 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="deliverabilityPage" x-init="load(false)">
-    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">Email Deliverability</h1>
-                    <h2 class="text-sm font-medium text-slate-500">
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Email Deliverability</h1>
+                    <h2 class="text-sm text-gray-500 dark:text-gray-500">
                         <span x-show="loading">Checking DKIM, SPF and DMARC records of every domain...</span>
                         <span x-show="!loading && error" x-text="error"></span>
                         <span x-show="!loading && !error && rows.length === 0">No domains yet.</span>
@@ -25,7 +25,7 @@
                     </h2>
                 </div>
                 <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                    <button type="button" @click="load(true)" :disabled="loading" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:opacity-50 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Check again</button>
+                    <button type="button" @click="load(true)" :disabled="loading" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 disabled:opacity-50">Check again</button>
                 </div>
             </div>
         </header>
@@ -35,12 +35,12 @@
         <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center sm:gap-x-6">
                 <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
-                    <input x-model.debounce.150ms="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search by domain/owner..." type="search">
+                    <input x-model.debounce.150ms="searchQuery" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-600/30 focus:border-blue-500 focus:dark:border-blue-600 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search by domain/owner..." type="search">
                     <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                     </div>
                 </div>
-                    <select x-show="servers.length" x-model="serverFilter" aria-label="Filter by server" class="rounded border border-dashed border-gray-300 bg-white px-2 py-1.5 font-medium text-gray-600 sm:text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-gray-400">
+                    <select x-show="servers.length" x-model="serverFilter" aria-label="Filter by server" class="rounded-md border border-dashed border-gray-300 bg-white px-2 py-1.5 font-medium text-gray-600 sm:text-xs dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
                         <option value="">All servers</option>
                         <template x-for="s in servers" :key="s"><option :value="s" x-text="s"></option></template>
                     </select>
@@ -54,7 +54,7 @@
                     <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
                         <template x-for="col in shownColumns" :key="col.key">
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
+                                <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span x-text="col.label"></span>
                                     <div class="-space-y-2">
                                         <a href="#" @click.prevent="sort = col.key; dir = 'desc'"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50" :class="sort === col.key && dir === 'desc' ? 'opacity-30' : ''"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg></a>
@@ -80,12 +80,12 @@
                             <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><span :class="badge(item.row.dmarc.status)" x-text="label(item.row.dmarc.status)"></span></td>
                             <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><span :class="badge(item.row.ok ? 'ok' : 'bad')" x-text="item.row.ok ? 'Good' : 'Needs changes'"></span></td>
                             <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 text-right">
-                                <a :href="'/domains/dns/' + item.row.domain" @click.stop target="_blank" class="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline dark:text-indigo-400"><svg class="size-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/></svg>Edit DNS</a>
+                                <a :href="'/domains/dns/' + item.row.domain" @click.stop target="_blank" class="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline dark:text-blue-500"><svg class="size-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/></svg>Edit DNS</a>
                             </td>
                             <td x-show="item.detail" colspan="7" class="px-4 py-3">
                                 <div class="grid gap-3 lg:grid-cols-3">
                                     <template x-for="rec in [['DKIM', 'mail._domainkey.' + item.row.domain, item.row.dkim], ['SPF', item.row.domain, item.row.spf], ['DMARC', '_dmarc.' + item.row.domain, item.row.dmarc]]" :key="rec[0]">
-                                        <div class="rounded border border-gray-200 bg-white p-3 text-xs dark:border-gray-800 dark:bg-gray-950">
+                                        <div class="rounded-md border border-gray-200 bg-white p-3 text-xs dark:border-gray-800 dark:bg-gray-950">
                                             <div class="mb-2 flex items-center justify-between">
                                                 <span class="font-semibold text-gray-900 dark:text-gray-50" x-text="rec[0] + ' TXT ' + rec[1]"></span>
                                                 <span :class="badge(rec[2].status)" x-text="label(rec[2].status)"></span>

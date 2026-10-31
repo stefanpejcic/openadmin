@@ -635,7 +635,7 @@ func TestServeDefaultsRendersRecommendations(t *testing.T) {
 		"Number(v) > 0 && Number(v) < 2",
 		"Users on the Standard plan get 2 CPU",
 		"Autostarted services use resources on every new account",
-		`class="col-span-full mt-3 text-sm text-amber-600 dark:text-amber-500">5 of 5 sites`,
+		`class="col-span-full mt-3 text-sm text-yellow-700 dark:text-yellow-500">5 of 5 sites`,
 	} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected %q in the page", want)

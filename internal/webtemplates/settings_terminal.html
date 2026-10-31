@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
   <!-- xterm 5.3.0 + fit 0.8.0 + web-links 0.9.0, vendored under static/vendor/xterm so the terminal has no CDN dependency and works offline -->
@@ -18,7 +18,7 @@
   <script src="{{asset "/static/vendor/xterm/addon-web-links.min.js"}}"></script>
 
   <div x-data="{ showSection: false, tooltip: false }"
-       class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+       class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <header>
       <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
         <div class="grow">
@@ -33,7 +33,7 @@
                          2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/>
               </svg>
               <template x-if="tooltip">
-                <div x-transition class="absolute z-10 mt-2 w-64 rounded-lg bg-gray-800 text-white text-sm px-3 py-2 shadow-lg" style="top: 100%; left: 0;">
+                <div x-transition class="absolute z-10 mt-2 w-64 text-sm rounded-md bg-gray-900 px-2.5 py-1.5 font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900" style="top: 100%; left: 0;">
                   {{if eq .TerminalType "users"}}
                     The terminal is <b>interactive</b> and executes commands as 'root' inside the container.
                   {{else if eq .TerminalType "root"}}
@@ -44,21 +44,21 @@
               </template>
             </span>
           </h1>
-          <h2 class="text-sm font-medium text-slate-500">
+          <h2 class="text-sm text-gray-500 dark:text-gray-500">
             {{if eq .TerminalType "users"}}
               User: <a href="/users/{{.Username}}">{{.Username}}</a> | Container: {{.ContainerName}}
             {{else if eq .TerminalType "root"}}
               Command line access to the server's "root" account.
             {{end}}
-            {{range .WebSessions}}<span class="text-amber-600 dark:text-amber-500">Web terminal already open by <b>{{.Admin}}</b> from {{.IP}} since {{.Since.Format "15:04"}}.</span>{{end}}
-            {{range .SSHPeers}}<span class="text-amber-600 dark:text-amber-500">SSH session{{if gt .Count 1}}s ({{.Count}}){{end}} open from {{.IP}}.</span>{{end}}
+            {{range .WebSessions}}<span class="text-yellow-700 dark:text-yellow-500">Web terminal already open by <b>{{.Admin}}</b> from {{.IP}} since {{.Since.Format "15:04"}}.</span>{{end}}
+            {{range .SSHPeers}}<span class="text-yellow-700 dark:text-yellow-500">SSH session{{if gt .Count 1}}s ({{.Count}}){{end}} open from {{.IP}}.</span>{{end}}
           </h2>
         </div>
 
         <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
           <select id="shell"
                   class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate
-                         rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm
+                         rounded-md border px-3 py-2 shadow-xs outline-none transition sm:text-sm
                          border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50
                          bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50
                          focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30
@@ -72,7 +72,7 @@
           <button id="reconnect-btn"
                   style="display:none"
                   onclick="connectTerminal()"
-                  class="px-3 py-2 rounded border border-blue-500 text-blue-600 dark:text-blue-400 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/30 transition">Reconnect
+                  class="px-3 py-2 rounded-md border border-blue-500 text-blue-600 dark:text-blue-400 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/30 transition">Reconnect
           </button>
         </div>
       </div>
@@ -86,7 +86,7 @@
     <span id="status-text">Connecting…</span>
   </div>
 
-  <div id="terminal" style="width:100%; height:calc(60vh - 2rem); background:#1a1b26;"></div>
+  <div id="terminal" class="w-full bg-gray-950" style="height:calc(60vh - 2rem);"></div>
 
   <script>
     // ── config injected by the server ───────────────────────────────────────
@@ -104,27 +104,28 @@
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 14,
-      fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
+      fontFamily: '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
       theme: {
-        background:   '#1a1b26',
-        foreground:   '#c0caf5',
-        cursor:       '#c0caf5',
-        black:        '#15161e',
-        red:          '#f7768e',
-        green:        '#9ece6a',
-        yellow:       '#e0af68',
-        blue:         '#7aa2f7',
-        magenta:      '#bb9af7',
-        cyan:         '#7dcfff',
-        white:        '#a9b1d6',
-        brightBlack:  '#414868',
-        brightRed:    '#f7768e',
-        brightGreen:  '#9ece6a',
-        brightYellow: '#e0af68',
-        brightBlue:   '#7aa2f7',
-        brightMagenta:'#bb9af7',
-        brightCyan:   '#7dcfff',
-        brightWhite:  '#c0caf5',
+        selectionBackground: '#1e3a8a',
+        background:   '#030712',
+        foreground:   '#e5e7eb',
+        cursor:       '#3b82f6',
+        black:        '#1f2937',
+        red:          '#ef4444',
+        green:        '#10b981',
+        yellow:       '#eab308',
+        blue:         '#3b82f6',
+        magenta:      '#8b5cf6',
+        cyan:         '#06b6d4',
+        white:        '#e5e7eb',
+        brightBlack:  '#6b7280',
+        brightRed:    '#f87171',
+        brightGreen:  '#34d399',
+        brightYellow: '#facc15',
+        brightBlue:   '#60a5fa',
+        brightMagenta:'#a78bfa',
+        brightCyan:   '#22d3ee',
+        brightWhite:  '#f9fafb',
       },
       scrollback: 5000,
       allowTransparency: false,
@@ -156,7 +157,7 @@
     function setStatus(state) {
       dot.className = 'inline-block w-2.5 h-2.5 rounded-full ' + {
         connecting: 'bg-yellow-500',
-        open:       'bg-green-500',
+        open:       'bg-emerald-500',
         closed:     'bg-red-500',
       }[state];
       txt.textContent = { connecting: 'Connecting…', open: 'Connected', closed: 'Disconnected' }[state];

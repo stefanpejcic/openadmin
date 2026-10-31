@@ -1,29 +1,29 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="rateLimitPage()" x-init="loadStats(false)">
 
-<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <header>
         <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
             <div class="grow">
-                <h1 class="mb-1 text-xl font-bold">Rate Limiting</h1>
-                <h2 class="text-sm font-medium text-slate-500">
+                <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Rate Limiting</h1>
+                <h2 class="text-sm text-gray-500 dark:text-gray-500">
                     Server default: {{if or .Status.Default.PerIP .Status.Default.PerSite}}<b>{{.Status.Default.PerIP}}</b>/min per IP, <b>{{.Status.Default.PerSite}}</b>/min per domain{{else}}<b>off</b>{{end}}. Visitors above a limit get HTTP 429.
                 </h2>
             </div>
             <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                {{if not .IsReseller}}<a @click="showDefault = !showDefault" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 sm:w-fit">Server Default</a>{{end}}
+                {{if not .IsReseller}}<a @click="showDefault = !showDefault" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Server Default</a>{{end}}
             </div>
         </div>
     </header>
@@ -36,14 +36,14 @@
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
                 <div class="col-span-full sm:col-span-2">
                     <label for="default_per_ip" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Per visitor IP <span class="font-normal text-gray-500">(requests/min)</span></label>
-                    <input id="default_per_ip" type="number" min="0" step="1" name="per_ip" value="{{.Status.Default.PerIP}}" class="mt-2 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                    <input id="default_per_ip" type="number" min="0" step="1" name="per_ip" value="{{.Status.Default.PerIP}}" class="mt-2 relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
                 </div>
                 <div class="col-span-full sm:col-span-2">
                     <label for="default_per_site" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Per domain <span class="font-normal text-gray-500">(requests/min)</span></label>
-                    <input id="default_per_site" type="number" min="0" step="1" name="per_site" value="{{.Status.Default.PerSite}}" class="mt-2 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                    <input id="default_per_site" type="number" min="0" step="1" name="per_site" value="{{.Status.Default.PerSite}}" class="mt-2 relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
                 </div>
                 <div class="col-span-full flex items-end sm:col-span-2">
-                    <button type="submit" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 sm:w-fit border-black bg-black text-white hover:bg-gray-800">Save default</button>
+                    <button type="submit" class="relative inline-flex items-center justify-center border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit rounded-md border-transparent bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 dark:disabled:bg-blue-800 dark:disabled:text-blue-400 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Save default</button>
                 </div>
             </div>
             <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">Used by every domain set to <span class="font-medium">Default</span>. 0 turns a limit off, both 0 turns rate limiting off for those domains.</p>
@@ -53,7 +53,7 @@
 </div>
 
 {{if .StatusError}}
-<div class="mx-6 mt-4 rounded border border-yellow-500 bg-yellow-50 p-4 text-sm text-yellow-800 dark:bg-yellow-400/10 dark:text-yellow-500">
+<div class="mx-6 mt-4 p-4 text-sm rounded-md bg-yellow-50 text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500">
     Couldn't read the rate limits, <code>opencli domains-ratelimit</code> is missing or failed. Update opencli and try again.
 </div>
 {{end}}
@@ -62,13 +62,13 @@
     <div class="flex px-6 pt-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
         <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
             <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-                <input x-model="q" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8" placeholder="Search domains or users..." type="search" />
+                <input x-model="q" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden" placeholder="Search domains or users..." type="search" />
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                 </div>
             </div>
             {{if .Users}}
-            <select x-model="user" aria-label="Filter by user" class="rounded border px-2.5 py-1.5 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+            <select x-model="user" aria-label="Filter by user" class="rounded-md border px-2.5 py-1.5 shadow-xs outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
                 <option value="">All users</option>
                 {{range .Users}}<option value="{{.}}">{{.}}</option>{{end}}
             </select>
@@ -107,9 +107,9 @@
                     <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-medium">{{.Domain}}</td>
                     <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">{{if .Owner}}{{.Owner}}{{else}}-{{end}}</td>
                     <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
-                        {{if eq .Mode "default"}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Default</span>
-                        {{else if eq .Mode "custom"}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-blue-50 text-blue-800 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Custom</span>
-                        {{else}}<span class="inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Off</span>{{end}}
+                        {{if eq .Mode "default"}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Default</span>
+                        {{else if eq .Mode "custom"}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Custom</span>
+                        {{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Off</span>{{end}}
                     </td>
                     <td class="p-4 text-sm relative whitespace-nowrap py-1 text-right tabular-nums text-gray-600 dark:text-gray-400">{{if .PerIP}}{{.PerIP}}{{else}}-{{end}}</td>
                     <td class="p-4 text-sm relative whitespace-nowrap py-1 text-right tabular-nums text-gray-600 dark:text-gray-400">{{if .PerSite}}{{.PerSite}}{{else}}-{{end}}</td>
@@ -133,8 +133,8 @@
 </div>
 
 <div x-show="edit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center px-4" @keydown.escape.window="edit = null">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="edit = null"></div>
-    <div @click.stop class="relative w-full max-w-xl overflow-hidden rounded border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#090E1A]">
+    <div class="absolute inset-0 bg-black/30" @click="edit = null"></div>
+    <div @click.stop class="relative w-full max-w-xl overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">
         <template x-if="edit">
         <form method="POST" action="/domains/ratelimit">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -153,14 +153,14 @@
                 <div x-show="edit.mode === 'custom'" class="flex flex-col gap-3 sm:flex-row">
                     <div>
                         <label for="edit_per_ip" class="block text-sm font-medium text-gray-900 dark:text-white">Per visitor IP</label>
-                        <input id="edit_per_ip" type="number" min="0" step="1" name="per_ip" x-model="edit.per_ip" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                        <input id="edit_per_ip" type="number" min="0" step="1" name="per_ip" x-model="edit.per_ip" class="mt-1 relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
                     </div>
                     <div>
                         <label for="edit_per_site" class="block text-sm font-medium text-gray-900 dark:text-white">Per domain</label>
-                        <input id="edit_per_site" type="number" min="0" step="1" name="per_site" x-model="edit.per_site" class="mt-1 relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+                        <input id="edit_per_site" type="number" min="0" step="1" name="per_site" x-model="edit.per_site" class="mt-1 relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
                     </div>
                 </div>
-                <div class="rounded border border-gray-200 p-3 text-sm dark:border-gray-800">
+                <div class="rounded-md border border-gray-200 p-3 text-sm dark:border-gray-800">
                     <p class="font-medium text-gray-900 dark:text-gray-50">Last 24h</p>
                     <template x-if="stat(edit.domain).requests !== undefined">
                         <div class="mt-1 text-gray-600 dark:text-gray-400">
@@ -182,8 +182,8 @@
                 </div>
             </div>
             <div class="flex gap-3 border-t px-6 py-4 border-gray-200 dark:border-gray-800">
-                <button type="button" @click="edit = null" class="cursor-pointer inline-flex w-full items-center justify-center rounded border px-3 py-2 text-sm font-medium shadow-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900">Cancel</button>
-                <button type="submit" class="cursor-pointer inline-flex w-full items-center justify-center rounded border px-3 py-2 text-sm font-medium shadow-sm border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800">Save</button>
+                <button type="button" @click="edit = null" class="cursor-pointer inline-flex w-full items-center justify-center border px-3 py-2 text-sm font-medium rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Cancel</button>
+                <button type="submit" class="cursor-pointer inline-flex w-full items-center justify-center border px-3 py-2 text-sm font-medium rounded-md border-transparent bg-blue-500 text-white hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white dark:border-transparent dark:bg-blue-500 dark:text-white dark:hover:bg-blue-600 dark:disabled:bg-blue-800 dark:disabled:text-blue-400 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Save</button>
             </div>
         </form>
         </template>

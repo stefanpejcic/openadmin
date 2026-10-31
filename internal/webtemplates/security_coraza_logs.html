@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div class="bg-gray-50 px-4 pt-4 dark:bg-gray-950 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+<div class="op-page-header px-4 pt-4 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
     <header>
         <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
             <div class="grow min-w-0">
@@ -19,11 +19,11 @@
             </div>
             <div class="flex flex-none flex-wrap items-center justify-center gap-2 sm:justify-end">
                 {{if .Target}}
-                <a href="/security/waf/rules/{{.Target}}" class="inline-flex items-center rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-900">Manage rules</a>
-                <form method="post" action="{{.Self}}" onsubmit="return confirm('Clear the WAF logs for {{.Target}}?');">
+                <a href="/security/waf/rules/{{.Target}}" class="inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-900">Manage rules</a>
+                <form method="post" action="{{.Self}}" data-confirm="Clear the WAF logs for {{.Target}}?">
                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                     <input type="hidden" name="action" value="purge">
-                    <button type="submit" class="inline-flex items-center rounded border border-red-300 px-3 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950">Clear logs</button>
+                    <button type="submit" class="inline-flex items-center rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 shadow-xs hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950">Clear logs</button>
                 </form>
                 {{end}}
             </div>
@@ -37,7 +37,7 @@
 
     {{if and (ne .Kind "domain") .Users}}
     <div class="px-6 pt-3">
-        <select aria-label="Filter by user" onchange="window.location = this.value ? '/security/waf/logs/' + encodeURIComponent(this.value) : '/security/waf/logs'" class="rounded border px-2.5 py-1.5 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+        <select aria-label="Filter by user" onchange="window.location = this.value ? '/security/waf/logs/' + encodeURIComponent(this.value) : '/security/waf/logs'" class="rounded-md border px-2.5 py-1.5 shadow-xs outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
             <option value="">All users</option>
             {{range .Users}}<option value="{{.}}" {{if eq . $.Target}}selected{{end}}>{{.}}</option>{{end}}
         </select>
@@ -45,15 +45,15 @@
     {{end}}
 
     <dl class="grid grid-cols-1 gap-4 px-6 pt-3 sm:grid-cols-3">
-        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
             <dt class="text-sm text-gray-500">Blocked</dt>
             <dd class="mt-1 text-lg font-semibold tabular-nums text-red-700 dark:text-red-400">{{.Report.Blocked}}</dd>
         </div>
-        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
             <dt class="text-sm text-gray-500">Would block (monitor only)</dt>
             <dd class="mt-1 text-lg font-semibold tabular-nums">{{.Report.WouldBlock}}</dd>
         </div>
-        <div class="rounded border border-gray-200 p-4 dark:border-gray-800">
+        <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
             <dt class="text-sm text-gray-500">Flagged, not blocked</dt>
             <dd class="mt-1 text-lg font-semibold tabular-nums">{{.Report.Flagged}}</dd>
         </div>
@@ -141,7 +141,7 @@
                             {{if .Disabled}}
                             <button type="submit" name="action" value="enable_rule" class="text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-400">Enable server-wide</button>
                             {{else}}
-                            <button type="submit" name="action" value="disable_rule" onclick="return confirm('Disable rule {{.ID}} on every domain on the server?');" class="text-sm font-medium text-red-600 hover:underline dark:text-red-400">Disable server-wide</button>
+                            <button type="submit" name="action" value="disable_rule" data-confirm="Disable rule {{.ID}} on every domain on the server?" class="text-sm font-medium text-red-600 hover:underline dark:text-red-400">Disable server-wide</button>
                             {{end}}
                         </form>
                         </div>
