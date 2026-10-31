@@ -160,6 +160,7 @@ func (m *Manager) refreshHealth() {
 	}
 	wg.Wait()
 	old := m.storeHealth(fresh)
+	m.markSyncedIfCaughtUp()
 	for id, h := range fresh {
 		prev, seen := old[id]
 		switch {
