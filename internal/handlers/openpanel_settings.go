@@ -63,7 +63,7 @@ var openpanelIntFields = []string{
 // openpanelStringFields lists the plain-string fields (those not in
 // openpanelIntFields above, and not the "weakpass" checkbox).
 var openpanelStringFields = []string{
-	"brand_name", "logo", "favicon", "ns1", "ns2", "ns3", "ns4",
+	"brand_name", "logo", "logo_dark", "favicon", "ns1", "ns2", "ns3", "ns4",
 	"menu_style", "ui_theme", "login_layout", "avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
 	"permit_username_change_by_user", "permit_subdomain_sharing",
 	"twofa_nag", "twofa_enforce", "how_to_guides", "onboarding", "found_a_bug_link", "ip_county_flag",
@@ -225,7 +225,7 @@ func validateOpenpanelValue(key, value string) (normalized string, ok bool, errM
 // belongs to.
 func openpanelSectionForKey(key string) string {
 	switch key {
-	case "brand_name", "logo", "favicon", "ns1", "ns2", "ns3", "ns4", "logout_url":
+	case "brand_name", "logo", "logo_dark", "favicon", "ns1", "ns2", "ns3", "ns4", "logout_url":
 		return "DEFAULT"
 	}
 	if strings.HasPrefix(key, "mysql_") {
