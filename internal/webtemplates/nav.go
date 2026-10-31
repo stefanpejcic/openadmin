@@ -331,6 +331,7 @@ var helpDocs = map[string]string{
 	"/server/resource-usage":         "admin/advanced/resource-usage",
 	"/server/crons":                  "admin/advanced/crons",
 	"/tasks":                         "admin/advanced/tasks",
+	"/account":                       "admin/accounts/resellers",
 	"/terminal":                      "admin/advanced/terminal",
 	"/server/processes":              "admin/advanced/processes",
 	"/server/timezone":               "admin/system/timezone",
@@ -360,6 +361,12 @@ var helpDocs = map[string]string{
 // helpSection picks the part of doc a page shows, "until:X" keeps what's before the X heading and "from:X" keeps that section
 func helpSection(doc, path string) string {
 	switch doc {
+	case "admin/accounts/resellers":
+		// a reseller's own account page shows just its section of the resellers doc
+		if strings.HasPrefix(path, "/account") {
+			return "from:Reseller Account"
+		}
+		return ""
 	case "admin/accounts/users":
 		if strings.HasPrefix(path, "/users/") && strings.Trim(path, "/") != "users" {
 			return "from:Single User"

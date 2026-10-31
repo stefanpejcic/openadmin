@@ -166,3 +166,10 @@ func TestHelpDocForWAFOpensTheTabSection(t *testing.T) {
 		}
 	}
 }
+
+func TestHelpDocForResellerAccountOpensItsSection(t *testing.T) {
+	tabs := []NavLink{{Href: "/account", Active: true}}
+	if doc, part := HelpDocFor(tabs, "/account"); doc != "admin/accounts/resellers" || part != "from:Reseller Account" {
+		t.Fatalf("got %q %q", doc, part)
+	}
+}
