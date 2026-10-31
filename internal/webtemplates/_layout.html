@@ -102,19 +102,19 @@
                                     </ul>
                                   </div>
                                 </form>
-                                <script>function searchDropdown(){return{query:'',dropdownOpen:false,filteredItems:[],isReseller:false,PERSON_FILL:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>',PERSON_FILL_X:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-person-fill-x" viewBox="0 0 16 16"><path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"/><path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m-.646-4.854.646.647.646-.647a.5.5 0 0 1 .708.708l-.647.646.647.646a.5.5 0 0 1-.708.708l-.646-.647-.646.647a.5.5 0 0 1-.708-.708l.647-.646-.647-.646a.5.5 0 0 1 .708-.708"/></svg>',async fetchJSON(url){try{const r=await fetch(url),d=await r.json();return Array.isArray(d)?d:[]}catch{return[]}},async handleInput(){const s=this.query.toLowerCase(),items=[],pagesReq=this.isReseller?[]:await this.fetchJSON('/search/pages'),usersReq=await this.fetchJSON('/search/users'),websitesReq=this.isReseller?[]:await this.fetchJSON('/search/websites');pagesReq.forEach(item=>{const n=item?.name??'',l=item?.link??'#',d=item?.description??'',a=item?.area??'',k=(item?.keywords??[]).join(' ');if([n,a,k].join(' ').toLowerCase().includes(s))items.push({id:`page-${l}`,html:`<a class="dropdown-item flex w-full" href="${l}">${a?a+' › ':''}${n}<br><p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${d}</p></a>`})});usersReq.forEach(n=>{if(!n)return;let srv='';const lm=n.match(/^(.*) \(([^()]+)\)$/);if(lm&&window.clusterGo){n=lm[1];srv=lm[2]};const sus=n.toLowerCase().includes('suspended'),icon=sus?this.PERSON_FILL_X:this.PERSON_FILL;if(n.toLowerCase().startsWith('suspended_')){const dn=n.split('_').pop();items.push({id:`user-${n}`,html:`<a class="flex text-red" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${dn}</span></a>`})}else if(n.toLowerCase().includes(s)){const go=srv?` onclick="event.preventDefault();window.clusterGo('${srv}',this.getAttribute('href'))"`:'';items.push({id:`user-${n}-${srv}`,html:`<div class="flex justify-between items-center w-full"><a class="flex" href="/users/${n}"${go}>${icon} &nbsp;<span class="text-sm">${n}${srv?`<span class="block text-xs text-gray-500">${srv}</span>`:''}</span></a><a href="/login/token/${n}"${go} title="Login as ${n} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center border p-1 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/></g></svg></a></div>`})}});websitesReq.forEach(row=>{const n=Array.isArray(row)?row[0]:'';if(n&&n.toLowerCase().includes(s))items.push({id:`website-${n}`,html:`<a class="flex dropdown-item" href="/domains/${n}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-globe2" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855q-.215.403-.395.872c.705.157 1.472.257 2.282.287zM4.249 3.539q.214-.577.481-1.078a7 7 0 0 1 .597-.933A7 7 0 0 0 3.051 3.05q.544.277 1.198.49zM3.509 7.5c.036-1.07.188-2.087.436-3.008a9 9 0 0 1-1.565-.667A6.96 6.96 0 0 0 1.018 7.5zm1.4-2.741a12.3 12.3 0 0 0-.4 2.741H7.5V5.091c-.91-.03-1.783-.145-2.591-.332M8.5 5.09V7.5h2.99a12.3 12.3 0 0 0-.399-2.741c-.808.187-1.681.301-2.591.332zM4.51 8.5c.035.987.176 1.914.399 2.741A13.6 13.6 0 0 1 7.5 10.91V8.5zm3.99 0v2.409c.91.03 1.783.145 2.591.332.223-.827.364-1.754.4-2.741zm-3.282 3.696q.18.469.395.872c.552 1.035 1.218 1.65 1.887 1.855V11.91c-.81.03-1.577.13-2.282.287zm.11 2.276a7 7 0 0 1-.598-.933 9 9 0 0 1-.481-1.079 8.4 8.4 0 0 0-1.198.49 7 7 0 0 0 2.276 1.522zm-1.383-2.964A13.4 13.4 0 0 1 3.508 8.5h-2.49a6.96 6.96 0 0 0 1.362 3.675c.47-.258.995-.482 1.565-.667m6.728 2.964a7 7 0 0 0 2.275-1.521 8.4 8.4 0 0 0-1.197-.49 9 9 0 0 1-.481 1.078 7 7 0 0 1-.597.933M8.5 11.909v3.014c.67-.204 1.335-.82 1.887-1.855q.216-.403.395-.872A12.6 12.6 0 0 0 8.5 11.91zm3.555-.401c.57.185 1.095.409 1.565.667A6.96 6.96 0 0 0 14.982 8.5h-2.49a13.4 13.4 0 0 1-.437 3.008M14.982 7.5a6.96 6.96 0 0 0-1.362-3.675c-.47.258-.995.482-1.565.667.248.92.4 1.938.437 3.008zM11.27 2.461q.266.502.482 1.078a8.4 8.4 0 0 0 1.196-.49 7 7 0 0 0-2.275-1.52c.218.283.418.597.597.932m-.488 1.343a8 8 0 0 0-.395-.872C9.835 1.897 9.17 1.282 8.5 1.077V4.09c.81-.03 1.577-.13 2.282-.287z"/></svg> &nbsp;${n}</a>`})});this.filteredItems=items;this.dropdownOpen=items.length>0},closeDropdown(){this.dropdownOpen=false},init(){this.isReseller={{if .IsReseller}}true{{else}}false{{end}}}}}</script>
+                                <script>function searchDropdown(){return{query:'',dropdownOpen:false,filteredItems:[],isReseller:false,PERSON_FILL:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 22C4 17.5817 7.58172 14 12 14C16.4183 14 20 17.5817 20 22H4ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13Z"/></svg>',PERSON_FILL_X:'<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 14.252V22H4C4 17.5817 7.58172 14 12 14C12.6906 14 13.3608 14.0875 14 14.252ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13ZM19 16.5858L21.1213 14.4645L22.5355 15.8787L20.4142 18L22.5355 20.1213L21.1213 21.5355L19 19.4142L16.8787 21.5355L15.4645 20.1213L17.5858 18L15.4645 15.8787L16.8787 14.4645L19 16.5858Z"/></svg>',async fetchJSON(url){try{const r=await fetch(url),d=await r.json();return Array.isArray(d)?d:[]}catch{return[]}},async handleInput(){const s=this.query.toLowerCase(),items=[],pagesReq=this.isReseller?[]:await this.fetchJSON('/search/pages'),usersReq=await this.fetchJSON('/search/users'),websitesReq=this.isReseller?[]:await this.fetchJSON('/search/websites');pagesReq.forEach(item=>{const n=item?.name??'',l=item?.link??'#',d=item?.description??'',a=item?.area??'',k=(item?.keywords??[]).join(' ');if([n,a,k].join(' ').toLowerCase().includes(s))items.push({id:`page-${l}`,html:`<a class="dropdown-item flex w-full" href="${l}">${a?a+' › ':''}${n}<br><p class="dropdown-item-description" style="display:contents;font-size:0.7em;margin-bottom:0;">${d}</p></a>`})});usersReq.forEach(n=>{if(!n)return;let srv='';const lm=n.match(/^(.*) \(([^()]+)\)$/);if(lm&&window.clusterGo){n=lm[1];srv=lm[2]};const sus=n.toLowerCase().includes('suspended'),icon=sus?this.PERSON_FILL_X:this.PERSON_FILL;if(n.toLowerCase().startsWith('suspended_')){const dn=n.split('_').pop();items.push({id:`user-${n}`,html:`<a class="flex text-red" href="/users/${n}">${icon} &nbsp;<span class="text-sm">${dn}</span></a>`})}else if(n.toLowerCase().includes(s)){const go=srv?` onclick="event.preventDefault();window.clusterGo('${srv}',this.getAttribute('href'))"`:'';items.push({id:`user-${n}-${srv}`,html:`<div class="flex justify-between items-center w-full"><a class="flex" href="/users/${n}"${go}>${icon} &nbsp;<span class="text-sm">${n}${srv?`<span class="block text-xs text-gray-500">${srv}</span>`:''}</span></a><a href="/login/token/${n}"${go} title="Login as ${n} into OpenPanel" target="_blank" class="relative inline-flex items-center justify-center border p-1 text-center text-sm font-medium transition-all duration-100 ease-in-out cursor-pointer sm:w-fit sm:mt-0 rounded-md border-gray-300 bg-white text-gray-900 hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 shadow-xs outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg version="1.0" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg" width="16" height="18" viewBox="0 0 213 215" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,215) scale(0.1,-0.1)" fill="currentColor" stroke="none"><path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"/></g></svg></a></div>`})}});websitesReq.forEach(row=>{const n=Array.isArray(row)?row[0]:'';if(n&&n.toLowerCase().includes(s))items.push({id:`website-${n}`,html:`<a class="flex dropdown-item" href="/domains/${n}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM9.71002 19.6674C8.74743 17.6259 8.15732 15.3742 8.02731 13H4.06189C4.458 16.1765 6.71639 18.7747 9.71002 19.6674ZM10.0307 13C10.1811 15.4388 10.8778 17.7297 12 19.752C13.1222 17.7297 13.8189 15.4388 13.9693 13H10.0307ZM19.9381 13H15.9727C15.8427 15.3742 15.2526 17.6259 14.29 19.6674C17.2836 18.7747 19.542 16.1765 19.9381 13ZM4.06189 11H8.02731C8.15732 8.62577 8.74743 6.37407 9.71002 4.33256C6.71639 5.22533 4.458 7.8235 4.06189 11ZM10.0307 11H13.9693C13.8189 8.56122 13.1222 6.27025 12 4.24799C10.8778 6.27025 10.1811 8.56122 10.0307 11ZM14.29 4.33256C15.2526 6.37407 15.8427 8.62577 15.9727 11H19.9381C19.542 7.8235 17.2836 5.22533 14.29 4.33256Z"/></svg> &nbsp;${n}</a>`})});this.filteredItems=items;this.dropdownOpen=items.length>0},closeDropdown(){this.dropdownOpen=false},init(){this.isReseller={{if .IsReseller}}true{{else}}false{{end}}}}}</script>
                         </div>
                     </div>
 
                     <div data-sidebar="group" class="relative flex w-full min-w-0 flex-col p-2 pt-0">
                         <div data-sidebar="group-content" class="w-full text-sm">
                             <ul data-sidebar="menu" class="flex w-full min-w-0 flex-col gap-1 space-y-1">
-                                <li><a data-active="{{if or (hasPrefix .CurrentPath "/dashboard") (eq .CurrentPath "/")}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/dashboard"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house size-[18px] shrink-0" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Dashboard</span></a></li>
+                                <li><a data-active="{{if or (hasPrefix .CurrentPath "/dashboard") (eq .CurrentPath "/")}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/dashboard"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-[18px] shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M21 20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V9.48907C3 9.18048 3.14247 8.88917 3.38606 8.69972L11.3861 2.47749C11.7472 2.19663 12.2528 2.19663 12.6139 2.47749L20.6139 8.69972C20.8575 8.88917 21 9.18048 21 9.48907V20ZM19 19V9.97815L12 4.53371L5 9.97815V19H19Z"/></svg>Dashboard</span></a></li>
                                 {{if not .IsReseller}}
-                                <li><a id="tour-notifications-link" data-active="{{if hasPrefix .CurrentPath "/notifications"}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/notifications"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-notification" width="18" height="18"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 6h-3a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-3"></path><path d="M17 7m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"></path></svg>Notifications</span>{{if .UnreadNotifications}}<span class="inline-flex size-5 items-center justify-center rounded bg-blue-100 text-sm font-medium text-blue-600 sm:text-xs dark:bg-blue-500/10 dark:text-blue-500">{{if gt .UnreadNotifications 30}}20+{{else}}{{.UnreadNotifications}}{{end}}</span>{{end}}</a></li>
-                                <li id="tour-recent-menu" x-data="{ open: true, active: false }" class="relative"><button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer"><div class="flex items-center gap-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-star"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 18a6 6 0 1 0 0 -12h-11" /><path d="M7 9l-3 -3l3 -3" /><path d="M8 20h2a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-2v-3h3" /></svg> Recent</div><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600 rotate-180" :class="{ 'rotate-180': open }"><path d="M12 16L6 10H18L12 16Z"></path></svg></button><ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent"><div id="recent-list" class="relative z-40 overflow-hidden min-w-48 text-gray-900 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade"></div></ul></li>
+                                <li><a id="tour-notifications-link" data-active="{{if hasPrefix .CurrentPath "/notifications"}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/notifications"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M13.3414 4C13.1203 4.62556 13 5.29873 13 6H5V20H19V12C19.7013 12 20.3744 11.8797 21 11.6586V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V5C3 4.44772 3.44772 4 4 4H13.3414ZM19 8C20.1046 8 21 7.10457 21 6C21 4.89543 20.1046 4 19 4C17.8954 4 17 4.89543 17 6C17 7.10457 17.8954 8 19 8ZM19 10C16.7909 10 15 8.20914 15 6C15 3.79086 16.7909 2 19 2C21.2091 2 23 3.79086 23 6C23 8.20914 21.2091 10 19 10Z"/></svg>Notifications</span>{{if .UnreadNotifications}}<span class="inline-flex size-5 items-center justify-center rounded bg-blue-100 text-sm font-medium text-blue-600 sm:text-xs dark:bg-blue-500/10 dark:text-blue-500">{{if gt .UnreadNotifications 30}}20+{{else}}{{.UnreadNotifications}}{{end}}</span>{{end}}</a></li>
+                                <li id="tour-recent-menu" x-data="{ open: true, active: false }" class="relative"><button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer"><div class="flex items-center gap-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5.82843 6.99955L8.36396 9.53509L6.94975 10.9493L2 5.99955L6.94975 1.0498L8.36396 2.46402L5.82843 4.99955H13C17.4183 4.99955 21 8.58127 21 12.9996C21 17.4178 17.4183 20.9996 13 20.9996H4V18.9996H13C16.3137 18.9996 19 16.3133 19 12.9996C19 9.68584 16.3137 6.99955 13 6.99955H5.82843Z"/></svg> Recent</div><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600 rotate-180" :class="{ 'rotate-180': open }"><path d="M12 16L6 10H18L12 16Z"></path></svg></button><ul x-show="open || active" x-transition class="relative space-y-1 border-l border-transparent"><div id="recent-list" class="relative z-40 overflow-hidden min-w-48 text-gray-900 will-change-[transform,opacity] data-[state=closed]:animate-hide data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideLeftAndFade data-[side=right]:animate-slideRightAndFade data-[side=top]:animate-slideUpAndFade"></div></ul></li>
                                 <script>function saveRecentPage(){const M=5,r=document.title?.trim();if(!r)return;const p=r.split(']'),t=p.length>1?p.slice(-1)[0].trim():r;if(!t||t.toLowerCase()==='untitled')return;const u=window.location.pathname+window.location.search+window.location.hash;let a=JSON.parse(localStorage.getItem("recent_pages")||"[]"),e=a.find(i=>i.url===u);if(!e||!e.pinned){a=a.filter(i=>i.url!==u||i.pinned);a.unshift({title:t,url:u,pinned:false})}localStorage.setItem("recent_pages",JSON.stringify([...a.filter(i=>i.pinned),...a.filter(i=>!i.pinned).slice(0,M)]))}saveRecentPage();</script>
-                                <script>function loadRecentPages(){const l=document.getElementById('recent-list');l.innerHTML='';let r=JSON.parse(localStorage.getItem("recent_pages")||"[]");const b=document.createElement('span');b.className='absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800';l.appendChild(b);r.forEach((item)=>{const li=document.createElement('li');li.className='relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50';const a=document.createElement('a');a.href=item.url;a.textContent=item.title;const btn=document.createElement('button');btn.innerHTML=item.pinned?'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="icon icon-tabler icons-tabler-filled icon-tabler-pin"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15.113 3.21l.094 .083l5.5 5.5a1 1 0 0 1 -1.175 1.59l-3.172 3.171l-1.424 3.797a1 1 0 0 1 -.158 .277l-.07 .08l-1.5 1.5a1 1 0 0 1 -1.32 .082l-.095 -.083l-2.793 -2.792l-3.793 3.792a1 1 0 0 1 -1.497 -1.32l.083 -.094l3.792 -3.793l-2.792 -2.793a1 1 0 0 1 -.083 -1.32l.083 -.094l1.5 -1.5a1 1 0 0 1 .258 -.187l.098 -.042l3.796 -1.425l3.171 -3.17a1 1 0 0 1 1.497 -1.26z"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-pin"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/></svg>';btn.className='ml-auto';btn.title=item.pinned?'Unpin':'Pin';btn.style.cssText='background:none;border:none;cursor:pointer';btn.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();item.pinned=!item.pinned;localStorage.setItem("recent_pages",JSON.stringify(r));loadRecentPages()});li.appendChild(a);li.appendChild(btn);l.appendChild(li)})}loadRecentPages();</script>
+                                <script>function loadRecentPages(){const l=document.getElementById('recent-list');l.innerHTML='';let r=JSON.parse(localStorage.getItem("recent_pages")||"[]");const b=document.createElement('span');b.className='absolute inset-y-0 left-4 w-px bg-gray-300 dark:bg-gray-800';l.appendChild(b);r.forEach((item)=>{const li=document.createElement('li');li.className='relative flex gap-2 rounded py-1.5 pl-9 pr-3 text-base transition sm:text-sm text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50';const a=document.createElement('a');a.href=item.url;a.textContent=item.title;const btn=document.createElement('button');btn.innerHTML=item.pinned?'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M22.3126 10.1753L20.8984 11.5895L20.1913 10.8824L15.9486 15.125L15.2415 18.6606L13.8273 20.0748L9.58466 15.8321L4.63492 20.7819L3.2207 19.3677L8.17045 14.4179L3.92781 10.1753L5.34202 8.76107L8.87756 8.05396L13.1202 3.81132L12.4131 3.10422L13.8273 1.69L22.3126 10.1753Z"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M13.8273 1.69L22.3126 10.1753L20.8984 11.5895L20.1913 10.8824L15.9486 15.125L15.2415 18.6606L13.8273 20.0748L9.58466 15.8321L4.63492 20.7819L3.2207 19.3677L8.17045 14.4179L3.92781 10.1753L5.34202 8.76107L8.87756 8.05396L13.1202 3.81132L12.4131 3.10422L13.8273 1.69ZM14.5344 5.22554L9.86358 9.89637L7.0417 10.4607L13.5418 16.9609L14.1062 14.139L18.7771 9.46818L14.5344 5.22554Z"/></svg>';btn.className='ml-auto';btn.title=item.pinned?'Unpin':'Pin';btn.style.cssText='background:none;border:none;cursor:pointer';btn.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();item.pinned=!item.pinned;localStorage.setItem("recent_pages",JSON.stringify(r));loadRecentPages()});li.appendChild(a);li.appendChild(btn);l.appendChild(li)})}loadRecentPages();</script>
                                 <script>
                                 // Recent links on/off is a per-browser preference, off for new browsers but kept on where recent pages were already saved before the switch existed
                                 window.OPRecent={shown(){try{let v=localStorage.getItem('show_recent_links');if(v===null){v=JSON.parse(localStorage.getItem('recent_pages')||'[]').length>1?'1':'0';localStorage.setItem('show_recent_links',v)}return v==='1'}catch(e){return false}},set(on){try{localStorage.setItem('show_recent_links',on?'1':'0')}catch(e){}const el=document.getElementById('tour-recent-menu');if(el)el.style.display=on?'':'none'}};
@@ -136,11 +136,7 @@
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Accounts -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-text size-[18px] shrink-0" aria-hidden="true">
-                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"></path>
-                <path d="M8 11h8"></path>
-                <path d="M8 7h6"></path>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-[18px] shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M21 18H6C5.44772 18 5 18.4477 5 19C5 19.5523 5.44772 20 6 20H21V22H6C4.34315 22 3 20.6569 3 19V4C3 2.89543 3.89543 2 5 2H21V18ZM5 16.05C5.16156 16.0172 5.32877 16 5.5 16H19V4H5V16.05ZM16 9H8V7H16V9Z"/></svg>
             Accounts
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -196,14 +192,7 @@
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Hosting Plans -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package-search size-[18px] shrink-0" aria-hidden="true">
-                <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path>
-                <path d="m7.5 4.27 9 5.15"></path>
-                <polyline points="3.29 7 12 12 20.71 7"></polyline>
-                <line x1="12" x2="12" y1="22" y2="12"></line>
-                <circle cx="18.5" cy="15.5" r="2.5"></circle>
-                <path d="M20.27 17.27 22 19"></path>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-[18px] shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L21.5 6.5V17.5L12 23L2.5 17.5V6.5L12 1ZM5.49388 7.0777L12.0001 10.8444L18.5062 7.07774L12 3.311L5.49388 7.0777ZM4.5 8.81329V16.3469L11.0001 20.1101V12.5765L4.5 8.81329ZM13.0001 20.11L19.5 16.3469V8.81337L13.0001 12.5765V20.11Z"/></svg>
             Hosting Plans
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -226,7 +215,7 @@
 <li x-data="{ open: false, active: {{if hasPrefix .CurrentPath "/domains"}}true{{else}}false{{end}} }" class="relative">
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-world-www"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M19.5 7a9 9 0 0 0 -7.5 -4a8.991 8.991 0 0 0 -7.484 4"></path><path d="M11.5 3a16.989 16.989 0 0 0 -1.826 4"></path><path d="M12.5 3a16.989 16.989 0 0 1 1.828 4"></path><path d="M19.5 17a9 9 0 0 1 -7.5 4a8.991 8.991 0 0 1 -7.484 -4"></path><path d="M11.5 21a16.989 16.989 0 0 1 -1.826 -4"></path><path d="M12.5 21a16.989 16.989 0 0 0 1.828 -4"></path><path d="M2 10l1 4l1.5 -4l1.5 4l1 -4"></path><path d="M17 10l1 4l1.5 -4l1.5 4l1 -4"></path><path d="M9.5 10l1 4l1.5 -4l1.5 4l1 -4"></path></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM9.71002 19.6674C8.74743 17.6259 8.15732 15.3742 8.02731 13H4.06189C4.458 16.1765 6.71639 18.7747 9.71002 19.6674ZM10.0307 13C10.1811 15.4388 10.8778 17.7297 12 19.752C13.1222 17.7297 13.8189 15.4388 13.9693 13H10.0307ZM19.9381 13H15.9727C15.8427 15.3742 15.2526 17.6259 14.29 19.6674C17.2836 18.7747 19.542 16.1765 19.9381 13ZM4.06189 11H8.02731C8.15732 8.62577 8.74743 6.37407 9.71002 4.33256C6.71639 5.22533 4.458 7.8235 4.06189 11ZM10.0307 11H13.9693C13.8189 8.56122 13.1222 6.27025 12 4.24799C10.8778 6.27025 10.1811 8.56122 10.0307 11ZM14.29 4.33256C15.2526 6.37407 15.8427 8.62577 15.9727 11H19.9381C19.542 7.8235 17.2836 5.22533 14.29 4.33256Z"/></svg>
             Domains
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -293,8 +282,8 @@
     </ul>
 </li>
 
-<li><a data-active="{{if hasPrefix .CurrentPath "/websites"}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/websites"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-browser"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4m0 1a1 1 0 0 1 1 -1h14a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-14a1 1 0 0 1 -1 -1z"/><path d="M4 8h16"/><path d="M8 4v4"/></svg>Websites</span></a></li>
-<li><a data-active="{{if hasPrefix .CurrentPath "/databases"}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/databases"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-database"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0"/><path d="M4 6v6a8 3 0 0 0 16 0v-6"/><path d="M4 12v6a8 3 0 0 0 16 0v-6"/></svg>Databases</span></a></li>
+<li><a data-active="{{if hasPrefix .CurrentPath "/websites"}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/websites"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H21ZM20 11H4V19H20V11ZM20 5H4V9H20V5ZM11 6V8H9V6H11ZM7 6V8H5V6H7Z"/></svg>Websites</span></a></li>
+<li><a data-active="{{if hasPrefix .CurrentPath "/databases"}}true{{else}}false{{end}}" class="flex items-center justify-between rounded-md p-2 text-base transition hover:bg-gray-200/50 sm:text-sm hover:dark:bg-gray-900 text-gray-900 dark:text-gray-400 hover:dark:text-gray-50 data-[active=true]:text-blue-600 data-[active=true]:dark:text-blue-500 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500" href="/databases"><span class="flex items-center gap-x-2.5"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"/></svg>Databases</span></a></li>
 
 
 {{if eq .LicenseType "Enterprise"}}
@@ -303,11 +292,7 @@
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Emails -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-mail">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z"/>
-                <path d="M3 7l9 6l9 -6"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3ZM20 7.23792L12.0718 14.338L4 7.21594V19H20V7.23792ZM4.51146 5L12.0619 11.662L19.501 5H4.51146Z"/></svg>
             Emails
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -360,11 +345,7 @@
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Settings -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-settings">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/>
-                <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M3.33946 17.0002C2.90721 16.2515 2.58277 15.4702 2.36133 14.6741C3.3338 14.1779 3.99972 13.1668 3.99972 12.0002C3.99972 10.8345 3.3348 9.824 2.36353 9.32741C2.81025 7.71651 3.65857 6.21627 4.86474 4.99001C5.7807 5.58416 6.98935 5.65534 7.99972 5.072C9.01009 4.48866 9.55277 3.40635 9.4962 2.31604C11.1613 1.8846 12.8847 1.90004 14.5031 2.31862C14.4475 3.40806 14.9901 4.48912 15.9997 5.072C17.0101 5.65532 18.2187 5.58416 19.1346 4.99007C19.7133 5.57986 20.2277 6.25151 20.66 7.00021C21.0922 7.7489 21.4167 8.53025 21.6381 9.32628C20.6656 9.82247 19.9997 10.8336 19.9997 12.0002C19.9997 13.166 20.6646 14.1764 21.6359 14.673C21.1892 16.2839 20.3409 17.7841 19.1347 19.0104C18.2187 18.4163 17.0101 18.3451 15.9997 18.9284C14.9893 19.5117 14.4467 20.5941 14.5032 21.6844C12.8382 22.1158 11.1148 22.1004 9.49633 21.6818C9.55191 20.5923 9.00929 19.5113 7.99972 18.9284C6.98938 18.3451 5.78079 18.4162 4.86484 19.0103C4.28617 18.4205 3.77172 17.7489 3.33946 17.0002ZM8.99972 17.1964C10.0911 17.8265 10.8749 18.8227 11.2503 19.9659C11.7486 20.0133 12.2502 20.014 12.7486 19.9675C13.1238 18.8237 13.9078 17.8268 14.9997 17.1964C16.0916 16.5659 17.347 16.3855 18.5252 16.6324C18.8146 16.224 19.0648 15.7892 19.2729 15.334C18.4706 14.4373 17.9997 13.2604 17.9997 12.0002C17.9997 10.74 18.4706 9.5632 19.2729 8.6665C19.1688 8.4405 19.0538 8.21822 18.9279 8.00021C18.802 7.78219 18.667 7.57148 18.5233 7.36842C17.3457 7.61476 16.0911 7.43414 14.9997 6.80405C13.9083 6.17395 13.1246 5.17768 12.7491 4.03455C12.2509 3.98714 11.7492 3.98646 11.2509 4.03292C10.8756 5.17671 10.0916 6.17364 8.99972 6.80405C7.9078 7.43447 6.65245 7.61494 5.47428 7.36803C5.18485 7.77641 4.93463 8.21117 4.72656 8.66637C5.52881 9.56311 5.99972 10.74 5.99972 12.0002C5.99972 13.2604 5.52883 14.4372 4.72656 15.3339C4.83067 15.5599 4.94564 15.7822 5.07152 16.0002C5.19739 16.2182 5.3324 16.4289 5.47612 16.632C6.65377 16.3857 7.90838 16.5663 8.99972 17.1964ZM11.9997 15.0002C10.3429 15.0002 8.99972 13.6571 8.99972 12.0002C8.99972 10.3434 10.3429 9.00021 11.9997 9.00021C13.6566 9.00021 14.9997 10.3434 14.9997 12.0002C14.9997 13.6571 13.6566 15.0002 11.9997 15.0002ZM11.9997 13.0002C12.552 13.0002 12.9997 12.5525 12.9997 12.0002C12.9997 11.4479 12.552 11.0002 11.9997 11.0002C11.4474 11.0002 10.9997 11.4479 10.9997 12.0002C10.9997 12.5525 11.4474 13.0002 11.9997 13.0002Z"/></svg>
             Settings
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -458,15 +439,7 @@
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Services -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-server-2">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M3 4m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z"/>
-                <path d="M3 12m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z"/>
-                <path d="M7 8l0 .01"/>
-                <path d="M7 16l0 .01"/>
-                <path d="M11 8h6"/>
-                <path d="M11 16h6"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5 11H19V5H5V11ZM21 4V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4ZM19 13H5V19H19V13ZM7 15H10V17H7V15ZM7 7H10V9H7V7Z"/></svg>
             Services
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -528,15 +501,7 @@
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Backups -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-database">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M4 6c0 1.657 3.582 3 8 3s8 -1.343 8 -3s-3.582 -3 -8 -3s-8 1.343 -8 3"/>
-                <path d="M4 6v6c0 1.657 3.582 3 8 3c.856 0 1.68 -.048 2.454 -.138"/>
-                <path d="M20 12v-6"/>
-                <path d="M4 12v6c0 1.657 3.582 3 8 3c.171 0 .34 -.002 .507 -.005"/>
-                <path d="M20 14a3.5 3.5 0 1 0 -3.5 3.5"/>
-                <path d="M21 21l-1.5 -1.5"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5 12.5C5 12.8134 5.46101 13.3584 6.53047 13.8931C7.91405 14.5849 9.87677 15 12 15C14.1232 15 16.0859 14.5849 17.4695 13.8931C18.539 13.3584 19 12.8134 19 12.5V10.3287C17.35 11.3482 14.8273 12 12 12C9.17273 12 6.64996 11.3482 5 10.3287V12.5ZM19 15.3287C17.35 16.3482 14.8273 17 12 17C9.17273 17 6.64996 16.3482 5 15.3287V17.5C5 17.8134 5.46101 18.3584 6.53047 18.8931C7.91405 19.5849 9.87677 20 12 20C14.1232 20 16.0859 19.5849 17.4695 18.8931C18.539 18.3584 19 17.8134 19 17.5V15.3287ZM3 17.5V7.5C3 5.01472 7.02944 3 12 3C16.9706 3 21 5.01472 21 7.5V17.5C21 19.9853 16.9706 22 12 22C7.02944 22 3 19.9853 3 17.5ZM12 10C14.1232 10 16.0859 9.58492 17.4695 8.89313C18.539 8.3584 19 7.81342 19 7.5C19 7.18658 18.539 6.6416 17.4695 6.10687C16.0859 5.41508 14.1232 5 12 5C9.87677 5 7.91405 5.41508 6.53047 6.10687C5.46101 6.6416 5 7.18658 5 7.5C5 7.81342 5.46101 8.3584 6.53047 8.89313C7.91405 9.58492 9.87677 10 12 10Z"/></svg>
             Backups
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -577,14 +542,7 @@
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Security -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-spy">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M3 11h18"/>
-                <path d="M5 11v-4a3 3 0 0 1 3 -3h8a3 3 0 0 1 3 3v4"/>
-                <path d="M7 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
-                <path d="M17 17m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/>
-                <path d="M10 17h4"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M17 13C19.2091 13 21 14.7909 21 17C21 19.2091 19.2091 21 17 21C14.7909 21 13 19.2091 13 17H11C11 19.2091 9.20914 21 7 21C4.79086 21 3 19.2091 3 17C3 14.7909 4.79086 13 7 13C8.48052 13 9.77317 13.8043 10.4648 14.9999H13.5352C14.2268 13.8043 15.5195 13 17 13ZM7 15C5.89543 15 5 15.8954 5 17C5 18.1046 5.89543 19 7 19C8.10457 19 9 18.1046 9 17C9 15.8954 8.10457 15 7 15ZM17 15C15.8954 15 15 15.8954 15 17C15 18.1046 15.8954 19 17 19C18.1046 19 19 18.1046 19 17C19 15.8954 18.1046 15 17 15ZM16 3C18.2091 3 20 4.79086 20 7V10H22V12H2V10H4V7C4 4.79086 5.79086 3 8 3H16ZM16 5H8C6.94564 5 6 5.95 6 7V10H18V7C18 5.94564 17.05 5 16 5Z"/></svg>
             Security
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -662,12 +620,7 @@
     <button @click="open = !open" class="flex w-full items-center justify-between gap-x-2.5 rounded-md p-2 text-base text-gray-900 transition hover:bg-gray-200/50 sm:text-sm dark:text-gray-400 hover:dark:bg-gray-900 hover:dark:text-gray-50 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 cursor-pointer">
         <div class="flex items-center gap-2.5">
             <!-- Icon for Advanced -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-terminal-2">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M8 9l3 3l-3 3"/>
-                <path d="M13 15l3 0"/>
-                <path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3ZM4 5V19H20V5H4ZM12 15H18V17H12V15ZM8.66685 12L5.83842 9.17157L7.25264 7.75736L11.4953 12L7.25264 16.2426L5.83842 14.8284L8.66685 12Z"/></svg>
             Server
         </div>
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon rotate-0 size-5 shrink-0 transform text-gray-400 transition-transform duration-150 ease-in-out dark:text-gray-600" :class="{ 'rotate-180': open }">
@@ -818,8 +771,8 @@
                     <span>Theme:</span>
 
 <button id="theme-toggle" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-md text-sm p-2.5 cursor-pointer">
-    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+    <svg id="theme-toggle-dark-icon" class="remixicon hidden w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.3807 2.01886C9.91573 3.38768 9 5.3369 9 7.49999C9 11.6421 12.3579 15 16.5 15C18.6631 15 20.6123 14.0843 21.9811 12.6193C21.6613 17.8537 17.3149 22 12 22C6.47715 22 2 17.5228 2 12C2 6.68514 6.14629 2.33869 11.3807 2.01886Z"/></svg>
+    <svg id="theme-toggle-light-icon" class="remixicon hidden w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12C18 15.3137 15.3137 18 12 18ZM12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16ZM11 1H13V4H11V1ZM11 20H13V23H11V20ZM3.51472 4.92893L4.92893 3.51472L7.05025 5.63604L5.63604 7.05025L3.51472 4.92893ZM16.9497 18.364L18.364 16.9497L20.4853 19.0711L19.0711 20.4853L16.9497 18.364ZM19.0711 3.51472L20.4853 4.92893L18.364 7.05025L16.9497 5.63604L19.0711 3.51472ZM5.63604 16.9497L7.05025 18.364L4.92893 20.4853L3.51472 19.0711L5.63604 16.9497ZM23 11V13H20V11H23ZM4 11V13H1V11H4Z"/></svg>
 </button>
 
                 </span>
@@ -860,18 +813,15 @@
                         xmlns="http://www.w3.org/2000/svg"
                         width="24"
                         height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        class="lucide lucide-arrow-up-right mb-1 ml-1 size-3 shrink-0 text-gray-500 dark:text-gray-500"
+                       
+                       
+                       
+                       
+                       
+                       
+                        class="remixicon mb-1 ml-1 size-3 shrink-0 text-gray-500 dark:text-gray-500"
                         aria-hidden="true"
-                    >
-                        <path d="M7 7h10v10"></path>
-                        <path d="M7 17 17 7"></path>
-                    </svg>
+                     viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg>
                 </a>
                 <a
                     role="menuitem"
@@ -886,18 +836,15 @@
                         xmlns="http://www.w3.org/2000/svg"
                         width="24"
                         height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        class="lucide lucide-arrow-up-right mb-1 ml-1 size-3 shrink-0 text-gray-500"
+                       
+                       
+                       
+                       
+                       
+                       
+                        class="remixicon mb-1 ml-1 size-3 shrink-0 text-gray-500"
                         aria-hidden="true"
-                    >
-                        <path d="M7 7h10v10"></path>
-                        <path d="M7 17 17 7"></path>
-                    </svg>
+                     viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg>
                 </a>
                 <a
                     role="menuitem"
@@ -912,18 +859,15 @@
                         xmlns="http://www.w3.org/2000/svg"
                         width="24"
                         height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        class="lucide lucide-arrow-up-right mb-1 ml-1 size-3 shrink-0 text-gray-500"
+                       
+                       
+                       
+                       
+                       
+                       
+                        class="remixicon mb-1 ml-1 size-3 shrink-0 text-gray-500"
                         aria-hidden="true"
-                    >
-                        <path d="M7 7h10v10"></path>
-                        <path d="M7 17 17 7"></path>
-                    </svg>
+                     viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg>
                 </a>
             </div>
             <div role="separator" aria-orientation="horizontal" class="-mx-1 my-1 h-px border-t border-gray-200 dark:border-gray-800"></div>
@@ -940,10 +884,7 @@
             <span class="flex size-8 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-xs text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 select-none" aria-hidden="true">{{firstUpper .CurrentUser}}</span>
             <span class="select-text">{{.CurrentUser}}</span>
         </span>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevrons-up-down size-4 shrink-0 text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400" aria-hidden="true">
-            <path d="m7 15 5 5 5-5"></path>
-            <path d="m7 9 5-5 5 5"></path>
-        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-500 group-hover:text-gray-700 group-hover:dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M18.2072 9.0428 12.0001 2.83569 5.793 9.0428 7.20721 10.457 12.0001 5.66412 16.793 10.457 18.2072 9.0428ZM5.79285 14.9572 12 21.1643 18.2071 14.9572 16.7928 13.543 12 18.3359 7.20706 13.543 5.79285 14.9572Z"/></svg>
     </button>
 </div>
 
@@ -977,7 +918,7 @@
         {{range .PageTabs}}
         <li class="shrink-0">
             <a href="{{.Href}}" {{if .Active}}aria-current="page"{{end}}
-               class="inline-flex border-b-2 py-3 font-medium transition {{if .Active}}border-blue-500 text-blue-500 dark:border-blue-500 dark:text-blue-500{{else}}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300{{end}}">{{.Label}}{{if .Dot}}<svg title="Needs attention" aria-label="Needs attention" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="ml-1.5 self-center text-yellow-500"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M8 4a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 4m.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/></svg>{{end}}</a>
+               class="inline-flex border-b-2 py-3 font-medium transition {{if .Active}}border-blue-500 text-blue-500 dark:border-blue-500 dark:text-blue-500{{else}}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300{{end}}">{{.Label}}{{if .Dot}}<svg title="Needs attention" aria-label="Needs attention" xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="remixicon ml-1.5 self-center text-yellow-500" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg>{{end}}</a>
         </li>
         {{end}}
     </ul>
@@ -989,7 +930,7 @@
 <section id="page-help" x-show="helpOpen" x-cloak class="border-b border-gray-200 bg-gray-50 px-4 py-6 dark:border-gray-800 dark:bg-gray-950 sm:px-6 lg:px-8">
     <div class="mx-auto max-w-4xl rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-raised">
         <div class="mb-4 flex items-center justify-between gap-4 border-b border-gray-200 pb-3 dark:border-gray-800">
-            <span class="inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 dark:text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 shrink-0" aria-hidden="true"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>Documentation</span>
+            <span class="inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 dark:text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13 21V23H11V21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H9C10.1947 3 11.2671 3.52375 12 4.35418C12.7329 3.52375 13.8053 3 15 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H13ZM20 19V5H15C13.8954 5 13 5.89543 13 7V19H20ZM11 19V7C11 5.89543 10.1046 5 9 5H4V19H11Z"/></svg>Documentation</span>
             <a href="https://openpanel.com/docs/{{.HelpDoc}}/" target="_blank" rel="noopener" class="text-sm font-medium text-blue-600 hover:underline dark:text-blue-500">Open on openpanel.com ↗</a>
         </div>
         <div x-ref="helpBody" class="op-help overflow-y-auto text-sm text-gray-700 dark:text-gray-300">Loading documentation...</div>
@@ -1005,10 +946,7 @@
 
             <div class="flex justify-between items-center">
                 <button id="sidebar_toggle_button" onclick="toggleSidebar()" class="group inline-flex rounded-md p-1.5 hover:bg-gray-200/50 hover:dark:bg-gray-900 outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-left size-[18px] shrink-0 text-gray-700 dark:text-gray-300 cusrsor-pointer" aria-hidden="true">
-                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-                    <path d="M9 3v18"></path>
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-[18px] shrink-0 text-gray-700 dark:text-gray-300 cusrsor-pointer" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H21ZM7 5H4V19H7V5ZM20 5H9V19H20V5Z"/></svg>
                 <span class="sr-only">Toggle Sidebar</span>
                 </button>
                 <div class="mr-2 h-4 w-px bg-gray-200 dark:bg-gray-800"></div>
@@ -1019,68 +957,68 @@
 
                     {{if and (eq .MenuStyle "modern") .AreaLabel}}
                     <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="{{.AreaHref}}">{{.AreaLabel}}</a></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
                     {{else}}{{if or (or (or (eq .Title "Users") (eq .Title "Resellers")) (eq .Title "Administrators")) (or (contains .Title "SUSPENDED_") (contains .Title "User:"))}}
 
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Users</span></div></li>
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (contains .Title "Change Password for Administrator") (contains .Title "Rename Administrator")}}
                     <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="/administrators">Administrators</a></li>
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (contains .Title "Change Password for Reseller") (contains .Title "Rename Reseller")}}
                     <li class="flex"><a class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 hover:dark:text-gray-300" href="/resellers">Resellers</a></li>
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if contains .Title "Access Log"}}
 
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Domains</span></div></li>
 
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if hasPrefix .CurrentPath "/domains"}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Domains</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (hasPrefix .CurrentPath "/settings/updates/log") (hasPrefix .CurrentPath "/services/")}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Services</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if hasPrefix .CurrentPath "/settings/"}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Settings</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (hasPrefix .CurrentPath "/plans") (hasPrefix .CurrentPath "/features")}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Plans</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
 
                     {{else if hasPrefix .CurrentPath "/services"}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Services</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
 
                     {{else if hasPrefix .CurrentPath "/security/"}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Security</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if hasPrefix .CurrentPath "/emails"}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Emails</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
 
 
                     {{else if or (hasPrefix .CurrentPath "/server/") (hasPrefix .CurrentPath "/terminal")}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Server</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
                     {{else if or (or (hasPrefix .CurrentPath "/backups") (hasPrefix .CurrentPath "/user/import")) (or (hasPrefix .CurrentPath "/import/cpanel") (hasPrefix .CurrentPath "/import/cyberpanel"))}}
                     <li class="flex"><div class="flex items-center"><span class="text-gray-900 dark:text-gray-50">Backups</span></div></li>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0 text-gray-600 dark:text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
 
 
                     {{end}}
@@ -1152,29 +1090,28 @@
 
     <!-- LOAD -->
     <a href="{{if not .IsReseller}}/server/processes?sort=cpu{{else}}#{{end}}" role="tab" class="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer bg-white text-gray-900 shadow-sm dark:bg-gray-950 dark:text-gray-50" data-tooltip-target="tooltip-sse_load" data-tooltip-placement="bottom">
-        <i class="px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bar-chart-fill" viewBox="0 0 16 16"><path d="M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/>
-</svg></i> <span id="sse_load" class=""></span>
+        <i class="px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12H7V21H3V12ZM17 8H21V21H17V8ZM10 2H14V21H10V2Z"/></svg></i> <span id="sse_load" class=""></span>
     </a>
     <div id="tooltip-sse_load" role="tooltip" class="absolute z-10 invisible inline-block transition-opacity duration-300 opacity-0 tooltip rounded-md bg-gray-900 px-2.5 py-1.5 text-sm font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900">Loading..<div class="tooltip-arrow" data-popper-arrow></div>
     </div>
 
     <!-- MEMORY -->
     <a href="{{if not .IsReseller}}/server/processes?sort=memory{{else}}#{{end}}" role="tab" class="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer bg-white text-gray-900 shadow-sm dark:bg-gray-950 dark:text-gray-50" data-tooltip-target="tooltip-sse_memory" data-tooltip-placement="bottom">
-        <i class="px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-memory" viewBox="0 0 16 16"> <path d="M1 3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h4.586a1 1 0 0 0 .707-.293l.353-.353a.5.5 0 0 1 .708 0l.353.353a1 1 0 0 0 .707.293H15a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1zm.5 1h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5m5 0h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5m4.5.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5zM2 10v2H1v-2zm2 0v2H3v-2zm2 0v2H5v-2zm3 0v2H8v-2zm2 0v2h-1v-2zm2 0v2h-1v-2zm2 0v2h-1v-2z"/> </svg></i> <span id="sse_memory" class=""></span>
+        <i class="px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7H21V17H19V15H17V17H15V15H13V17H11V15H9V17H7V15H5V17H3V7ZM2 5C1.44772 5 1 5.44772 1 6V18C1 18.5523 1.44772 19 2 19H22C22.5523 19 23 18.5523 23 18V6C23 5.44772 22.5523 5 22 5H2ZM11 9H5V12H11V9ZM13 9H19V12H13V9Z"/></svg></i> <span id="sse_memory" class=""></span>
     </a>
     <div id="tooltip-sse_memory" role="tooltip" class="absolute z-10 invisible inline-block transition-opacity duration-300 opacity-0 tooltip rounded-md bg-gray-900 px-2.5 py-1.5 text-sm font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900">Loading..<div class="tooltip-arrow" data-popper-arrow></div>
     </div>
 
     <!-- CPU -->
     <a href="{{if not .IsReseller}}/server/processes?sort=cpu{{else}}#{{end}}" role="tab" class="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer bg-white text-gray-900 shadow-sm dark:bg-gray-950 dark:text-gray-50" data-tooltip-target="tooltip-sse_cpu" data-tooltip-placement="bottom">
-        <i class="px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cpu" viewBox="0 0 16 16"> <path d="M5 0a.5.5 0 0 1 .5.5V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2h1V.5a.5.5 0 0 1 1 0V2A2.5 2.5 0 0 1 14 4.5h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14v1h1.5a.5.5 0 0 1 0 1H14a2.5 2.5 0 0 1-2.5 2.5v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14h-1v1.5a.5.5 0 0 1-1 0V14A2.5 2.5 0 0 1 2 11.5H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2v-1H.5a.5.5 0 0 1 0-1H2A2.5 2.5 0 0 1 4.5 2V.5A.5.5 0 0 1 5 0m-.5 3A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13h7a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 11.5 3zM5 6.5A1.5 1.5 0 0 1 6.5 5h3A1.5 1.5 0 0 1 11 6.5v3A1.5 1.5 0 0 1 9.5 11h-3A1.5 1.5 0 0 1 5 9.5zM6.5 6a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z"/> </svg></i>  <span id="sse_cpu" class=""></span>
+        <i class="px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18H18V6H6V18ZM14 20H10V22H8V20H5C4.44772 20 4 19.5523 4 19V16H2V14H4V10H2V8H4V5C4 4.44772 4.44772 4 5 4H8V2H10V4H14V2H16V4H19C19.5523 4 20 4.44772 20 5V8H22V10H20V14H22V16H20V19C20 19.5523 19.5523 20 19 20H16V22H14V20ZM8 8H16V16H8V8Z"/></svg></i>  <span id="sse_cpu" class=""></span>
     </a>
     <div id="tooltip-sse_cpu" role="tooltip" class="absolute z-10 invisible inline-block transition-opacity duration-300 opacity-0 tooltip rounded-md bg-gray-900 px-2.5 py-1.5 text-sm font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900">Loading..<div class="tooltip-arrow" data-popper-arrow></div>
     </div>
 
     <!-- DISK -->
     <a href="{{if not .IsReseller}}/server/resource-usage?tab=disk{{else}}#{{end}}" role="tab" class="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-1 ring-inset transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:dark:text-gray-200 ring-transparent w-full cursor-pointer bg-white text-gray-900 shadow-sm dark:bg-gray-950 dark:text-gray-50" data-tooltip-target="tooltip-sse_disk" data-tooltip-placement="bottom">
-        <i class="px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-hdd-fill" viewBox="0 0 16 16"> <path d="M0 10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2.5 1a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1m2 0a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1M.91 7.204A3 3 0 0 1 2 7h12c.384 0 .752.072 1.09.204l-1.867-3.422A1.5 1.5 0 0 0 11.906 3H4.094a1.5 1.5 0 0 0-1.317.782z"/> </svg></i> <span id="sse_disk" class=""></span>
+        <i class="px-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5.5 2C4.99568 2 4.57028 2.37554 4.50772 2.87597L3.00772 14.876C3.00258 14.9171 3 14.9585 3 15V21C3 21.5523 3.44772 22 4 22H20C20.5523 22 21 21.5523 21 21V15C21 14.9585 20.9974 14.9171 20.9923 14.876L19.4923 2.87597C19.4297 2.37554 19.0043 2 18.5 2H5.5ZM5 16H19V20H5V16ZM15 17H17V19H15V17ZM13 17H11V19H13V17Z"/></svg></i> <span id="sse_disk" class=""></span>
     </a>
     <div id="tooltip-sse_disk" role="tooltip" class="absolute z-10 invisible inline-block transition-opacity duration-300 opacity-0 tooltip rounded-md bg-gray-900 px-2.5 py-1.5 text-sm font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900">Loading..<div class="tooltip-arrow" data-popper-arrow></div>
     </div>
@@ -1198,9 +1135,7 @@
     {{if .Message}}
 
 <div id="alert" class="flex items-center gap-3 border-b border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:px-6 dark:border-blue-900 dark:bg-blue-950/70 dark:text-blue-400" role="alert">
-  <svg class="size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
-    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
-  </svg>
+  <svg class="remixicon size-4 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z"/></svg>
   <span class="sr-only">Notification</span>
 <div class="font-medium">
   {{if contains .Message "as there are users assigned to it."}}
@@ -1215,9 +1150,7 @@
 
   <button type="button" class="ms-auto inline-flex size-8 shrink-0 items-center justify-center rounded-md text-blue-900/70 transition hover:bg-blue-100 hover:text-blue-900 dark:text-blue-400/80 dark:hover:bg-blue-900/40 dark:hover:text-blue-300 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" data-dismiss-target="#alert" aria-label="Close">
     <span class="sr-only">Dismiss</span>
-    <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
-      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
-    </svg>
+    <svg class="remixicon w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"/></svg>
   </button>
 </div>
     {{end}}
@@ -1285,10 +1218,7 @@
 <label class="flex justify-between pb-2 text-sm leading-none text-gray-900 dark:text-gray-50 font-medium flex items-center gap-1" for="{{.ID}}" x-data="{tooltip: false}">
     <span>{{.Label}}: {{if .Required}}<span class="text-red-500 dark:text-red-500">*</span>{{end}}</span>
     <span @mouseenter="tooltip = true" @mouseleave="tooltip = false" class="relative cursor-pointer">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
-            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
-            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
-        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM13 13.3551V14H11V12.5C11 11.9477 11.4477 11.5 12 11.5C12.8284 11.5 13.5 10.8284 13.5 10C13.5 9.17157 12.8284 8.5 12 8.5C11.2723 8.5 10.6656 9.01823 10.5288 9.70577L8.56731 9.31346C8.88637 7.70919 10.302 6.5 12 6.5C13.933 6.5 15.5 8.067 15.5 10C15.5 11.5855 14.4457 12.9248 13 13.3551Z"/></svg>
         <div x-show="tooltip" x-transition class="absolute z-10 mt-2 w-64 text-sm rounded-md bg-gray-900 px-2.5 py-1.5 font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900" style="top: 100%; left: 0;">{{.Description}}
         </div>
     </span>

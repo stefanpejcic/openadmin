@@ -13,7 +13,7 @@ import (
 var knownWebservers = []string{"apache", "nginx", "openresty", "openlitespeed", "litespeed"}
 
 // genericWebserverIcon is shown for webserver services we don't have a logo for
-const genericWebserverIcon template.HTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-10 h-10" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><circle cx="7" cy="7.5" r="1" fill="currentColor"/><circle cx="7" cy="16.5" r="1" fill="currentColor"/></svg>`
+const genericWebserverIcon template.HTML = `<svg xmlns="http://www.w3.org/2000/svg" class="remixicon w-10 h-10" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5 11H19V5H5V11ZM21 4V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4ZM19 13H5V19H19V13ZM7 15H10V17H7V15ZM7 7H10V9H7V7Z"/></svg>`
 
 // fallbackWebservers is used when the compose file can't be read or has no webserver services
 var fallbackWebservers = []string{"apache", "nginx", "openresty", "openlitespeed"}
