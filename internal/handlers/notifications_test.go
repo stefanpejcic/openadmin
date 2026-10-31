@@ -98,7 +98,7 @@ func TestNotificationsViewRendersHTMLForEachMessageKind(t *testing.T) {
 	}
 	got := string(body)
 	for _, want := range []string{
-		"4096MB of 8192MB", "width: 50%;", "pid1 proc1\npid2 proc2",
+		"4096 MB of 8192 MB", "width: 50%;", "pid1 proc1\npid2 proc2",
 		"CPU Usage", "width: 80%;",
 		"User processes: alice", "alice line", "sys line",
 		"width: 90%;", "/dev/sda1 90%\n/dev/sdb1 10%",

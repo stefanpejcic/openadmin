@@ -417,8 +417,8 @@ func TestWebsitesImunifyNeverScanned(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	page := string(body)
-	if strings.Count(page, "</svg>None</span>") != 1 || !strings.Contains(page, "text-gray-400 dark:text-gray-500\" title=\"ImunifyAV hasn't scanned") {
-		t.Error("a never scanned owner should show a gray None")
+	if strings.Count(page, "title=\"ImunifyAV hasn't scanned the owner's files yet\">—</span>") != 1 {
+		t.Error("a never scanned owner should show a muted dash")
 	}
 	if strings.Count(page, "</svg>Clean</span>") != 1 {
 		t.Error("only the scanned owner should show Clean")
