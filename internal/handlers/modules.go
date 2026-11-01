@@ -226,6 +226,7 @@ func (m *Modules) ServeModules(w http.ResponseWriter, r *http.Request) {
 
 	webtemplates.Render(w, "settings_modules.html", mergeChrome(map[string]interface{}{
 		"Features":  allFeatures,
+		"Groups":    groupModules(allFeatures),
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, m.Sessions),
 	}, r, "Modules"))
