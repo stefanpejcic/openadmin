@@ -52,13 +52,12 @@ fetch('/json/user_activity_status')
 
       onlineCell.textContent = '';
 
-      if (isActive) {
-        const dot = document.createElement('span');
-        dot.className = 'user-status-dot inline-block size-2 rounded-full bg-emerald-500';
-        dot.setAttribute('role', 'img');
-        dot.setAttribute('aria-label', 'Online');
-        onlineCell.appendChild(dot);
-      }
+      const dot = document.createElement('span');
+      dot.className = 'user-status-dot inline-block size-2 rounded-full ' + (isActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-700');
+      dot.setAttribute('role', 'img');
+      dot.setAttribute('aria-label', isActive ? 'Online' : 'Offline');
+      dot.title = isActive ? 'Online' : 'Offline';
+      onlineCell.appendChild(dot);
     });
   })
   .catch(error => console.error('Error fetching user activity status:', error));
