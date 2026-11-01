@@ -60,7 +60,9 @@ func (c *Cluster) ServePage(w http.ResponseWriter, r *http.Request) {
 	}
 	switch st.Role {
 	case cluster.RoleMaster:
-		data["Health"] = c.Manager.Health()
+		health := c.Manager.Health()
+		data["Health"] = health
+		data["Totals"] = clusterTotals(health)
 		data["Nodes"] = st.Nodes
 		data["Jobs"] = reverseJobs(st.Jobs)
 		data["Unsynced"] = c.Manager.UnsyncedCount()
@@ -83,6 +85,27 @@ func (c *Cluster) ServePage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	webtemplates.Render(w, "server_cluster.html", mergeChrome(data, r, "Multi-server"))
+}
+
+// clusterTotals sums the health rows for the strip above the servers table
+type clusterTotalsRow struct{ Servers, Offline, Paused, Users, Behind int }
+
+func clusterTotals(health []cluster.NodeHealth) clusterTotalsRow {
+	t := clusterTotalsRow{Servers: len(health)}
+	for _, h := range health {
+		switch {
+		case h.Paused:
+			t.Paused++
+		case !h.Online:
+			t.Offline++
+		default:
+			t.Users += h.Users
+			if h.Latest != "" {
+				t.Behind++
+			}
+		}
+	}
+	return t
 }
 
 type clusterServerOption struct {

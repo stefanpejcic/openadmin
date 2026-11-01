@@ -11,13 +11,16 @@
     <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-    <div class="op-page-header px-4 pt-4 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+    <div class="op-page-header flex flex-col gap-3 px-4 pt-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
+      <div>
         <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Multi-server</h1>
         <p class="text-sm text-gray-500 dark:text-gray-500">
             {{if eq .Role "master"}}This server is the master, it manages the servers below.
             {{else if eq .Role "slave"}}This server is managed by {{.MasterName}}.
             {{else}}This server is standalone.{{end}}
         </p>
+      </div>
+      {{if eq .Role "master"}}<a href="#add" class="relative inline-flex flex-none items-center justify-center gap-1.5 self-start whitespace-nowrap rounded-md border border-transparent bg-blue-500 px-3 py-2 text-sm font-medium text-white shadow-xs transition hover:bg-blue-600 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 sm:self-auto">Add server</a>{{end}}
     </div>
 
 {{$input := "block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm"}}
@@ -69,8 +72,8 @@
 
         <form method="post" action="/server/cluster/pull" class="mt-4 flex flex-wrap items-center gap-4">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <label class="{{$check}}"><input type="checkbox" name="group_secrets" {{if .GroupSecrets}}checked{{end}}> SMTP, captcha, AI and Cloudflare keys</label>
-            <label class="{{$check}}"><input type="checkbox" name="group_ns" {{if .GroupNS}}checked{{end}}> Nameservers</label>
+            <label class="{{$check}}"><span class="relative flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" name="group_secrets" {{if .GroupSecrets}}checked{{end}}><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span> SMTP, captcha, AI and Cloudflare keys</label>
+            <label class="{{$check}}"><span class="relative flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" name="group_ns" {{if .GroupNS}}checked{{end}}><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span> Nameservers</label>
             <button class="{{$btn}}" type="submit">Sync from master</button>
         </form>
         <form method="post" action="/server/cluster/rollback" class="mt-2">
@@ -103,8 +106,8 @@
                 <p id="pinned-help" class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">One per line, like <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">openpanel:USERS.session_duration</code>.</p>
             </div>
             <div class="flex flex-wrap items-center gap-4">
-                <label class="{{$check}}"><input type="checkbox" name="group_secrets" {{if .GroupSecrets}}checked{{end}}> SMTP, captcha, AI and Cloudflare keys</label>
-                <label class="{{$check}}"><input type="checkbox" name="group_ns" {{if .GroupNS}}checked{{end}}> Nameservers</label>
+                <label class="{{$check}}"><span class="relative flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" name="group_secrets" {{if .GroupSecrets}}checked{{end}}><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span> SMTP, captcha, AI and Cloudflare keys</label>
+                <label class="{{$check}}"><span class="relative flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" name="group_ns" {{if .GroupNS}}checked{{end}}><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span> Nameservers</label>
             </div>
             <div><button class="{{$btn}}" type="submit">Save</button></div>
         </form>
@@ -133,13 +136,18 @@
 {{end}}
 
 {{if eq .Role "master"}}
-<div class="{{$section}}">
-    <div>
-        <h2 class="{{$h2}}">Servers</h2>
-        <p class="{{$p}}">{{len .Health}} servers in this cluster.</p>
-    </div>
-    <div class="md:col-span-2 overflow-x-auto">
-        <table class="w-full">
+<dl class="-mx-4 mb-6 grid grid-cols-2 gap-px border-y border-gray-200 bg-gray-200 sm:-mx-6 sm:grid-cols-4 lg:-mx-8 dark:border-gray-800 dark:bg-gray-800">
+    <div class="bg-white px-4 py-4 sm:px-6 lg:px-8 dark:bg-gray-950"><dt class="text-xs text-gray-500 dark:text-gray-500">Servers</dt><dd class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Totals.Servers}}{{if or .Totals.Offline .Totals.Paused}} <span class="text-sm font-normal text-gray-500 dark:text-gray-500">·{{if .Totals.Offline}} {{.Totals.Offline}} offline{{end}}{{if and .Totals.Offline .Totals.Paused}},{{end}}{{if .Totals.Paused}} {{.Totals.Paused}} paused{{end}}</span>{{end}}</dd></div>
+    <div class="bg-white px-4 py-4 sm:px-6 lg:px-8 dark:bg-gray-950"><dt class="text-xs text-gray-500 dark:text-gray-500">Users</dt><dd class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Totals.Users}}</dd></div>
+    <div class="bg-white px-4 py-4 sm:px-6 lg:px-8 dark:bg-gray-950"><dt class="text-xs text-gray-500 dark:text-gray-500">Settings</dt><dd class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Unsynced}} <span class="text-sm font-normal text-gray-500 dark:text-gray-500">changed since last sync</span></dd></div>
+    <div class="bg-white px-4 py-4 sm:px-6 lg:px-8 dark:bg-gray-950"><dt class="text-xs text-gray-500 dark:text-gray-500">Updates</dt><dd class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-50">{{if .Totals.Behind}}{{.Totals.Behind}} <span class="text-sm font-normal text-gray-500 dark:text-gray-500">behind</span>{{else}}<span class="text-sm font-normal text-gray-500 dark:text-gray-500">All up to date</span>{{end}}</dd></div>
+</dl>
+<div class="mb-3">
+    <h2 class="{{$h2}}">Servers</h2>
+    <p class="{{$p}}">{{len .Health}} servers in this cluster.</p>
+</div>
+<div class="-mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+        <table class="w-full border-t border-gray-200 dark:border-gray-800 [&_tr>*:first-child]:pl-4 sm:[&_tr>*:first-child]:pl-6 lg:[&_tr>*:first-child]:pl-8 [&_tr>*:last-child]:pr-4 sm:[&_tr>*:last-child]:pr-6 lg:[&_tr>*:last-child]:pr-8">
             <thead><tr><th class="{{$th}}">Server</th><th class="{{$th}}">Users</th><th class="{{$th}}">Load</th><th class="{{$th}}">RAM</th><th class="{{$th}}">Disk</th><th class="{{$th}}">Version</th><th class="{{$th}}"><span class="sr-only">Actions</span></th></tr></thead>
             <tbody>
             {{range .Health}}
@@ -177,13 +185,13 @@
                         <input type="hidden" name="id" value="{{.ID}}">
                         <button class="{{$iconBtn}}" type="submit" title="Remove from the cluster" aria-label="Remove" data-confirm="Remove {{.Name}} from the cluster? Nothing on that server is deleted."><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" aria-hidden="true" class="remixicon size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM9 11V17H11V11H9ZM13 11V17H15V11H13ZM9 4V6H15V4H9Z"/></svg></button>
                     </form>
-                {{else if not .Master}}
+                {{else if not .Master}}{{if .Online}}
                     <button type="button" class="{{$btnSm}}" onclick="clusterSwitchTo('{{.ID}}')">Open</button>
                     <form method="post" action="/server/cluster/promote" class="inline">
                         <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                         <input type="hidden" name="id" value="{{.ID}}">
                         <button class="{{$btnSm}}" type="submit" data-confirm="Make {{.Name}} the master? This server becomes a slave, and you manage the cluster from {{.Name}} using its own admin login. Make sure you have that login first.">Make master</button>
-                    </form>
+                    </form>{{end}}
                     <form method="post" action="/server/cluster/pause" class="inline">
                         <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                         <input type="hidden" name="id" value="{{.ID}}">
@@ -200,7 +208,6 @@
             {{end}}
             </tbody>
         </table>
-    </div>
 </div>
 
 <div class="{{$sep}}"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
@@ -264,7 +271,7 @@
                 <tbody>
                 {{range .Health}}{{if not (or .Master .Paused)}}
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
-                    <td class="{{$td}}" style="width:1.5rem"><input type="checkbox" name="nodes" value="{{.ID}}" aria-label="Sync {{.Name}}" checked></td>
+                    <td class="{{$td}}" style="width:1.5rem"><span class="relative flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" name="nodes" value="{{.ID}}" aria-label="Sync {{.Name}}" {{if .Online}}checked{{else}}disabled{{end}}><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span></td>
                     <td class="{{$td}} font-medium whitespace-nowrap text-gray-900 dark:text-gray-50">{{.Name}}</td>
                     <td class="{{$td}} whitespace-nowrap">{{if eq .Mode "follow"}}Follow{{else if .Online}}Manual{{else}}<span class="text-gray-400 dark:text-gray-600">–</span>{{end}}</td>
                     <td class="{{$td}}">{{if .LastSyncAt}}<span class="whitespace-nowrap">{{.LastSyncAt}}</span><span class="block text-xs text-gray-500 dark:text-gray-500">{{.LastSync}}</span>{{else}}Never{{end}}</td>
@@ -276,8 +283,8 @@
             </table>
             </div>
             <div class="flex flex-wrap items-center gap-4">
-                <label class="{{$check}}"><input type="checkbox" name="group_secrets" id="group_secrets"> SMTP, captcha, AI and Cloudflare keys</label>
-                <label class="{{$check}}"><input type="checkbox" name="group_ns" id="group_ns"> Nameservers</label>
+                <label class="{{$check}}"><span class="relative flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" name="group_secrets" id="group_secrets"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span> SMTP, captcha, AI and Cloudflare keys</label>
+                <label class="{{$check}}"><span class="relative flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" name="group_ns" id="group_ns"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span> Nameservers</label>
             </div>
             <div><button class="{{$btn}}" type="submit" data-confirm="Sync settings to the selected servers? OpenPanel and OpenAdmin restart on each server that changes.">Sync to selected</button></div>
         </form>
@@ -319,7 +326,7 @@
                 </select>
             </div>
             <div class="sm:col-span-3 flex flex-wrap items-center gap-4">
-                <label class="{{$check}}"><input type="checkbox" name="live" checked> Live: stop the account for the final copy and forward its websites until DNS moves</label>
+                <label class="{{$check}}"><span class="relative flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" name="live" checked><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span> Live: stop the account for the final copy and forward its websites until DNS moves</label>
                 <button class="{{$btn}}" type="submit" data-confirm="Start moving this account?">Start move</button>
             </div>
         </form>
