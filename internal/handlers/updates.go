@@ -258,7 +258,12 @@ func getOpUpdateLogs() []updateLogEntry {
 			HumanReadableTimestamp: info.ModTime().Format("2006-01-02 15:04:05"),
 		})
 	}
-	sort.Slice(logs, func(i, j int) bool { return logs[i].Timestamp > logs[j].Timestamp })
+	sort.Slice(logs, func(i, j int) bool {
+		if logs[i].Timestamp != logs[j].Timestamp {
+			return logs[i].Timestamp > logs[j].Timestamp
+		}
+		return compareVersionTags(strings.TrimSuffix(logs[i].File, ".log"), strings.TrimSuffix(logs[j].File, ".log")) > 0
+	})
 	return logs
 }
 
