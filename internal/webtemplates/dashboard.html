@@ -179,7 +179,7 @@
 {{end}}
 
 
-<dl id="dashboard-widgets" class="{{if .IsReseller}}-mx-6 -mb-4{{else}}-mx-6 -my-4{{end}} grid grid-cols-1 items-start gap-px sm:grid-cols-1 md:grid-flow-row-dense md:grid-cols-2 lg:grid-cols-6">
+<dl id="dashboard-widgets" class="{{if .IsReseller}}-mx-6 -mb-4{{else}}-mx-6 -my-4{{end}} grid grid-cols-1 gap-px sm:grid-cols-1 md:grid-flow-row-dense md:grid-cols-2 lg:grid-cols-6">
 
 
 
@@ -782,7 +782,7 @@ const renderNewsItems = (items) => {
         '#dashboard-widgets>[data-widget="activity"],#dashboard-widgets>[data-widget="news"]{align-self:stretch;display:flex;flex-direction:column;min-height:24rem}' +
         '#dashboard-widgets>[data-widget="news"]>div,#custom_message{display:flex;flex:1 1 auto;flex-direction:column;min-height:0}' +
         '#dashboard-widgets>[data-widget="activity"]>.overflow-y-auto,#news-content{flex:1 1 0;min-height:0;height:auto!important}' +
-        '#dashboard-widgets>[data-widget].is-collapsed{min-height:0}' +
+        '#dashboard-widgets>[data-widget].is-collapsed{align-self:start;grid-row:auto;min-height:0}' +
         // wider news gets bigger pictures
         '@media (min-width:1024px){#dashboard-widgets>[data-widget="news"][data-size="2"] .news-img{height:6rem}#dashboard-widgets>[data-widget="news"][data-size="3"] .news-img{height:8rem}}';
     document.head.appendChild(style);
@@ -816,6 +816,7 @@ const renderNewsItems = (items) => {
         var head = header(w);
         if (!head) { return; }
         w.classList.toggle('is-collapsed', on);
+        requestAnimationFrame(fit);
         var keep = head;
         while (keep && keep !== w) {
             Array.prototype.forEach.call(keep.parentElement.children, function (sib) {
@@ -869,9 +870,56 @@ const renderNewsItems = (items) => {
             addTools(w);
             setCollapsed(w, isCollapsed(w.dataset.widget));
         });
+        requestAnimationFrame(fit);
     }
 
+    // after layout a widget with empty cells right of it in its row widens into them so the row has no hole
+    function fit() {
+        var list = widgets();
+        list.forEach(function (w) { w.style.gridColumn = ''; });
+        if (window.innerWidth < 1024) { return; }
+        var gb = grid.getBoundingClientRect();
+        var cs = getComputedStyle(grid);
+        var cols = cs.gridTemplateColumns.split(' ').length;
+        var gap = parseFloat(cs.columnGap) || 0;
+        var colW = (gb.width - gap * (cols - 1)) / cols;
+        var tracks = cs.gridTemplateRows.split(' ').map(parseFloat);
+        var tops = [], y = gb.top + (parseFloat(cs.paddingTop) || 0);
+        tracks.forEach(function (h) { tops.push(y); y += h + gap; });
+        var placed = list.map(function (w) {
+            var b = w.getBoundingClientRect();
+            var c0 = Math.round((b.left - gb.left) / (colW + gap));
+            var span = Math.max(1, Math.round((b.width + gap) / (colW + gap)));
+            var r0 = 0;
+            tops.forEach(function (t, i) { if (t <= b.top + 2) { r0 = i; } });
+            var rs = w.dataset.rows && !w.classList.contains('is-collapsed') ? 2 : 1;
+            return { w: w, c0: c0, span: span, r0: r0, rs: rs, top: b.top, bottom: b.bottom };
+        });
+        var occ = tracks.map(function () { return new Array(cols).fill(null); });
+        placed.forEach(function (p) {
+            for (var r = p.r0; r < p.r0 + p.rs && r < occ.length; r++) {
+                for (var c = p.c0; c < p.c0 + p.span && c < cols; c++) { occ[r][c] = p; }
+            }
+        });
+        occ.forEach(function (row, r) {
+            var c = 0;
+            while (c < cols) {
+                if (row[c]) { c++; continue; }
+                var start = c;
+                while (c < cols && !row[c]) { c++; }
+                var left = start > 0 ? row[start - 1] : null;
+                if (left && left.rs === 1 && left.r0 === r) {
+                    left.span += c - start;
+                    left.w.style.gridColumn = 'span ' + left.span + ' / span ' + left.span;
+                }
+            }
+        });
+    }
+    window.addEventListener('resize', function () { requestAnimationFrame(fit); });
+
     var SIZE_BTN = 'cursor-pointer whitespace-nowrap rounded px-2 py-1 text-xs font-medium tabular-nums text-gray-500 ring-1 ring-transparent ring-inset transition hover:text-gray-900 aria-pressed:bg-white aria-pressed:text-gray-900 aria-pressed:shadow-xs aria-pressed:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-50 dark:aria-pressed:bg-gray-950 dark:aria-pressed:text-gray-50 dark:aria-pressed:ring-gray-800';
+    // the close function of whichever widget's width and height menus are open
+    var openTools = null;
     function markSize(bar, id) {
         bar.querySelectorAll('[data-size-btn]').forEach(function (b) {
             var on = Number(b.dataset.sizeBtn) === sizeOf(id);
@@ -951,8 +999,13 @@ const renderNewsItems = (items) => {
         bar.appendChild(handle);
         // widths and heights stay open while the pointer or focus is on the handle or them, then close 3s later
         var timer;
-        function showSizes() { clearTimeout(timer); sizes.classList.add('show'); heights.classList.add('show'); }
-        function hideSoon() { clearTimeout(timer); timer = setTimeout(function () { sizes.classList.remove('show'); heights.classList.remove('show'); }, 3000); }
+        function closeMine() { clearTimeout(timer); sizes.classList.remove('show'); heights.classList.remove('show'); }
+        function showSizes() {
+            if (openTools && openTools !== closeMine) { openTools(); }
+            openTools = closeMine;
+            clearTimeout(timer); sizes.classList.add('show'); heights.classList.add('show');
+        }
+        function hideSoon() { clearTimeout(timer); timer = setTimeout(closeMine, 3000); }
         [move, sizes, heights].forEach(function (el) {
             el.addEventListener('mouseenter', showSizes);
             el.addEventListener('mouseleave', hideSoon);
@@ -960,7 +1013,7 @@ const renderNewsItems = (items) => {
             el.addEventListener('focusout', hideSoon);
         });
         move.addEventListener('click', function () {
-            if (sizes.classList.contains('show')) { clearTimeout(timer); sizes.classList.remove('show'); heights.classList.remove('show'); } else { showSizes(); hideSoon(); }
+            if (sizes.classList.contains('show')) { closeMine(); } else { showSizes(); hideSoon(); }
         });
         markSize(bar, id);
         var chev = head.querySelector('.widget-chevron');
