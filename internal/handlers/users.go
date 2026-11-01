@@ -1223,7 +1223,7 @@ func (u *Users) ServeCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "user_add.html", userCreatePageData{
-		Chrome:           buildChrome(r, "Add User"),
+		Chrome:           buildChrome(r, "Create user account"),
 		Plans:            plans,
 		MySQLIsDown:      mysqlIsDown,
 		WebServer:        webServer,
