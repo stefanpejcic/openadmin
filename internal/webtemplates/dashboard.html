@@ -179,7 +179,7 @@
 {{end}}
 
 
-<dl id="dashboard-widgets" class="{{if .IsReseller}}-mx-6 -mb-4{{else}}-mx-6 -my-4{{end}} grid grid-cols-1 gap-px sm:grid-cols-1 md:grid-flow-row-dense md:grid-cols-2 lg:grid-cols-3">
+<dl id="dashboard-widgets" class="{{if .IsReseller}}-mx-6 -mb-4{{else}}-mx-6 -my-4{{end}} grid grid-cols-1 gap-px sm:grid-cols-1 md:grid-flow-row-dense md:grid-cols-2 lg:grid-cols-6">
 
 
 
@@ -762,11 +762,10 @@ const renderNewsItems = (items) => {
     // width goes by a style rule so phones keep one column
     var style = document.createElement('style');
     style.textContent = '@media (min-width:768px){#dashboard-widgets>[data-size="2"],#dashboard-widgets>[data-size="3"]{grid-column:span 2}}' +
-        '@media (min-width:1024px){#dashboard-widgets>[data-size="2"]{grid-column:span 2}#dashboard-widgets>[data-size="3"]{grid-column:span 3}#dashboard-widgets>[data-rows="2"]{grid-row:span 2}}' +
-        // move and width controls fade in on hover or keyboard focus, touch screens always show them
-        '#dashboard-widgets>[data-widget] .widget-tools{opacity:0;transition:opacity 150ms cubic-bezier(0.16,1,0.3,1)}' +
-        '#dashboard-widgets>[data-widget]:hover .widget-tools,#dashboard-widgets>[data-widget]:focus-within .widget-tools,#dashboard-widgets.sorting .widget-tools{opacity:1}' +
-        '@media (hover:none){#dashboard-widgets>[data-widget] .widget-tools{opacity:1}}' +
+        '@media (min-width:1024px){#dashboard-widgets>[data-widget]{grid-column:span 2}#dashboard-widgets>[data-size="1.5"]{grid-column:span 3}#dashboard-widgets>[data-size="2"]{grid-column:span 4}#dashboard-widgets>[data-size="3"]{grid-column:span 6}#dashboard-widgets>[data-rows="2"]{grid-row:span 2}}' +
+        // only the drag handle shows, the widths slide out from it on hover, focus or a tap
+        '#dashboard-widgets .widget-sizes{max-width:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-width 200ms cubic-bezier(0.16,1,0.3,1),opacity 150ms}' +
+        '#dashboard-widgets .widget-sizes.show{max-width:16rem;opacity:1;pointer-events:auto}' +
         // while dragging, the free slot is a dashed drop zone and the picked widget lifts
         '#dashboard-widgets>.widget-ghost{border-radius:.375rem;outline:1px dashed var(--color-gray-300);outline-offset:4px;background:var(--color-gray-50)}' +
         '.dark #dashboard-widgets>.widget-ghost{outline-color:var(--color-gray-700);background:var(--color-gray-900)}' +
@@ -902,18 +901,35 @@ const renderNewsItems = (items) => {
         });
         move.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" aria-hidden="true" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 7C9.32843 7 10 6.32843 10 5.5C10 4.67157 9.32843 4 8.5 4C7.67157 4 7 4.67157 7 5.5C7 6.32843 7.67157 7 8.5 7ZM8.5 13.5C9.32843 13.5 10 12.8284 10 12C10 11.1716 9.32843 10.5 8.5 10.5C7.67157 10.5 7 11.1716 7 12C7 12.8284 7.67157 13.5 8.5 13.5ZM10 18.5C10 19.3284 9.32843 20 8.5 20C7.67157 20 7 19.3284 7 18.5C7 17.6716 7.67157 17 8.5 17C9.32843 17 10 17.6716 10 18.5ZM15.5 7C16.3284 7 17 6.32843 17 5.5C17 4.67157 16.3284 4 15.5 4C14.6716 4 14 4.67157 14 5.5C14 6.32843 14.6716 7 15.5 7ZM17 12C17 12.8284 16.3284 13.5 15.5 13.5C14.6716 13.5 14 12.8284 14 12C14 11.1716 14.6716 10.5 15.5 10.5C16.3284 10.5 17 11.1716 17 12ZM15.5 20C16.3284 20 17 19.3284 17 18.5C17 17.6716 16.3284 17 15.5 17C14.6716 17 14 17.6716 14 18.5C14 19.3284 14.6716 20 15.5 20Z"/></svg>';
         bar.appendChild(move);
-        [1, 2, 3].forEach(function (n) {
+        var sizes = document.createElement('span');
+        sizes.className = 'widget-sizes flex items-center gap-0.5';
+        var LABEL = { 1: '1/3', 1.5: '1/2', 2: '2/3', 3: 'Full' };
+        [1, 1.5, 2, 3].forEach(function (n) {
             var b = document.createElement('button');
             b.type = 'button';
             b.className = SIZE_BTN;
             b.dataset.sizeBtn = n;
-            b.title = n === 3 ? 'Full width' : n + '/3 width';
-            b.textContent = n + '/3';
+            b.textContent = LABEL[n];
+            b.title = n === 3 ? 'Full width' : LABEL[n] + ' width';
             b.addEventListener('click', function () {
                 if (n === (DEFAULT_SIZE[id] || 1)) { delete layout.size[id]; } else { layout.size[id] = n; }
                 apply(); markSize(bar, id); save();
             });
-            bar.appendChild(b);
+            sizes.appendChild(b);
+        });
+        bar.appendChild(sizes);
+        // widths stay open while the pointer or focus is on the handle or them, then close 3s later
+        var timer;
+        function showSizes() { clearTimeout(timer); sizes.classList.add('show'); }
+        function hideSoon() { clearTimeout(timer); timer = setTimeout(function () { sizes.classList.remove('show'); }, 3000); }
+        [move, sizes].forEach(function (el) {
+            el.addEventListener('mouseenter', showSizes);
+            el.addEventListener('mouseleave', hideSoon);
+            el.addEventListener('focusin', showSizes);
+            el.addEventListener('focusout', hideSoon);
+        });
+        move.addEventListener('click', function () {
+            if (sizes.classList.contains('show')) { clearTimeout(timer); sizes.classList.remove('show'); } else { showSizes(); hideSoon(); }
         });
         markSize(bar, id);
         var chev = head.querySelector('.widget-chevron');
