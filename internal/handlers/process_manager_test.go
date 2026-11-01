@@ -344,3 +344,14 @@ func TestServeProcessActionStraceMissingBinary(t *testing.T) {
 		t.Fatalf("expected a clear missing-binary message, got %s", truncate(string(body)))
 	}
 }
+
+func TestKillProcessRefusesInitAndGroups(t *testing.T) {
+	for _, pid := range []int{1, 0, -1} {
+		if err := killProcess(pid); err == nil || !strings.Contains(err.Error(), "whole server") {
+			t.Fatalf("pid %d: got %v", pid, err)
+		}
+	}
+	if err := killProcess(os.Getpid()); err == nil || !strings.Contains(err.Error(), "OpenAdmin itself") {
+		t.Fatalf("own pid: got %v", err)
+	}
+}

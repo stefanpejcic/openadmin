@@ -328,6 +328,13 @@ func (p *ProcessManager) ServeProcessAction(w http.ResponseWriter, r *http.Reque
 }
 
 func killProcess(pid int) error {
+	// pid 1 is init and takes the server down with it, 0 and -1 would signal a whole process group or every process
+	if pid <= 1 {
+		return fmt.Errorf("PID %d can't be killed, it would take the whole server down", pid)
+	}
+	if pid == os.Getpid() {
+		return errors.New("this is OpenAdmin itself, restart the admin service instead")
+	}
 	proc, err := os.FindProcess(pid)
 	if err != nil {
 		return err

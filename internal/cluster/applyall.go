@@ -40,8 +40,8 @@ var (
 	applyPrefixes = []string{"/features/", "/plan/delete/"}
 	applyDenied   = []string{"/settings/notifications/test-", "/settings/updates/log", "/settings/defaults/files"}
 	planEditRe    = regexp.MustCompile(`^/plans/(\d+)$`)
-	// these describe one machine, and crons post by line number which can differ per server, so sending them everywhere is a choice and not the default
-	perServerDefault = map[string]bool{"/server/timezone": true, "/server/root-password": true, "/server/ssh": true, "/server/crons": true}
+	// these describe one machine, so sending them everywhere is a choice and not the default
+	perServerDefault = map[string]bool{"/server/timezone": true, "/server/root-password": true, "/server/ssh": true}
 )
 
 func applyPath(path string) bool {

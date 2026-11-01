@@ -219,6 +219,7 @@ var modernAreas = []navArea{
 				tabSpec{true, "/server/crons", "Scheduled actions", strings.HasPrefix(path, "/server/crons")},
 				tabSpec{!c.IsReseller, "/terminal", "Terminal", strings.HasPrefix(path, "/terminal")},
 				tabSpec{!c.IsReseller, "/server/processes", "Process manager", strings.HasPrefix(path, "/server/processes")},
+				tabSpec{!c.IsReseller, "/tasks", "Tasks", strings.HasPrefix(path, "/tasks")},
 			)
 		}},
 	{label: "System", icon: systemIcon, menuID: "system-menu", show: adminOnly,
@@ -302,7 +303,7 @@ var helpDocs = map[string]string{
 	"/domains/file-templates":        "admin/domains/file_templates",
 	"/domains/vhost-templates":       "admin/domains/vhost_templates",
 	"/domains/ratelimit":             "admin/domains/ratelimit",
-	"/websites":                      "admin/websites",
+	"/websites":                      "admin/websites/websites",
 	"/databases":                     "admin/databases/mysql",
 	"/databases/postgresql":          "admin/databases/postgresql",
 	"/databases/mongodb":             "admin/databases/mongodb",
@@ -331,6 +332,8 @@ var helpDocs = map[string]string{
 	"/security/disable-admin":        "admin/security/disable-admin",
 	"/server/resource-usage":         "admin/advanced/resource-usage",
 	"/server/crons":                  "admin/advanced/crons",
+	"/tasks":                         "admin/advanced/tasks",
+	"/account":                       "admin/accounts/resellers",
 	"/terminal":                      "admin/advanced/terminal",
 	"/server/processes":              "admin/advanced/processes",
 	"/server/timezone":               "admin/system/timezone",
@@ -339,7 +342,7 @@ var helpDocs = map[string]string{
 	"/server/reboot":                 "admin/system/reboot",
 	"/server/swap":                   "admin/system/swap",
 	"/server/migrate":                "admin/system/migrate",
-	"/server/cluster":                "admin/system/multi-server",
+	"/server/cluster":                "admin/system/multi-server/index",
 	"/server/demo-mode":              "admin/system/demo-mode",
 	"/settings/general":              "admin/settings/general",
 	"/settings/open-panel":           "admin/settings/openpanel",
@@ -352,14 +355,20 @@ var helpDocs = map[string]string{
 	"/settings/locales":              "admin/settings/locales",
 	"/settings/custom-code":          "admin/settings/custom_code",
 	"/license":                       "admin/license",
-	"/dashboard":                     "admin/dashboard",
-	"/notifications":                 "admin/notifications",
-	"/dashboard/summary":             "admin/daily-summary",
+	"/dashboard":                     "admin/001_dashboard",
+	"/notifications":                 "admin/002_notifications",
+	"/dashboard/summary":             "admin/003_daily-summary",
 }
 
 // helpSection picks the part of doc a page shows, "until:X" keeps what's before the X heading and "from:X" keeps that section
 func helpSection(doc, path string) string {
 	switch doc {
+	case "admin/accounts/resellers":
+		// a reseller's own account page shows just its section of the resellers doc
+		if strings.HasPrefix(path, "/account") {
+			return "from:Reseller Account"
+		}
+		return ""
 	case "admin/accounts/users":
 		if strings.HasPrefix(path, "/users/") && strings.Trim(path, "/") != "users" {
 			return "from:Single User"

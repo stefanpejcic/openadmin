@@ -459,6 +459,30 @@ func (m *Manager) UnsyncedCount() int {
 	return len(diff(st.LastSynced, snap.Values, []string{GroupCore}, nil))
 }
 
+// markSyncedIfCaughtUp takes the current values as the baseline once every live slave already has them, a slave that pulled or follows never goes through a push
+func (m *Manager) markSyncedIfCaughtUp() {
+	if m.UnsyncedCount() == 0 {
+		return
+	}
+	nodes := m.LiveNodes()
+	if len(nodes) == 0 {
+		return
+	}
+	for _, n := range nodes {
+		changes, err := m.PreviewPush(n.ID, []string{GroupCore})
+		if err != nil {
+			return
+		}
+		for _, c := range changes {
+			// a pinned key differs on purpose and is never pushed
+			if !c.Pinned {
+				return
+			}
+		}
+	}
+	m.MarkSynced()
+}
+
 // MarkSynced records the current values as the baseline once a push went through
 func (m *Manager) MarkSynced() {
 	snap, err := BuildSnapshot()

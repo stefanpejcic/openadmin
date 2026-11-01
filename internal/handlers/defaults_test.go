@@ -593,11 +593,11 @@ func TestAdviseWebserver(t *testing.T) {
 		ok     string
 		text   string
 	}{
-		{map[string]int{"WordPress": 12, "Joomla": 3, "NodeJS": 4}, "openlitespeed,apache", "12 of 19 sites on this server are WordPress"},
+		{map[string]int{"WordPress": 12, "Joomla": 3, "NodeJS": 4}, "litespeed,openlitespeed,apache", "12 of 19 sites on this server are WordPress"},
 		{map[string]int{"NodeJS": 3, "Python": 2, "n8n": 1, "WordPress": 4}, "nginx", "6 of 10 sites on this server are Node.js/Python apps"},
 		{map[string]int{"Java": 2, "ruby": 2, "PHP": 1}, "openresty", "Java/Ruby apps, which run best on OpenResty"},
 		{map[string]int{"Drupal": 2, "websitebuilder": 1, "": 1}, "apache,nginx", "4 of 4 sites on this server are other CMS/PHP sites"},
-		{map[string]int{"WordPress": 2, "Drupal": 2}, "openlitespeed,apache", "WordPress"},
+		{map[string]int{"WordPress": 2, "Drupal": 2}, "litespeed,openlitespeed,apache", "WordPress"},
 	}
 	for _, c := range cases {
 		a := adviseWebserver(c.counts)
@@ -628,8 +628,8 @@ func TestServeDefaultsRendersRecommendations(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	for _, want := range []string{
-		`data-ok="openlitespeed,apache"`,
-		"5 of 5 sites on this server are WordPress, which performs best on OpenLiteSpeed",
+		`data-ok="litespeed,openlitespeed,apache"`,
+		"5 of 5 sites on this server are WordPress, which performs best on LiteSpeed or OpenLiteSpeed",
 		"MySQL uses about 100 MB more RAM per user than MariaDB",
 		"5 WordPress sites are on this server. Recommended: enable Varnish",
 		"Number(v) > 0 && Number(v) < 2",
@@ -686,5 +686,22 @@ func TestPHPWatchStatusesCachesAndKeepsLastGoodList(t *testing.T) {
 	}
 	if got, err := phpWatchStatuses(); err != nil || !got["8.4"].IsLatestVersion {
 		t.Fatalf("expected the last good list, got %v, %v", got, err)
+	}
+}
+
+func TestSetDefaultsComposePerconaTogglesMySQLImage(t *testing.T) {
+	in := "services:\n  mysql:\n    image: mysql:${MYSQL_VERSION:-latest}\n    container_name: mysql\n  mariadb:\n    image: mariadb:latest\n"
+	on := setDefaultsComposePercona(in, true)
+	if !defaultsUsesPercona(on) || !strings.Contains(on, "    user: root\n") || !strings.Contains(on, "--socket=/var/run/mysqld/mysqld.sock") {
+		t.Fatalf("percona not set:\n%s", on)
+	}
+	if !strings.Contains(on, "  mariadb:\n    image: mariadb:latest\n") {
+		t.Fatalf("mariadb changed:\n%s", on)
+	}
+	if again := setDefaultsComposePercona(on, true); again != on {
+		t.Fatalf("not idempotent:\n%s", again)
+	}
+	if off := setDefaultsComposePercona(on, false); off != in {
+		t.Fatalf("switching back left changes:\n%s", off)
 	}
 }

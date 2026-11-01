@@ -279,3 +279,25 @@ func TestCronWarnings(t *testing.T) {
 		t.Fatalf("cronWarnings = %+v", got)
 	}
 }
+
+func TestHandlePostFindsTheJobByCommand(t *testing.T) {
+	path := withScratchCronFile(t, "*/5 * * * * root opencli sentinel && echo cron executed >> /var/log/x\n0 3 * * * root opencli backup && echo cron executed >> /var/log/x\n")
+	c := &Cronjobs{Sessions: auth.NewManager("test-secret", false)}
+	// line 1 on the server the form came from is the backup job, here it's line 2
+	form := "1_command=opencli+backup&1_schedule_0=30&1_schedule_1=4&1_schedule_2=*&1_schedule_3=*&1_schedule_4=*&1_logging=on" +
+		"&9_command=opencli+missing&9_schedule_0=1&9_schedule_1=1&9_schedule_2=*&9_schedule_3=*&9_schedule_4=*"
+	req := httptest.NewRequest(http.MethodPost, "/server/crons", strings.NewReader(form))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	c.handlePost(httptest.NewRecorder(), req)
+	raw, _ := os.ReadFile(path)
+	lines := strings.Split(string(raw), "\n")
+	if !strings.HasPrefix(lines[0], "*/5 * * * * root opencli sentinel") {
+		t.Fatalf("sentinel was changed: %q", lines[0])
+	}
+	if !strings.HasPrefix(lines[1], "30 4 * * * root") || !strings.Contains(lines[1], "opencli backup") {
+		t.Fatalf("backup not rescheduled: %q", lines[1])
+	}
+	if len(strings.TrimSpace(string(raw))) == 0 || strings.Count(string(raw), "\n") != 2 {
+		t.Fatalf("a job missing here must not be added: %q", raw)
+	}
+}
