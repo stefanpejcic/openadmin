@@ -232,7 +232,7 @@ var modernAreas = []navArea{
 				tabSpec{true, "/server/reboot", "Server reboot", strings.HasPrefix(path, "/server/reboot")},
 				tabSpec{true, "/server/swap", "Swap", strings.HasPrefix(path, "/server/swap")},
 				tabSpec{true, "/server/migrate", "Migrate", strings.HasPrefix(path, "/server/migrate")},
-				tabSpec{isEnterprise(c), "/server/cluster", "Multi-Server", strings.HasPrefix(path, "/server/cluster")},
+				tabSpec{isEnterprise(c), "/server/cluster", "Multi-server", strings.HasPrefix(path, "/server/cluster")},
 				tabSpec{true, "/server/demo-mode", "Demo mode", strings.HasPrefix(path, "/server/demo-mode")},
 			)
 		}},

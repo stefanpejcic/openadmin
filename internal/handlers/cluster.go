@@ -82,7 +82,7 @@ func (c *Cluster) ServePage(w http.ResponseWriter, r *http.Request) {
 			data["PreviewError"] = err.Error()
 		}
 	}
-	webtemplates.Render(w, "server_cluster.html", mergeChrome(data, r, "Multi-Server"))
+	webtemplates.Render(w, "server_cluster.html", mergeChrome(data, r, "Multi-server"))
 }
 
 type clusterServerOption struct {
