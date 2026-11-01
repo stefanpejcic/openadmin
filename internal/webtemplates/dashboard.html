@@ -736,7 +736,7 @@ const renderNewsItems = (items) => {
 // dashboard layout saved on the admin's account: widget order, width, collapsed widgets and the header buttons
 (function () {
     var saved = {{if .Layout}}{{.Layout}}{{else}}null{{end}};
-    var layout = Object.assign({ order: [], size: {}, collapsed: {} }, saved || {});
+    var layout = Object.assign({ order: [], size: {}, rows: {}, collapsed: {} }, saved || {});
     var grid = document.getElementById('dashboard-widgets');
     if (!grid) { return; }
     // default arrangement, a saved order or width replaces it
@@ -747,6 +747,9 @@ const renderNewsItems = (items) => {
     // widgets with their own collapse button
     var OWN_COLLAPSE = { summary: true };
     function sizeOf(id) { return Number(layout.size[id] || DEFAULT_SIZE[id] || 1); }
+    // height in blocks, a 2-block widget makes room for two 1-block ones stacked next to it
+    var DEFAULT_ROWS = { usage: 2 };
+    function rowsOf(id) { return Number(layout.rows[id] || DEFAULT_ROWS[id] || 1); }
 
     function widgets() { return Array.prototype.slice.call(grid.querySelectorAll(':scope > [data-widget]')); }
 
@@ -770,6 +773,10 @@ const renderNewsItems = (items) => {
         '#dashboard-widgets>.widget-ghost{opacity:.4;outline:1px dashed #9ca3af;outline-offset:-6px}' +
         '#dashboard-widgets>.widget-chosen{box-shadow:0 10px 15px -3px rgb(0 0 0/.25),0 4px 6px -4px rgb(0 0 0/.2)}' +
         '#dashboard-widgets.sorting .widget-sizes{max-width:0;opacity:0}' +
+        // heights drop down under the handle as a small vertical list
+        '#dashboard-widgets .widget-heights{opacity:0;pointer-events:none;transform:translateY(-4px);transition:opacity 150ms,transform 200ms cubic-bezier(0.16,1,0.3,1)}' +
+        '#dashboard-widgets .widget-heights.show{opacity:1;pointer-events:auto;transform:none}' +
+        '#dashboard-widgets.sorting .widget-heights{opacity:0;pointer-events:none}' +
         '[data-widget] .widget-hidden{display:none!important}' +
         // long lists take the height of the other widgets in their row and scroll inside, never shorter than 24rem
         '#dashboard-widgets>[data-widget="activity"],#dashboard-widgets>[data-widget="news"]{align-self:stretch;display:flex;flex-direction:column;min-height:24rem}' +
@@ -850,14 +857,8 @@ const renderNewsItems = (items) => {
             var w = grid.querySelector(':scope > [data-widget="' + id + '"]');
             if (w) { grid.appendChild(w); }
         });
-        // a 2/3 widget followed by the two short 1/3 ones (tasks and cluster) spans two rows so those stack next to it, taller ones would get squeezed
-        var SHORT = { tasks: true, cluster: true };
-        var list = widgets();
-        list.forEach(function (w, i) {
-            var stack = sizeOf(w.dataset.widget) === 2 && list[i + 1] && list[i + 2] &&
-                sizeOf(list[i + 1].dataset.widget) === 1 && sizeOf(list[i + 2].dataset.widget) === 1 &&
-                SHORT[list[i + 1].dataset.widget] && SHORT[list[i + 2].dataset.widget];
-            if (stack) { w.dataset.rows = 2; } else { delete w.dataset.rows; }
+        widgets().forEach(function (w) {
+            if (rowsOf(w.dataset.widget) === 2) { w.dataset.rows = 2; } else { delete w.dataset.rows; }
         });
         widgets().forEach(function (w) {
             w.classList.add('bg-white', 'px-6', 'py-5', 'ring-1', 'ring-gray-200', 'dark:bg-gray-950', 'dark:ring-gray-800');
@@ -875,6 +876,9 @@ const renderNewsItems = (items) => {
         bar.querySelectorAll('[data-size-btn]').forEach(function (b) {
             var on = Number(b.dataset.sizeBtn) === sizeOf(id);
             b.setAttribute('aria-pressed', String(on));
+        });
+        bar.querySelectorAll('[data-rows-btn]').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(Number(b.dataset.rowsBtn) === rowsOf(id)));
         });
     }
 
@@ -921,20 +925,42 @@ const renderNewsItems = (items) => {
             });
             sizes.appendChild(b);
         });
+        var heights = document.createElement('span');
+        heights.className = 'widget-heights absolute right-0 top-full z-20 mt-1 flex w-36 flex-col gap-0.5 rounded-md bg-gray-100 p-0.5 shadow-lg dark:bg-gray-900';
+        var HEIGHT_ICON = {
+            1: '<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="4.5" width="11" height="7" rx="1.5"/></svg>',
+            2: '<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="1.5" width="11" height="5.5" rx="1.5"/><rect x="2.5" y="9" width="11" height="5.5" rx="1.5"/></svg>'
+        };
+        [1, 2].forEach(function (n) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = SIZE_BTN + ' flex items-center gap-2 py-1.5 text-left';
+            b.dataset.rowsBtn = n;
+            b.innerHTML = HEIGHT_ICON[n] + (n === 1 ? '1 block high' : '2 blocks high');
+            b.addEventListener('click', function () {
+                if (n === (DEFAULT_ROWS[id] || 1)) { delete layout.rows[id]; } else { layout.rows[id] = n; }
+                apply(); markSize(bar, id); save();
+            });
+            heights.appendChild(b);
+        });
+        var handle = document.createElement('span');
+        handle.className = 'relative';
+        handle.appendChild(move);
+        handle.appendChild(heights);
         bar.appendChild(sizes);
-        bar.appendChild(move);
-        // widths stay open while the pointer or focus is on the handle or them, then close 3s later
+        bar.appendChild(handle);
+        // widths and heights stay open while the pointer or focus is on the handle or them, then close 3s later
         var timer;
-        function showSizes() { clearTimeout(timer); sizes.classList.add('show'); }
-        function hideSoon() { clearTimeout(timer); timer = setTimeout(function () { sizes.classList.remove('show'); }, 3000); }
-        [move, sizes].forEach(function (el) {
+        function showSizes() { clearTimeout(timer); sizes.classList.add('show'); heights.classList.add('show'); }
+        function hideSoon() { clearTimeout(timer); timer = setTimeout(function () { sizes.classList.remove('show'); heights.classList.remove('show'); }, 3000); }
+        [move, sizes, heights].forEach(function (el) {
             el.addEventListener('mouseenter', showSizes);
             el.addEventListener('mouseleave', hideSoon);
             el.addEventListener('focusin', showSizes);
             el.addEventListener('focusout', hideSoon);
         });
         move.addEventListener('click', function () {
-            if (sizes.classList.contains('show')) { clearTimeout(timer); sizes.classList.remove('show'); } else { showSizes(); hideSoon(); }
+            if (sizes.classList.contains('show')) { clearTimeout(timer); sizes.classList.remove('show'); heights.classList.remove('show'); } else { showSizes(); hideSoon(); }
         });
         markSize(bar, id);
         var chev = head.querySelector('.widget-chevron');
