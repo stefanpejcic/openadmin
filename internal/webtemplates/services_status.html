@@ -18,7 +18,7 @@
         <header>
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
-                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Services</h1>
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Service status</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-500">Manage system services and containers.</p>
                 </div>
                 <div class="flex flex-none items-center gap-2 sm:justify-end">
@@ -263,6 +263,9 @@ function submitServiceAction(form, loadingMessage, onSettled) {
       Monitored
     </a>
   </template>
+  <template x-if="!isMonitored('{{$svc.RealName}}')">
+    <span class="text-gray-400 dark:text-gray-600" aria-label="Not monitored">—</span>
+  </template>
 </td>
 
 <td class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-right">
@@ -285,13 +288,19 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                 <button
                     type="button"
                     title="Stop {{$svc.RealName}}"
+                    data-tip="Stop {{$svc.RealName}}"
+                    data-tip-placement="left"
                     aria-label="Stop {{$svc.RealName}}"
                     class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 cursor-pointer disabled:pointer-events-none"
                     :disabled="$store.actions.locked"
                     :class="{ 'opacity-50 cursor-not-allowed': $store.actions.locked }"
                     @click="
-                        $store.actions.locked = true;
-                        submitServiceAction($el.closest('form'), 'Stopping {{$svc.RealName}}…');
+                        const form = $el.closest('form');
+                        opConfirm('Stop {{$svc.RealName}}? It stays down until you start it again.').then(ok => {
+                            if (!ok) return;
+                            $store.actions.locked = true;
+                            submitServiceAction(form, 'Stopping {{$svc.RealName}}…');
+                        });
                     "
                 >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
@@ -303,6 +312,8 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                 <button
                     type="button"
                     title="Start {{$svc.RealName}}"
+                    data-tip="Start {{$svc.RealName}}"
+                    data-tip-placement="left"
                     aria-label="Start {{$svc.RealName}}"
                     class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 cursor-pointer disabled:pointer-events-none"
                     :disabled="$store.actions.locked"
@@ -331,21 +342,31 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                     x-data="{ spinning: false }"
                     type="button"
                     title="Restart {{$svc.RealName}}"
+                    data-tip="Restart {{$svc.RealName}}"
+                    data-tip-placement="left"
                     aria-label="Restart {{$svc.RealName}}"
                     class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 cursor-pointer disabled:pointer-events-none"
                     :disabled="$store.actions.locked"
                     :class="{ 'opacity-50 cursor-not-allowed': $store.actions.locked }"
 {{if eq $svc.RealName "admin"}}
                     @click="
-                        spinning = true;
-                        $store.actions.locked = true;
-                        restartAdminService($el.closest('form'));
+                        const form = $el.closest('form');
+                        opConfirm('Restart {{$svc.RealName}}? It will be unavailable for a few seconds.').then(ok => {
+                            if (!ok) return;
+                            spinning = true;
+                            $store.actions.locked = true;
+                            restartAdminService(form);
+                        });
                     "
 {{else}}
                     @click="
-                        spinning = true;
-                        $store.actions.locked = true;
-                        submitServiceAction($el.closest('form'), 'Restarting {{$svc.RealName}}…', function () { spinning = false; });
+                        const form = $el.closest('form');
+                        opConfirm('Restart {{$svc.RealName}}? It will be unavailable for a few seconds.').then(ok => {
+                            if (!ok) return;
+                            spinning = true;
+                            $store.actions.locked = true;
+                            submitServiceAction(form, 'Restarting {{$svc.RealName}}…', function () { spinning = false; });
+                        });
                     "
 {{end}}
                 >

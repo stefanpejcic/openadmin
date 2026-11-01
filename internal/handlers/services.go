@@ -72,7 +72,7 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 	}
 
 	if serviceType != "docker" {
-		cmd := exec.Command("systemctl", action, serviceName)
+		cmd := exec.Command("systemctl", action, resolveUnitAlias(serviceName, systemdUnitExists))
 		cmd.Dir = "/root"
 		out, err := cmd.CombinedOutput()
 		return err == nil, string(out)
@@ -208,7 +208,32 @@ func systemdUnitFor(realName string) string {
 	if realName == "podman" {
 		return "podman.socket"
 	}
-	return realName
+	return resolveUnitAlias(realName, systemdUnitExists)
+}
+
+// Debian and RHEL name these units differently
+var systemdUnitAliases = map[string]string{"cron": "crond", "crond": "cron", "ssh": "sshd", "sshd": "ssh"}
+
+// systemdUnitExists is a var so tests can fake the LoadState lookup
+var systemdUnitExists = func(unit string) bool {
+	out, err := exec.Command("systemctl", "show", "-p", "LoadState", "--value", unit).Output()
+	if err != nil {
+		return true
+	}
+	state := strings.TrimSpace(string(out))
+	return state != "not-found" && state != ""
+}
+
+// resolveUnitAlias swaps in the other distro's unit name when the configured one isn't installed
+func resolveUnitAlias(name string, exists func(string) bool) string {
+	alias, ok := systemdUnitAliases[name]
+	if !ok || exists(name) {
+		return name
+	}
+	if exists(alias) {
+		return alias
+	}
+	return name
 }
 
 func fetchAllSystemdStatuses(names []string) map[string]bool {
@@ -329,7 +354,7 @@ func (s *Services) ServeStatus(w http.ResponseWriter, r *http.Request) {
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, s.Sessions),
 		"BulkActions":   ServicesBulkActions(),
-	}, r, "Services"))
+	}, r, "Service status"))
 }
 
 // serviceActionMessage builds the human-readable outcome of a start/stop/
@@ -569,7 +594,7 @@ func realManageService(serviceName, action string) (bool, string) {
 		if serviceName == "admin" && action == "restart" {
 			_ = os.Remove(bootstrap.RestartFlagPath)
 		}
-		cmd := exec.Command("service", serviceName, action)
+		cmd := exec.Command("service", resolveUnitAlias(serviceName, systemdUnitExists), action)
 		cmd.Dir = "/root"
 		out, err := cmd.CombinedOutput()
 		return err == nil, string(out)
