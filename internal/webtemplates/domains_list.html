@@ -45,66 +45,71 @@
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
                             <div class="col-span-full sm:col-span-2">
                                 <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="domain">
-                                    Domain<span class="text-red-500">*</span>
+                                    Domain<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span>
                                 </label>
                                 <div class="relative w-full mt-2">
                                     <input type="text" name="domain" id="domain" placeholder="example.net" required
-                x-model="domain" @input="syncDocroot()" autofocus class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm">
+                x-model="domain" @input="syncDocroot(); errors.domain = ''" :aria-invalid="errors.domain ? 'true' : 'false'" aria-describedby="domain-error" autofocus class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm">
+                                    <p id="domain-error" x-show="errors.domain" x-cloak x-text="errors.domain" role="alert" class="mt-1.5 text-xs text-red-600 dark:text-red-500"></p>
                                 </div>
                             </div>
 
                             <div class="col-span-full sm:col-span-2" x-data @click.away="show = false">
-                                <label for="username" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Username<span class="text-red-500">*</span></label>
+                                <label for="username" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Username<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span></label>
                                 <div class="relative w-full mt-2">
                                     <input type="text" name="username" id="username" placeholder="username" required role="combobox" aria-autocomplete="list" aria-controls="username-options" :aria-expanded="(show && users.length > 0).toString()"
-                                        x-model="query" @input.debounce.300ms="searchUsers"
+                                        x-model="query" @input.debounce.300ms="searchUsers" @input="errors.username = ''"
                                         @focus="show = true"
+                                        @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)"
+                                        @keydown.enter="if (show && active >= 0) { $event.preventDefault(); selectUser(users[active]) }"
+                                        @keydown.escape="show = false"
+                                        :aria-activedescendant="show && active >= 0 ? 'username-option-' + active : null"
+                                        :aria-invalid="errors.username ? 'true' : 'false'" aria-describedby="username-error"
                                         class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm"
                                         autocomplete="off">
 
                                     <ul id="username-options" role="listbox" x-show="show && users.length > 0" class="absolute mt-1 max-h-60 w-full overflow-auto z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
-                                        <template x-for="user in users" :key="user">
-                                            <li role="option" @click="selectUser(user)" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50">
+                                        <template x-for="(user, i) in users" :key="user">
+                                            <li role="option" :id="'username-option-' + i" :aria-selected="(i === active).toString()" @mouseenter="active = i" @click="selectUser(user)" class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 text-gray-900 dark:text-gray-50">
                                                 <span x-text="user"></span>
                                             </li>
                                         </template>
                                     </ul>
+                                    <p id="username-error" x-show="errors.username" x-cloak x-text="errors.username" role="alert" class="mt-1.5 text-xs text-red-600 dark:text-red-500"></p>
                                 </div>
                             </div>
 
                             {{if eq .LicenseType "Enterprise"}}
                             <div class="col-span-full sm:col-span-2">
-                                <label for="docroot" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Docroot<span class="text-red-500">*</span></label>
+                                <label for="docroot" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Docroot<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span></label>
                                 <div class="relative w-full mt-2">
                                     <input type="text" name="docroot" id="docroot" required
-                                        x-model="docroot" @input="docrootEdited = true; keepDocrootPrefix()"
+                                        x-model="docroot" @input="docrootEdited = true; keepDocrootPrefix(); errors.docroot = ''" :aria-invalid="errors.docroot ? 'true' : 'false'" aria-describedby="docroot-error"
                                         class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm"
                                         autocomplete="off">
+                                    <p id="docroot-error" x-show="errors.docroot" x-cloak x-text="errors.docroot" role="alert" class="mt-1.5 text-xs text-red-600 dark:text-red-500"></p>
                                 </div>
                             </div>
                             {{end}}
 
-                            <div class="col-span-full {{if eq .LicenseType "Enterprise"}}{{else}}sm:col-span-2 h-full{{end}} flex items-end justify-end">
-                                <div class="relative mt-2 flex items-center gap-3">
-{{if not .IsReseller}}                                    <a href="#add" @click.prevent="bulkMode = true" class="whitespace-nowrap text-sm text-blue-500 hover:underline hover:underline-offset-4">Adding more than one domain?</a>{{end}}
-                                    <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">
-                                        Add domain
-                                    </button>
-                                </div>
+                            <div class="col-span-full flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-end dark:border-gray-800">
+{{if not .IsReseller}}                                <a href="#add" @click.prevent="bulkMode = true" class="whitespace-nowrap text-sm text-blue-500 hover:underline hover:underline-offset-4 sm:mr-auto">Adding more than one domain?</a>{{end}}
+                                <button type="button" @click="showSection = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                                <button type="submit" :disabled="busy" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400"><span x-show="busy" x-cloak class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span>Add domain</button>
                             </div>
                         </div>
                     </form>
 
                     <form x-show="bulkMode" x-cloak @submit.prevent="submitBulk">
-                        <label for="bulk_domains" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Domains<span class="text-red-500">*</span></label>
+                        <label for="bulk_domains" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Domains<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span></label>
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">One per line: <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">domain|username</code>{{if eq .LicenseType "Enterprise"}}, optionally followed by <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">|docroot</code>{{end}} and <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">|php version</code>. Spaces work instead of <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">|</code>.</p>
                         <textarea id="bulk_domains" x-model="bulkText" @blur="validateBulk()" rows="8" spellcheck="false" :disabled="bulkRunning"
                             placeholder="domain1.com|milan{{if eq .LicenseType "Enterprise"}}&#10;domain2.rs|stefan|/var/www/html/somedir/here/&#10;domain3.rs|stefan|/var/www/html/somedir/here/|8.3{{else}}&#10;domain2.rs stefan 8.3{{end}}"
                             class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2 font-mono"></textarea>
 
-                        <ul x-show="bulkErrors.length" class="mt-2 list-disc pl-5 text-sm text-red-600 dark:text-red-500">
+                        <div x-show="bulkErrors.length" x-cloak role="alert" class="mt-2 flex gap-3 rounded-md bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/70 dark:text-red-500"><svg class="remixicon size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"/></svg><ul class="list-disc pl-5">
                             <template x-for="err in bulkErrors" :key="err"><li x-text="err"></li></template>
-                        </ul>
+                        </ul></div>
 
                         <div x-show="bulkStatus" class="mt-2 text-sm">
                             <p x-text="bulkStatus"></p>
@@ -113,11 +118,10 @@
                             </ul>
                         </div>
 
-                        <div class="mt-2 flex items-center justify-end gap-3">
-                            <a href="#add" @click.prevent="bulkMode = false" x-show="!bulkRunning" class="whitespace-nowrap text-sm text-blue-500 hover:underline hover:underline-offset-4">Adding just one domain?</a>
-                            <button type="submit" :disabled="bulkRunning" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">
-                                Add domains
-                            </button>
+                        <div class="mt-4 flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-end dark:border-gray-800">
+                            <a href="#add" @click.prevent="bulkMode = false" x-show="!bulkRunning" class="whitespace-nowrap text-sm text-blue-500 hover:underline hover:underline-offset-4 sm:mr-auto">Adding just one domain?</a>
+                            <button type="button" @click="showSection = false" :disabled="bulkRunning" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                            <button type="submit" :disabled="bulkRunning" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400"><span x-show="bulkRunning" x-cloak class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span>Add domains</button>
                         </div>
                     </form>
 
@@ -189,6 +193,9 @@ function userSearch() {
         users: [],
         show: false,
         validUser: null,
+        active: -1,
+        busy: false,
+        errors: { domain: '', username: '', docroot: '' },
         domain: '',
         docroot: DOCROOT_PREFIX,
         docrootEdited: false,
@@ -283,11 +290,19 @@ function userSearch() {
                 .then(data => {
                     this.users = data.filter(u => !u.startsWith('SUSPENDED_'));
                     this.show = this.users.length > 0;
+                    this.active = -1;
                     this.validUser = null;
                 });
         },
 
+        move(step) {
+            if (!this.users.length) return;
+            this.show = true;
+            this.active = (this.active + step + this.users.length) % this.users.length;
+        },
+
         selectUser(user) {
+            this.errors.username = '';
             this.query = user;
             this.validUser = user;
             this.show = false;
@@ -299,21 +314,18 @@ function userSearch() {
         },
 
         submitForm(event) {
-            if (!this.validUser || this.validUser !== this.query) {
-                showToast("Error, please select a valid username from the list.", 'error');
+            this.errors = { domain: '', username: '', docroot: '' };
+            if (!this.validateDomain(this.domain)) this.errors.domain = 'Enter a valid domain, e.g. example.com.';
+            if (!this.validUser || this.validUser !== this.query) this.errors.username = 'Pick a user from the list.';
+            if (document.getElementById('docroot') && !this.validateDocroot(this.docroot)) this.errors.docroot = "Docroot must start with " + DOCROOT_PREFIX + " and can't contain '..'.";
+            const first = ['domain', 'username', 'docroot'].find(k => this.errors[k]);
+            if (first) {
+                showToast(this.errors[first], 'error');
+                document.getElementById(first).focus();
                 return;
             }
 
-            if (!this.validateDomain(this.domain)) {
-                showToast("Error, please enter a valid domain (e.g., example.com).", 'error');
-                return;
-            }
-
-            if (document.getElementById('docroot') && !this.validateDocroot(this.docroot)) {
-                showToast("Error, docroot must start with " + DOCROOT_PREFIX + " and can't contain '..'.", 'error');
-                return;
-            }
-
+            this.busy = true;
             event.target.submit();
         }
     }
