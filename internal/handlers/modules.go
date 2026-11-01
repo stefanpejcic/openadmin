@@ -228,5 +228,5 @@ func (m *Modules) ServeModules(w http.ResponseWriter, r *http.Request) {
 		"Features":  allFeatures,
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, m.Sessions),
-	}, r, "Manage Modules"))
+	}, r, "Modules"))
 }
