@@ -87,9 +87,11 @@ document.addEventListener("DOMContentLoaded", function () {
         verifyLicense();
     });
 
-    document.querySelector('.btn-downgrade').addEventListener('click', function (event) {
+    document.querySelector('.btn-downgrade').addEventListener('click', async function (event) {
         event.preventDefault();
         const downgradeButton = this;
+        const sure = await window.opConfirm('This removes the license key and turns off all Enterprise features. You can add the key again later.', { title: 'Downgrade to Community?', ok: 'Downgrade', danger: true });
+        if (!sure) return;
         downgradeButton.disabled = true;
         downgradeButton.innerHTML = "<svg class='size-4 animate-spin' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-opacity='.25' stroke-width='3'></circle><path d='M21 12a9 9 0 0 0-9-9' stroke='currentColor' stroke-width='3' stroke-linecap='round'></path></svg>Downgrading…";
 
@@ -125,7 +127,8 @@ function verifyLicense() {
         let verifyButton = document.querySelector('.btn-verify');
         if (!infoContainer) return;
         if (!response.info) {
-            infoContainer.textContent = response.error || 'No license information available.';
+            infoContainer.innerHTML = `<p class="py-3 text-gray-600 dark:text-gray-400">${escapeHtml(response.error || 'No license information available.')}</p>`;
+            document.querySelector('#license_info').classList.remove('hidden');
             verifyButton.innerHTML = 'Re-verify';
             verifyButton.disabled = false;
             return;
@@ -133,19 +136,20 @@ function verifyLicense() {
 
         try {
             let infoObject = JSON.parse(response.info);
-            let listHtml = `<ul class='space-y-1'>` +
-                           Object.keys(infoObject).map(key => `<li><span class='font-medium'>${key}</span> ${infoObject[key]}</li>`).join('') +
-                           `</ul>`;
-            infoContainer.innerHTML = listHtml;
+            infoContainer.innerHTML = `<dl class="divide-y divide-gray-200 dark:divide-gray-800">` +
+                Object.keys(infoObject).map(key =>
+                    `<div class="flex items-center justify-between gap-4 py-2.5"><dt class="text-gray-600 dark:text-gray-400">${escapeHtml(key)}</dt>` +
+                    `<dd class="min-w-0 break-words text-right font-medium text-gray-900 dark:text-gray-50">${escapeHtml(licenseValue(key, infoObject[key]))}</dd></div>`
+                ).join('') + `</dl>`;
             const dueWarning = licenseDueWarning(infoObject['Next Due Date'], new Date());
             if (dueWarning) {
                 const p = document.createElement('p');
-                p.className = 'mt-3 text-xs text-yellow-700 dark:text-yellow-500';
+                p.className = 'border-t border-gray-200 py-3 text-xs text-yellow-700 dark:border-gray-800 dark:text-yellow-500';
                 p.textContent = dueWarning;
                 infoContainer.appendChild(p);
             }
         } catch (e) {
-            infoContainer.innerHTML = `<p class="text-red-600 dark:text-red-500">${response.info}</p>`;
+            infoContainer.innerHTML = `<p class="py-3 text-red-600 dark:text-red-500">${escapeHtml(response.info)}</p>`;
         }
 
         document.querySelector('#license_info').classList.remove('hidden');
@@ -157,6 +161,17 @@ function verifyLicense() {
         document.querySelector('.btn-verify').innerHTML = 'Re-verify';
         document.querySelector('.btn-verify').disabled = false;
     });
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+// lifetime licenses come back with a 0000-00-00 due date, and dates carry a midnight time nobody needs
+function licenseValue(key, value) {
+    const v = String(value ?? '').trim();
+    if (/^0000-00-00/.test(v)) return key === 'Next Due Date' ? 'Never' : '—';
+    return v.replace(/^(\d{4}-\d{2}-\d{2}) 00:00:00$/, '$1') || '—';
 }
 
 // warns from 3 days before the next due date, the license gets suspended on that date
