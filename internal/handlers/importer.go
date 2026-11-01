@@ -166,7 +166,7 @@ func (im *Importer) ServeImportUser(w http.ResponseWriter, r *http.Request) {
 		"Plans":     plans,
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, im.Sessions),
-	}, r, "Import User"))
+	}, r, "Import account"))
 }
 
 var importerBackupPanelDisplayNames = map[string]string{
