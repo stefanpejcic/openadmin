@@ -771,6 +771,11 @@ const renderNewsItems = (items) => {
         '#dashboard-widgets>.widget-chosen{box-shadow:0 10px 15px -3px rgb(0 0 0/.25),0 4px 6px -4px rgb(0 0 0/.2)}' +
         '#dashboard-widgets.sorting .widget-sizes{max-width:0;opacity:0}' +
         '[data-widget] .widget-hidden{display:none!important}' +
+        // long lists take the height of the other widgets in their row and scroll inside, never shorter than 24rem
+        '#dashboard-widgets>[data-widget="activity"],#dashboard-widgets>[data-widget="news"]{align-self:stretch;display:flex;flex-direction:column;min-height:24rem}' +
+        '#dashboard-widgets>[data-widget="news"]>div,#custom_message{display:flex;flex:1 1 auto;flex-direction:column;min-height:0}' +
+        '#dashboard-widgets>[data-widget="activity"]>.overflow-y-auto,#news-content{flex:1 1 0;min-height:0;height:auto!important}' +
+        '#dashboard-widgets>[data-widget].is-collapsed{min-height:0}' +
         // wider news gets bigger pictures
         '@media (min-width:1024px){#dashboard-widgets>[data-widget="news"][data-size="2"] .news-img{height:6rem}#dashboard-widgets>[data-widget="news"][data-size="3"] .news-img{height:8rem}}';
     document.head.appendChild(style);
@@ -803,6 +808,7 @@ const renderNewsItems = (items) => {
     function setCollapsed(w, on) {
         var head = header(w);
         if (!head) { return; }
+        w.classList.toggle('is-collapsed', on);
         var keep = head;
         while (keep && keep !== w) {
             Array.prototype.forEach.call(keep.parentElement.children, function (sib) {
