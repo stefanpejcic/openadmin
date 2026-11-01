@@ -94,6 +94,61 @@ func podmanInfoText() string {
 	return out
 }
 
+type podmanInfoField struct {
+	Label string
+	Value string
+}
+
+// podmanInfoSummary pulls a few headline fields out of the `podman info` yaml; nil if it doesn't parse.
+func podmanInfoSummary(raw string) []podmanInfoField {
+	var doc struct {
+		Host struct {
+			CgroupVersion string `yaml:"cgroupVersion"`
+			Kernel        string `yaml:"kernel"`
+			Distribution  struct {
+				Distribution string `yaml:"distribution"`
+				Version      string `yaml:"version"`
+			} `yaml:"distribution"`
+		} `yaml:"host"`
+		Store struct {
+			GraphDriverName string `yaml:"graphDriverName"`
+			ContainerStore  struct {
+				Number int `yaml:"number"`
+			} `yaml:"containerStore"`
+			ImageStore struct {
+				Number int `yaml:"number"`
+			} `yaml:"imageStore"`
+		} `yaml:"store"`
+		Version struct {
+			Version string `yaml:"Version"`
+		} `yaml:"version"`
+	}
+	if err := yaml.Unmarshal([]byte(raw), &doc); err != nil || doc.Version.Version == "" {
+		return nil
+	}
+	osName := strings.TrimSpace(doc.Host.Distribution.Distribution + " " + doc.Host.Distribution.Version)
+	if doc.Host.Kernel != "" {
+		if osName != "" {
+			osName += " / "
+		}
+		osName += doc.Host.Kernel
+	}
+	dash := func(s string) string {
+		if s == "" {
+			return "—"
+		}
+		return s
+	}
+	return []podmanInfoField{
+		{"Podman version", doc.Version.Version},
+		{"OS / kernel", dash(osName)},
+		{"Storage driver", dash(doc.Store.GraphDriverName)},
+		{"Cgroup version", dash(doc.Host.CgroupVersion)},
+		{"Containers", strconv.Itoa(doc.Store.ContainerStore.Number)},
+		{"Images", strconv.Itoa(doc.Store.ImageStore.Number)},
+	}
+}
+
 type podmanImageRow struct {
 	ID               string // short, display-only
 	FullID           string // used for the delete action
@@ -195,7 +250,9 @@ func podmanFormatSize(v interface{}) string {
 	if exp >= len(units) {
 		exp = len(units) - 1
 	}
-	return strconv.FormatFloat(f/div, 'f', 1, 64) + " " + units[exp]
+	s := strconv.FormatFloat(f/div, 'f', 2, 64)
+	s = strings.TrimRight(strings.TrimRight(s, "0"), ".")
+	return s + " " + units[exp]
 }
 
 // podmanSplitRef splits a "repo:tag" (or "registryhost:port/repo:tag")
@@ -659,29 +716,50 @@ func podmanSystemDiskUsage() []podmanDiskUsageRow {
 		active, _ := item["Active"].(float64)
 		sizeBytes, _ := item["RawSize"].(float64)
 		reclaimableBytes, _ := item["RawReclaimable"].(float64)
+		size := podmanStringField(item, "Size")
+		reclaimable := podmanStringField(item, "Reclaimable")
+		if _, ok := item["RawSize"].(float64); ok {
+			size = podmanFormatSize(sizeBytes)
+			reclaimable = podmanFormatReclaimable(reclaimableBytes, sizeBytes)
+		}
+		typ := podmanStringField(item, "Type")
+		if typ == "Local Volumes" {
+			typ = "Local volumes"
+		}
 		rows = append(rows, podmanDiskUsageRow{
-			Type:             podmanStringField(item, "Type"),
+			Type:             typ,
 			Total:            int(total),
 			Active:           int(active),
-			Size:             podmanStringField(item, "Size"),
+			Size:             size,
 			SizeBytes:        sizeBytes,
-			Reclaimable:      podmanStringField(item, "Reclaimable"),
+			Reclaimable:      reclaimable,
 			ReclaimableBytes: reclaimableBytes,
 		})
 	}
 	return rows
 }
 
+// podmanFormatReclaimable renders e.g. "4.11 GB (59%)", leaving off the percent when there's nothing to reclaim.
+func podmanFormatReclaimable(reclaimable, size float64) string {
+	s := podmanFormatSize(reclaimable)
+	if reclaimable > 0 && size > 0 {
+		s += fmt.Sprintf(" (%d%%)", int(reclaimable/size*100+0.5))
+	}
+	return s
+}
+
 // ServePodman handles GET /server/podman.
 func (p *Podman) ServePodman(w http.ResponseWriter, r *http.Request) {
+	info := podmanInfoText()
 	webtemplates.Render(w, "server_podman.html", mergeChrome(map[string]interface{}{
-		"Info":      podmanInfoText(),
-		"Images":    podmanListImages(podmanImageUsageCounts(p.MySQL), podmanStackImages()),
-		"Volumes":   podmanListVolumes(),
-		"Networks":  podmanListNetworks(),
-		"DiskUsage": podmanSystemDiskUsage(),
-		"CSRFToken": csrf.Token(r),
-		"Flashes":   auth.PopFlashes(w, r, p.Sessions),
+		"Info":        info,
+		"InfoSummary": podmanInfoSummary(info),
+		"Images":      podmanListImages(podmanImageUsageCounts(p.MySQL), podmanStackImages()),
+		"Volumes":     podmanListVolumes(),
+		"Networks":    podmanListNetworks(),
+		"DiskUsage":   podmanSystemDiskUsage(),
+		"CSRFToken":   csrf.Token(r),
+		"Flashes":     auth.PopFlashes(w, r, p.Sessions),
 	}, r, "Podman"))
 }
 
@@ -814,10 +892,10 @@ func podmanUpdateStatusSnapshot() map[string]podmanUpdateStatus {
 
 // podmanVulnDetail is one HIGH/CRITICAL finding from a Trivy scan.
 type podmanVulnDetail struct {
-	ID               string `json:"id"`                // e.g. CVE-2024-12345
+	ID               string `json:"id"` // e.g. CVE-2024-12345
 	Package          string `json:"package"`
 	InstalledVersion string `json:"installed_version"`
-	FixedVersion     string `json:"fixed_version"`      // empty if no fix is published yet
+	FixedVersion     string `json:"fixed_version"` // empty if no fix is published yet
 	Severity         string `json:"severity"`
 	Title            string `json:"title"`
 	URL              string `json:"url"`
