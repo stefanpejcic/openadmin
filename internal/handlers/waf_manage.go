@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -1075,7 +1076,9 @@ func (wf *WAF) ServeWAFTargetRules(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]interface{}{"kind": kind, "target": target, "domains": rows})
 		return
 	}
-	webtemplates.Render(w, "security_coraza_target.html", mergeChrome(data, r, "Web firewall rules: "+target))
+	if err := webtemplates.Render(w, "security_coraza_target.html", mergeChrome(data, r, "Web firewall rules: "+target)); err != nil {
+		log.Printf("render security_coraza_target.html: %v", err)
+	}
 }
 
 func (wf *WAF) handleTargetRulesPOST(w http.ResponseWriter, r *http.Request, kind string, domains []string) {
