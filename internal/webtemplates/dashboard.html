@@ -785,6 +785,9 @@ const renderNewsItems = (items) => {
         '#dashboard-widgets>[data-widget="news"]>div,#custom_message{display:flex;flex:1 1 auto;flex-direction:column;min-height:0}' +
         '#dashboard-widgets>[data-widget="activity"]>.overflow-y-auto,#news-content{flex:1 1 0;min-height:0;height:auto!important}' +
         '#dashboard-widgets>[data-widget].is-collapsed{align-self:start;grid-row:auto;min-height:0}' +
+        // a collapsed widget is just its title row, without the description or the line under it
+        '#dashboard-widgets>.is-collapsed [data-widget-head]{border-bottom:0;margin-bottom:0;padding-bottom:0}' +
+        '#dashboard-widgets>.is-collapsed [data-widget-head] h3~:not(a){display:none}' +
         // wider news gets bigger pictures
         '@media (min-width:1024px){#dashboard-widgets>[data-widget="news"][data-size="2"] .news-img{height:6rem}#dashboard-widgets>[data-widget="news"][data-size="3"] .news-img{height:8rem}}';
     document.head.appendChild(style);
@@ -796,20 +799,9 @@ const renderNewsItems = (items) => {
         var head = h ? (h.closest('.pb-2') || h.parentElement) : null;
         if (!head) { return null; }
         head.setAttribute('data-widget-head', '');
-        // title row keeps the title and tools, the description and pickers go full width under it
-        var block = h.parentElement;
-        var sub = document.createElement('div');
-        sub.className = 'pb-2';
-        Array.prototype.slice.call(block.children).forEach(function (el) {
-            if (el !== h && el.tagName !== 'A') { sub.appendChild(el); }
-        });
-        if (sub.children.length) {
-            head.classList.remove('pb-2');
-            head.classList.add('items-center');
-            head.classList.remove('items-start');
-            head.parentElement.insertBefore(sub, head.nextSibling);
-        }
-        (sub.children.length ? sub : head).classList.add('-mx-6', 'mb-5', 'border-b', 'border-gray-200', 'px-6', 'pb-4', 'dark:border-gray-800');
+        // title and description stay in one block so the tools centre on both lines, the line under it runs edge to edge
+        head.classList.remove('pb-2', 'items-start');
+        head.classList.add('items-center', '-mx-6', 'mb-5', 'border-b', 'border-gray-200', 'px-6', 'pb-4', 'dark:border-gray-800');
         return head;
     }
 
