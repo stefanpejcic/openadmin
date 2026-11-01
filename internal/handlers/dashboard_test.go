@@ -527,3 +527,16 @@ func TestCountAccountConmonsSkipsRootAndExecSessions(t *testing.T) {
 		t.Fatalf("got %d, want 2", got)
 	}
 }
+
+func TestIsExitCodeTreatsDnfUpdatesAvailableAsSuccess(t *testing.T) {
+	err := exec.Command("sh", "-c", "exit 100").Run()
+	if !isExitCode(err, 100) {
+		t.Fatalf("exit 100 not recognized: %v", err)
+	}
+	if isExitCode(exec.Command("sh", "-c", "exit 1").Run(), 100) {
+		t.Fatal("exit 1 treated as updates available")
+	}
+	if isExitCode(nil, 100) {
+		t.Fatal("nil error treated as exit 100")
+	}
+}

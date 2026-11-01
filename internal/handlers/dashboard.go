@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -642,19 +643,25 @@ func packageUpdatesCount() string {
 	}
 	if _, err := exec.LookPath("dnf"); err == nil {
 		out, err := exec.Command("dnf", "check-update").Output()
-		if err != nil {
+		if err != nil && !isExitCode(err, 100) {
 			return "Unavailable"
 		}
 		return strconv.Itoa(countUpdateLines(string(out), "Last metadata"))
 	}
 	if _, err := exec.LookPath("yum"); err == nil {
 		out, err := exec.Command("yum", "check-update").Output()
-		if err != nil {
+		if err != nil && !isExitCode(err, 100) {
 			return "Unavailable"
 		}
 		return strconv.Itoa(countUpdateLines(string(out), "Loaded plugins"))
 	}
 	return "Unavailable"
+}
+
+// dnf and yum check-update exit 100 when updates are available
+func isExitCode(err error, code int) bool {
+	var ee *exec.ExitError
+	return errors.As(err, &ee) && ee.ExitCode() == code
 }
 
 func countUpdateLines(output, skipPrefix string) int {
