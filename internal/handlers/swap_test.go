@@ -184,7 +184,7 @@ func TestServeSwapGetRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(got))
 	}
-	for _, want := range []string{"Swap", "/swapfile", "1024 MB", "</html>"} {
+	for _, want := range []string{"Swap", "/swapfile", "1.00 GB", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}

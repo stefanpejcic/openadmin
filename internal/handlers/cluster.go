@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -84,7 +85,9 @@ func (c *Cluster) ServePage(w http.ResponseWriter, r *http.Request) {
 			data["PreviewError"] = err.Error()
 		}
 	}
-	webtemplates.Render(w, "server_cluster.html", mergeChrome(data, r, "Multi-server"))
+	if err := webtemplates.Render(w, "server_cluster.html", mergeChrome(data, r, "Multi-server")); err != nil {
+		log.Printf("render server_cluster.html: %v", err)
+	}
 }
 
 // clusterTotals sums the health rows for the strip above the servers table

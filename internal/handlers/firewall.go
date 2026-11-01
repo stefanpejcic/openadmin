@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"log"
 	"mime"
 	"net/http"
 	"os"
@@ -161,5 +162,7 @@ func (f *Firewall) ServeFirewallSettings(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// not installed is a normal state here, so it gets its own page instead of the 404 error page
-	webtemplates.Render(w, "security_csf_not_installed.html", mergeChrome(map[string]interface{}{}, r, "Firewall (Not Installed)"))
+	if err := webtemplates.Render(w, "security_csf_not_installed.html", mergeChrome(map[string]interface{}{}, r, "Firewall (Not Installed)")); err != nil {
+		log.Printf("render security_csf_not_installed.html: %v", err)
+	}
 }
