@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gorilla/csrf"
 
@@ -84,24 +85,30 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		confContentForm := r.PostFormValue("conf_content")
+		// browsers send textarea line breaks as CRLF, the config files use LF
+		confContentForm := strings.ReplaceAll(r.PostFormValue("conf_content"), "\r\n", "\n")
 
-		procErr := func() error {
-			if confPath == "" {
-				return fmt.Errorf("unrecognized webserver %q for user %q", webserver, username)
-			}
-			if err := os.WriteFile(confPath, []byte(confContentForm), 0644); err != nil {
-				return err
-			}
-			if err := podmanFireAndForgetRun(context, "restart", webserver); err != nil {
-				return err
-			}
-			auth.AddFlash(w, r, h.Sessions, "Main configuration file for "+username+" saved successfully and "+webserver+" restarted.", "success")
-			return nil
-		}()
+		// an empty main config would take every site of the user down on the restart
+		if strings.TrimSpace(confContentForm) == "" {
+			auth.AddFlash(w, r, h.Sessions, "Main configuration file for "+username+" can't be empty, nothing was saved.", "error")
+		} else {
+			procErr := func() error {
+				if confPath == "" {
+					return fmt.Errorf("unrecognized webserver %q for user %q", webserver, username)
+				}
+				if err := os.WriteFile(confPath, []byte(confContentForm), 0644); err != nil {
+					return err
+				}
+				if err := podmanFireAndForgetRun(context, "restart", webserver); err != nil {
+					return err
+				}
+				auth.AddFlash(w, r, h.Sessions, "Main configuration file for "+username+" saved successfully and "+webserver+" restarted.", "success")
+				return nil
+			}()
 
-		if procErr != nil {
-			auth.AddFlash(w, r, h.Sessions, "Error saving main configuration file for "+username+".", "error")
+			if procErr != nil {
+				auth.AddFlash(w, r, h.Sessions, "Error saving main configuration file for "+username+".", "error")
+			}
 		}
 	}
 
