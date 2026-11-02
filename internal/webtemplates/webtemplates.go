@@ -105,6 +105,10 @@ var funcMap = template.FuncMap{
 			if parsed, err := time.Parse("2006-01-02 15:04:05", t); err == nil {
 				return parsed.Format("02.01.2006 15:04:05")
 			}
+			// setup time and usage snapshots come as RFC 3339, e.g. 2026-10-31T07:12:41Z
+			if parsed, err := time.Parse(time.RFC3339, t); err == nil {
+				return parsed.Format("02.01.2006 15:04:05")
+			}
 			return t
 		default:
 			return ""
