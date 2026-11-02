@@ -90,7 +90,7 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 
 		// an empty main config would take every site of the user down on the restart
 		if strings.TrimSpace(confContentForm) == "" {
-			auth.AddFlash(w, r, h.Sessions, "Main configuration file for "+username+" can't be empty, nothing was saved.", "error")
+			_ = auth.AddFlash(w, r, h.Sessions, "Main configuration file for "+username+" can't be empty, nothing was saved.", "error")
 		} else {
 			procErr := func() error {
 				if confPath == "" {
@@ -102,12 +102,12 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 				if err := podmanFireAndForgetRun(context, "restart", webserver); err != nil {
 					return err
 				}
-				auth.AddFlash(w, r, h.Sessions, "Main configuration file for "+username+" saved successfully and "+webserver+" restarted.", "success")
+				_ = auth.AddFlash(w, r, h.Sessions, "Main configuration file for "+username+" saved successfully and "+webserver+" restarted.", "success")
 				return nil
 			}()
 
 			if procErr != nil {
-				auth.AddFlash(w, r, h.Sessions, "Error saving main configuration file for "+username+".", "error")
+				_ = auth.AddFlash(w, r, h.Sessions, "Error saving main configuration file for "+username+".", "error")
 			}
 		}
 	}
@@ -119,7 +119,7 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 			confContent = string(content)
 		}
 	} else {
-		auth.AddFlash(w, r, h.Sessions, "Error reading main configuration file for user "+username+".", "error")
+		_ = auth.AddFlash(w, r, h.Sessions, "Error reading main configuration file for user "+username+".", "error")
 	}
 
 	webtemplates.Render(w, "domains_config_editor.html", mergeChrome(map[string]interface{}{

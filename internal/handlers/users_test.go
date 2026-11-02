@@ -1036,7 +1036,7 @@ func TestUsersListUsageColumnsLineUp(t *testing.T) {
 		t.Fatal("the Usage column should be gone")
 	}
 	for _, col := range []string{"memory_limit", "cpu_limit", "disk_limit", "inodes_limit"} {
-		if n := strings.Count(page, `<th x-show="columns.`+col+`"`); n != 1 {
+		if n := strings.Count(page, `<th scope="col" x-show="columns.`+col+`"`); n != 1 {
 			t.Fatalf("expected one %s header, got %d", col, n)
 		}
 		if n := strings.Count(page, `<td x-show="columns.`+col+`"`); n != 1 {
@@ -1048,8 +1048,8 @@ func TestUsersListUsageColumnsLineUp(t *testing.T) {
 			t.Fatalf("missing sort link for %s", key)
 		}
 	}
-	if strings.Count(page, "<th x-show=") != strings.Count(page, "<td x-show=") {
-		t.Fatalf("header/cell count mismatch: %d th vs %d td", strings.Count(page, "<th x-show="), strings.Count(page, "<td x-show="))
+	if strings.Count(page, `<th scope="col" x-show=`) != strings.Count(page, "<td x-show=") {
+		t.Fatalf("header/cell count mismatch: %d th vs %d td", strings.Count(page, `<th scope="col" x-show=`), strings.Count(page, "<td x-show="))
 	}
 	if !regexp.MustCompile(`columns\.passkeys"[^>]*>2</td>`).MatchString(page) {
 		t.Fatal("expected the passkey count in the row")

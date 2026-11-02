@@ -1311,20 +1311,20 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 
 	if slave != "" && sshKeyPath == "" {
-		fmt.Fprintf(w, "Error: SSH key path is required for creating account on %s\n", slave)
+		_, _ = fmt.Fprintf(w, "Error: SSH key path is required for creating account on %s\n", slave)
 		flusher.Flush()
 		return
 	}
 
 	cmd, err := userCreateRun(command)
 	if err != nil {
-		fmt.Fprintf(w, "Error: %s\n\n", err.Error())
+		_, _ = fmt.Fprintf(w, "Error: %s\n\n", err.Error())
 		flusher.Flush()
 		return
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		fmt.Fprintf(w, "Error: %s\n\n", err.Error())
+		_, _ = fmt.Fprintf(w, "Error: %s\n\n", err.Error())
 		flusher.Flush()
 		return
 	}
@@ -1332,22 +1332,22 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 	var stderrBuf bytes.Buffer
 	cmd.Stderr = &stderrBuf
 	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(w, "Error: %s\n\n", err.Error())
+		_, _ = fmt.Fprintf(w, "Error: %s\n\n", err.Error())
 		flusher.Flush()
 		return
 	}
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
-		fmt.Fprintf(w, "%s\n", strings.TrimSpace(scanner.Text()))
+		_, _ = fmt.Fprintf(w, "%s\n", strings.TrimSpace(scanner.Text()))
 		flusher.Flush()
 	}
 	if err := cmd.Wait(); err != nil {
 		for _, line := range strings.Split(strings.TrimSpace(stderrBuf.String()), "\n") {
 			if line = strings.TrimSpace(line); line != "" {
-				fmt.Fprintf(w, "%s\n", line)
+				_, _ = fmt.Fprintf(w, "%s\n", line)
 			}
 		}
-		fmt.Fprintf(w, "Error: %s\n", err.Error())
+		_, _ = fmt.Fprintf(w, "Error: %s\n", err.Error())
 		flusher.Flush()
 	}
 }

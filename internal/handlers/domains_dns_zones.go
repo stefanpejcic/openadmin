@@ -215,7 +215,7 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 				}
 			}
 			// named-checkzone reports zone errors on stdout
-			auth.AddFlash(w, r, h.Sessions, "Zone file validation failed. Changes reverted. Error: "+strings.TrimSpace(stdout+" "+stderr), "error")
+			_ = auth.AddFlash(w, r, h.Sessions, "Zone file validation failed. Changes reverted. Error: "+strings.TrimSpace(stdout+" "+stderr), "error")
 			return nil
 		}()
 
