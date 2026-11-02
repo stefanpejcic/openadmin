@@ -79,7 +79,7 @@ func TestBuildModernNavResellerTabs(t *testing.T) {
 		"/domains":              "Domains,DNS zone editor,Rate limiting",
 		"/emails/queue":         "Accounts,Queue,Email deliverability",
 		"/databases/mongodb":    "MySQL,PostgreSQL,MongoDB",
-		"/user/import":          "Import account",
+		"/user/import":          "Import Account",
 		"/security/waf/domains": "Web firewall (Coraza),ImunifyAV",
 		"/server/crons":         "Resource usage,Scheduled actions",
 		"/settings/locales":     "Locales",

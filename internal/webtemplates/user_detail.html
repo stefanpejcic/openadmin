@@ -111,7 +111,7 @@
 {{if .CountryCode}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .CountryCode}}.svg" alt="IP address location: {{.CountryCode}}"></img></span><span>{{.ServerIP}} / {{end}}
 {{if or (eq .PlanCPU "0") (not .PlanCPU)}}&#8734;{{else}}{{.PlanCPU}}{{end}} Cores /
 {{if or (eq .PlanRAM "0g") (not .PlanRAM)}}&#8734;{{else}}{{rstrip .PlanRAM "g"}} GB{{end}} Memory /
-{{if .Disk.DiskHard}}{{.StatsWidget.DiskHardHuman}}{{else}}&#8734;{{end}}
+{{if .Disk.DiskHard}}{{spaceUnit .StatsWidget.DiskHardHuman}}{{else}}&#8734;{{end}}
                     </p>
                </div>
                 <div class="flex flex-none items-center gap-2">
@@ -333,25 +333,11 @@
       },
 
       formatDateString(rawDate) {
-          const dateObj = new Date(rawDate);
-          let day = dateObj.getDate();
-          const month = dateObj.toLocaleString('en-US', { month: 'long' });
-          const year = dateObj.getFullYear();
-          const hours = dateObj.getHours();
-          const minutes = dateObj.getMinutes();
-
-          day = day < 10 ? '0' + day : day;
-          const formattedHours = hours < 10 ? '0' + hours : hours;
-          const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-
-          const currentDate = new Date();
-          const currentYear = currentDate.getFullYear();
-
-          if (year !== currentYear) {
-              return `${day}.${month}.${year} ${formattedHours}:${formattedMinutes}`;
-          } else {
-              return `${day}.${month} ${formattedHours}:${formattedMinutes}`;
-          }
+          // 2 Nov 2026, 11:45, the year always shown so old entries can't be misread
+          const d = new Date(rawDate);
+          if (isNaN(d)) return String(rawDate);
+          const pad = (n) => (n < 10 ? '0' + n : n);
+          return `${d.getDate()} ${d.toLocaleString('en-US', { month: 'short' })} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }
   });
 
@@ -394,25 +380,11 @@
       },
 
       formatDateString(rawDate) {
-          const dateObj = new Date(rawDate);
-          let day = dateObj.getDate();
-          const month = dateObj.toLocaleString('en-US', { month: 'long' });
-          const year = dateObj.getFullYear();
-          const hours = dateObj.getHours();
-          const minutes = dateObj.getMinutes();
-
-          day = day < 10 ? '0' + day : day;
-          const formattedHours = hours < 10 ? '0' + hours : hours;
-          const formattedMinutes = minutes < 10 ? '0' + minutes : minutes;
-
-          const currentDate = new Date();
-          const currentYear = currentDate.getFullYear();
-
-          if (year !== currentYear) {
-              return `${day}.${month}.${year} ${formattedHours}:${formattedMinutes}`;
-          } else {
-              return `${day}.${month} ${formattedHours}:${formattedMinutes}`;
-          }
+          // 2 Nov 2026, 11:45, the year always shown so old entries can't be misread
+          const d = new Date(rawDate);
+          if (isNaN(d)) return String(rawDate);
+          const pad = (n) => (n < 10 ? '0' + n : n);
+          return `${d.getDate()} ${d.toLocaleString('en-US', { month: 'short' })} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }
   });
 
@@ -531,14 +503,14 @@
                      <li>
                         <a href="#activity" @click.prevent="$store.activityStore.fetchLogs(); activeTab = 'activity'; window.location.hash = 'activity'" :aria-current="activeTab === 'activity' ? 'page' : null" class="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-gray-900 transition hover:bg-gray-200/50 aria-[current=page]:text-blue-600 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-[18px] shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M19 22H5C3.34315 22 2 20.6569 2 19V3C2 2.44772 2.44772 2 3 2H17C17.5523 2 18 2.44772 18 3V15H22V19C22 20.6569 20.6569 22 19 22ZM18 17V19C18 19.5523 18.4477 20 19 20C19.5523 20 20 19.5523 20 19V17H18ZM16 20V4H4V19C4 19.5523 4.44772 20 5 20H16ZM6 7H14V9H6V7ZM6 11H14V13H6V11ZM6 15H11V17H6V15Z"/></svg>
-                           Activity log
+                           Activity Log
                         </a>
                      </li>
 
                      <li>
                         <a href="#logins" @click.prevent="$store.loginsStore.fetchloginLogs(); activeTab = 'logins'; window.location.hash = 'logins'" :aria-current="activeTab === 'logins' ? 'page' : null" class="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm text-gray-900 transition hover:bg-gray-200/50 aria-[current=page]:text-blue-600 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-[18px] shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M4 15H6V20H18V4H6V9H4V3C4 2.44772 4.44772 2 5 2H19C19.5523 2 20 2.44772 20 3V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V15ZM10 11V8L15 12L10 16V13H2V11H10Z"/></svg>
-                           Login log
+                           Login Log
                         </a>
                      </li>
                   </ul>
@@ -1009,7 +981,7 @@
                         {{template "bulk_open" (dict "Table" "#user_services_table" "Endpoint" (printf "/containers/%s/bulk" (lastSegment .Username "_")))}}
                         <table id="user_services_table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                            <thead>
-                              <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                              <tr class="whitespace-nowrap border-b text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6">
 {{template "bulk_head_checkbox" .}}
                                  <th x-show="columns.name" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name</th>
                                  <th x-show="columns.image" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Image</th>
@@ -1097,13 +1069,12 @@
                                           </div>
                                        </div>
                                        <div class="flex flex-col gap-0">
-                                          <span class="text-gray-900 dark:text-gray-50">
-                                             <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
-                                             <span class="font-medium" id="cpu-usage-{{.Name}}"></span>
+                                          <span class="flex items-center text-xs text-gray-500 dark:text-gray-500">
+                                             Usage:&nbsp;<span class="font-medium text-gray-900 dark:text-gray-50" id="cpu-usage-{{.Name}}">–</span>
                                           </span>
-                                          <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
+                                          <span class="flex items-center text-xs text-gray-500 dark:text-gray-500">
                                              Allocated:&nbsp;
-                                             <span x-show="!editing"><span class="font-medium" x-text="value"></span> cores
+                                             <span x-show="!editing"><span class="font-medium text-gray-900 dark:text-gray-50" x-text="value"></span> cores
                                              <button type="button" @click="editing = !editing" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit limit"><span x-show="!editing"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></span></button>
                                              </span>
                                              <form action="/containers/{{lastSegment $.Username `_`}}/cpu/{{.Name}}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
@@ -1138,13 +1109,12 @@
                                           </div>
                                        </div>
                                        <div class="flex flex-col gap-0">
-                                          <span class="text-gray-900 dark:text-gray-50">
-                                             <span class="text-xs text-gray-500 dark:text-gray-500">Usage: </span>
-                                             <span class="font-medium" id="ram-usage-{{.Name}}"></span>
+                                          <span class="flex items-center text-xs text-gray-500 dark:text-gray-500">
+                                             Usage:&nbsp;<span class="font-medium text-gray-900 dark:text-gray-50" id="ram-usage-{{.Name}}">–</span>
                                           </span>
-                                          <span class="flex items-center justify-center text-xs text-gray-500 dark:text-gray-500">
+                                          <span class="flex items-center text-xs text-gray-500 dark:text-gray-500">
                                              Allocated:&nbsp;
-                                             <span x-show="!editing"><span class="font-medium" x-text="value"></span>
+                                             <span x-show="!editing"><span class="font-medium text-gray-900 dark:text-gray-50" x-text="value"></span>
                                              <button type="button" @click="editing = !editing" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit limit"><span x-show="!editing"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></span></button>
                                              </span>
                                              <form action="/containers/{{lastSegment $.Username `_`}}/ram/{{.Name}}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
@@ -1165,7 +1135,7 @@
                                     set value(val) { this.rawValue = val; this.PIDSinputValue = val; }}"
                                     class="group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left">
                                     <span x-show="!editing">
-                                       <span id="pids-usage-{{.Name}}">0</span>/<span class="font-medium text-gray-900 dark:text-gray-50" x-text="value"></span>
+                                       <span class="font-medium text-gray-900 dark:text-gray-50" id="pids-usage-{{.Name}}">0</span> / <span x-text="value"></span>
                                        <button type="button" @click="editing = !editing" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit limit"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
                                     </span>
                                     <form action="/containers/{{lastSegment $.Username `_`}}/pids/{{.Name}}" method="POST" x-show="editing" class="inline-flex items-center gap-1">
@@ -1855,7 +1825,7 @@
                   <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
                      <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                         <thead>
-                           <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                           <tr class="whitespace-nowrap border-b text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6">
                               <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
                               <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"><span class="sr-only">Actions</span></th>
                               <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP address</th>
@@ -1904,7 +1874,7 @@
         <div class="w-full overflow-auto border-t border-gray-200 dark:border-gray-800">
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                 <thead>
-                    <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                    <tr class="whitespace-nowrap border-b text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6">
                         <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
                         <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Country</th>
                         <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP address</th>

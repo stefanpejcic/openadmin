@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,6 +27,8 @@ import (
 
 //go:embed *.html
 var files embed.FS
+
+var spaceUnitRe = regexp.MustCompile(`^([0-9.]+)([A-Za-z]+)$`)
 
 var funcMap = template.FuncMap{
 	"asset":    assetURL,
@@ -94,6 +97,10 @@ var funcMap = template.FuncMap{
 	// formatDateTime is like formatDate but keeps seconds, and also parses
 	// a raw MySQL "2006-01-02 15:04:05" string (sql.NullString columns come
 	// back as the driver's raw text, not a parsed time.Time).
+	// spaceUnit puts a space between a size and its unit, 5GB -> 5 GB
+	"spaceUnit": func(s string) string {
+		return spaceUnitRe.ReplaceAllString(s, "$1 $2")
+	},
 	"formatDateTime": func(v interface{}) string {
 		switch t := v.(type) {
 		case time.Time:

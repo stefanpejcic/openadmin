@@ -171,7 +171,7 @@ var modernAreas = []navArea{
 			return buildTabs(
 				tabSpec{!c.IsReseller, "/backups/user", "User backups", strings.HasPrefix(path, "/backups/user")},
 				tabSpec{!c.IsReseller, "/backups/system", "System backups", strings.HasPrefix(path, "/backups/system")},
-				tabSpec{isEnterprise(c), "/user/import", "Import account", hasAnyPrefix(path, "/user/import", "/import/")},
+				tabSpec{isEnterprise(c), "/user/import", "Import Account", hasAnyPrefix(path, "/user/import", "/import/")},
 			)
 		}},
 
