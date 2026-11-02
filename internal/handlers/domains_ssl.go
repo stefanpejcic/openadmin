@@ -178,6 +178,11 @@ func (h *SSLPage) ServeSSL(w http.ResponseWriter, r *http.Request) {
 		action := r.PostFormValue("action")
 
 		switch action {
+		case "diagnose":
+			// asked by the page itself on load, answers with JSON
+			writeJSON(w, diagnoseCertificate(domainName))
+			return
+
 		case "custom":
 			// Pasted directly by the user now (matching the OpenPanel user
 			// panel), rather than a path to a file already sitting on

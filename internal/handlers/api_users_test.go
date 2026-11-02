@@ -356,16 +356,17 @@ func TestServeUsersPatchNeitherPasswordNorActionReturns400(t *testing.T) {
 	}
 }
 
-func TestServeUsersDeleteRequiresJSONContentType(t *testing.T) {
+func TestServeUsersDeleteWithoutBody(t *testing.T) {
 	srv, client, _ := newAPIUsersTestServer(t)
+	stubAPICheckOutputRun(t, "User deleted.\n", nil)
 	req, _ := http.NewRequest(http.MethodDelete, srv.URL+"/api/users/bob", nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", resp.StatusCode)
 	}
 }
 

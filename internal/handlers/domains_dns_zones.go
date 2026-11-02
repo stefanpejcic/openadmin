@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/gorilla/csrf"
@@ -174,7 +175,8 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		bindContentForm := r.PostFormValue("bind_content")
+		// browsers send textarea line breaks as CRLF, zone files use LF
+		bindContentForm := strings.ReplaceAll(r.PostFormValue("bind_content"), "\r\n", "\n")
 		timestamp := dnsZoneBackupTimestamp()
 		backupFilePath := filepath.Join(DNSZoneBackupDir, domainName+".zone.backup_"+timestamp)
 
@@ -189,7 +191,7 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 			}
 
 			zonePath := filepath.Join(BindZonesDir, domainName+".zone")
-			_, stderr, exitCode, verr := dnsZoneValidateRun(domainName, zonePath)
+			stdout, stderr, exitCode, verr := dnsZoneValidateRun(domainName, zonePath)
 			if verr != nil {
 				return verr
 			}
@@ -212,7 +214,8 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 					return err
 				}
 			}
-			auth.AddFlash(w, r, h.Sessions, "Zone file validation failed. Changes reverted. Error: "+stderr, "error")
+			// named-checkzone reports zone errors on stdout
+			auth.AddFlash(w, r, h.Sessions, "Zone file validation failed. Changes reverted. Error: "+strings.TrimSpace(stdout+" "+stderr), "error")
 			return nil
 		}()
 

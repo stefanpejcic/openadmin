@@ -1328,9 +1328,9 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 		return
 	}
-	// Only stdout is read line-by-line and streamed to the client; stderr
-	// is never read from here -- any output opencli sends to stderr is
-	// silently discarded, not a bug to "fix" here.
+	// stderr is kept and shown after a failure, otherwise the page only says "exit status 1"
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintf(w, "Error: %s\n\n", err.Error())
 		flusher.Flush()
@@ -1342,6 +1342,11 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 	}
 	if err := cmd.Wait(); err != nil {
+		for _, line := range strings.Split(strings.TrimSpace(stderrBuf.String()), "\n") {
+			if line = strings.TrimSpace(line); line != "" {
+				fmt.Fprintf(w, "%s\n", line)
+			}
+		}
 		fmt.Fprintf(w, "Error: %s\n", err.Error())
 		flusher.Flush()
 	}

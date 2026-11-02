@@ -43,10 +43,10 @@
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="tasks_table">
                     <thead class="">
                         <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 border-y border-gray-200 dark:border-gray-800">
-                            <th class="w-full border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 py-2.5 text-xs text-left">Command</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Status</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Time</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left"><span class="sr-only">Actions</span></th>
+                            <th scope="col" class="w-full border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 py-2.5 text-xs text-left">Command</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Status</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Time</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800" id="tasks_tbody">
@@ -183,7 +183,18 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         tbody.innerHTML = tasks.map(function (t) { return row(t, withServer); }).join('');
+        applySearch();
     }
+
+    // rebuilt rows aren't Alpine-bound, so the search box filters them here too
+    var searchInput = document.querySelector('input[x-model="searchQuery"]');
+    function applySearch() {
+        var q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+        document.querySelectorAll('#tasks_tbody tr[data-command]').forEach(function (tr) {
+            tr.hidden = q !== '' && !(tr.dataset.command || '').toLowerCase().includes(q);
+        });
+    }
+    if (searchInput) searchInput.addEventListener('input', applySearch);
 
     document.querySelector('#tasks_table thead').addEventListener('click', function (e) {
         var th = e.target.closest('th[data-sort]');

@@ -73,6 +73,16 @@
 
             {{end}}
                     </div>
+                    {{/* filled in after load from Caddy's log, only shows when it logged a failure */}}
+                    <div x-data="{ diag: null }" x-init="fetch(window.location.pathname, { method: 'POST', headers: { 'X-CSRFToken': '{{.CSRFToken}}', 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=diagnose' }).then(r => r.ok ? r.json() : null).then(d => diag = d).catch(() => {})">
+                        <div x-show="diag && diag.found" x-cloak role="status" class="mt-4 flex gap-3 rounded-md bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/70 dark:text-red-500">
+                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg>
+                            <div class="min-w-0">
+                                <p class="font-medium">Last certificate error<span x-show="diag && diag.time" class="font-normal" x-text="' (' + (diag && diag.time) + ' UTC)'"></span></p>
+                                <p class="mt-1 break-words" x-text="diag && diag.reason"></p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

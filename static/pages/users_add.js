@@ -200,7 +200,7 @@ document.getElementById('subtitle').textContent = `Creating user: '${username}',
                             if (text.includes("Successfully added user")) {
                                 showToast(`Success, user ${username} was created successfully.`, 'success');
 
-document.getElementById('title').textContent = `User created`;
+document.getElementById('title').textContent = `User created successfully`;
 document.getElementById('subtitle').textContent = `Username: ${username} Password: ${password}`;
 helpBtn.parentElement.appendChild(newLink);
 
@@ -248,7 +248,7 @@ document.getElementById('subtitle').textContent = `Error creating user: '${usern
             } else if (response.message && response.message.includes("Successfully added user")) {
                 showToast(`Success, user ${username} was created successfully.`, 'success');
 
-document.getElementById('title').textContent = `User created`;
+document.getElementById('title').textContent = `User created successfully`;
 document.getElementById('subtitle').textContent = `Username: ${username} \nPassword: ${password}`;
 helpBtn.parentElement.appendChild(newLink);
 
