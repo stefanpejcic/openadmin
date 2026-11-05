@@ -253,7 +253,9 @@ document.addEventListener('alpine:init', () => {
 });
 
 // sidebar toggle
-function toggleSidebar(){const root=document.documentElement;const isOpen=root.classList.toggle('sidebar-open');sessionStorage.setItem('sidebarOpen',isOpen);}window.addEventListener('resize',()=>{if(window.innerWidth<768){document.documentElement.classList.remove('sidebar-open');}});
+function toggleSidebar(){const root=document.documentElement;const isOpen=root.classList.toggle('sidebar-open');if(window.innerWidth>=768){sessionStorage.setItem('sidebarOpen',isOpen);}}
+// on phones the sidebar is an overlay, a tap outside it or Escape closes it
+document.addEventListener('click',e=>{if(window.innerWidth<768&&document.documentElement.classList.contains('sidebar-open')&&!e.target.closest('#sidebar,#sidebar_toggle_button')){document.documentElement.classList.remove('sidebar-open');}});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&window.innerWidth<768){document.documentElement.classList.remove('sidebar-open');}});window.addEventListener('resize',()=>{if(window.innerWidth<768){document.documentElement.classList.remove('sidebar-open');}});
 
 // ask before leaving a settings form with unsaved changes
 (function(){let dirty=false;const mark=e=>{if(e.target.closest&&e.target.closest('form[data-warn-unsaved]'))dirty=true;};document.addEventListener('input',mark);document.addEventListener('change',mark);document.addEventListener('submit',()=>{dirty=false;},true);window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});})();
