@@ -110,7 +110,7 @@ func (h *VHostFileEditor) ServeEditVHostFile(w http.ResponseWriter, r *http.Requ
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		bindContentForm := r.PostFormValue("bind_content")
+		bindContentForm := unixNewlines(r.PostFormValue("bind_content"))
 
 		procErr := func() error {
 			if err := os.WriteFile(bindFilePath, []byte(bindContentForm), 0644); err != nil {

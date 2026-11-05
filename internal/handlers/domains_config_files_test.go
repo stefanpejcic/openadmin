@@ -170,3 +170,9 @@ func TestConfigEditorPostUnrecognizedWebserverFlashesError(t *testing.T) {
 		t.Fatalf("expected save-error flash, got %s", truncate(string(body)))
 	}
 }
+
+func TestUnixNewlinesDropsCarriageReturns(t *testing.T) {
+	if got := unixNewlines("a\r\nb\r\n\nc"); got != "a\nb\n\nc" {
+		t.Fatalf("got %q", got)
+	}
+}

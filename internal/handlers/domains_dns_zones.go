@@ -174,7 +174,7 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		bindContentForm := r.PostFormValue("bind_content")
+		bindContentForm := unixNewlines(r.PostFormValue("bind_content"))
 		timestamp := dnsZoneBackupTimestamp()
 		backupFilePath := filepath.Join(DNSZoneBackupDir, domainName+".zone.backup_"+timestamp)
 

@@ -339,6 +339,13 @@ function userSearch() {
                             </svg>
                         </div>
                     </div>
+                    <select x-model="sslFilter" aria-label="Filter by SSL" style="height:30px" class="rounded border px-2 py-0 text-sm sm:text-xs border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 cursor-pointer">
+                        <option value="">All SSL</option>
+                        <option value="problems">SSL problems</option>
+                        <option value="expired">Expired</option>
+                        <option value="expiring">Expiring soon</option>
+                        <option value="none">No SSL</option>
+                    </select>
                 </div>
                 <div class="flex items-center gap-2">
 
@@ -591,7 +598,7 @@ function userSearch() {
 {{$domainURL := index . "domain_url"}}
 {{$username := index . "username"}}
 {{$status := index . "status"}}
-                        <tr data-domain="{{$domainURL}}" data-owner="{{lastSegment $username "_"}}" x-show="domainRowMatches($el, searchQuery)" class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if contains $username "SUSPENDED_"}}bg-red-50 dark:bg-red-400/10{{end}}">
+                        <tr data-domain="{{$domainURL}}" data-owner="{{lastSegment $username "_"}}" data-ssl="{{index . "ssl"}}" data-ssl-problem="{{index . "ssl_problem"}}" x-show="domainRowMatches($el, searchQuery) && sslRowMatches($el, sslFilter)" class="user-row [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900 {{if contains $username "SUSPENDED_"}}bg-red-50 dark:bg-red-400/10{{end}}">
 {{$skip := "unsuspend"}}{{if eq $status "suspended"}}{{$skip = "suspend"}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" $domainURL "Label" $domainURL "Skip" $skip)}}
 
@@ -968,6 +975,18 @@ function userSearch() {
 
 <script>
 // row filter, names come from data attributes so quotes in them can't break the expression
+// "problems" is anything the SSL column flags: expired, expiring, no cert file or one that can't be read
+function sslRowMatches(row, filter) {
+    const problem = row.dataset.sslProblem || '';
+    switch (filter) {
+        case 'problems': return problem !== '';
+        case 'expired': return problem === 'expired';
+        case 'expiring': return problem === 'expiring';
+        case 'none': return row.dataset.ssl !== 'automatic' && row.dataset.ssl !== 'custom';
+    }
+    return true;
+}
+
 function domainRowMatches(row, query) {
     const q = (query || '').toLowerCase();
     return q === '' || row.dataset.domain.toLowerCase().includes(q) || row.dataset.owner.toLowerCase().includes(q);
@@ -1110,6 +1129,7 @@ function domainRowMatches(row, query) {
 function domainsTable() {
     return {
         searchQuery: '',
+        sslFilter: '',
         columns: {
             id: false,
             domain: true,
@@ -1133,10 +1153,16 @@ function domainsTable() {
             if (owner) {
                 this.searchQuery = owner;
             }
+            if (['problems', 'expired', 'expiring', 'none'].includes(params.get('ssl'))) {
+                this.sslFilter = params.get('ssl');
+            }
         },
 
         initWatchers() {
             this.$watch('searchQuery', () => {
+                this.$nextTick(() => this.updateCount());
+            });
+            this.$watch('sslFilter', () => {
                 this.$nextTick(() => this.updateCount());
             });
 

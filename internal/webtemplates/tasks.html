@@ -169,7 +169,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function render() {
         var tasks = lastTasks || [];
         var tbody = document.getElementById('tasks_tbody');
-        var withServer = headers(tasks.some(function (t) { return t.node && t.node !== 'local'; }));
+        // a job shared by every server still has node "local", its nodes list says where else it runs
+        var withServer = headers(tasks.some(function (t) { return (t.node && t.node !== 'local') || (t.nodes || []).length > 1; }));
         if (onlyNode) tasks = tasks.filter(function (t) { return (t.nodes || [t.node]).indexOf(onlyNode) !== -1; });
         if (sortKey) {
             tasks = tasks.slice().sort(function (a, b) {
@@ -197,6 +198,9 @@ document.addEventListener('DOMContentLoaded', function () {
         render();
     });
 
+    // same search filter as the first render, alpine picks it up on the rebuilt rows
+    var searchShow = ' x-show="searchQuery === \'\' || $el.dataset.command.toLowerCase().includes(searchQuery.toLowerCase())"';
+
     function row(t, withServer) {
         var remote = t.node && t.node !== 'local';
         var server = withServer ? '<td class="' + td + '">' + esc(t.server || '') + '</td>' : '';
@@ -205,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var kill = remote
                 ? '<button type="button" class="ml-2 text-blue-500 hover:underline" data-kill-node="' + esc(t.node) + '" data-kill-pid="' + esc(t.pid) + '">Kill</button>'
                 : '<form method="POST" action="/server/processes/' + esc(t.pid) + '/kill" class="inline" onsubmit="return confirm(\'Kill this task?\');"><input type="hidden" name="csrf_token" value="' + esc(csrfToken) + '"><button type="submit" class="ml-2 text-blue-500 hover:underline">Kill</button></form>';
-            return '<tr data-command="' + esc(t.command) + '" class="group hover:bg-gray-50 hover:dark:bg-gray-900">' +
+            return '<tr data-command="' + esc(t.command) + '"' + searchShow + ' class="group hover:bg-gray-50 hover:dark:bg-gray-900">' +
                 '<td class="w-full p-4 text-sm py-1 break-words">' + esc(t.command) + '</td>' + server +
                 '<td class="p-4 text-sm whitespace-nowrap py-1">' + runningBadge + '</td>' +
                 '<td class="' + td + '">' + esc(t.time) + '</td>' +
@@ -213,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '</tr>';
         }
         var edit = t.link || '/server/crons#' + t.line_number;
-        return '<tr data-command="' + esc(t.command) + '" class="hover:bg-gray-50 hover:dark:bg-gray-900">' +
+        return '<tr data-command="' + esc(t.command) + '"' + searchShow + ' class="hover:bg-gray-50 hover:dark:bg-gray-900">' +
             '<td class="w-full p-4 text-sm py-1 text-gray-600 dark:text-gray-400 break-words">' + esc(t.command) + '</td>' + server +
             '<td class="p-4 text-sm whitespace-nowrap py-1">' + scheduledBadge + '</td>' +
             '<td class="' + td + '">' + esc(t.time) + '</td>' +
