@@ -1162,3 +1162,29 @@ func TestDNSModuleOnReadsEnabledModules(t *testing.T) {
 		t.Fatal("dns module is on")
 	}
 }
+
+func TestAddKeyReuse(t *testing.T) {
+	src := "{\n    log\n}\n\n# START HOSTNAME IP #\n1.2.3.4 {\n  tls {\n    issuer acme {\n      profile shortlived\n    }\n  }\n  reverse_proxy localhost:2087\n}\n# END HOSTNAME IP #\nexample.net {\n  tls {\n  }\n}\n"
+	got, changed := addKeyReuse(src)
+	if !changed || strings.Count(got, "reuse_private_keys") != 1 || !strings.Contains(got, "  tls {\n    reuse_private_keys\n    issuer acme {") {
+		t.Fatalf("unexpected result:\n%s", got)
+	}
+	if _, again := addKeyReuse(got); again {
+		t.Fatal("added reuse_private_keys twice")
+	}
+	if _, none := addKeyReuse("example.net {\n  tls {\n  }\n}\n"); none {
+		t.Fatal("touched a Caddyfile without a HOSTNAME IP block")
+	}
+}
+
+func TestTrustNameFallsBackToIP(t *testing.T) {
+	if got := trustName(Node{URL: "https://158.220.122.185:2087"}); got != "158.220.122.185" {
+		t.Fatalf("got %q", got)
+	}
+	if got := trustName(Node{URL: "https://panel.example.net:2087"}); got != "" {
+		t.Fatalf("got %q for a hostname without a saved name", got)
+	}
+	if got := trustName(Node{URL: "https://1.2.3.4:2087", TLSName: "panel.example.net"}); got != "panel.example.net" {
+		t.Fatalf("got %q", got)
+	}
+}
