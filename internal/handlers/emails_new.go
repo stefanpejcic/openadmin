@@ -23,6 +23,9 @@ type emailDomainOption struct {
 // same rule the user panel uses for the part before the @
 var emailLocalPartRe = regexp.MustCompile(`^[A-Za-z0-9._%+-]{1,64}$`)
 
+// docker-mailserver colors its errors even without a terminal
+var emailAnsiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
 var emailQuotaUnits = map[string]bool{"k": true, "M": true, "G": true, "T": true}
 
 // emailDomainOptions lists every domain the acting admin or reseller can add mailboxes on
@@ -125,7 +128,7 @@ func (e *Emails) ServeEmailsNew(w http.ResponseWriter, r *http.Request) {
 		if msg == "" {
 			msg = err.Error()
 		}
-		back("Failed to add email "+email+": "+msg, "error")
+		back("Failed to add email "+email+": "+emailAnsiRe.ReplaceAllString(msg, ""), "error")
 		return
 	}
 
