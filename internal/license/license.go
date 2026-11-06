@@ -191,6 +191,12 @@ func writeCache() {
 	os.WriteFile(CacheFilePath, data, 0644)
 }
 
+// CachedValid is for commands run from a shell, the service refreshes this cache on every successful check
+func CachedValid() bool {
+	age, ok := readCacheAge()
+	return ok && age < RecheckInterval+GracePeriod
+}
+
 func readCacheAge() (time.Duration, bool) {
 	data, err := os.ReadFile(CacheFilePath)
 	if err != nil {

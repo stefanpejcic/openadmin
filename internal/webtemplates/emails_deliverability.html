@@ -40,6 +40,11 @@
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                     </div>
                 </div>
+                    <select x-show="servers.length" x-model="serverFilter" aria-label="Filter by server" class="rounded border border-dashed border-gray-300 bg-white px-2 py-1.5 font-medium text-gray-600 sm:text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-gray-400">
+                        <option value="">All servers</option>
+                        <template x-for="s in servers" :key="s"><option :value="s" x-text="s"></option></template>
+                    </select>
+
             </div>
         </div>
 
@@ -47,7 +52,7 @@
             <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="deliverability_table">
                 <thead class="">
                     <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
-                        <template x-for="col in columns" :key="col.key">
+                        <template x-for="col in shownColumns" :key="col.key">
                             <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                                 <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
                                     <span x-text="col.label"></span>
@@ -68,6 +73,7 @@
                     <template x-for="item in items" :key="item.key">
                         <tr @click="item.detail || toggle(item.row.domain)" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900" :class="item.detail ? 'bg-gray-50 dark:bg-gray-900' : 'cursor-pointer'">
                             <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="item.row.domain"></td>
+                            <td x-show="!item.detail && servers.length" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400" x-text="item.row.server"></td>
                             <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><a :href="'/users/' + item.row.owner" @click.stop x-text="item.row.owner"></a></td>
                             <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><span :class="badge(item.row.dkim.status)" x-text="label(item.row.dkim.status)"></span></td>
                             <td x-show="!item.detail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><span :class="badge(item.row.spf.status)" x-text="label(item.row.spf.status)"></span></td>
@@ -123,11 +129,17 @@ document.addEventListener('alpine:init', () => {
             { key: 'dmarc', label: 'DMARC' },
             { key: 'ok', label: 'Status' },
         ],
+        serverFilter: '',
+        get servers() { return [...new Set(this.rows.map(r => r.server).filter(Boolean))]; },
+        get shownColumns() {
+            if (!this.servers.length) return this.columns;
+            return [this.columns[0], { key: 'server', label: 'Server' }, ...this.columns.slice(1)];
+        },
         async load(refresh) {
             this.loading = true;
             this.error = '';
             try {
-                const res = await fetch('/emails/deliverability?output=json' + (refresh ? '&refresh=1' : ''));
+                const res = await fetch('/emails/deliverability?output=json&cluster=all' + (refresh ? '&refresh=1' : ''));
                 if (!res.ok) throw new Error('status ' + res.status);
                 this.rows = (await res.json()).domains || [];
             } catch (e) {
@@ -145,6 +157,7 @@ document.addEventListener('alpine:init', () => {
                 return (r[k] || '').toLowerCase();
             };
             return this.rows
+                .filter(r => !this.serverFilter || r.server === this.serverFilter)
                 .filter(r => q === '' || r.domain.includes(q) || (r.owner || '').toLowerCase().includes(q))
                 .sort((a, b) => {
                     const x = key(a), y = key(b);

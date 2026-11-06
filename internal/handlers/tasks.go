@@ -216,7 +216,8 @@ type taskRow struct {
 	Command    string `json:"command"`
 	PID        int    `json:"pid,omitempty"`
 	LineNumber int    `json:"line_number,omitempty"`
-	Time       string `json:"time"` // elapsed ("4s") for running, countdown ("in 4h 26m") for scheduled
+	Schedule   string `json:"schedule,omitempty"` // cron expression, the master shows a job scheduled the same on several servers once
+	Time       string `json:"time"`               // elapsed ("4s") for running, countdown ("in 4h 26m") for scheduled
 }
 
 // listTasks combines currently running opencli processes with opencli
@@ -228,7 +229,7 @@ func listTasks() []taskRow {
 		rows = append(rows, taskRow{Status: "running", Command: t.Command, PID: t.PID, Time: t.Elapsed})
 	}
 	for _, s := range listScheduledOpencliTasks() {
-		rows = append(rows, taskRow{Status: "scheduled", Command: s.Command, LineNumber: s.LineNumber, Time: s.In})
+		rows = append(rows, taskRow{Status: "scheduled", Command: s.Command, LineNumber: s.LineNumber, Schedule: s.Schedule, Time: s.In})
 	}
 	return rows
 }

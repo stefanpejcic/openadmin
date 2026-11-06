@@ -101,6 +101,18 @@ func (db *DB) migrate() error {
 		return err
 	}
 
+	// small per-admin settings like the dashboard layout, so they follow the account to any browser
+	if _, err := db.sql.Exec(`
+		CREATE TABLE IF NOT EXISTS user_pref (
+			user_id INTEGER NOT NULL,
+			key TEXT NOT NULL,
+			value TEXT NOT NULL,
+			PRIMARY KEY (user_id, key)
+		)
+	`); err != nil {
+		return err
+	}
+
 	credColumns, err := db.tableColumns("webauthn_credential")
 	if err != nil {
 		return err
@@ -276,6 +288,10 @@ func (db *DB) RenameUser(oldUsername, newUsername string) error {
 
 // DeleteUser backs the "delete" admin action.
 func (db *DB) DeleteUser(username string) error {
+	// sqlite reuses ids, a new admin must not inherit the old one's settings
+	if _, err := db.sql.Exec(`DELETE FROM user_pref WHERE user_id IN (SELECT id FROM user WHERE username = ?)`, username); err != nil {
+		return err
+	}
 	_, err := db.sql.Exec(`DELETE FROM user WHERE username = ?`, username)
 	return err
 }
@@ -319,5 +335,26 @@ func (db *DB) RenameCredential(id int64, name string) error {
 // DeleteCredentialByID deletes a single Webauthn credential by its row id.
 func (db *DB) DeleteCredentialByID(id int64) error {
 	_, err := db.sql.Exec(`DELETE FROM webauthn_credential WHERE id = ?`, id)
+	return err
+}
+
+// Pref reads one of an admin's saved settings, "" when it was never saved
+func (db *DB) Pref(userID int64, key string) (string, error) {
+	var v string
+	err := db.sql.QueryRow(`SELECT value FROM user_pref WHERE user_id = ? AND key = ?`, userID, key).Scan(&v)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return v, err
+}
+
+// SetPref saves one of an admin's settings, an empty value removes it
+func (db *DB) SetPref(userID int64, key, value string) error {
+	if value == "" {
+		_, err := db.sql.Exec(`DELETE FROM user_pref WHERE user_id = ? AND key = ?`, userID, key)
+		return err
+	}
+	_, err := db.sql.Exec(`INSERT INTO user_pref (user_id, key, value) VALUES (?, ?, ?)
+		ON CONFLICT (user_id, key) DO UPDATE SET value = excluded.value`, userID, key, value)
 	return err
 }

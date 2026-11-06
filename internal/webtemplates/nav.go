@@ -23,6 +23,8 @@ type NavLink struct {
 	Href   string
 	Label  string
 	Active bool
+	// Dot marks a tab that has something to look at
+	Dot bool
 }
 
 func hasAnyPrefix(path string, prefixes ...string) bool {
@@ -215,6 +217,7 @@ var modernAreas = []navArea{
 				tabSpec{true, "/server/crons", "Scheduled Actions", strings.HasPrefix(path, "/server/crons")},
 				tabSpec{!c.IsReseller, "/terminal", "Terminal", strings.HasPrefix(path, "/terminal")},
 				tabSpec{!c.IsReseller, "/server/processes", "Process Manager", strings.HasPrefix(path, "/server/processes")},
+				tabSpec{!c.IsReseller, "/tasks", "Tasks", strings.HasPrefix(path, "/tasks")},
 			)
 		}},
 	{label: "System", icon: systemIcon, menuID: "system-menu", show: adminOnly,
@@ -227,6 +230,7 @@ var modernAreas = []navArea{
 				tabSpec{true, "/server/reboot", "Server Reboot", strings.HasPrefix(path, "/server/reboot")},
 				tabSpec{true, "/server/swap", "Swap", strings.HasPrefix(path, "/server/swap")},
 				tabSpec{true, "/server/migrate", "Migrate", strings.HasPrefix(path, "/server/migrate")},
+				tabSpec{isEnterprise(c), "/server/cluster", "Multi-Server", strings.HasPrefix(path, "/server/cluster")},
 				tabSpec{true, "/server/demo-mode", "Demo Mode", strings.HasPrefix(path, "/server/demo-mode")},
 			)
 		}},
@@ -297,7 +301,7 @@ var helpDocs = map[string]string{
 	"/domains/file-templates":        "admin/domains/file_templates",
 	"/domains/vhost-templates":       "admin/domains/vhost_templates",
 	"/domains/ratelimit":             "admin/domains/ratelimit",
-	"/websites":                      "admin/websites",
+	"/websites":                      "admin/websites/websites",
 	"/databases":                     "admin/databases/mysql",
 	"/databases/postgresql":          "admin/databases/postgresql",
 	"/databases/mongodb":             "admin/databases/mongodb",
@@ -326,6 +330,8 @@ var helpDocs = map[string]string{
 	"/security/disable-admin":        "admin/security/disable-admin",
 	"/server/resource-usage":         "admin/advanced/resource-usage",
 	"/server/crons":                  "admin/advanced/crons",
+	"/tasks":                         "admin/advanced/tasks",
+	"/account":                       "admin/accounts/resellers",
 	"/terminal":                      "admin/advanced/terminal",
 	"/server/processes":              "admin/advanced/processes",
 	"/server/timezone":               "admin/system/timezone",
@@ -334,6 +340,7 @@ var helpDocs = map[string]string{
 	"/server/reboot":                 "admin/system/reboot",
 	"/server/swap":                   "admin/system/swap",
 	"/server/migrate":                "admin/system/migrate",
+	"/server/cluster":                "admin/system/multi-server/index",
 	"/server/demo-mode":              "admin/system/demo-mode",
 	"/settings/general":              "admin/settings/general",
 	"/settings/open-panel":           "admin/settings/openpanel",
@@ -346,11 +353,20 @@ var helpDocs = map[string]string{
 	"/settings/locales":              "admin/settings/locales",
 	"/settings/custom-code":          "admin/settings/custom_code",
 	"/license":                       "admin/license",
+	"/dashboard":                     "admin/001_dashboard",
+	"/notifications":                 "admin/002_notifications",
+	"/dashboard/summary":             "admin/003_daily-summary",
 }
 
 // helpSection picks the part of doc a page shows, "until:X" keeps what's before the X heading and "from:X" keeps that section
 func helpSection(doc, path string) string {
 	switch doc {
+	case "admin/accounts/resellers":
+		// a reseller's own account page shows just its section of the resellers doc
+		if strings.HasPrefix(path, "/account") {
+			return "from:Reseller Account"
+		}
+		return ""
 	case "admin/accounts/users":
 		if strings.HasPrefix(path, "/users/") && strings.Trim(path, "/") != "users" {
 			return "from:Single User"
@@ -379,4 +395,25 @@ func HelpDocFor(tabs []NavLink, path string) (doc, section string) {
 		}
 	}
 	return "", ""
+}
+
+// DashboardTabs puts the dashboard, notifications, daily summary and license pages under one tab bar, nil on other pages
+func DashboardTabs(c *Chrome) []NavLink {
+	path := c.CurrentPath
+	if path != "/" && !hasAnyPrefix(path, "/dashboard", "/notifications", "/license", "/support/") {
+		return nil
+	}
+	tabs := buildTabs(
+		tabSpec{true, "/dashboard", "Dashboard", path == "/" || path == "/dashboard"},
+		tabSpec{true, "/notifications", "Notifications", strings.HasPrefix(path, "/notifications")},
+		tabSpec{c.SummaryTab, "/dashboard/summary", "Daily Summary", strings.HasPrefix(path, "/dashboard/summary")},
+		tabSpec{!c.IsReseller && isEnterprise(c), "/license", "License", hasAnyPrefix(path, "/license", "/support/")},
+		tabSpec{!c.IsReseller && !isEnterprise(c), "/license", "Upgrade", hasAnyPrefix(path, "/license", "/support/")},
+	)
+	for i := range tabs {
+		if tabs[i].Href == "/dashboard/summary" {
+			tabs[i].Dot = c.SummaryAttention
+		}
+	}
+	return tabs
 }

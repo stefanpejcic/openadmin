@@ -23,6 +23,9 @@ type emailDomainOption struct {
 // same rule the user panel uses for the part before the @
 var emailLocalPartRe = regexp.MustCompile(`^[A-Za-z0-9._%+-]{1,64}$`)
 
+// docker-mailserver colors its errors even without a terminal
+var emailAnsiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
 var emailQuotaUnits = map[string]bool{"k": true, "M": true, "G": true, "T": true}
 
 // emailDomainOptions lists every domain the acting admin or reseller can add mailboxes on
@@ -64,8 +67,9 @@ func (e *Emails) ServeEmailsNew(w http.ResponseWriter, r *http.Request) {
 		auth.AddFlash(w, r, e.Sessions, msg, category)
 		http.Redirect(w, r, "/emails/accounts", http.StatusSeeOther)
 	}
-	if checkMailserverStatus() != "running" {
-		back("The mailserver is not running, start it before adding email accounts.", "error")
+	// a mailserver without accounts keeps restarting until it gets one, so opencli has to be let through while it's down
+	if checkMailserverStatus() == "not_installed" {
+		back("The mailserver is not installed.", "error")
 		return
 	}
 
@@ -124,7 +128,7 @@ func (e *Emails) ServeEmailsNew(w http.ResponseWriter, r *http.Request) {
 		if msg == "" {
 			msg = err.Error()
 		}
-		back("Failed to add email "+email+": "+msg, "error")
+		back("Failed to add email "+email+": "+emailAnsiRe.ReplaceAllString(msg, ""), "error")
 		return
 	}
 
@@ -133,6 +137,10 @@ func (e *Emails) ServeEmailsNew(w http.ResponseWriter, r *http.Request) {
 			back("Email "+email+" was added for user "+owner+", but setting the "+quota+" quota failed: "+qErr, "warning")
 			return
 		}
+	}
+	if strings.Contains(stderr, "is not running") {
+		back("Email "+email+" added for user "+owner+". The mailserver is not up right now, the account will work once it has started.", "warning")
+		return
 	}
 	back("Email "+email+" added for user "+owner+".", "success")
 }

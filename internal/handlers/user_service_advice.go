@@ -102,9 +102,6 @@ func adviseUserServices(username string, st userServiceState) []string {
 		has[s] = true
 	}
 	ws := strings.ToLower(st.WebServer)
-	if strings.Contains(ws, "litespeed") {
-		ws = "openlitespeed"
-	}
 
 	if len(st.DomainPHP) > 0 && st.Running != nil && ws != "" && has[ws] && !st.Running[ws] {
 		out = append(out, fmt.Sprintf("The %s webserver isn't running, so this user's %d domain(s) are down. Recommended: start %s.", ws, len(st.DomainPHP), ws))
@@ -118,9 +115,10 @@ func adviseUserServices(username string, st userServiceState) []string {
 	}
 	sort.Strings(runningPHP)
 
-	if ws == "openlitespeed" {
+	if ws == "openlitespeed" || ws == "litespeed" {
+		name := map[string]string{"openlitespeed": "OpenLiteSpeed", "litespeed": "LiteSpeed"}[ws]
 		for _, v := range runningPHP {
-			out = append(out, fmt.Sprintf("php-fpm-%s isn't needed, OpenLiteSpeed uses its own LSPHP inside the same container. Recommended: stop php-fpm-%s.", v, v))
+			out = append(out, fmt.Sprintf("php-fpm-%s isn't needed, %s uses its own LSPHP inside the same container. Recommended: stop php-fpm-%s.", v, name, v))
 		}
 	} else if len(st.DomainPHP) > 0 {
 		used := map[string][]string{}

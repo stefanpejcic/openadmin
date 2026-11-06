@@ -68,7 +68,7 @@ func TestMainConfPathForKnownWebservers(t *testing.T) {
 		"nginx":         "nginx.conf",
 		"openresty":     "openresty.conf",
 		"openlitespeed": "openlitespeed.conf",
-		"litespeed":     "openlitespeed.conf",
+		"litespeed":     "litespeed.conf",
 	}
 	for webserver, filename := range cases {
 		want := filepath.Join("/home", "alice-ctx", filename)
@@ -168,5 +168,11 @@ func TestConfigEditorPostUnrecognizedWebserverFlashesError(t *testing.T) {
 	resp.Body.Close()
 	if !strings.Contains(string(body), "Error saving main configuration file for nobody.") {
 		t.Fatalf("expected save-error flash, got %s", truncate(string(body)))
+	}
+}
+
+func TestUnixNewlinesDropsCarriageReturns(t *testing.T) {
+	if got := unixNewlines("a\r\nb\r\n\nc"); got != "a\nb\n\nc" {
+		t.Fatalf("got %q", got)
 	}
 }

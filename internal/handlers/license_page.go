@@ -3,9 +3,12 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -59,11 +62,69 @@ func (l *LicensePage) ServeLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	webtemplates.Render(w, "settings_license.html", mergeChrome(map[string]interface{}{
+	data := map[string]interface{}{
 		"Key":       key,
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, l.Sessions),
-	}, r, "License"))
+	}
+	if key == nil || key == "" {
+		data["Upgrade"] = enterpriseFeatures(r.Context())
+	}
+	webtemplates.Render(w, "settings_license.html", mergeChrome(data, r, "License"))
+}
+
+// enterpriseFeaturesURL is generated from the website's enterprise table, read from github so it's current without a website deploy
+var enterpriseFeaturesURL = "https://raw.githubusercontent.com/stefanpejcic/OpenPanel/main/website/static/enterprise/features.json"
+
+type EnterpriseFeatures struct {
+	Price      string `json:"price"`
+	BuyURL     string `json:"buy_url"`
+	CompareURL string `json:"compare_url"`
+	Limits     []struct {
+		Name       string `json:"name"`
+		Community  string `json:"community"`
+		Enterprise string `json:"enterprise"`
+	} `json:"limits"`
+	Sections []struct {
+		Title    string   `json:"title"`
+		Features []string `json:"features"`
+	} `json:"sections"`
+}
+
+var (
+	enterpriseMu      sync.Mutex
+	enterpriseCache   *EnterpriseFeatures
+	enterpriseFetched time.Time
+)
+
+// enterpriseFeatures is cached for a day, a failed fetch is retried after 10 minutes and the page shows just the links meanwhile
+func enterpriseFeatures(ctx context.Context) *EnterpriseFeatures {
+	enterpriseMu.Lock()
+	defer enterpriseMu.Unlock()
+	ttl := 24 * time.Hour
+	if enterpriseCache == nil {
+		ttl = 10 * time.Minute
+	}
+	if !enterpriseFetched.IsZero() && time.Since(enterpriseFetched) < ttl {
+		return enterpriseCache
+	}
+	enterpriseFetched = time.Now()
+	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, enterpriseFeaturesURL, nil)
+	if err != nil {
+		return enterpriseCache
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return enterpriseCache
+	}
+	defer resp.Body.Close()
+	var f EnterpriseFeatures
+	if resp.StatusCode == http.StatusOK && json.NewDecoder(resp.Body).Decode(&f) == nil && len(f.Sections) > 0 {
+		enterpriseCache = &f
+	}
+	return enterpriseCache
 }
 
 // ServeLicenseKey handles GET/POST /license/key.

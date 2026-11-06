@@ -90,7 +90,7 @@ func (h *CaddyFileEditor) ServeEditCaddyFile(w http.ResponseWriter, r *http.Requ
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		bindContentForm := r.PostFormValue("bind_content")
+		bindContentForm := unixNewlines(r.PostFormValue("bind_content"))
 		timestamp := caddyBackupTimestampRun()
 		backupFilePath := filepath.Join(CaddyFileBackupDir, domainName+".conf.backup_"+timestamp)
 

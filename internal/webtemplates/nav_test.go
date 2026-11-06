@@ -99,7 +99,6 @@ func TestBuildModernNavServerAndSystem(t *testing.T) {
 		"/terminal":              "Server",
 		"/tasks":                 "Server",
 		"/server/timezone":       "System",
-		"/server/node":           "System",
 		"/user/import":           "Backups",
 		"/users/alice":           "Accounts",
 		"/settings/updates/log":  "Settings",
@@ -165,5 +164,12 @@ func TestHelpDocForWAFOpensTheTabSection(t *testing.T) {
 		if doc, part := HelpDocFor(tabs, path); doc != "admin/security/waf" || part != want {
 			t.Errorf("%s: got %q %q, want admin/security/waf %q", path, doc, part, want)
 		}
+	}
+}
+
+func TestHelpDocForResellerAccountOpensItsSection(t *testing.T) {
+	tabs := []NavLink{{Href: "/account", Active: true}}
+	if doc, part := HelpDocFor(tabs, "/account"); doc != "admin/accounts/resellers" || part != "from:Reseller Account" {
+		t.Fatalf("got %q %q", doc, part)
 	}
 }

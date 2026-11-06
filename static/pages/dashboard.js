@@ -1,6 +1,6 @@
 function updateUserActivityTable() {
     $.ajax({
-        url: '/json/combined_activity',
+        url: '/json/combined_activity?cluster=all',
         type: 'GET',
         dataType: 'json',
         success: function (data) {

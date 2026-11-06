@@ -350,7 +350,6 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 	"POST /server/processes/{pid}/{action}": func(r *http.Request) string {
 		return actJoin(titleWord(actPath(r, "action")), "process", actPath(r, "pid"))
 	},
-	"POST /server/node":       func(r *http.Request) string { return "Changed cluster nodes" },
 	"POST /server/ssh":        func(r *http.Request) string { return "Changed SSH access" },
 	"POST /server/ssh/config": func(r *http.Request) string { return "Edited SSH configuration" },
 	"POST /server/demo-mode":  func(r *http.Request) string { return "Changed demo mode" },

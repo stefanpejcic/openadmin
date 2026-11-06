@@ -134,14 +134,18 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 		}
 		return err == nil, string(out)
 	case "restart":
-		_, _ = runCompose("down", svc)
-		// Always force-remove afterward, even when `down` reports
-		// success -- it can still leave the container wedged in a
-		// transitional state (e.g. stuck "Stopping" after a crashed
-		// conmon/OCI process), which then blocks `compose up -d` from
-		// recreating it.
+		// stop and recreate only this container, compose down would also take its dependencies (mysql, redis) down and up again
+		if cmd, err := podman.Command("default", "stop", "-t", "10", svc); err == nil {
+			cmd.Dir = workingDir
+			_ = cmd.Run()
+		}
+		// force-remove even after a clean stop, a container wedged in "Stopping" blocks up -d
 		_ = podmanForceRemoveContainer(svc)
-		out, err := runCompose("up", "-d", svc)
+		out, err := runCompose("up", "-d", "--no-deps", svc)
+		if err != nil {
+			// a dependency that wasn't running has to come up too
+			out, err = runCompose("up", "-d", svc)
+		}
 		if err == nil && serviceName == "openpanel" {
 			// Emptied, not removed: the chrome banner checks for
 			// non-empty content (os.ReadFile), unlike the openadmin
@@ -609,14 +613,18 @@ func realManageService(serviceName, action string) (bool, string) {
 		}
 		return err == nil, string(out)
 	case "restart":
-		_, _ = runCompose("down", svc)
-		// Always force-remove afterward, even when `down` reports
-		// success -- it can still leave the container wedged in a
-		// transitional state (e.g. stuck "Stopping" after a crashed
-		// conmon/OCI process), which then blocks `compose up -d` from
-		// recreating it.
+		// stop and recreate only this container, compose down would also take its dependencies (mysql, redis) down and up again
+		if cmd, err := podman.Command("default", "stop", "-t", "10", svc); err == nil {
+			cmd.Dir = workingDir
+			_ = cmd.Run()
+		}
+		// force-remove even after a clean stop, a container wedged in "Stopping" blocks up -d
 		_ = podmanForceRemoveContainer(svc)
-		out, err := runCompose("up", "-d", svc)
+		out, err := runCompose("up", "-d", "--no-deps", svc)
+		if err != nil {
+			// a dependency that wasn't running has to come up too
+			out, err = runCompose("up", "-d", svc)
+		}
 		if err == nil && serviceName == "openpanel" {
 			// Emptied, not removed: the chrome banner checks for
 			// non-empty content (os.ReadFile), unlike the openadmin

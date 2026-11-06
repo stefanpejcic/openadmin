@@ -238,6 +238,14 @@
     <div class="space-y-6 md:col-span-2">
       <div
         class="p-4 relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden">
+        <div x-data="acmeDiagnosis()" x-init="load()" x-show="found" x-cloak class="mb-4 rounded border-l-4 border-yellow-500 bg-amber-50 p-3 text-sm dark:bg-gray-900">
+          <p class="font-medium text-gray-900 dark:text-gray-50">Last certificate error <span class="font-normal text-gray-500" x-text="time"></span></p>
+          <p class="mt-1 text-gray-700 dark:text-gray-300" x-text="reason"></p>
+          <details class="mt-1">
+            <summary class="cursor-pointer text-xs text-gray-500">Error details</summary>
+            <p class="mt-1 break-all font-mono text-xs text-gray-600 dark:text-gray-400" x-text="error"></p>
+          </details>
+        </div>
         <div class="flex justify-between items-center">
           <button @click="fetchLogs" x-text="buttonText" :disabled="loading" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 gap-x-0.5 whitespace-nowrap sm:w-fit" id="service-log"></button>
 
@@ -258,6 +266,27 @@
 
   <script>
     const domainName = "{{.DomainName}}";
+
+    // reads caddy's log for the domain's newest certificate error, the command next to the logs button is there when nothing is found
+    function acmeDiagnosis() {
+        return {
+            found: false, reason: '', error: '', time: '',
+            async load() {
+                try {
+                    const response = await fetch(`/domains/ssl/${domainName}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: new URLSearchParams({ action: 'diagnose' })
+                    });
+                    if (!response.ok) return;
+                    Object.assign(this, await response.json());
+                } catch (e) {}
+            }
+        };
+    }
 
     document.addEventListener('alpine:init', () => {
       Alpine.data('logViewer', () => ({

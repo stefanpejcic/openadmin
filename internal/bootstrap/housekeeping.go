@@ -12,6 +12,7 @@ var executablePaths = []string{
 	"/etc/openpanel/services/watcher.sh",       // reload dns zones
 	"/etc/openpanel/mysql/scripts/dump.sh",     // mysql export script for backups
 	"/etc/openpanel/openlitespeed/start.sh",    // overwrites ols entrypoint
+	"/etc/openpanel/litespeed/start.sh",        // overwrites lsws entrypoint
 }
 
 // cacheDir is a var (not a const) so tests can point it at a scratch

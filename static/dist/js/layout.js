@@ -11,39 +11,53 @@ function formatBytes(bytes) {
     return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
 }
 
+// label on the left, value on the right
+function tipRow(label, value) {
+    return `<div style="display:flex;justify-content:space-between;gap:1.5rem;white-space:nowrap"><span>${label}</span><span>${value}</span></div>`;
+}
+
+const tipArrow = `<div class="tooltip-arrow" data-popper-arrow></div>`;
+
 function updateSSEUI(data) {
     if (data.cpu !== undefined) {
-        const cpuAvg = Object.values(data.cpu).reduce((a,b)=>a+b,0)/Object.values(data.cpu).length;
-        document.getElementById("sse_cpu").textContent = cpuAvg.toFixed(1) + "%";
         const cpuTooltip = document.getElementById("tooltip-sse_cpu");
-        cpuTooltip.innerHTML = "CPU Usage per core:<br>" +
-            Object.entries(data.cpu)
-                  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-                  .map(([core, val]) => `${core.replace(/_/g, ' ')}: ${val.toFixed(1)}%`)
-                  .join("<br>") +
-            `<div class="tooltip-arrow" data-popper-arrow></div>`;
+        // a master gets every member's average and shows the busiest one
+        if (Array.isArray(data.cpu.servers)) {
+            const servers = [...data.cpu.servers].sort((a, b) => b.avg - a.avg);
+            document.getElementById("sse_cpu").textContent = (servers.length ? servers[0].avg : 0).toFixed(1) + "%";
+            cpuTooltip.innerHTML = "CPU usage:" + servers.map(s => tipRow(s.name, `${s.avg.toFixed(1)}% (${s.cores} ${s.cores === 1 ? 'core' : 'cores'})`)).join("") + tipArrow;
+        } else {
+            const cpuValues = Object.values(data.cpu);
+            document.getElementById("sse_cpu").textContent = (cpuValues.reduce((a,b)=>a+b,0)/cpuValues.length).toFixed(1) + "%";
+            cpuTooltip.innerHTML = "CPU usage per core:" +
+                Object.entries(data.cpu)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([core, val]) => tipRow(core.replace(/_/g, ' '), `${val.toFixed(1)}%`))
+                      .join("") + tipArrow;
+        }
     }
 
     if (data.memory !== undefined) {
         const mem = data.memory.human_readable;
         document.getElementById("sse_memory").textContent = mem.ram.percent;
         const memTooltip = document.getElementById("tooltip-sse_memory");
-        memTooltip.innerHTML = `
-            RAM:  ${mem.ram.used} / ${mem.ram.total} (${mem.ram.percent})<br>
-            Swap: ${mem.swap.used} / ${mem.swap.total} (${mem.swap.percent})<br>
-            <div class="tooltip-arrow" data-popper-arrow></div>
-        `;
+        if (data.memory.servers) {
+            const servers = [...data.memory.servers].sort((a, b) => parseFloat(b.ram.percent) - parseFloat(a.ram.percent));
+            memTooltip.innerHTML = "RAM usage:" + servers.map(s => tipRow(s.name, `${s.ram.used} / ${s.ram.total} (${s.ram.percent})`)).join("") + tipArrow;
+        } else {
+            memTooltip.innerHTML = tipRow("RAM", `${mem.ram.used} / ${mem.ram.total} (${mem.ram.percent})`) + tipRow("Swap", `${mem.swap.used} / ${mem.swap.total} (${mem.swap.percent})`) + tipArrow;
+        }
     }
 
     if (data.load !== undefined) {
         document.getElementById("sse_load").textContent = data.load.load1min.toFixed(2);
         const loadTooltip = document.getElementById("tooltip-sse_load");
-        loadTooltip.innerHTML = `
-            Load &#8199;1 min: ${data.load.load1min.toFixed(2)}<br>
-            Load &#8199;5 min: ${data.load.load5min.toFixed(2)}<br>
-            Load 15 min: ${data.load.load15min.toFixed(2)}<br>
-            <div class="tooltip-arrow" data-popper-arrow></div>
-        `;
+        if (data.load.servers) {
+            const servers = [...data.load.servers].sort((a, b) => b.load1min - a.load1min);
+            loadTooltip.innerHTML = "Load (1, 5, 15 min):" + servers.map(s => tipRow(s.name, `${s.load1min.toFixed(2)} / ${s.load5min.toFixed(2)} / ${s.load15min.toFixed(2)}`)).join("") + tipArrow;
+        } else {
+            loadTooltip.innerHTML = tipRow("Load 1 min", data.load.load1min.toFixed(2)) + tipRow("Load 5 min", data.load.load5min.toFixed(2)) + tipRow("Load 15 min", data.load.load15min.toFixed(2)) + tipArrow;
+        }
     }
 
     if (data.disk !== undefined) {
@@ -53,12 +67,15 @@ function updateSSEUI(data) {
             document.getElementById("sse_disk").textContent = rootDisk.percent.toFixed(1) + "%";
         }
 
-        const filteredDisks = data.disk.filter(d => !d.mountpoint.startsWith("/mnt"));
         const diskTooltip = document.getElementById("tooltip-sse_disk");
-        diskTooltip.innerHTML = filteredDisks.map(d => `
-            ${d.device} mounted on ${d.mountpoint} (${d.fstype}):<br>
-            Used: ${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)<br>
-        `).join("<br>") + `<div class="tooltip-arrow" data-popper-arrow></div>`;
+        // a master's first entry is only the number shown in the header
+        if (data.disk[0] && data.disk[0].device === "Fullest server") {
+            const servers = data.disk.slice(1).sort((a, b) => b.percent - a.percent);
+            diskTooltip.innerHTML = "Disk usage:" + servers.map(d => tipRow(d.device, `${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)`)).join("") + tipArrow;
+        } else {
+            const filteredDisks = data.disk.filter(d => !d.mountpoint.startsWith("/mnt")).sort((a, b) => b.percent - a.percent);
+            diskTooltip.innerHTML = filteredDisks.map(d => tipRow(`${d.device} on ${d.mountpoint}`, `${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)`)).join("") + tipArrow;
+        }
     }
 
 }
@@ -73,7 +90,7 @@ const resourceFetchedAt = {};
 function fetchResource(resource) {
     if (document.hidden) return;
     resourceFetchedAt[resource] = Date.now();
-    fetch(`/json/${resource}`)
+    fetch(`/json/${resource}?cluster=all`)
         .then(res => res.json())
         .then(data => {
             updateSSEUI({[resource]: data});
@@ -97,6 +114,50 @@ document.addEventListener("visibilitychange", () => {
         if (Date.now() - (resourceFetchedAt[resource] || 0) >= ms) fetchResource(resource);
     }
 });
+})();
+
+// the "..." row menus open on hover, each page keeps one shared menu per table
+(function () {
+    let hideTimer = null;
+    let openBtn = null;
+    function menuFor(btn) {
+        const match = btn.className.match(/([\w-]+)-menu-btn/);
+        return match ? document.getElementById(match[1] + '-menu') : null;
+    }
+    // hover already opened it, a real click on the same button would toggle it shut again
+    document.addEventListener('click', e => {
+        const btn = e.isTrusted && e.target.closest && e.target.closest('[class*="-menu-btn"]');
+        const menu = btn && menuFor(btn);
+        if (btn && btn === openBtn && menu && !menu.classList.contains('hidden')) {
+            e.stopImmediatePropagation();
+        }
+    }, true);
+    document.addEventListener('mouseover', e => {
+        const btn = e.target.closest && e.target.closest('[class*="-menu-btn"]');
+        if (btn) {
+            clearTimeout(hideTimer);
+            const menu = menuFor(btn);
+            if (menu && (menu.classList.contains('hidden') || openBtn !== btn)) {
+                btn.click();
+                openBtn = btn;
+            }
+            return;
+        }
+        if (openBtn) {
+            const menu = menuFor(openBtn);
+            if (menu && menu.contains(e.target)) {
+                clearTimeout(hideTimer);
+                return;
+            }
+            clearTimeout(hideTimer);
+            const leaving = openBtn;
+            hideTimer = setTimeout(() => {
+                const m = menuFor(leaving);
+                if (m && !m.classList.contains('hidden')) document.body.click();
+                openBtn = null;
+            }, 250);
+        }
+    });
 })();
 
 // auto-dismiss progress bar of flash messages

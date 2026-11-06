@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -75,6 +76,7 @@ var openpanelStringFields = []string{
 	"captcha_provider", "recaptcha_site_key", "recaptcha_secret_key",
 	"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key",
 	"applications_dashboard_items",
+	"dns_record_types",
 	"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_name", "ai_instructions",
 	"ai_monthly_limit", "ai_max_tokens", "ai_actions",
 }
@@ -89,6 +91,7 @@ const (
 	openpanelSpaceSeparatedExtensions
 	openpanelOneToMax // options[0] is the max
 	openpanelSingleLine
+	openpanelOptionList // space-separated, each from options, at least one
 )
 
 type openpanelRule struct {
@@ -119,6 +122,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"mysql_restricted_databases":      {kind: openpanelSpaceSeparatedList},
 	"mysql_enforce_username_prefix":   {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"applications_dashboard_items":    {kind: openpanelSpaceSeparatedList},
+	"dns_record_types":                {kind: openpanelOptionList, options: []string{"A", "AAAA", "CAA", "CNAME", "MX", "SRV", "TLSA", "TXT", "HTTPS", "SVCB", "NS", "SSHFP", "URI", "DMARC"}},
 	"filemanager_buttons_style":       {kind: openpanelEnum, options: []string{"classic", "modern"}},
 	"filemanager_files_per_page":      {kind: openpanelNonNegativeInt},
 	"filemanager_edit_size":           {kind: openpanelNonNegativeInt},
@@ -192,6 +196,18 @@ func validateOpenpanelValue(key, value string) (normalized string, ok bool, errM
 	case openpanelSingleLine:
 		// the config is key=value per line, a newline would break the file
 		return strings.Join(strings.Fields(value), " "), true, ""
+
+	case openpanelOptionList:
+		items := strings.Fields(strings.ToUpper(value))
+		if len(items) == 0 {
+			return "", false, fmt.Sprintf("Error: choose at least one value for %s.", key)
+		}
+		for _, item := range items {
+			if !slices.Contains(rule.options, item) {
+				return "", false, fmt.Sprintf("Error: '%s' is not a valid value for %s.", item, key)
+			}
+		}
+		return strings.Join(items, " "), true, ""
 
 	case openpanelSpaceSeparatedList:
 		items := strings.Fields(value)

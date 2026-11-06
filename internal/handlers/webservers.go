@@ -18,6 +18,9 @@ const genericWebserverIcon template.HTML = `<svg xmlns="http://www.w3.org/2000/s
 // fallbackWebservers is used when the compose file can't be read or has no webserver services
 var fallbackWebservers = []string{"apache", "nginx", "openresty", "openlitespeed"}
 
+// cardWebservers have their own card on the defaults page, anything else gets a generic one
+var cardWebservers = []string{"apache", "nginx", "openresty", "openlitespeed", "litespeed"}
+
 // webserverServicesInComposeData returns services that mount webserver_data and publish ports, backup mounts the volume too but has no ports
 func webserverServicesInComposeData(data []byte) ([]string, error) {
 	var doc struct {

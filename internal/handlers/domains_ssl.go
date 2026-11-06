@@ -231,6 +231,16 @@ func (h *SSLPage) ServeSSL(w http.ResponseWriter, r *http.Request) {
 			}
 			panicDomainCustomSSLBuildError()
 
+		case "diagnose":
+			// caddy logs errors for every domain, a few days of them is well past a thousand lines
+			stdout, _, exitCode, err := opencliSSLRun(domainName, "logs", "20000")
+			if err != nil || exitCode != 0 {
+				writeJSON(w, acmeDiagnosis{})
+				return
+			}
+			writeJSON(w, diagnoseACME(stdout, domainName))
+			return
+
 		case "logs":
 			stdout, _, exitCode, err := opencliSSLRun(domainName, "logs", "1000")
 			logs := ""

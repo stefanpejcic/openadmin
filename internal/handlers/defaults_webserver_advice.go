@@ -18,7 +18,7 @@ type siteGroup struct {
 }
 
 var (
-	wpSiteGroup    = siteGroup{"WordPress", "which performs best on OpenLiteSpeed, or Apache if your sites rely on .htaccess rules", []string{"openlitespeed", "apache"}}
+	wpSiteGroup    = siteGroup{"WordPress", "which performs best on LiteSpeed or OpenLiteSpeed, or Apache if your sites rely on .htaccess rules", []string{"litespeed", "openlitespeed", "apache"}}
 	proxySiteGroup = siteGroup{"Node.js/Python apps", "which run best behind Nginx, the fastest reverse proxy", []string{"nginx"}}
 	luaSiteGroup   = siteGroup{"Java/Ruby apps", "which run best on OpenResty since it can be scripted with Lua", []string{"openresty"}}
 	otherSiteGroup = siteGroup{"other CMS/PHP sites", "which run well on Apache or Nginx", []string{"apache", "nginx"}}

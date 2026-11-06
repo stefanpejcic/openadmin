@@ -190,6 +190,9 @@
             <thead>
               <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
 
+                <th x-show="multi" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
+                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('server')"><span>Server</span></div>
+                </th>
                 <th x-show="columns.ts" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
                   <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('ts')">
                     <span>Timestamp</span>
@@ -334,9 +337,10 @@
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 
-              <template x-for="(s, i) in filteredSorted" :key="s.ts + i">
+              <template x-for="(s, i) in filteredSorted" :key="(s.server || '') + s.ts + i">
                 <tr class="[&_td:last-child]:pr-4 [&_td:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
 
+                  <td x-show="multi" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 text-left" x-text="s.server"></td>
                   <td x-show="columns.ts" class="p-4 text-sm relative whitespace-nowrap py-1 font-mono text-gray-500 dark:text-gray-400 first:w-10 text-left" x-text="s.ts"></td>
 
                   <td x-show="columns.cpu" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium first:w-10 text-left"
@@ -406,7 +410,7 @@
 <script>
 (function () {
   // ── Data from server ──────────────────────────────────────────────
-  const RAW = {{.SnapshotsJSON}};
+  const RAW_LOCAL = {{.SnapshotsJSON}};
   const VIEW = "{{.View}}";
 
   function fmtTs(ts) {
@@ -487,6 +491,7 @@
   }
 
   // ── No-data guard ─────────────────────────────────────────────────
+  function drawSingle(RAW) {
   if (!RAW || RAW.length === 0) {
     document.getElementById("no-data").classList.remove("hidden");
     document.getElementById("content-area").classList.add("hidden");
@@ -574,11 +579,51 @@
       })
     });
   }
+  }
+
+  // one line per server for each chart, like the dashboard widget
+  function drawPerServer(perServer) {
+    const palette = ["59,130,246", "16,185,129", "245,158,11", "236,72,153", "139,92,246", "20,184,166", "239,68,68", "107,114,128"];
+    const longest = perServer.reduce((a, p) => p.snapshots.length > a.snapshots.length ? p : a, perServer[0]);
+    const labels = longest.snapshots.map(s => fmtTs(s.ts));
+    const per = (pick, opts) => perServer.map((p, i) => {
+      const pad = longest.snapshots.length - p.snapshots.length;
+      const data = labels.map((_, j) => { const s = p.snapshots[j - pad]; return s ? pick(s) : null; });
+      return lineDataset(p.name, data, "rgb(" + palette[i % palette.length] + ")", Object.assign({ spanGaps: true }, opts || {}));
+    });
+    const legend = { plugins: { legend: { display: true, labels: { color: tickColor, font: chartFont, boxWidth: 12 } } } };
+    if (VIEW !== "line") return;
+    new Chart(document.getElementById("chart-cpu"), { type: "line", data: { labels, datasets: per(s => s.cpu_pct) },
+      options: mergeDeep(mergeDeep(CHART_DEFAULTS, legend), { scales: { y: { min: 0, suggestedMax: 100 } } }) });
+    new Chart(document.getElementById("chart-mem"), { type: "line", data: { labels, datasets: per(s => s.mem.pct) },
+      options: mergeDeep(mergeDeep(CHART_DEFAULTS, legend), { scales: { y: { min: 0, max: 100, ticks: { callback: v => v + "%" } } } }) });
+    new Chart(document.getElementById("chart-disk"), { type: "line", data: { labels, datasets: per(s => s.disk_pct) },
+      options: mergeDeep(mergeDeep(CHART_DEFAULTS, legend), { scales: { y: { min: 0, max: 100 } } }) });
+    new Chart(document.getElementById("chart-conn"), { type: "line", data: { labels, datasets: per(s => s.web_conn) },
+      options: mergeDeep(CHART_DEFAULTS, legend) });
+    new Chart(document.getElementById("chart-checks"), { type: "line", data: { labels, datasets: per(s => s.fail) },
+      options: mergeDeep(mergeDeep(CHART_DEFAULTS, legend), { scales: { y: { min: 0, ticks: { stepSize: 1 } } } }) });
+  }
+
+  // on a master the data route answers for every server, a lone server just keeps its own rows
+  fetch("/server/resource-usage/history/data?minutes={{.Minutes}}&cluster=all", { credentials: "same-origin" })
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      const perServer = ((d && d.per_server) || []).filter(p => p.snapshots && p.snapshots.length);
+      if (perServer.length < 2) { drawSingle(RAW_LOCAL); return; }
+      drawPerServer(perServer);
+      const rows = [];
+      perServer.forEach(p => p.snapshots.forEach(s => rows.push(Object.assign({ server: p.name }, s))));
+      window.__usageRows = rows;
+      window.dispatchEvent(new CustomEvent("usage-rows", { detail: rows }));
+    })
+    .catch(() => drawSingle(RAW_LOCAL));
 
   // ── Grid / table view (Alpine) ────────────────────────────────────
   window.snapshotTable = function() {
     return {
-      allRows: RAW,
+      allRows: RAW_LOCAL,
+      multi: false,
       searchQuery: '',
       sortKey: 'ts',
       sortDir: 'desc',
@@ -607,6 +652,9 @@
       init() {
         const saved = localStorage.getItem('sentinelColumnsVisibility');
         if (saved) { try { this.columns = JSON.parse(saved); } catch(e) {} }
+        const take = rows => { this.allRows = rows; this.multi = true; };
+        if (window.__usageRows) take(window.__usageRows);
+        window.addEventListener('usage-rows', e => take(e.detail));
       },
 
       saveColumns() {
@@ -631,6 +679,7 @@
         let rows = q
           ? this.allRows.filter(s =>
               s.ts.toLowerCase().includes(q) ||
+              (s.server || '').toLowerCase().includes(q) ||
               (['ok','warning','critical'][s.status] || '').toLowerCase().includes(q)
             )
           : this.allRows.slice();
@@ -640,6 +689,7 @@
         const getVal = s => {
           switch(key) {
             case 'ts':      return s.ts;
+            case 'server':  return s.server || '';
             case 'cpu':     return s.cpu_pct;
             case 'load1':   return parseFloat(s.load['1m']);
             case 'load5':   return parseFloat(s.load['5m']);

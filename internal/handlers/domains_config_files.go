@@ -9,10 +9,12 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gorilla/csrf"
 
@@ -39,7 +41,7 @@ var webserverMainConfFilenames = map[string]string{
 	"nginx":         "nginx.conf",
 	"openresty":     "openresty.conf",
 	"openlitespeed": "openlitespeed.conf",
-	"litespeed":     "openlitespeed.conf",
+	"litespeed":     "litespeed.conf",
 }
 
 // mainConfPathFor returns the absolute path to context's main webserver
@@ -50,6 +52,13 @@ func mainConfPathFor(context, webserver string) string {
 		return ""
 	}
 	return filepath.Join("/home", context, filename)
+}
+
+var errEmptyMainConf = errors.New("empty main configuration file")
+
+// unixNewlines undoes the CRLF a browser sends for a textarea, config files are read line by line with LF
+func unixNewlines(s string) string {
+	return strings.ReplaceAll(s, "\r\n", "\n")
 }
 
 // ServeEditConfigFile handles GET /domains/config, GET
@@ -84,11 +93,15 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		confContentForm := r.PostFormValue("conf_content")
+		confContentForm := unixNewlines(r.PostFormValue("conf_content"))
 
 		procErr := func() error {
 			if confPath == "" {
 				return fmt.Errorf("unrecognized webserver %q for user %q", webserver, username)
+			}
+			// an empty file takes the user's webserver and every site on it down
+			if strings.TrimSpace(confContentForm) == "" {
+				return errEmptyMainConf
 			}
 			if err := os.WriteFile(confPath, []byte(confContentForm), 0644); err != nil {
 				return err
@@ -100,7 +113,9 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 			return nil
 		}()
 
-		if procErr != nil {
+		if procErr == errEmptyMainConf {
+			auth.AddFlash(w, r, h.Sessions, "Main configuration file for "+username+" can't be empty, nothing was saved.", "error")
+		} else if procErr != nil {
 			auth.AddFlash(w, r, h.Sessions, "Error saving main configuration file for "+username+".", "error")
 		}
 	}

@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
-    verifyLicense();
+    // the info box is only there once a key is saved
+    if (document.querySelector('#license_data')) verifyLicense();
 
     document.querySelector('#license-form').addEventListener('submit', function (event) {
         event.preventDefault();
@@ -122,6 +123,13 @@ function verifyLicense() {
     .then(response => {
         let infoContainer = document.querySelector('#license_data');
         let verifyButton = document.querySelector('.btn-verify');
+        if (!infoContainer) return;
+        if (!response.info) {
+            infoContainer.textContent = response.error || 'No license information available.';
+            verifyButton.innerHTML = 'Re-Verify';
+            verifyButton.disabled = false;
+            return;
+        }
 
         try {
             let infoObject = JSON.parse(response.info);
@@ -154,7 +162,8 @@ function verifyLicense() {
 // warns from 3 days before the next due date, the license gets suspended on that date
 function licenseDueWarning(dueDate, now) {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dueDate || '');
-    if (!m) return '';
+    // free and lifetime licenses have no due date, the api sends 0000-00-00 for those
+    if (!m || +m[1] === 0) return '';
     const due = new Date(+m[1], +m[2] - 1, +m[3]);
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const days = Math.round((due - today) / 86400000);

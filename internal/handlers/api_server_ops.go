@@ -11,11 +11,9 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
-	"openadmin/internal/config"
 )
 
-// APIServerOps bundles the /api/server/timezone, /api/server/node,
+// APIServerOps bundles the /api/server/timezone,
 // /api/server/root-password, and /api/server/reboot handlers.
 type APIServerOps struct{}
 
@@ -51,67 +49,6 @@ func (a *APIServerOps) ServeTimezone(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]interface{}{"current_timezone": current, "available_timezones": zones})
-}
-
-// --- clustering default node ---
-
-// ServeNode handles GET/POST /api/server/node.
-func (a *APIServerOps) ServeNode(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		var body map[string]interface{}
-		if !apiDecodeJSONBody(r, &body) {
-			writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
-			return
-		}
-		nodeValue, _ := body["default_node"].(string)
-		keyValue, _ := body["default_ssh_key_path"].(string)
-
-		if nodeValue != "" && keyValue != "" {
-			valid, sshErr := slaveValidateSSHConnection(nodeValue, keyValue)
-			if !valid {
-				writeJSONError(w, http.StatusBadRequest, "SSH validation failed: "+sshErr)
-				return
-			}
-		}
-
-		cfg := config.Load(config.AdminConfigPath)
-		if v, ok := body["default_node"]; ok {
-			if s, ok := v.(string); ok {
-				cfg.Set("CLUSTERING", "default_node", s)
-			}
-		}
-		if v, ok := body["default_ssh_key_path"]; ok {
-			if s, ok := v.(string); ok {
-				cfg.Set("CLUSTERING", "default_ssh_key_path", s)
-			}
-		}
-
-		if err := config.Save(config.AdminConfigPath, cfg); err != nil {
-			writeJSONStatus(w, http.StatusInternalServerError, map[string]interface{}{"success": false, "error": "Failed to write config: " + err.Error()})
-			return
-		}
-		writeJSON(w, map[string]interface{}{"success": true, "message": "Default node edited successfully."})
-		return
-	}
-
-	cfg := config.Load(config.AdminConfigPath)
-	defaultNode := strings.Trim(cfg.Get("CLUSTERING", "default_node", ""), `"`)
-	defaultSSHKeyPath := strings.Trim(cfg.Get("CLUSTERING", "default_ssh_key_path", ""), `"`)
-
-	var sshValid *bool
-	var sshError string
-	if defaultNode != "" && defaultSSHKeyPath != "" {
-		v, e := slaveValidateSSHConnection(defaultNode, defaultSSHKeyPath)
-		sshValid = &v
-		sshError = e
-	}
-
-	writeJSON(w, map[string]interface{}{
-		"default_node":         defaultNode,
-		"default_ssh_key_path": defaultSSHKeyPath,
-		"ssh_valid":            sshValid,
-		"ssh_error":            sshError,
-	})
 }
 
 // --- root SSH password ---
