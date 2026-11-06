@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -158,7 +159,9 @@ func (s *ServerUtils) ServeTimezone(w http.ResponseWriter, r *http.Request) {
 			data.FieldError = "Pick a timezone from the list. \"" + selected + "\" isn't one this server knows."
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusBadRequest)
-			webtemplates.Render(w, "timezone.html", data)
+			if err := webtemplates.Render(w, "timezone.html", data); err != nil {
+				log.Printf("render timezone.html: %v", err)
+			}
 			return
 		}
 		if _, stderr, err := timedatectlRun("set-timezone", selected); err != nil {
@@ -166,16 +169,20 @@ func (s *ServerUtils) ServeTimezone(w http.ResponseWriter, r *http.Request) {
 			data.Error = "Couldn't change the timezone to " + selected + ": " + strings.TrimSpace(stderr) + ". Check that timedatectl works on the host, then try again."
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusInternalServerError)
-			webtemplates.Render(w, "timezone.html", data)
+			if err := webtemplates.Render(w, "timezone.html", data); err != nil {
+				log.Printf("render timezone.html: %v", err)
+			}
 			return
 		}
-		auth.AddFlash(w, r, s.Sessions, "Timezone changed to "+selected+". Restart admin and cron (systemctl restart admin cron) so they use it too.", "success")
+		_ = auth.AddFlash(w, r, s.Sessions, "Timezone changed to "+selected+". Restart admin and cron (systemctl restart admin cron) so they use it too.", "success")
 		http.Redirect(w, r, "/server/timezone", http.StatusSeeOther)
 		return
 	}
 
 	data.Flashes = auth.PopFlashes(w, r, s.Sessions)
-	webtemplates.Render(w, "timezone.html", data)
+	if err := webtemplates.Render(w, "timezone.html", data); err != nil {
+		log.Printf("render timezone.html: %v", err)
+	}
 }
 
 func containsString(list []string, v string) bool {
@@ -220,13 +227,13 @@ func (s *ServerUtils) ServeRootPassword(w http.ResponseWriter, r *http.Request) 
 func (s *ServerUtils) handleRootPasswordPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
 	if len(password) < 6 || len(password) > 30 || strings.Contains(password, "'") {
-		auth.AddFlash(w, r, s.Sessions, "Use a password of 6 to 30 characters, without apostrophes.", "error")
+		_ = auth.AddFlash(w, r, s.Sessions, "Use a password of 6 to 30 characters, without apostrophes.", "error")
 		http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 		return
 	}
 
 	if _, stderr, err := passwdRun(password+"\n"+password+"\n", "root"); err != nil {
-		auth.AddFlash(w, r, s.Sessions, "Couldn't change the root password: "+strings.TrimSpace(stderr), "error")
+		_ = auth.AddFlash(w, r, s.Sessions, "Couldn't change the root password: "+strings.TrimSpace(stderr), "error")
 		http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 		return
 	}
