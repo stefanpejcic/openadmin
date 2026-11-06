@@ -105,6 +105,26 @@ fetch('/json/user_activity_status')
   document.addEventListener('focusout', hide);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
   addEventListener('scroll', hide, true);
+
+  // the login tooltip opens to the left, so keep that much room before the button and it won't cover Created
+  let widest = 0;
+  document.querySelectorAll('td[data-login-col] a[data-tip]').forEach(el => {
+    tip.textContent = el.dataset.tip;
+    widest = Math.max(widest, tip.offsetWidth);
+  });
+  tip.textContent = '';
+  const cells = document.querySelectorAll('[data-login-col]'), wrap = cells.length && cells[0].closest('table').parentElement;
+  const pad = px => { cells.forEach(c => { c.style.paddingLeft = px + 'px'; }); return wrap.scrollWidth <= wrap.clientWidth; };
+  // biggest gap that still fits, never make the table scroll sideways because of it
+  function fitLoginGap() {
+    if (pad(widest)) return;
+    let lo = 48, hi = widest;
+    if (!pad(lo)) return;
+    while (hi - lo > 4) { const mid = (lo + hi) >> 1; if (pad(mid)) lo = mid; else hi = mid; }
+    pad(lo);
+  }
+  // again on load, alpine and the date formatting change column widths after this runs
+  if (widest && wrap) { fitLoginGap(); addEventListener('load', () => requestAnimationFrame(fitLoginGap)); addEventListener('resize', fitLoginGap); }
 })();
 
 
