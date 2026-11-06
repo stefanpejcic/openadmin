@@ -30,6 +30,17 @@ var files embed.FS
 
 var spaceUnitRe = regexp.MustCompile(`^([0-9.]+)([A-Za-z]+)$`)
 
+// an opencli command inside advice text, stopping before a sentence-ending period or comma
+var opencliCmdRe = regexp.MustCompile(`opencli(?: --?[\w-]+| [\w-]+(?:\.\d+)*)+`)
+
+// codeCommands escapes s and wraps any opencli command in it in <code>
+func codeCommands(s string) template.HTML {
+	esc := template.HTMLEscapeString(s)
+	return template.HTML(opencliCmdRe.ReplaceAllStringFunc(esc, func(cmd string) string {
+		return `<code class="rounded bg-yellow-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-400">` + cmd + `</code>`
+	}))
+}
+
 var funcMap = template.FuncMap{
 	"asset":    assetURL,
 	"contains": strings.Contains,
@@ -242,6 +253,7 @@ var funcMap = template.FuncMap{
 		}
 		return strings.Join(words, " ")
 	},
+	"codeCommands": codeCommands,
 	"lastSegment": func(s, sep string) string {
 		parts := strings.Split(s, sep)
 		return parts[len(parts)-1]
