@@ -43,15 +43,20 @@
     </div>
 
 
-<div id="collapseAddNewUser" class="px-4 py-6 sm:px-6 lg:px-8">
-    <div id="create_user_form" class="max-w-2xl" style="display:block;">
+<div class="px-4 py-6 sm:px-6 lg:px-8">
+    <div class="max-w-7xl">
         <form id="userForm">
 
 
 {{/* internal/cluster adds the server picker here when clustered */}}
 
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <section aria-labelledby="sec-user-account" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-user-account" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Account</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Login details for the new user. They can change the password once they log in.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
                 <div class="col-span-full sm:col-span-3">
                     <label class="flex h-5 items-center text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="admin_username">Username<span class="ml-1 text-red-600 dark:text-red-500" aria-hidden="true">*</span></label>                    
                     <div class="relative w-full mt-2">
@@ -200,6 +205,140 @@
 
 
 
+</div>
+            </section>
+            <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>
+            <section aria-labelledby="sec-user-package" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-user-package" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Package</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Sets the user's disk, CPU and memory, and how many domains, sites and mailboxes they can create.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
+{{if .MySQLIsDown}}
+  <div class="col-span-full">
+  {{template "partial_mysql_error" .}}
+  </div>
+{{else if .Plans}}
+  <div id="tour-user-plan" class="col-span-full">
+      <div class="grid gap-2">
+
+          <!-- Alpine.js state defined outside the loop -->
+          <div x-data="{ selectedPlan: '{{index (index .Plans 0) "name"}}' }" role="radiogroup" aria-labelledby="sec-user-package" class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {{range .Plans}}
+              <label class="relative flex min-w-0 cursor-pointer items-center justify-start gap-3 rounded-md border border-gray-300 bg-white p-4 shadow-xs transition hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-200 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900/60 dark:has-[:checked]:border-blue-500 dark:has-[:checked]:ring-blue-700/30 flex-col">
+                  <div class="flex w-full items-start gap-3">
+                      <input type="radio" name="plan_name" value="{{index . "name"}}" id="{{index . "id"}}" x-model="selectedPlan" class="size-4 shrink-0 cursor-pointer appearance-none rounded-full border border-gray-300 bg-white shadow-xs transition checked:border-[5px] checked:border-blue-500 checked:bg-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:shadow-none dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-white dark:disabled:border-gray-700 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 mt-0.5" aria-describedby="{{index . "id"}}-description">
+                      <div class="min-w-0">
+                          <span class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">{{index . "name"}}</span>
+                          <p id="{{index . "id"}}-description" title="{{index . "description"}}"
+                            x-data='{"text": {{toJSON (index . "description")}}}'
+                            x-text="text.length > 25 ? text.slice(0, 25) + '…' : text"
+                            class="mt-1 text-xs text-gray-500 dark:text-gray-500"
+                          ></p>
+                      </div>
+                  </div>
+                  <div class="flex w-full flex-col justify-between">
+  <div class="my-2 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+                          <div>
+
+  <div class="flex items-center gap-4 mt-2 text-base text-gray-500 dark:text-gray-500">
+    <p class="w-1/2 flex flex-col items-center text-sm" title="CPU Cores">
+      <span class="flex items-center gap-2 text-lg">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18H18V6H6V18ZM14 20H10V22H8V20H5C4.44772 20 4 19.5523 4 19V16H2V14H4V10H2V8H4V5C4 4.44772 4.44772 4 5 4H8V2H10V4H14V2H16V4H19C19.5523 4 20 4.44772 20 5V8H22V10H20V14H22V16H20V19C20 19.5523 19.5523 20 19 20H16V22H14V20ZM8 8H16V16H8V8Z"/></svg>
+          <span class="text-base font-medium text-gray-900 tabular-nums dark:text-gray-50">{{if eq (toInt (index . "cpu")) 0}}&#8734;{{else}}{{index . "cpu"}}{{end}}</span>
+      </span>
+      <span>CPU</span>
+    </p>
+    <p class="w-1/2 flex flex-col items-center text-sm" title="Physical Memory (RAM)">
+      <span class="flex items-center gap-2 text-lg">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7H21V17H19V15H17V17H15V15H13V17H11V15H9V17H7V15H5V17H3V7ZM2 5C1.44772 5 1 5.44772 1 6V18C1 18.5523 1.44772 19 2 19H22C22.5523 19 23 18.5523 23 18V6C23 5.44772 22.5523 5 22 5H2ZM11 9H5V12H11V9ZM13 9H19V12H13V9Z"/></svg>
+          <span class="text-base font-medium text-gray-900 tabular-nums dark:text-gray-50">{{if eq (lower (index . "ram")) "0g"}}&#8734;{{else}}{{sizeLabel (index . "ram")}}{{end}}</span>
+      </span>
+      <span>Memory</span>
+    </p>
+  </div>
+
+
+  <div class="flex items-center gap-4 mt-2 text-base text-gray-500 dark:text-gray-500">
+    <p class="w-1/2 flex flex-col items-center text-sm" title="Storage (Disk Space)">
+      <span class="flex items-center gap-2 text-lg">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M4.50772 2.87597C4.57028 2.37554 4.99568 2 5.5 2H18.5C19.0043 2 19.4297 2.37554 19.4923 2.87597L20.9923 14.876C20.9974 14.9171 21 14.9585 21 15V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V15C3 14.9585 3.00258 14.9171 3.00772 14.876L4.50772 2.87597ZM6.38278 4L5.13278 14H18.8672L17.6172 4H6.38278ZM19 16H5V20H19V16ZM15 17H17V19H15V17ZM13 17H11V19H13V17Z"/></svg>
+          <span class="text-base font-medium text-gray-900 tabular-nums dark:text-gray-50">{{if eq (index . "disk_limit") "0 GB"}}&#8734;{{else}}{{index . "disk_limit"}}{{end}}</span>
+      </span>
+      <span>Storage</span>
+    </p>
+    <p class="w-1/2 flex flex-col items-center text-sm" title="Inodes (Files Count)">
+      <span class="flex items-center gap-2 text-lg">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M5 11H19V5H5V11ZM21 4V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4ZM19 13H5V19H19V13ZM7 15H10V17H7V15ZM7 7H10V9H7V7Z"/></svg>
+          <span class="text-base font-medium text-gray-900 tabular-nums dark:text-gray-50">
+  {{if eq (toInt (index . "inodes_limit")) 0}}&#8734;{{else}}{{formatInodes (index . "inodes_limit")}}{{end}}
+          </span>
+      </span>
+      <span>Inodes</span>
+    </p>
+  </div>
+
+
+  <div class="my-2 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+
+  <div class="items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-500" x-data="{ showDetails: false }">
+      <button type="button" @click="showDetails = !showDetails" :aria-expanded="showDetails.toString()" class="flex items-center gap-1 rounded text-xs text-gray-500 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" :class="showDetails ? '' : '-rotate-90'" class="remixicon size-5 text-gray-400 transition-transform duration-150 dark:text-gray-600" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.05021 8.22168L11.9999 13.1714Z"/></svg>View all limits</button>
+      </span>
+
+      <div x-show="showDetails">
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+          {{if eq (toInt (index . "bandwidth")) 0}}&#8734;{{else}}{{index . "bandwidth"}} Mbit/s{{end}} port speed
+          </p>
+
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+          {{if eq (toInt (index . "domains_limit")) 0}}&#8734;{{else}}{{index . "domains_limit"}}{{end}} domains
+          </p>
+
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+          {{if eq (toInt (index . "websites_limit")) 0}}&#8734;{{else}}{{index . "websites_limit"}}{{end}} websites
+          </p>
+
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+          {{if eq (toInt (index . "email_limit")) 0}}&#8734;{{else}}{{index . "email_limit"}}{{end}} Email accounts
+          </p>
+
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+          {{if eq (toInt (index . "ftp_limit")) 0}}&#8734;{{else}}{{index . "ftp_limit"}}{{end}} FTP accounts
+          </p>
+
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
+          {{if eq (toInt (index . "db_limit")) 0}}&#8734;{{else}}{{index . "db_limit"}}{{end}} databases
+          </p>
+      </div>
+  </div>
+
+
+                          </div>
+                  </div>
+
+
+              </label>
+              {{end}}
+          </div>
+
+      </div>
+  </div>
+{{else}}
+<div class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500 col-span-full mt-2"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg><div>{{if .IsReseller}}No plans are assigned to your account yet, ask your administrator to assign plans before adding a user.{{else}}No plans available. <a href="/plans/new" class="font-medium underline underline-offset-4">Create a plan</a> before adding a user.{{end}}</div></div>
+{{end}}
+
+
+            </div>
+            </section>
+            <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>
+            <section aria-labelledby="sec-user-server" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-user-server" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Server options</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Webserver, database type and owner. Leave them closed to use the server defaults.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
 <div class="mx-auto w-full col-span-full" x-data="{ showDetails: {{if .IsReseller}}true{{else}}false{{end}} }">
 
 
@@ -422,131 +561,12 @@
 </div>
 </div>
 
-<div class="col-span-full my-3 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+</div>
+            </section>
 
 
 
-{{if .MySQLIsDown}}
-  <div class="col-span-full">
-  {{template "partial_mysql_error" .}}
-  </div>
-{{else if .Plans}}
-  <div id="tour-user-plan" class="col-span-full">
-      <div class="grid gap-2">
-          <p class="text-sm font-semibold text-gray-900 dark:text-gray-50">Package</p>
-
-          <!-- Alpine.js state defined outside the loop -->
-          <div x-data="{ selectedPlan: '{{index (index .Plans 0) "name"}}' }" role="radiogroup" aria-label="Package" class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {{range .Plans}}
-              <label class="relative flex min-w-0 cursor-pointer items-center justify-start gap-3 rounded-md border border-gray-300 bg-white p-4 shadow-xs transition hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-200 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900/60 dark:has-[:checked]:border-blue-500 dark:has-[:checked]:ring-blue-700/30 flex-col">
-                  <div class="flex w-full items-start gap-3">
-                      <input type="radio" name="plan_name" value="{{index . "name"}}" id="{{index . "id"}}" x-model="selectedPlan" class="size-4 shrink-0 cursor-pointer appearance-none rounded-full border border-gray-300 bg-white shadow-xs transition checked:border-[5px] checked:border-blue-500 checked:bg-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:shadow-none dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-white dark:disabled:border-gray-700 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 mt-0.5" aria-describedby="{{index . "id"}}-description">
-                      <div class="min-w-0">
-                          <span class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">{{index . "name"}}</span>
-                          <p id="{{index . "id"}}-description" title="{{index . "description"}}"
-                            x-data='{"text": {{toJSON (index . "description")}}}'
-                            x-text="text.length > 25 ? text.slice(0, 25) + '…' : text"
-                            class="mt-1 text-xs text-gray-500 dark:text-gray-500"
-                          ></p>
-                      </div>
-                  </div>
-                  <div class="flex w-full flex-col justify-between">
-  <div class="my-2 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-
-                          <div>
-
-  <div class="flex items-center gap-4 mt-2 text-base text-gray-500 dark:text-gray-500">
-    <p class="w-1/2 flex flex-col items-center text-sm" title="CPU Cores">
-      <span class="flex items-center gap-2 text-lg">
-          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18H18V6H6V18ZM14 20H10V22H8V20H5C4.44772 20 4 19.5523 4 19V16H2V14H4V10H2V8H4V5C4 4.44772 4.44772 4 5 4H8V2H10V4H14V2H16V4H19C19.5523 4 20 4.44772 20 5V8H22V10H20V14H22V16H20V19C20 19.5523 19.5523 20 19 20H16V22H14V20ZM8 8H16V16H8V8Z"/></svg>
-          <span class="text-base font-medium text-gray-900 tabular-nums dark:text-gray-50">{{if eq (toInt (index . "cpu")) 0}}&#8734;{{else}}{{index . "cpu"}}{{end}}</span>
-      </span>
-      <span>CPU</span>
-    </p>
-    <p class="w-1/2 flex flex-col items-center text-sm" title="Physical Memory (RAM)">
-      <span class="flex items-center gap-2 text-lg">
-          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7H21V17H19V15H17V17H15V15H13V17H11V15H9V17H7V15H5V17H3V7ZM2 5C1.44772 5 1 5.44772 1 6V18C1 18.5523 1.44772 19 2 19H22C22.5523 19 23 18.5523 23 18V6C23 5.44772 22.5523 5 22 5H2ZM11 9H5V12H11V9ZM13 9H19V12H13V9Z"/></svg>
-          <span class="text-base font-medium text-gray-900 tabular-nums dark:text-gray-50">{{if eq (lower (index . "ram")) "0g"}}&#8734;{{else}}{{sizeLabel (index . "ram")}}{{end}}</span>
-      </span>
-      <span>Memory</span>
-    </p>
-  </div>
-
-
-  <div class="flex items-center gap-4 mt-2 text-base text-gray-500 dark:text-gray-500">
-    <p class="w-1/2 flex flex-col items-center text-sm" title="Storage (Disk Space)">
-      <span class="flex items-center gap-2 text-lg">
-          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M4.50772 2.87597C4.57028 2.37554 4.99568 2 5.5 2H18.5C19.0043 2 19.4297 2.37554 19.4923 2.87597L20.9923 14.876C20.9974 14.9171 21 14.9585 21 15V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V15C3 14.9585 3.00258 14.9171 3.00772 14.876L4.50772 2.87597ZM6.38278 4L5.13278 14H18.8672L17.6172 4H6.38278ZM19 16H5V20H19V16ZM15 17H17V19H15V17ZM13 17H11V19H13V17Z"/></svg>
-          <span class="text-base font-medium text-gray-900 tabular-nums dark:text-gray-50">{{if eq (index . "disk_limit") "0 GB"}}&#8734;{{else}}{{index . "disk_limit"}}{{end}}</span>
-      </span>
-      <span>Storage</span>
-    </p>
-    <p class="w-1/2 flex flex-col items-center text-sm" title="Inodes (Files Count)">
-      <span class="flex items-center gap-2 text-lg">
-          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M5 11H19V5H5V11ZM21 4V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4ZM19 13H5V19H19V13ZM7 15H10V17H7V15ZM7 7H10V9H7V7Z"/></svg>
-          <span class="text-base font-medium text-gray-900 tabular-nums dark:text-gray-50">
-  {{if eq (toInt (index . "inodes_limit")) 0}}&#8734;{{else}}{{formatInodes (index . "inodes_limit")}}{{end}}
-          </span>
-      </span>
-      <span>Inodes</span>
-    </p>
-  </div>
-
-
-  <div class="my-2 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-
-
-  <div class="items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-500" x-data="{ showDetails: false }">
-      <button type="button" @click="showDetails = !showDetails" :aria-expanded="showDetails.toString()" class="flex items-center gap-1 rounded text-xs text-gray-500 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" :class="showDetails ? '' : '-rotate-90'" class="remixicon size-5 text-gray-400 transition-transform duration-150 dark:text-gray-600" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.05021 8.22168L11.9999 13.1714Z"/></svg>View all limits</button>
-      </span>
-
-      <div x-show="showDetails">
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-          {{if eq (toInt (index . "bandwidth")) 0}}&#8734;{{else}}{{index . "bandwidth"}} Mbit/s{{end}} port speed
-          </p>
-
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-          {{if eq (toInt (index . "domains_limit")) 0}}&#8734;{{else}}{{index . "domains_limit"}}{{end}} domains
-          </p>
-
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-          {{if eq (toInt (index . "websites_limit")) 0}}&#8734;{{else}}{{index . "websites_limit"}}{{end}} websites
-          </p>
-
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-          {{if eq (toInt (index . "email_limit")) 0}}&#8734;{{else}}{{index . "email_limit"}}{{end}} Email accounts
-          </p>
-
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-          {{if eq (toInt (index . "ftp_limit")) 0}}&#8734;{{else}}{{index . "ftp_limit"}}{{end}} FTP accounts
-          </p>
-
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">
-          {{if eq (toInt (index . "db_limit")) 0}}&#8734;{{else}}{{index . "db_limit"}}{{end}} databases
-          </p>
-      </div>
-  </div>
-
-
-                          </div>
-                  </div>
-
-
-              </label>
-              {{end}}
-          </div>
-
-      </div>
-  </div>
-{{else}}
-<div class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500 col-span-full mt-2"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg><div>{{if .IsReseller}}No plans are assigned to your account yet, ask your administrator to assign plans before adding a user.{{else}}No plans available. <a href="/plans/new" class="font-medium underline underline-offset-4">Create a plan</a> before adding a user.{{end}}</div></div>
-{{end}}
-
-
-            </div>
-
-
-            <div class="mt-6 flex flex-col-reverse gap-2 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end dark:border-gray-800">
+            <div class="mt-8 flex flex-col-reverse gap-2 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end dark:border-gray-800">
                 <a href="/users" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</a>
 
                 <button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400" id="CreateUserButton" {{if not .Plans}}disabled title="No plans available"{{end}}>Create user</button>

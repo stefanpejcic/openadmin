@@ -128,25 +128,33 @@ async function backupsUserRunNow() {
 
     <!-- SETTINGS -->
     <div x-show="tab === 'settings'" role="tabpanel" x-data="{ choice: '' }" data-choice="{{.ScheduleChoice}}" x-init="choice = $el.dataset.choice">
-        <div x-show="choice === 'disabled'" x-cloak class="mb-4 flex gap-3 rounded-md bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-950/70 dark:text-blue-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z"></path></svg>
+        <div x-show="choice === 'disabled'" x-cloak class="mb-8 flex max-w-7xl gap-3 rounded-md bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-950/70 dark:text-blue-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z"></path></svg>
             <p><strong>Disabled</strong> (default): each user manages their own backup from their own account when the backups module is enabled, so nothing runs centrally. Choosing Daily/Weekly/Monthly instead runs backups for <em>every</em> user on that schedule, via the "opencli docker-backup" <a href="/server/crons" class="font-medium underline underline-offset-4">system cron job</a>. See the docs for the difference between <a href="https://openpanel.com/docs/articles/backups/configuring-backups/" target="_blank" class="font-medium underline hover:no-underline">user-defined and admin-defined backups</a>.</p>
         </div>
-        <div class="max-w-2xl">
-            <form method="POST" action="/backups/user/settings" class="space-y-4">
+        <div class="max-w-7xl">
+            <form method="POST" action="/backups/user/settings">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-
-                <div class="grid gap-2">
+                <section aria-labelledby="sec-bk-schedule" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-bk-schedule" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Schedule</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">When OpenAdmin backs up every account centrally. Leave it disabled to let each user run their own backups.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
+                    <div class="col-span-full sm:col-span-3">
                     <label for="schedule_choice" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Schedule</label>
-                    <select id="schedule_choice" name="schedule_choice" x-model="choice" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full truncate mt-2">
+                    <select id="schedule_choice" aria-describedby="schedule_choice-help" name="schedule_choice" x-model="choice" class="mt-2 w-full block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full truncate mt-2">
                         <option value="disabled" {{if eq .ScheduleChoice "disabled"}}selected{{end}}>Disabled (user configured)</option>
                         <option value="daily" {{if eq .ScheduleChoice "daily"}}selected{{end}}>Daily</option>
                         <option value="weekly" {{if eq .ScheduleChoice "weekly"}}selected{{end}}>Weekly</option>
                         <option value="monthly" {{if eq .ScheduleChoice "monthly"}}selected{{end}}>Monthly</option>
                     </select>
-                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Daily/Weekly/Monthly all run at 03:00 server time. Fine-tune the exact time later from <a href="/server/crons" class="text-blue-500 hover:underline hover:underline-offset-4">scheduled actions</a>.</p>
+                    <p id="schedule_choice-help" class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Daily/Weekly/Monthly all run at 03:00 server time. Fine-tune the exact time later from <a href="/server/crons" class="text-blue-500 hover:underline hover:underline-offset-4">scheduled actions</a>.</p>
                 </div>
-
-                <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Save</button>
+                </div>
+            </section>
+                <div class="mt-8 flex flex-col-reverse gap-2 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end dark:border-gray-800">
+                    <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Save</button>
+                </div>
             </form>
         </div>
     </div>
@@ -162,7 +170,7 @@ async function backupsUserRunNow() {
         </div>
 
         <!-- form view -->
-        <form x-show="!advanced" method="POST" action="/backups/user/configuration" class="space-y-6">
+        <form x-show="!advanced" method="POST" action="/backups/user/configuration" class="max-w-7xl space-y-8">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <input type="hidden" name="mode" value="form">
 
@@ -201,7 +209,7 @@ async function backupsUserRunNow() {
             </div>
 
             {{if .BackupEnvForm.Settings}}
-            <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+            <div class="h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>
             <div class="grid grid-cols-1 gap-x-14 gap-y-6 lg:grid-cols-3">
                 <div>
                     <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Backup settings</h2>
@@ -241,12 +249,12 @@ async function backupsUserRunNow() {
             </div>
             {{end}}
 
-            <div x-data="{ confirmApply: false }" class="space-y-3">
-                <div class="flex flex-wrap items-center gap-2">
+            <div x-data="{ confirmApply: false }" class="space-y-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+                <div class="flex flex-wrap items-center justify-end gap-2">
                     <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Save</button>
                     <button type="button" x-show="!confirmApply" @click="confirmApply = true" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save and apply to existing accounts</button>
                 </div>
-                <p x-show="!confirmApply" class="text-xs text-gray-500 dark:text-gray-500">Save changes the default for new accounts only, existing accounts keep their own backup configuration.</p>
+                <p x-show="!confirmApply" class="text-right text-xs text-gray-500 dark:text-gray-500">Save changes the default for new accounts only, existing accounts keep their own backup configuration.</p>
                 <div x-show="confirmApply" x-cloak class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg><div>
                     <p>This saves the configuration and applies it to <strong>all existing accounts</strong>, overwriting their own backup configuration. Each account's <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">backup.env</code> is replaced with this default, their backup settings become admin-managed, and their backup containers restart.</p>
                     <div class="mt-3 flex flex-wrap gap-2">
@@ -258,7 +266,7 @@ async function backupsUserRunNow() {
         </form>
 
         <!-- advanced: raw file -->
-        <form x-show="advanced" x-cloak method="POST" action="/backups/user/configuration" class="space-y-4">
+        <form x-show="advanced" x-cloak method="POST" action="/backups/user/configuration" class="max-w-5xl space-y-4">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <input type="hidden" name="mode" value="advanced">
 
@@ -270,12 +278,12 @@ async function backupsUserRunNow() {
                 <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">The default backup.env: destination (S3, WebDAV, SSH and others), retention and notification settings.</p>
             </div>
 
-            <div x-data="{ confirmApply: false }" class="space-y-3">
-                <div class="flex flex-wrap items-center gap-2">
+            <div x-data="{ confirmApply: false }" class="space-y-3 border-t border-gray-200 pt-6 dark:border-gray-800">
+                <div class="flex flex-wrap items-center justify-end gap-2">
                     <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Save</button>
                     <button type="button" x-show="!confirmApply" @click="confirmApply = true" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save and apply to existing accounts</button>
                 </div>
-                <p x-show="!confirmApply" class="text-xs text-gray-500 dark:text-gray-500">Save changes the default for new accounts only, existing accounts keep their own backup configuration.</p>
+                <p x-show="!confirmApply" class="text-right text-xs text-gray-500 dark:text-gray-500">Save changes the default for new accounts only, existing accounts keep their own backup configuration.</p>
                 <div x-show="confirmApply" x-cloak class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg><div>
                     <p>This saves the configuration and applies it to <strong>all existing accounts</strong>, overwriting their own backup configuration. Each account's <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">backup.env</code> is replaced with this default, their backup settings become admin-managed, and their backup containers restart.</p>
                     <div class="mt-3 flex flex-wrap gap-2">

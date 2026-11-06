@@ -5,7 +5,12 @@
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
     <input type="hidden" name="action" value="{{if .Plan}}update{{else}}create{{end}}">
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+    <section aria-labelledby="sec-rp-package" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-rp-package" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Package</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">How the package shows up in OpenAdmin, billing systems and the API.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
         <div class="col-span-full sm:col-span-3">
             <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="rp_name">Name<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span></label>
             <div class="relative w-full mt-2">
@@ -24,6 +29,15 @@
                 <input type="text" class="{{$input}}" name="description" id="rp_description" maxlength="255" value="{{if .Plan}}{{.Plan.Description}}{{end}}">
             </div>
         </div>
+    </div>
+            </section>
+            <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>
+    <section aria-labelledby="sec-rp-limits" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-rp-limits" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Limits</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Totals across all of the reseller's accounts. When one is reached, the reseller can't create more accounts.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
         <div class="col-span-full sm:col-span-3">
             <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="rp_max_accounts">Max accounts<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span></label>
             <div class="relative w-full mt-2">
@@ -39,10 +53,17 @@
             <p id="rp_max_disk_gb_help" class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Total for all accounts of the reseller, 0 for unlimited. When reached, the reseller can't create accounts or upgrade them to plans with more disk.</p>
         </div>
 
+    </div>
+            </section>
+            <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>
+    <section aria-labelledby="rp_allowed_label" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="rp_allowed_label" class="text-sm font-semibold text-gray-900 dark:text-gray-50">User packages</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">The packages resellers on this package can assign to their users.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
         <div class="col-span-full" x-data='{ selected: {{if .Plan}}{{toJSON .Plan.AllowedPlans}}{{else}}[]{{end}}.map(String), toggle(id) { this.selected.includes(id) ? this.selected = this.selected.filter(p => p !== id) : this.selected.push(id) } }'>
-            <p class="text-sm font-medium text-gray-900 dark:text-gray-50" id="rp_allowed_label">User packages</p>
-            <p id="rp_allowed_help" class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Packages resellers on this package can assign to their users.</p>
-            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-labelledby="rp_allowed_label" aria-describedby="rp_allowed_help">
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-labelledby="rp_allowed_label">
                 {{range .Plans}}
                 <label class="relative flex cursor-pointer items-start gap-3 rounded-md border border-gray-300 bg-white p-4 shadow-xs transition hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-200 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900/60 dark:has-[:checked]:border-blue-500 dark:has-[:checked]:ring-blue-700/30">
                     <span class="relative mt-0.5 flex"><input type="checkbox" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 indeterminate:border-blue-500 indeterminate:bg-blue-500 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:shadow-none dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:indeterminate:border-blue-500 dark:indeterminate:bg-blue-500 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" value="{{.id}}" :checked="selected.includes('{{.id}}')" @change="toggle('{{.id}}')"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block peer-disabled:text-gray-400 dark:peer-disabled:text-gray-500"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span>
@@ -58,10 +79,8 @@
             <input type="hidden" name="allowed_plans" :value="selected.join(',')">
         </div>
     </div>
-
-    <div class="my-6 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-
-    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            </section>
+    <div class="mt-8 flex flex-col-reverse gap-2 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end dark:border-gray-800">
         {{if .Plan}}<a href="/plans/resellers" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</a>{{else}}<button type="button" @click="showSection = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>{{end}}
         <button type="submit" :disabled="busy" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400"><span x-show="busy" x-cloak class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span>{{if .Plan}}Save{{else}}Create{{end}}</button>
     </div>
