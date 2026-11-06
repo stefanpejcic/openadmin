@@ -64,8 +64,9 @@ func (e *Emails) ServeEmailsNew(w http.ResponseWriter, r *http.Request) {
 		auth.AddFlash(w, r, e.Sessions, msg, category)
 		http.Redirect(w, r, "/emails/accounts", http.StatusSeeOther)
 	}
-	if checkMailserverStatus() != "running" {
-		back("The mailserver is not running, start it before adding email accounts.", "error")
+	// a mailserver without accounts keeps restarting until it gets one, so opencli has to be let through while it's down
+	if checkMailserverStatus() == "not_installed" {
+		back("The mailserver is not installed.", "error")
 		return
 	}
 
@@ -133,6 +134,10 @@ func (e *Emails) ServeEmailsNew(w http.ResponseWriter, r *http.Request) {
 			back("Email "+email+" was added for user "+owner+", but setting the "+quota+" quota failed: "+qErr, "warning")
 			return
 		}
+	}
+	if strings.Contains(stderr, "is not running") {
+		back("Email "+email+" added for user "+owner+". The mailserver is not up right now, the account will work once it has started.", "warning")
+		return
 	}
 	back("Email "+email+" added for user "+owner+".", "success")
 }

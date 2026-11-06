@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -60,6 +61,44 @@ func TestServeEmailsNewRunsOpencli(t *testing.T) {
 	}
 	if len(*calls) != 2 || strings.Join((*calls)[0], " ") != strings.Join(want[0], " ") || strings.Join((*calls)[1], " ") != strings.Join(want[1], " ") {
 		t.Errorf("got opencli calls %v", *calls)
+	}
+}
+
+// the first mailbox has to get through while docker-mailserver is down waiting for it
+func TestServeEmailsNewRunsWhileMailserverDown(t *testing.T) {
+	e, calls := newEmailsForAdd(t)
+	resetMailserverStatus()
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "", nil }
+	t.Cleanup(resetMailserverStatus)
+	postEmailNew(e, url.Values{"domain": {"example.com"}, "username": {"info"}, "password": {"Secret123x"}})
+	if len(*calls) != 1 {
+		t.Errorf("opencli should run with the mailserver down, got %v", *calls)
+	}
+}
+
+func TestServeEmailsNewNotInstalled(t *testing.T) {
+	e, calls := newEmailsForAdd(t)
+	resetMailserverStatus()
+	EmailsMailComposeFile = filepath.Join(t.TempDir(), "missing.yml")
+	t.Cleanup(resetMailserverStatus)
+	postEmailNew(e, url.Values{"domain": {"example.com"}, "username": {"info"}, "password": {"Secret123x"}})
+	if len(*calls) != 0 {
+		t.Errorf("opencli should not run, got %v", *calls)
+	}
+}
+
+// a failed add must not go on to set a quota as if the mailbox exists
+func TestServeEmailsNewAddFails(t *testing.T) {
+	e, calls := newEmailsForAdd(t)
+	resetMailserverStatus()
+	t.Cleanup(resetMailserverStatus)
+	emailAddRun = func(args ...string) (string, string, error) {
+		*calls = append(*calls, args)
+		return "", "OCI runtime error", errors.New("exit status 1")
+	}
+	postEmailNew(e, url.Values{"domain": {"example.com"}, "username": {"info"}, "password": {"Secret123x"}, "quota": {"2"}, "unit": {"G"}})
+	if len(*calls) != 1 {
+		t.Errorf("quota should not be set after a failed add, got %v", *calls)
 	}
 }
 
