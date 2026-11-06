@@ -254,6 +254,7 @@ var funcMap = template.FuncMap{
 		return strings.Join(words, " ")
 	},
 	"codeCommands": codeCommands,
+	"sentenceCase": sentenceCase,
 	"lastSegment": func(s, sep string) string {
 		parts := strings.Split(s, sep)
 		return parts[len(parts)-1]
