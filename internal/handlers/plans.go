@@ -257,7 +257,7 @@ func sqlIDMatches(rowID interface{}, id string) bool {
 // ServeNewForm handles GET /plans/new.
 func (p *Plans) ServeNewForm(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "plan_new.html", newPlanPageData{
-		Chrome:        buildChrome(r, "New Plan"),
+		Chrome:        buildChrome(r, "New plan"),
 		FormData:      map[string]string{},
 		FeatureSets:   fetchFeatureSets(auth.CurrentUser(r)),
 		OtherPlans:    upsellCandidatePlans(p.MySQL, auth.CurrentUser(r), ""),
