@@ -276,6 +276,23 @@ func caName(certs []*x509.Certificate) string {
 			return name
 		}
 	}
+	// Let's Encrypt IP certs have no DNS names, Verify checks an IP string against the IP SANs
+	for _, ip := range leaf.IPAddresses {
+		if _, err := leaf.Verify(x509.VerifyOptions{Intermediates: inter, DNSName: ip.String()}); err == nil {
+			return ip.String()
+		}
+	}
+	return ""
+}
+
+// trustName is the name a renewed public cert may be valid for, nodes joined before IP names were saved fall back to their address
+func trustName(n Node) string {
+	if n.TLSName != "" {
+		return n.TLSName
+	}
+	if ip := net.ParseIP(hostOnly(n.URL)); ip != nil {
+		return ip.String()
+	}
 	return ""
 }
 
@@ -469,7 +486,8 @@ func (m *Manager) client(n Node) *http.Client {
 	if m.clients == nil {
 		m.clients = map[string]*http.Client{}
 	}
-	key := n.ID + "|" + n.SPKI + "|" + n.TLSName
+	name := trustName(n)
+	key := n.ID + "|" + n.SPKI + "|" + name
 	if c, ok := m.clients[key]; ok {
 		return c
 	}
@@ -477,7 +495,7 @@ func (m *Manager) client(n Node) *http.Client {
 	if m.rpcTimeout > 0 {
 		timeout = m.rpcTimeout
 	}
-	c := &http.Client{Transport: pinnedTransport(n.SPKI, n.TLSName), Timeout: timeout}
+	c := &http.Client{Transport: pinnedTransport(n.SPKI, name), Timeout: timeout}
 	m.clients[key] = c
 	return c
 }
@@ -623,6 +641,7 @@ func (m *Manager) addNode(rawURL, name, code, mode string) (Node, error) {
 		return nil
 	})
 	if err == nil {
+		go ensureKeyReuse()
 		Notify("Server added to the cluster", node.Name+" ("+hostOnly(u)+") joined as a slave.", "info")
 	}
 	return node, err

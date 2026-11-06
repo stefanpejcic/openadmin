@@ -169,7 +169,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function render() {
         var tasks = lastTasks || [];
         var tbody = document.getElementById('tasks_tbody');
-        var withServer = headers(tasks.some(function (t) { return t.node && t.node !== 'local'; }));
+        // a job shared by every server still has node "local", its nodes list says where else it runs
+        var withServer = headers(tasks.some(function (t) { return (t.node && t.node !== 'local') || (t.nodes || []).length > 1; }));
         if (onlyNode) tasks = tasks.filter(function (t) { return (t.nodes || [t.node]).indexOf(onlyNode) !== -1; });
         if (sortKey) {
             tasks = tasks.slice().sort(function (a, b) {
@@ -183,18 +184,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         tbody.innerHTML = tasks.map(function (t) { return row(t, withServer); }).join('');
-        applySearch();
     }
-
-    // rebuilt rows aren't Alpine-bound, so the search box filters them here too
-    var searchInput = document.querySelector('input[x-model="searchQuery"]');
-    function applySearch() {
-        var q = (searchInput ? searchInput.value : '').trim().toLowerCase();
-        document.querySelectorAll('#tasks_tbody tr[data-command]').forEach(function (tr) {
-            tr.hidden = q !== '' && !(tr.dataset.command || '').toLowerCase().includes(q);
-        });
-    }
-    if (searchInput) searchInput.addEventListener('input', applySearch);
 
     document.querySelector('#tasks_table thead').addEventListener('click', function (e) {
         var th = e.target.closest('th[data-sort]');
@@ -208,6 +198,9 @@ document.addEventListener('DOMContentLoaded', function () {
         render();
     });
 
+    // same search filter as the first render, alpine picks it up on the rebuilt rows
+    var searchShow = ' x-show="searchQuery === \'\' || $el.dataset.command.toLowerCase().includes(searchQuery.toLowerCase())"';
+
     function row(t, withServer) {
         var remote = t.node && t.node !== 'local';
         var server = withServer ? '<td class="' + td + '">' + esc(t.server || '') + '</td>' : '';
@@ -216,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var kill = remote
                 ? '<button type="button" class="ml-3 text-red-600 hover:underline hover:underline-offset-4 dark:text-red-500 rounded outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 cursor-pointer" data-kill-node="' + esc(t.node) + '" data-kill-pid="' + esc(t.pid) + '">Kill</button>'
                 : '<form method="POST" action="/server/processes/' + esc(t.pid) + '/kill" class="inline" data-confirm="Kill this task?"><input type="hidden" name="csrf_token" value="' + esc(csrfToken) + '"><button type="submit" class="ml-3 text-red-600 hover:underline hover:underline-offset-4 dark:text-red-500 rounded outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 cursor-pointer">Kill</button></form>';
-            return '<tr data-command="' + esc(t.command) + '" class="group hover:bg-gray-50 dark:hover:bg-gray-900/60 *:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8">' +
+            return '<tr data-command="' + esc(t.command) + '"' + searchShow + ' class="group hover:bg-gray-50 dark:hover:bg-gray-900/60 *:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8">' +
                 '<td class="w-full px-4 py-2.5 text-sm break-words text-gray-600 dark:text-gray-400">' + esc(t.command) + '</td>' + server +
                 '<td class="px-4 py-2.5 text-sm whitespace-nowrap">' + runningBadge + '</td>' +
                 '<td class="' + td + '">' + esc(t.time) + '</td>' +
@@ -224,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '</tr>';
         }
         var edit = t.link || '/server/crons#' + t.line_number;
-        return '<tr data-command="' + esc(t.command) + '" class="hover:bg-gray-50 dark:hover:bg-gray-900/60 *:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8">' +
+        return '<tr data-command="' + esc(t.command) + '"' + searchShow + ' class="hover:bg-gray-50 dark:hover:bg-gray-900/60 *:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8">' +
             '<td class="w-full px-4 py-2.5 text-sm break-words text-gray-600 dark:text-gray-400">' + esc(t.command) + '</td>' + server +
             '<td class="px-4 py-2.5 text-sm whitespace-nowrap">' + scheduledBadge + '</td>' +
             '<td class="' + td + '">' + esc(t.time) + '</td>' +

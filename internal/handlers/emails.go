@@ -9,6 +9,7 @@ import (
 	cryptorand "crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,9 +40,8 @@ const emailsMasterUser = "openpanel"
 
 var emailsRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
-// EmailsDovecotSecretKeyPath is the dovecot master-password secret file
-// (distinct from auth.SecretKeyPath, which is a different secret).
-var EmailsDovecotSecretKeyPath = "/etc/openpanel/openpanel/secret.key"
+// EmailsDovecotSecretKeyPath is the dovecot master-password secret file, shared with the user panel which sets the same master user
+var EmailsDovecotSecretKeyPath = "/etc/openpanel/openpanel/dovecot_master.key"
 
 // LoadDovecotMasterPass reads the dovecot master-password secret from disk.
 // Like auth.LoadSecretKey, this is unique-per-server secret material
@@ -55,7 +55,25 @@ func LoadDovecotMasterPass() (string, error) {
 	if !os.IsNotExist(err) {
 		return "", fmt.Errorf("failed to read dovecot master secret file %s: %w", EmailsDovecotSecretKeyPath, err)
 	}
-	return auth.GenerateAndPersistSecret(EmailsDovecotSecretKeyPath)
+	// the user panel may create the same file at the same time, O_EXCL makes one of them win and the other reads it
+	b := make([]byte, 32)
+	if _, err := cryptorand.Read(b); err != nil {
+		return "", err
+	}
+	secret := hex.EncodeToString(b)
+	f, err := os.OpenFile(EmailsDovecotSecretKeyPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if os.IsExist(err) {
+		raw, err = os.ReadFile(EmailsDovecotSecretKeyPath)
+		return strings.TrimSpace(string(raw)), err
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to create dovecot master secret file %s: %w", EmailsDovecotSecretKeyPath, err)
+	}
+	defer f.Close()
+	if _, err := f.WriteString(secret); err != nil {
+		return "", err
+	}
+	return secret, nil
 }
 
 // EmailsMailComposeFile / EmailsMailserverEnvFile / EmailsCaddyRedirectsPath
@@ -808,8 +826,15 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, map[string]string{"status": mailserverStatus})
 			return
 		}
+		// docker-mailserver doesn't stay up without an account, so the first one has to be addable from here
+		var domains []emailDomainOption
+		if mailserverStatus != "not_installed" {
+			domains = e.emailDomainOptions(r)
+		}
 		renderGzip(w, r, "emails_accounts.html", mergeChrome(map[string]interface{}{
 			"MailserverStatus": mailserverStatus,
+			"CanAddEmail":      mailserverStatus != "not_installed",
+			"EmailDomains":     domains,
 			"Installing":       emailsInstallRunning(),
 			"Emails":           nil,
 			"EmailPairs":       [][3]interface{}{},
@@ -833,15 +858,14 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 	data := map[string]interface{}{
 		"MailserverStatus": mailserverStatus,
+		"CanAddEmail":      true,
+		"EmailDomains":     e.emailDomainOptions(r),
 		"FromFile":         fromFile,
 		"Installing":       emailsInstallRunning(),
 		"Emails":           accounts,
 		"EmailPairs":       pairs,
 		"UsagePending":     !usageFresh,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
-	}
-	if mailserverStatus == "running" {
-		data["EmailDomains"] = e.emailDomainOptions(r)
 	}
 	// every bulk action goes through the container, so there's none to offer while it's down
 	if !fromFile {

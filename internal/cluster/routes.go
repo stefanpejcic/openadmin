@@ -158,6 +158,7 @@ func (m *Manager) handleJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	os.Remove(joinPath())
+	go ensureKeyReuse()
 	Notify("Joined a cluster", "This server is now a slave of "+req.MasterName+".", "info")
 	json.NewEncoder(w).Encode(resp)
 }

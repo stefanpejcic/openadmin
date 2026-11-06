@@ -554,3 +554,18 @@ func TestServeOpenpanelSettingsAISectionSavesAndRenders(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateDNSRecordTypes(t *testing.T) {
+	got, ok, _ := validateOpenpanelValue("dns_record_types", "a  AAAA dmarc")
+	if !ok || got != "A AAAA DMARC" {
+		t.Errorf("got %q, ok=%v", got, ok)
+	}
+	for _, bad := range []string{"", "   ", "A BOGUS", "A;reboot"} {
+		if _, ok, _ := validateOpenpanelValue("dns_record_types", bad); ok {
+			t.Errorf("%q should be refused", bad)
+		}
+	}
+	if got := openpanelSectionForKey("dns_record_types"); got != "USERS" {
+		t.Errorf("section = %q", got)
+	}
+}

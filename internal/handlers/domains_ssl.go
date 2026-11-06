@@ -178,11 +178,6 @@ func (h *SSLPage) ServeSSL(w http.ResponseWriter, r *http.Request) {
 		action := r.PostFormValue("action")
 
 		switch action {
-		case "diagnose":
-			// asked by the page itself on load, answers with JSON
-			writeJSON(w, diagnoseCertificate(domainName))
-			return
-
 		case "custom":
 			// Pasted directly by the user now (matching the OpenPanel user
 			// panel), rather than a path to a file already sitting on
@@ -235,6 +230,16 @@ func (h *SSLPage) ServeSSL(w http.ResponseWriter, r *http.Request) {
 				auth.AddFlash(w, r, h.Sessions, strings.TrimSpace(stderr), "error")
 			}
 			panicDomainCustomSSLBuildError()
+
+		case "diagnose":
+			// caddy logs errors for every domain, a few days of them is well past a thousand lines
+			stdout, _, exitCode, err := opencliSSLRun(domainName, "logs", "20000")
+			if err != nil || exitCode != 0 {
+				writeJSON(w, acmeDiagnosis{})
+				return
+			}
+			writeJSON(w, diagnoseACME(stdout, domainName))
+			return
 
 		case "logs":
 			stdout, _, exitCode, err := opencliSSLRun(domainName, "logs", "1000")

@@ -175,8 +175,7 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 
 	if r.Method == http.MethodPost {
 		r.ParseForm()
-		// browsers send textarea line breaks as CRLF, zone files use LF
-		bindContentForm := strings.ReplaceAll(r.PostFormValue("bind_content"), "\r\n", "\n")
+		bindContentForm := unixNewlines(r.PostFormValue("bind_content"))
 		timestamp := dnsZoneBackupTimestamp()
 		backupFilePath := filepath.Join(DNSZoneBackupDir, domainName+".zone.backup_"+timestamp)
 

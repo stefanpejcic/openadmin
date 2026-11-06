@@ -1,74 +1,80 @@
-// finds the newest failed certificate attempt for a domain in Caddy's log, for the SSL page
 package handlers
 
 import (
-	"bufio"
 	"encoding/json"
-	"regexp"
 	"strings"
 	"time"
 )
 
-// caddyLogTail is how many of Caddy's newest log lines are searched
-const caddyLogTail = "5000"
-
-// caddyLogRun returns Caddy's recent log; injectable so tests never call podman
-var caddyLogRun = func() (string, error) {
-	stdout, stderr, _, err := podmanExecCapture("default", "logs", "--tail", caddyLogTail, "caddy")
-	return stdout + "\n" + stderr, err
-}
-
-// caddyCertError is the newest certificate failure Caddy logged for a domain
-type caddyCertError struct {
+// acmeDiagnosis is the last certificate error caddy logged for a domain, in words an admin can act on
+type acmeDiagnosis struct {
 	Found  bool   `json:"found"`
 	Reason string `json:"reason,omitempty"`
+	Error  string `json:"error,omitempty"`
 	Time   string `json:"time,omitempty"`
 }
 
-var (
-	// "[example.com] Obtain: [example.com] " in front of a retry error
-	caddyObtainPrefix = regexp.MustCompile(`^(\[[^\]]+\]\s*)?Obtain:\s*(\[[^\]]+\]\s*)?`)
-	// " (ca=https://...)" after it
-	caddyCASuffix = regexp.MustCompile(`\s*\(ca=[^)]*\)\s*$`)
-)
+// acmeReasons maps pieces of caddy and let's encrypt errors to what the admin should check, first match wins
+var acmeReasons = []struct{ match, reason string }{
+	{"rateLimited", "Let's Encrypt rate limit reached for this domain. Caddy retries on its own once the limit resets."},
+	{"too many certificates", "Let's Encrypt rate limit reached for this domain. Caddy retries on its own once the limit resets."},
+	{"caa", "A CAA DNS record of the domain doesn't allow Let's Encrypt to issue certificates for it."},
+	{"rejectedIdentifier", "Let's Encrypt refuses to issue certificates for this name, it's a reserved or blocked domain."},
+	{"NXDOMAIN", "The domain doesn't resolve. Add an A (and AAAA) record pointing to this server."},
+	{"no valid A records", "The domain has no A or AAAA record. Point it to this server's IP address."},
+	{"DNS problem", "Let's Encrypt couldn't look up the domain. Check its DNS records and nameservers."},
+	{"Timeout during connect", "Let's Encrypt couldn't connect to this server. Check that ports 80 and 443 are open in the firewall."},
+	{"Connection refused", "Let's Encrypt couldn't connect to this server. Check that ports 80 and 443 are open in the firewall."},
+	{"unauthorized", "The validation request didn't reach this server. Check that the domain's A/AAAA records point to this server's IP and not to a proxy or another host."},
+	{"Invalid response", "The validation request didn't reach this server. Check that the domain's A/AAAA records point to this server's IP and not to a proxy or another host."},
+	{"certificate not allowed", "Caddy wasn't allowed to request a certificate for this name, the domain isn't set up on this server."},
+}
 
-// lastCaddyCertError scans Caddy's JSON log lines for the newest tls error about domain
-func lastCaddyCertError(logs, domain string) caddyCertError {
-	var last caddyCertError
-	sc := bufio.NewScanner(strings.NewReader(logs))
-	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for sc.Scan() {
-		line := sc.Text()
-		if !strings.Contains(line, domain) || !strings.HasPrefix(strings.TrimSpace(line), "{") {
+// diagnoseACME finds the newest certificate error for domain or its www name in caddy's json log lines
+func diagnoseACME(logs, domain string) acmeDiagnosis {
+	domain = strings.ToLower(domain)
+	var last acmeDiagnosis
+	for _, line := range strings.Split(logs, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "{") {
 			continue
 		}
-		var e struct {
+		var entry struct {
 			Level      string  `json:"level"`
+			Ts         float64 `json:"ts"`
 			Logger     string  `json:"logger"`
-			TS         float64 `json:"ts"`
+			Msg        string  `json:"msg"`
 			Identifier string  `json:"identifier"`
 			Error      string  `json:"error"`
 		}
-		if json.Unmarshal([]byte(line), &e) != nil || e.Level != "error" || !strings.HasPrefix(e.Logger, "tls") || e.Error == "" {
+		if json.Unmarshal([]byte(line), &entry) != nil || entry.Level != "error" || !strings.HasPrefix(entry.Logger, "tls") {
 			continue
 		}
-		if e.Identifier != domain && !strings.Contains(e.Error, "["+domain+"]") {
+		id := strings.ToLower(entry.Identifier)
+		// "will retry" lines carry the name only in the error, as "[example.com] Obtain: ..."
+		if id == "" && strings.HasPrefix(entry.Error, "[") {
+			if end := strings.Index(entry.Error, "]"); end > 0 {
+				id = strings.ToLower(entry.Error[1:end])
+			}
+		}
+		if id != domain && id != "www."+domain {
 			continue
 		}
-		reason := caddyCASuffix.ReplaceAllString(caddyObtainPrefix.ReplaceAllString(e.Error, ""), "")
-		last = caddyCertError{Found: true, Reason: strings.TrimSpace(reason)}
-		if e.TS > 0 {
-			last.Time = time.Unix(int64(e.TS), 0).UTC().Format("2006-01-02 15:04:05")
+		text := entry.Error
+		if text == "" {
+			text = entry.Msg
+		}
+		last = acmeDiagnosis{Found: true, Error: text, Reason: "Let's Encrypt couldn't issue a certificate, the error below has the details."}
+		if entry.Ts > 0 {
+			last.Time = time.Unix(int64(entry.Ts), 0).UTC().Format("2006-01-02 15:04 UTC")
+		}
+		lower := strings.ToLower(text)
+		for _, r := range acmeReasons {
+			if strings.Contains(lower, strings.ToLower(r.match)) {
+				last.Reason = r.reason
+				break
+			}
 		}
 	}
 	return last
-}
-
-// diagnoseCertificate returns the newest certificate error Caddy logged for domain
-func diagnoseCertificate(domain string) caddyCertError {
-	logs, err := caddyLogRun()
-	if err != nil && logs == "" {
-		return caddyCertError{}
-	}
-	return lastCaddyCertError(logs, domain)
 }

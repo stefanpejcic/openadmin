@@ -350,6 +350,13 @@ function userSearch() {
                             </svg>
                         </div>
                     </div>
+                    <select x-model="sslFilter" aria-label="Filter by SSL" style="height:30px" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full sm:w-auto px-2 py-0 text-xs cursor-pointer dark:[color-scheme:dark]">
+                        <option value="">All SSL</option>
+                        <option value="problems">SSL problems</option>
+                        <option value="expired">Expired</option>
+                        <option value="expiring">Expiring soon</option>
+                        <option value="none">No SSL</option>
+                    </select>
                 </div>
                 <div class="flex items-center gap-2">
 
@@ -520,7 +527,7 @@ function userSearch() {
 {{$domainURL := index . "domain_url"}}
 {{$username := index . "username"}}
 {{$status := index . "status"}}
-                        <tr data-domain="{{$domainURL}}" data-owner="{{lastSegment $username "_"}}" x-show="domainRowMatches($el, searchQuery)" class="user-row [&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                        <tr data-domain="{{$domainURL}}" data-owner="{{lastSegment $username "_"}}" data-ssl="{{index . "ssl"}}" data-ssl-problem="{{index . "ssl_problem"}}" x-show="domainRowMatches($el, searchQuery) && sslRowMatches($el, sslFilter)" class="user-row [&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
 {{$skip := "unsuspend"}}{{if eq $status "suspended"}}{{$skip = "suspend"}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" $domainURL "Label" $domainURL "Skip" $skip)}}
 
@@ -882,6 +889,18 @@ function userSearch() {
 
 <script>
 // row filter, names come from data attributes so quotes in them can't break the expression
+// "problems" is anything the SSL column flags: expired, expiring, no cert file or one that can't be read
+function sslRowMatches(row, filter) {
+    const problem = row.dataset.sslProblem || '';
+    switch (filter) {
+        case 'problems': return problem !== '';
+        case 'expired': return problem === 'expired';
+        case 'expiring': return problem === 'expiring';
+        case 'none': return row.dataset.ssl !== 'automatic' && row.dataset.ssl !== 'custom';
+    }
+    return true;
+}
+
 function domainRowMatches(row, query) {
     const q = (query || '').toLowerCase();
     return q === '' || row.dataset.domain.toLowerCase().includes(q) || row.dataset.owner.toLowerCase().includes(q);
@@ -1040,6 +1059,7 @@ function domainRowMatches(row, query) {
 function domainsTable() {
     return {
         searchQuery: '',
+        sslFilter: '',
         columns: {
             id: false,
             domain: true,
@@ -1063,10 +1083,16 @@ function domainsTable() {
             if (owner) {
                 this.searchQuery = owner;
             }
+            if (['problems', 'expired', 'expiring', 'none'].includes(params.get('ssl'))) {
+                this.sslFilter = params.get('ssl');
+            }
         },
 
         initWatchers() {
             this.$watch('searchQuery', () => {
+                this.$nextTick(() => this.updateCount());
+            });
+            this.$watch('sslFilter', () => {
                 this.$nextTick(() => this.updateCount());
             });
 
