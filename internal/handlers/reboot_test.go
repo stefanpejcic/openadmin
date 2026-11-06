@@ -174,10 +174,44 @@ func TestServeRebootPostRunnerErrorReturns500(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("expected 500 when the runner fails, got %d", resp.StatusCode)
+	}
+	got := string(body)
+	// html/template escapes the apostrophe in "didn't"
+	if !strings.Contains(got, "The reboot didn") || !strings.Contains(got, "boom") || strings.Contains(got, "reboot is now in progress") {
+		t.Fatalf("expected the form back with an error callout, got %s", truncate(got))
+	}
+}
+
+func TestServeRebootPostUnknownTypeDoesNotReboot(t *testing.T) {
+	withScratchRebootDisableFlag(t)
+
+	called := false
+	origGraceful, origHard := rebootGracefulRun, rebootHardRun
+	rebootGracefulRun = func() error { called = true; return nil }
+	rebootHardRun = func() error { called = true; return nil }
+	t.Cleanup(func() { rebootGracefulRun, rebootHardRun = origGraceful, origHard })
+
+	rb := &Reboot{}
+	srv, client := newRebootTestServer(t, rb)
+
+	resp, err := client.PostForm(srv.URL+"/server/reboot", url.Values{"reboot_type": {"soft"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if called {
+		t.Fatal("expected no reboot for an unknown reboot type")
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+	if got := string(body); strings.Contains(got, "reboot is now in progress") || !strings.Contains(got, "Pick graceful or hard reboot.") {
+		t.Fatalf("expected the form with a field error, got %s", truncate(got))
 	}
 }
 

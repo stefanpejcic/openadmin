@@ -219,23 +219,23 @@ func (s *ServerUtils) ServeRootPassword(w http.ResponseWriter, r *http.Request) 
 
 func (s *ServerUtils) handleRootPasswordPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
-	if password == "" {
-		auth.AddFlash(w, r, s.Sessions, "Password cannot be empty.", "error")
+	if len(password) < 6 || len(password) > 30 || strings.Contains(password, "'") {
+		auth.AddFlash(w, r, s.Sessions, "Use a password of 6 to 30 characters, without apostrophes.", "error")
 		http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 		return
 	}
 
 	if _, stderr, err := passwdRun(password+"\n"+password+"\n", "root"); err != nil {
-		auth.AddFlash(w, r, s.Sessions, "Error changing password: "+stderr, "error")
+		auth.AddFlash(w, r, s.Sessions, "Couldn't change the root password: "+strings.TrimSpace(stderr), "error")
 		http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 		return
 	}
 
 	verifyOut, _, err := passwdRun("", "--status", "root")
 	if err == nil && strings.Contains(verifyOut, "P") {
-		auth.AddFlash(w, r, s.Sessions, "SSH password changed successfully!", "success")
+		auth.AddFlash(w, r, s.Sessions, "Root password changed. Use it for SSH and the server console from now on.", "success")
 	} else {
-		auth.AddFlash(w, r, s.Sessions, "Password change verification failed.", "error")
+		auth.AddFlash(w, r, s.Sessions, "Password change verification failed. Run passwd -S root on the server to check whether the new password was set.", "error")
 	}
 	http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 }

@@ -300,7 +300,7 @@ func TestRootPasswordRejectsEmptyPassword(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "Password cannot be empty.") {
+	if !strings.Contains(string(body), "Use a password of 6 to 30 characters") {
 		t.Fatalf("expected empty-password flash, got %s", truncate(string(body)))
 	}
 	if called {
@@ -327,7 +327,7 @@ func TestRootPasswordSuccessFlow(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "SSH password changed successfully!") {
+	if !strings.Contains(string(body), "Root password changed.") {
 		t.Fatalf("expected success flash, got %s", truncate(string(body)))
 	}
 	if gotStdin != "newpw123\nnewpw123\n" {
