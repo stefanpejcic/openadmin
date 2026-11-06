@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -114,8 +115,22 @@ type timezonePageData struct {
 	webtemplates.Chrome
 	AvailableTimezones []string
 	CurrentTimezone    string
+	CurrentTime        string // local time and UTC offset in the current zone, empty if the zone can't be loaded
+	Selected           string
+	FieldError         string
+	Error              string
 	CSRFToken          string
 	Flashes            []auth.Flash
+}
+
+// localTimeIn returns "21:17 (UTC+04:00)" for zone, or "" when the zone isn't installed
+func localTimeIn(zone string) string {
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return ""
+	}
+	now := time.Now().In(loc)
+	return now.Format("15:04") + " (UTC" + now.Format("-07:00") + ")"
 }
 
 // ServeTimezone handles GET/POST /server/timezone, mirroring
@@ -128,27 +143,39 @@ func (s *ServerUtils) ServeTimezone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data := timezonePageData{
+		Chrome:             buildChrome(r, "Timezone"),
+		AvailableTimezones: zones,
+		CurrentTimezone:    current,
+		CurrentTime:        localTimeIn(current),
+		Selected:           current,
+		CSRFToken:          csrf.Token(r),
+	}
+
 	if r.Method == http.MethodPost {
 		selected := r.FormValue("timezone")
 		if !containsString(zones, selected) {
-			writeJSONError(w, http.StatusBadRequest, "Invalid timezone: "+selected)
+			data.FieldError = "Pick a timezone from the list. \"" + selected + "\" isn't one this server knows."
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			webtemplates.Render(w, "timezone.html", data)
 			return
 		}
 		if _, stderr, err := timedatectlRun("set-timezone", selected); err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "Error changing timezone to "+selected+": "+stderr)
+			data.Selected = selected
+			data.Error = "Couldn't change the timezone to " + selected + ": " + strings.TrimSpace(stderr) + ". Check that timedatectl works on the host, then try again."
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusInternalServerError)
+			webtemplates.Render(w, "timezone.html", data)
 			return
 		}
+		auth.AddFlash(w, r, s.Sessions, "Timezone changed to "+selected+". Restart admin and cron (systemctl restart admin cron) so they use it too.", "success")
 		http.Redirect(w, r, "/server/timezone", http.StatusSeeOther)
 		return
 	}
 
-	webtemplates.Render(w, "timezone.html", timezonePageData{
-		Chrome:             buildChrome(r, "Timezone"),
-		AvailableTimezones: zones,
-		CurrentTimezone:    current,
-		CSRFToken:          csrf.Token(r),
-		Flashes:            auth.PopFlashes(w, r, s.Sessions),
-	})
+	data.Flashes = auth.PopFlashes(w, r, s.Sessions)
+	webtemplates.Render(w, "timezone.html", data)
 }
 
 func containsString(list []string, v string) bool {

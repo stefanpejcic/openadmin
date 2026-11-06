@@ -158,6 +158,9 @@ func TestTimezoneSetRejectsInvalidZone(t *testing.T) {
 	if called {
 		t.Fatal("expected set-timezone to never be invoked for an invalid zone")
 	}
+	if !strings.Contains(string(body), "Pick a timezone from the list") || !strings.Contains(string(body), "</html>") {
+		t.Fatalf("expected the form back with an inline error, got %s", truncate(string(body)))
+	}
 }
 
 func TestTimezoneSetAcceptsValidZone(t *testing.T) {
@@ -174,14 +177,54 @@ func TestTimezoneSetAcceptsValidZone(t *testing.T) {
 	su := &ServerUtils{}
 	srv, client := newServerUtilsTestServer(t, su, "admin")
 
+	// the client follows the redirect, so this body is the page that shows the flash
 	resp, err := client.PostForm(srv.URL+"/server/timezone", url.Values{"timezone": {"Europe/Belgrade"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if setTo != "Europe/Belgrade" {
 		t.Fatalf("expected set-timezone to be called with Europe/Belgrade, got %q", setTo)
+	}
+	if !strings.Contains(string(body), "Timezone changed to Europe/Belgrade") {
+		t.Fatalf("expected a success flash after the redirect, got %s", truncate(string(body)))
+	}
+}
+
+func TestTimezoneSetShowsTimedatectlFailureOnPage(t *testing.T) {
+	withFixtureTimezones(t, []string{"Europe/Belgrade", "UTC"})
+	withStubbedTimedatectl(t, func(args ...string) (string, string, error) {
+		if len(args) > 0 && args[0] == "set-timezone" {
+			return "", "Failed to set time zone: Access denied", errors.New("exit status 1")
+		}
+		return "UTC", "", nil
+	})
+
+	su := &ServerUtils{}
+	srv, client := newServerUtilsTestServer(t, su, "admin")
+
+	resp, err := client.PostForm(srv.URL+"/server/timezone", url.Values{"timezone": {"Europe/Belgrade"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", resp.StatusCode)
+	}
+	got := string(body)
+	if !strings.Contains(got, "Access denied") || !strings.Contains(got, `role="alert"`) || strings.HasPrefix(strings.TrimSpace(got), "{") {
+		t.Fatalf("expected the page with an error callout, got %s", truncate(got))
+	}
+}
+
+func TestLocalTimeIn(t *testing.T) {
+	if got := localTimeIn("UTC"); !strings.HasSuffix(got, "(UTC+00:00)") {
+		t.Fatalf("localTimeIn(UTC) = %q", got)
+	}
+	if got := localTimeIn("Not/AZone"); got != "" {
+		t.Fatalf("expected empty for an unknown zone, got %q", got)
 	}
 }
 
