@@ -62,58 +62,75 @@
 </div>
 
 {{else}}
-
-<!-- page header -->
-<section aria-label="Select Domain Header">
-
-    <div x-data="{ showSection: false }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
+<section aria-label="DNS zones" x-data="{ q: '', shown: {{len .Domains}} }">
+    <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
                     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">DNS zone editor</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-500">Select domain name</p>
-                </div>
-                <div class="flex flex-none items-center gap-2">
+                    <p class="text-sm text-gray-500 dark:text-gray-500">{{if .Domains}}<span class="tabular-nums">{{len .Domains}}</span> domains. Open one to see and edit its DNS records.{{else}}DNS records for every domain on this server.{{end}}</p>
                 </div>
             </div>
         </header>
     </div>
-<!-- END page header -->
-
-<!-- form -->
-<div class="px-4 py-6 sm:px-6 lg:px-8">
-<div class="max-w-2xl rounded-md border border-gray-200 bg-white p-6 dark:border-gray-900 dark:bg-raised" id="toAddActive">
-    <form method="GET">
-        <div class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-6">
-            <div class="col-span-full">
-                {{if .MySQLIsDown}}
-                {{template "partial_mysql_error" .}}
-                {{else if .Domains}}
-                <label for="domains" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Domain</label>
-                <select id="domains" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] mt-2 w-full" onchange="redirectToSelectedDomain(this, '/domains/dns/')">
-                    <option value="" disabled selected>Select domain</option>
-                    {{range .Domains}}
-                    <option value="{{index . "domain_url"}}" class="punycode">{{index . "domain_url"}}</option>
-                    {{end}}
-                </select>
-
-                <script>
-                    function redirectToSelectedDomain(selectElement, baseUrl) {
-                        const domain = selectElement.value;
-                        if (domain) {
-                            window.location.href = baseUrl + domain;
-                        }
-                    }
-                </script>
-                {{else}}
-                <p class="text-center text-sm text-gray-500 dark:text-gray-500">No domains yet.</p>
-                {{end}}
+    {{if .MySQLIsDown}}
+    <div class="px-4 py-6 sm:px-6 lg:px-8">{{template "partial_mysql_error" .}}</div>
+    {{else if .Domains}}
+    <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:px-8">
+        <div class="relative w-full sm:w-72 sm:[&>input]:h-[30px]">
+            <input x-model="q" @input="$nextTick(() => shown = $root.querySelectorAll('tbody tr[data-row]:not([hidden])').length)" aria-label="Search domains" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-700/30 focus:border-blue-500 dark:focus:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search domains or owners…" type="search">
+            <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
             </div>
         </div>
-    </form>
-</div>
-</div>
-
+        <p class="text-xs tabular-nums text-gray-500 dark:text-gray-500" aria-live="polite" x-show="q" x-cloak x-text="shown === 1 ? '1 domain' : shown + ' domains'"></p>
+    </div>
+    <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+            <thead>
+                <tr class="border-b border-gray-200 dark:border-gray-800">
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 sm:px-6 lg:px-8 dark:text-gray-50">Domain</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Owner</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Zone</th>
+                    <th scope="col" class="px-4 py-2.5 text-right text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Records</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Last changed</th>
+                    <th scope="col" class="px-4 py-2.5 sm:pr-6 lg:pr-8"><span class="sr-only">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .Domains}}
+                {{$d := index . "domain_url"}}
+                <tr data-row data-search="{{lower (printf "%v %v" $d (index . "username"))}}" x-bind:hidden="q !== '' && !$el.dataset.search.includes(q.trim().toLowerCase())" class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap sm:px-6 lg:px-8"><a href="/domains/dns/{{$d}}" class="punycode font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50">{{$d}}</a></td>
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"><a href="/users/{{index . "username"}}" class="hover:text-gray-900 hover:underline hover:underline-offset-4 dark:hover:text-gray-50">{{index . "username"}}</a></td>
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap">
+                        {{if index . "zone_exists"}}
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Zone file</span>
+                        {{else}}
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20" title="No file in the BIND zones directory, so this domain isn't served by the local DNS server">No zone file</span>
+                        {{end}}
+                    </td>
+                    <td class="px-4 py-2.5 text-right text-sm whitespace-nowrap tabular-nums text-gray-600 dark:text-gray-400">{{if index . "zone_exists"}}{{with index . "zone_records"}}{{.}}{{else}}0{{end}}{{else}}<span class="text-gray-400 dark:text-gray-600">–</span>{{end}}</td>
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{with index . "zone_modified"}}<time datetime="{{.Format "2006-01-02T15:04:05Z07:00"}}" title="{{.Format "2006-01-02 15:04"}}">{{timeAgo .}}</time>{{else}}<span class="text-gray-400 dark:text-gray-600">–</span>{{end}}</td>
+                    <td class="px-4 py-2.5 text-right text-sm whitespace-nowrap sm:pr-6 lg:pr-8">
+                        <a href="/domains/dns/{{$d}}" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">{{if index . "zone_exists"}}Edit zone{{else}}Open{{end}}<span class="sr-only"> for {{$d}}</span></a>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        <div x-show="q !== '' && shown === 0" x-cloak class="flex flex-col items-center px-4 py-16 text-center">
+            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">No domains match "<span x-text="q"></span>"</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">Search by domain or by the owner's username.</p>
+        </div>
+    </div>
+    {{else}}
+    <div class="flex flex-col items-center px-4 py-16 text-center">
+        <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">No domains yet</h2>
+        <p class="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-500">Zones appear here once a user adds a domain.</p>
+        <a href="/domains" class="mt-4 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Go to domains</a>
+    </div>
+    {{end}}
 </section>
 {{end}}
 
