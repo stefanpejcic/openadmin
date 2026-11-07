@@ -73,7 +73,7 @@ func (s *SecurityToggles) ServeBasicAuth(w http.ResponseWriter, r *http.Request)
 
 	cfg := config.Load(config.AdminConfigPath)
 	webtemplates.Render(w, "basic_auth.html", basicAuthPageData{
-		Chrome:            buildChrome(r, "OpenAdmin Basic Auth"),
+		Chrome:            buildChrome(r, "OpenAdmin basic auth"),
 		BasicAuth:         cfg.Get("SECURITY", "basic_auth", ""),
 		BasicAuthUsername: cfg.Get("SECURITY", "basic_auth_username", ""),
 		BasicAuthPassword: cfg.Get("SECURITY", "basic_auth_password", ""),
@@ -172,7 +172,7 @@ func (s *SecurityToggles) ServeBlacklistUseragents(w http.ResponseWriter, r *htt
 	}
 
 	webtemplates.Render(w, "blacklist_useragents.html", blacklistUseragentsPageData{
-		Chrome:                     buildChrome(r, "Blocked User Agents"),
+		Chrome:                     buildChrome(r, "Blocked user agents"),
 		BlacklistUseragentsEnabled: enabled,
 		BlacklistUseragents:        list,
 		CSRFToken:                  csrf.Token(r),

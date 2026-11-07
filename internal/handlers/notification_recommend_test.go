@@ -184,8 +184,8 @@ func TestNotificationSettingsRendersRecommendations(t *testing.T) {
 		"Highest connections from one IP in the last day: 12",
 		"Recommended: on, OpenPanel depends on this service.",
 		`x-data="actionGroup" data-group="Web Firewall"`,
-		"+ 203.0.113.4",
-		"+ 198.51.100.7",
+		"Add 203.0.113.4 to the whitelist",
+		"Add 198.51.100.7 to the whitelist",
 	} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected %q in the page", want)

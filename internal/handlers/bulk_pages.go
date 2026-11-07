@@ -183,7 +183,7 @@ func DomainsBulkActions(phpVersions []string) []webtemplates.BulkAction {
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
 		{Key: "waf", Icon: "shield-check", Label: "WAF", Confirm: "Set the WAF for the selected domains:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Enable", "Disable")}},
-		{Key: "ratelimit", Icon: "clock", Label: "Rate limit", Confirm: "Rate limit for the selected domains, custom limits are set on the Rate Limiting page:",
+		{Key: "ratelimit", Icon: "clock", Label: "Rate limit", Confirm: "Rate limit for the selected domains, custom limits are set on the Rate limiting page:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: []webtemplates.BulkOption{{Value: "default", Label: "Server default"}, {Value: "off", Label: "No limits"}}}},
 		{Key: "cloudflare", Icon: "cloud", Label: "Cloudflare", Confirm: "Cloudflare-only access for the selected domains, restricted domains not proxied through Cloudflare return 403 to visitors:",
 			Input: &webtemplates.BulkInput{Type: "select", Options: onOffOptions("Restrict to Cloudflare", "Unrestrict")}},
@@ -355,7 +355,7 @@ func accountsBulkRoute(path string) BulkRoute {
 }
 
 // PlansBulkActions: Update picks one limit of the edit form and sets it on every selected plan
-// cronNeverSchedule is Feb 31st, the same "never fires" schedule System Backups uses for disabled
+// cronNeverSchedule is Feb 31st, the same "never fires" schedule System backups uses for disabled
 const cronNeverSchedule = "59 23 31 2 *"
 
 func CronsBulkActions() []webtemplates.BulkAction {

@@ -234,7 +234,7 @@ func (wf *WAF) ServeWAFRules(w http.ResponseWriter, r *http.Request) {
 		"Flashes":       auth.PopFlashes(w, r, wf.Sessions),
 		"BulkActions":   WAFRulesBulkActions(),
 		"WAFTab":        "rules",
-	}, r, "Web Firewall Rules"))
+	}, r, "Web firewall rules"))
 }
 
 // wafModuleEnabled does a plain, unstructured substring search for "waf"
@@ -352,7 +352,7 @@ func (wf *WAF) ServeWAFStatus(w http.ResponseWriter, r *http.Request) {
 		"CSRFToken":       csrf.Token(r),
 		"Flashes":         auth.PopFlashes(w, r, wf.Sessions),
 		"WAFTab":          "overview",
-	}, r, "Web Firewall (Coraza)"))
+	}, r, "Web firewall (Coraza)"))
 }
 
 // handleStatusAction runs the CRS update and profile download buttons on /security/waf, handled reports whether action was one of them

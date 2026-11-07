@@ -51,10 +51,20 @@ func isValidSSHAuthParam(param string) bool {
 	return param == "yes" || param == "no"
 }
 
+// sshUnit picks the SSH service's unit name: Debian/Ubuntu call it ssh, EL distros sshd
+func sshUnit() string {
+	for _, unit := range []string{"ssh", "sshd"} {
+		if exec.Command("systemctl", "cat", unit).Run() == nil {
+			return unit
+		}
+	}
+	return "ssh"
+}
+
 // sshStatusRun / sshExecuteActionRun / sshRestartServiceRun are injectable
 // so tests never shell out to systemctl.
 var sshStatusRun = func() string {
-	out, _ := exec.Command("systemctl", "is-active", "ssh").Output()
+	out, _ := exec.Command("systemctl", "is-active", sshUnit()).Output()
 	return strings.TrimSpace(string(out))
 }
 
@@ -64,7 +74,7 @@ var sshStatusRun = func() string {
 // real) fire-and-forget behavior is kept as-is rather than turned into
 // an error-checked call.
 var sshExecuteActionRun = func(action string) {
-	_ = exec.Command("systemctl", action, "ssh").Run()
+	_ = exec.Command("systemctl", action, sshUnit()).Run()
 }
 
 var sshRestartServiceRun = func() {

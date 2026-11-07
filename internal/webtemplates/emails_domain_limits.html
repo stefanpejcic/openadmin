@@ -1,68 +1,63 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="rateLimits()" x-init="init()">
 
   <!-- Page header -->
-  <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+  <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
       <header>
-          <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div class="grow">
-                  <h1 class="mb-1 text-xl font-bold">Email Rate Limits</h1>
-                  <h2 class="text-sm font-medium text-slate-500">Manage per-domain hourly send limits via <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded text-xs">postfwd</code></h2>
+                  <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Email rate limits</h1>
+                  <p class="text-sm text-gray-500 dark:text-gray-500">Manage per-domain hourly send limits through <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">postfwd</code>.</p>
               </div>
 
 
-              <div class="hidden items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                <a href="?mode=gui" class="cursor-pointer px-3 py-1.5 rounded text-sm font-medium">GUI</a>
-                <a href="?mode=raw" class="cursor-pointer px-3 py-1.5 rounded text-sm font-medium">Raw</a>
-              </div>
-
-              <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                <a @click="panel = panel === 'restore' ? '' : 'restore'" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Restore from plan</a>
-                <a @click="panel = panel === 'remove' ? '' : 'remove'" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60">Remove rules</a>
+              <div class="flex flex-none items-center gap-2">
+                <button type="button" @click="panel = panel === 'restore' ? '' : 'restore'" :aria-expanded="panel === 'restore'" aria-controls="limits-panel-restore" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Restore from plan</button>
+                <button type="button" @click="panel = panel === 'remove' ? '' : 'remove'" :aria-expanded="panel === 'remove'" aria-controls="limits-panel-remove" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Remove rules</button>
               </div>
           </div>
       </header>
 
-      <div x-show="panel === 'restore'" x-cloak class="mt-8 w-full">
+      <div id="limits-panel-restore" x-show="panel === 'restore'" x-cloak class="mt-6 w-full">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div class="col-span-full sm:col-span-2">
-            <label for="restore_user" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Restore limits for</label>
-            <select id="restore_user" x-model="selectedUser" class="mt-2 block w-full rounded border px-2.5 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+            <label for="restore_user" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Restore limits for</label>
+            <select id="restore_user" x-model="selectedUser" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full mt-2">
               <option value="">All users</option>
               {{range .Usernames}}<option value="{{.}}">{{.}}</option>{{end}}
             </select>
           </div>
           <div class="col-span-full flex items-end sm:col-span-2">
-            <button type="button" @click="restore()" :disabled="$store.page.busy" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800">Restore</button>
+            <button type="button" @click="restore()" :disabled="$store.page.busy" class="sm:w-fit relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Restore</button>
           </div>
         </div>
-        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">Rewrites the hourly limit of every domain from its owner's plan, custom limits set here are replaced.</p>
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-500">Rewrites the hourly limit of every domain from its owner's plan, custom limits set here are replaced.</p>
       </div>
 
-      <div x-show="panel === 'remove'" x-cloak class="mt-8 w-full">
+      <div id="limits-panel-remove" x-show="panel === 'remove'" x-cloak class="mt-6 w-full">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div class="col-span-full sm:col-span-2">
-            <label for="remove_user" class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium">Remove rules for</label>
-            <select id="remove_user" x-model="selectedUserDelete" @change="removeArmed = false" class="mt-2 block w-full rounded border px-2.5 py-2 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+            <label for="remove_user" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Remove rules for</label>
+            <select id="remove_user" x-model="selectedUserDelete" @change="removeArmed = false" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full mt-2">
               <option value="">All users</option>
               {{range .Usernames}}<option value="{{.}}">{{.}}</option>{{end}}
             </select>
           </div>
           <div class="col-span-full flex items-end sm:col-span-2">
-            <button type="button" @click="removeRules()" :disabled="$store.page.busy" :class="removeArmed ? 'relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer border-transparent bg-red-600 text-white hover:bg-red-700 disabled:opacity-50' : 'relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60'" x-text="removeArmed ? 'Click again to confirm' : 'Remove'"></button>
+            <button type="button" @click="removeRules()" :disabled="$store.page.busy" :class="removeArmed ? 'relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400' : 'relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600'" x-text="removeArmed ? 'Click again to confirm' : 'Remove'"></button>
           </div>
         </div>
-        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">Domains without a rule can send any number of emails until the rules are restored from their plan.</p>
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-500">Domains without a rule can send any number of emails until the rules are restored from their plan.</p>
       </div>
   </div>
 
@@ -70,20 +65,18 @@
 
   {{if eq .Mode "raw"}}
   <div class="space-y-3">
-    <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+    <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
       <div>
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Editing file:</span><span class="ml-2 text-xs text-gray-400 font-mono">{{.PostfwdCF}}</span>
+        <label for="raw_content" class="text-sm font-medium text-gray-900 dark:text-gray-50">Editing file</label><span class="ml-2 font-mono text-xs text-gray-500 dark:text-gray-500">{{.PostfwdCF}}</span>
       </div>
-      <span class="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 px-2 py-0.5 rounded">
-        Edit with care
-      </span>
+      <p class="text-xs text-yellow-700 dark:text-yellow-500">Saving reloads postfwd.</p>
     </div>
     <form action="/emails/domain-limits/save-raw" method="POST">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-      <textarea name="raw_content" class="w-full font-mono text-xs text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 p-4 focus:outline-none resize-y min-h-[90vh]" spellcheck="false" autocomplete="off">{{.RawContent}}</textarea>
-      <div class="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-        <a href="?mode=gui" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 cursor-pointer">Cancel</a>
-        <button type="submit" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Save & Reload postfwd</button>
+      <textarea id="raw_content" name="raw_content" class="block min-h-[60vh] w-full resize-y border-y border-gray-200 bg-gray-50 p-4 font-mono text-xs leading-5 whitespace-pre text-gray-800 [tab-size:4] outline-hidden focus:ring-2 focus:ring-inset focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200 dark:focus:ring-blue-700/30" spellcheck="false" autocomplete="off" wrap="off" autocapitalize="off">{{.RawContent}}</textarea>
+      <div class="flex flex-col-reverse gap-2 px-4 py-4 sm:flex-row sm:justify-end sm:px-6 lg:px-8">
+        <a href="?mode=gui" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</a>
+        <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Save and reload postfwd</button>
       </div>
     </form>
   </div>
@@ -91,16 +84,16 @@
   {{else}}
 
   <div class="space-y-3">
-    <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+    <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
       <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
-        <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-          <input x-model="search" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 pl-8" placeholder="Search domains or users..." type="search" />
+        <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+          <input x-model="search" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm pl-8" placeholder="Search domains or users…" aria-label="Search domains or users…" type="search" />
           <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
           </div>
         </div>
         {{if .Usernames}}
-        <select x-model="owner" aria-label="Filter by user" class="rounded border px-2.5 py-1.5 shadow-sm outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">
+        <select x-model="owner" aria-label="Filter by user" class="block w-auto min-w-36 shrink-0 rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2.5 py-1.5 text-sm dark:[color-scheme:dark]">
           <option value="">All users</option>
           {{range .Usernames}}<option value="{{.}}">{{.}}</option>{{end}}
         </select>
@@ -110,17 +103,17 @@
 
     {{if .Rules}}
     {{template "bulk_open" (dict "Table" "#domain_limits_table" "Endpoint" "/emails/domain-limits/bulk")}}
-    <div class="relative overflow-x-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+    <div class="relative overflow-x-auto">
       <table id="domain_limits_table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
         <thead>
-          <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+          <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 border-y border-gray-200 dark:border-gray-800">
             {{template "bulk_head_checkbox" .}}
-            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Domain" "Key" "domain" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Owner" "Key" "owner" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs" title="Emails sent this hour, counted per user">{{template "sort_header" (dict "Label" "Sent this hour" "Key" "usage" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Limit/hour" "Key" "limit" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs">{{template "sort_header" (dict "Label" "Rule ID" "Key" "id" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Actions</th>
+            <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">{{template "sort_header" (dict "Label" "Domain" "Key" "domain" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+            <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">{{template "sort_header" (dict "Label" "Owner" "Key" "owner" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+            <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">{{template "sort_header" (dict "Label" "Sent this hour" "Key" "usage" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+            <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">{{template "sort_header" (dict "Label" "Limit/hour" "Key" "limit" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+            <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">{{template "sort_header" (dict "Label" "Rule ID" "Key" "id" "Base" "/emails/domain-limits" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+            <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50 text-right"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -128,54 +121,56 @@
           <tr data-domain="{{.Domain}}" data-user="{{.Username}}"
             x-show="matchesSearch('{{.Domain}}', '{{.Username}}')"
             x-data="ruleRow({ id: '{{.ID}}', domain: '{{.Domain}}', username: '{{.Username}}', limit: {{.Limit}}, current: {{intOrNull .Current}} })"
-            class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+            class="group *:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60 has-[.bulk-select-box:checked]:bg-gray-50 dark:has-[.bulk-select-box:checked]:bg-gray-900">
             {{template "bulk_row_checkbox" (dict "Key" .Domain "Label" .Domain)}}
-            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-medium">{{.Domain}}</td>
-            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">{{.Username}}</td>
-            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
+            <td class="px-4 py-2.5 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-50">{{.Domain}}</td>
+            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{.Username}}</td>
+            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
               <div class="flex items-center gap-2">
-                <span x-show="current !== null" class="tabular-nums font-semibold" :class="usageColor()" x-text="current"></span>
-                <span x-show="current === null" class="text-gray-400" title="postfwd has no counter for this user yet">-</span>
-                <div x-show="current !== null" class="h-1.5 w-20 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <span x-show="current !== null" class="tabular-nums font-medium" :class="usageColor()" x-text="current"></span>
+                <span x-show="current === null" class="text-gray-400 dark:text-gray-600"><span aria-hidden="true">—</span><span class="sr-only">postfwd has no counter for this user yet</span></span>
+                <div x-show="current !== null" role="meter" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="Math.min(100, Math.round(current / limit * 100))" :aria-label="'Hourly limit used by ' + domain" class="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
                   <div class="h-full rounded-full" :class="usageBarColor()" :style="`width: ${Math.min(100, Math.round(current / limit * 100))}%`"></div>
                 </div>
-                <span x-show="hitLimit()" @click="toggleHits()" title="Limit was hit, click to show the mail log lines"
-                      class="cursor-pointer inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1 bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Limit hit</span>
+                <button type="button" x-show="hitLimit()" @click="toggleHits()" :aria-expanded="$store.page.hits.open && $store.page.hits.domain === domain" aria-label="Limit hit, show the mail log lines"
+                      class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 cursor-pointer hover:bg-red-100 dark:hover:bg-red-400/20 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Limit hit</button>
               </div>
             </td>
-            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 tabular-nums">
+            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">
               <template x-if="!editing"><span x-text="limit"></span></template>
               <template x-if="editing">
-                <input type="number" x-model.number="editLimit" min="1" max="100000" @keydown.enter="saveLimit()" @keydown.escape="cancelEdit()"
+                <input type="number" x-model.number="editLimit" min="1" max="100000" :aria-label="'Hourly limit for ' + domain" @keydown.enter="saveLimit()" @keydown.escape="cancelEdit()"
                        x-ref="editInput" x-init="$nextTick(() => $refs.editInput && $refs.editInput.focus())"
-                       class="w-24 rounded border px-2 py-1 text-sm shadow-sm outline-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:border-blue-500">
+                       class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-24 px-2 py-1 text-xs">
               </template>
             </td>
-            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-mono text-xs">{{.ID}}</td>
-            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 text-right">
+            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 font-mono">{{.ID}}</td>
+            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-right">
+              <div class="inline-flex items-center justify-end gap-1">
               <template x-if="!editing">
-                <button type="button" @click="startEdit()" class="cursor-pointer inline-block px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition disabled:opacity-50">Edit</button>
+                <button type="button" @click="startEdit()" aria-label="Edit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-transparent text-gray-900 hover:bg-gray-100 disabled:text-gray-400 dark:text-gray-50 dark:hover:bg-gray-800/80 dark:disabled:text-gray-600">Edit</button>
               </template>
               <template x-if="editing">
-                <span>
-                  <button type="button" @click="saveLimit()" :disabled="$store.page.busy" class="cursor-pointer inline-block px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition disabled:opacity-50">Save</button>
-                  <button type="button" @click="cancelEdit()" class="cursor-pointer inline-block px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition disabled:opacity-50">Cancel</button>
+                <span class="inline-flex gap-1">
+                  <button type="button" @click="saveLimit()" :disabled="$store.page.busy" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Save</button>
+                  <button type="button" @click="cancelEdit()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-transparent text-gray-900 hover:bg-gray-100 disabled:text-gray-400 dark:text-gray-50 dark:hover:bg-gray-800/80 dark:disabled:text-gray-600">Cancel</button>
                 </span>
               </template>
-              <button type="button" @click="resetDomain()" :disabled="$store.page.busy" title="Set the limit from the owner's plan again" class="cursor-pointer inline-block px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-600 transition disabled:opacity-50">Restore</button>
-              <button type="button" @click="deleteDomain()" :disabled="$store.page.busy" :class="armed ? 'cursor-pointer inline-block px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 transition disabled:opacity-50 font-semibold' : 'cursor-pointer inline-block px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-600 transition disabled:opacity-50'" x-text="armed ? 'Confirm removal' : 'Remove'"></button>
+              <button type="button" @click="resetDomain()" :disabled="$store.page.busy" :aria-label="'Restore the limit for ' + domain + ' from the owner\'s plan'" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-transparent text-gray-900 hover:bg-gray-100 disabled:text-gray-400 dark:text-gray-50 dark:hover:bg-gray-800/80 dark:disabled:text-gray-600">Restore</button>
+              <button type="button" @click="deleteDomain()" :disabled="$store.page.busy" :class="armed ? 'relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400' : 'relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-transparent hover:bg-gray-100 disabled:text-gray-400 dark:hover:bg-gray-800/80 dark:disabled:text-gray-600 text-red-600 dark:text-red-500'" x-text="armed ? 'Confirm removal' : 'Remove'"></button>
+              </div>
             </td>
           </tr>
           <tr x-data="{ domain: '{{.Domain}}' }" x-show="$store.page.hits.open && $store.page.hits.domain === domain" x-cloak>
             <td></td>
             <td colspan="6" class="px-4 pb-3">
-              <p x-show="$store.page.hits.loading" class="text-sm text-gray-500">Reading the mail log...</p>
-              <p x-show="!$store.page.hits.loading && $store.page.hits.lines.length === 0" class="text-sm text-gray-500">No limit hits found in the mail log for this domain.</p>
+              <p x-show="$store.page.hits.loading" class="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg>Reading the mail log…</p>
+              <p x-show="!$store.page.hits.loading && $store.page.hits.lines.length === 0" class="text-sm text-gray-500 dark:text-gray-500">No limit hits found in the mail log for this domain.</p>
               <div x-show="!$store.page.hits.loading && $store.page.hits.lines.length > 0">
                 <p class="mb-1 text-xs font-medium text-gray-900 dark:text-gray-50">Last <span x-text="$store.page.hits.lines.length"></span> limit hits from the mail log</p>
                 <div class="max-h-64 space-y-1 overflow-y-auto">
                   <template x-for="line in $store.page.hits.lines" :key="line">
-                    <div class="font-mono text-xs bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 break-all" x-text="line"></div>
+                    <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 font-mono text-xs leading-5 break-all text-gray-800 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200" x-text="line"></div>
                   </template>
                 </div>
               </div>
@@ -183,22 +178,22 @@
           </tr>
           {{end}}
           <tr x-show="filteredCount === 0" x-cloak>
-            <td colspan="7" class="p-6 text-center text-sm text-gray-500">No rules match the filter.</td>
+            <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">No rules match the filter.</td>
           </tr>
         </tbody>
       </table>
     </div>
     {{template "bulk_bar" .}}
     </div>
-    <div class="px-6 py-2 flex items-center justify-end">
-      <p class="text-sm tabular-nums text-gray-500">Showing <span class="font-medium text-gray-900 dark:text-gray-50" x-text="filteredCount"></span> of {{len .Rules}}</p>
+    <div class="flex items-center justify-end px-4 py-3 sm:px-6 lg:px-8">
+      <p class="text-sm tabular-nums text-gray-500 dark:text-gray-500">Showing <span class="font-medium text-gray-900 dark:text-gray-50" x-text="filteredCount"></span> of {{len .Rules}}</p>
     </div>
 
     {{else}}
-    <div class="flex flex-col items-center justify-center py-6 text-center">
-      <p class="text-gray-500 dark:text-gray-400 font-medium">No rate-limit rules configured</p>
-      <p class="text-sm text-gray-400 dark:text-gray-500 mt-1 mb-4">Generate rules from your users' plan settings</p>
-      <button type="button" @click="selectedUser = ''; restore()" :disabled="$store.page.busy" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800">Generate rules from plans</button>
+    <div class="mx-4 mt-3 rounded-md border border-dashed border-gray-300 px-6 py-8 text-center sm:mx-6 lg:mx-8 dark:border-gray-800">
+      <p class="text-sm font-medium text-gray-900 dark:text-gray-50">No rate-limit rules configured</p>
+      <p class="mt-1 mb-4 text-sm text-gray-500 dark:text-gray-500">Generate rules from your users' plan settings.</p>
+      <button type="button" @click="selectedUser = ''; restore()" :disabled="$store.page.busy" class="sm:w-fit relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Generate rules from plans</button>
     </div>
     {{end}}
   </div>
@@ -293,17 +288,16 @@ function ruleRow({ id, domain, username, limit, current }) {
     usageColor() {
       if (this.current === null) return '';
       const pct = this.current / this.limit;
-      if (pct >= 1) return 'text-red-600 dark:text-red-400';
-      if (pct >= 0.8) return 'text-yellow-600 dark:text-yellow-400';
-      return 'text-green-600 dark:text-green-400';
+      if (pct >= 1) return 'text-red-600 dark:text-red-500';
+      return 'text-gray-900 dark:text-gray-50';
     },
 
     usageBarColor() {
       if (this.current === null) return '';
       const pct = this.current / this.limit;
-      if (pct >= 1) return 'bg-red-500';
-      if (pct >= 0.8) return 'bg-yellow-400';
-      return 'bg-green-500';
+      if (pct >= 0.9) return 'bg-red-500';
+      if (pct >= 0.7) return 'bg-yellow-500';
+      return 'bg-blue-500';
     },
 
     async toggleHits() {

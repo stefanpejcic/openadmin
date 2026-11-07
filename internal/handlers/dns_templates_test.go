@@ -108,7 +108,7 @@ func TestServeDNSZoneTemplatesRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"ipv4 content", "ipv6 content", "Edit Zone Templates", "</html>"} {
+	for _, want := range []string{"ipv4 content", "ipv6 content", "Edit zone templates", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}

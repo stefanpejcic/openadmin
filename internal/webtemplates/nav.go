@@ -97,19 +97,19 @@ var modernAreas = []navArea{
 				tabSpec{true, "/users", "Users", (strings.HasPrefix(path, "/user") && !strings.HasPrefix(path, "/user/import")) || hasAnyPrefix(path, "/containers/", "/php/")},
 				tabSpec{isEnterprise(c) && !c.IsReseller, "/resellers", "Resellers", strings.HasPrefix(path, "/resellers")},
 				tabSpec{!c.IsReseller, "/administrators", "Administrators", strings.HasPrefix(path, "/administrators")},
-				tabSpec{c.IsReseller, "/account", "Reseller Account", strings.HasPrefix(path, "/account")},
-				tabSpec{c.IsReseller, "/security/2fa", "Two-Factor Authentication", strings.HasPrefix(path, "/security/2fa")},
+				tabSpec{c.IsReseller, "/account", "Reseller account", strings.HasPrefix(path, "/account")},
+				tabSpec{c.IsReseller, "/security/2fa", "Two-factor authentication", strings.HasPrefix(path, "/security/2fa")},
 				tabSpec{c.IsReseller, "/security/passkeys", "Passkeys", strings.HasPrefix(path, "/security/passkeys")},
 			)
 		}},
-	{label: "Hosting Plans", icon: plansIcon, menuID: "plans-menu",
+	{label: "Hosting plans", icon: plansIcon, menuID: "plans-menu",
 		show:  func(c *Chrome) bool { return true },
 		match: func(c *Chrome, path string) bool { return hasAnyPrefix(path, "/plans", "/plan/", "/features") },
 		tabs: func(c *Chrome, path string) []NavLink {
 			return buildTabs(
-				tabSpec{true, "/plans", "User Packages", hasAnyPrefix(path, "/plans", "/plan/") && !strings.HasPrefix(path, "/plans/resellers")},
-				tabSpec{isEnterprise(c) && !c.IsReseller, "/plans/resellers", "Reseller Packages", strings.HasPrefix(path, "/plans/resellers")},
-				tabSpec{true, "/features", "Feature Manager", strings.HasPrefix(path, "/features")},
+				tabSpec{true, "/plans", "User packages", hasAnyPrefix(path, "/plans", "/plan/") && !strings.HasPrefix(path, "/plans/resellers")},
+				tabSpec{isEnterprise(c) && !c.IsReseller, "/plans/resellers", "Reseller packages", strings.HasPrefix(path, "/plans/resellers")},
+				tabSpec{true, "/features", "Feature manager", strings.HasPrefix(path, "/features")},
 			)
 		}},
 	{label: "Domains", icon: domainsIcon, menuID: "domains-menu", show: func(c *Chrome) bool { return true },
@@ -125,11 +125,11 @@ var modernAreas = []navArea{
 			admin := !c.IsReseller
 			return buildTabs(
 				tabSpec{true, "/domains", "Domains", !isDNS && !isCluster && !isZone && !isFile && !isVhost && !isRateLimit},
-				tabSpec{dns, "/domains/dns", "DNS Zone Editor", isDNS},
+				tabSpec{dns, "/domains/dns", "DNS zone editor", isDNS},
 				tabSpec{admin && dns && isEnterprise(c), "/domains/dns-cluster", "DNS Cluster", isCluster},
-				tabSpec{true, "/domains/ratelimit", "Rate Limiting", isRateLimit},
-				tabSpec{admin && dns, "/domains/zone-templates", "Zone Templates", isZone},
-				tabSpec{admin, "/domains/file-templates", "Domain Templates", isFile},
+				tabSpec{true, "/domains/ratelimit", "Rate limiting", isRateLimit},
+				tabSpec{admin && dns, "/domains/zone-templates", "Zone templates", isZone},
+				tabSpec{admin, "/domains/file-templates", "Domain templates", isFile},
 				tabSpec{admin, "/domains/vhost-templates", "VirtualHost Templates", isVhost},
 			)
 		}},
@@ -157,9 +157,9 @@ var modernAreas = []navArea{
 			return buildTabs(
 				tabSpec{true, "/emails/accounts", "Accounts", strings.HasPrefix(path, "/emails/accounts")},
 				tabSpec{true, "/emails/queue", "Queue", strings.HasPrefix(path, "/emails/queue")},
-				tabSpec{admin, "/emails/reports", "Summary Reports", hasAnyPrefix(path, "/emails/reports", "/emails/data")},
-				tabSpec{admin, "/emails/domain-limits", "Domain Limits", strings.HasPrefix(path, "/emails/domain-limits")},
-				tabSpec{true, "/emails/deliverability", "Email Deliverability", strings.HasPrefix(path, "/emails/deliverability")},
+				tabSpec{admin, "/emails/reports", "Summary reports", hasAnyPrefix(path, "/emails/reports", "/emails/data")},
+				tabSpec{admin, "/emails/domain-limits", "Domain limits", strings.HasPrefix(path, "/emails/domain-limits")},
+				tabSpec{true, "/emails/deliverability", "Email deliverability", strings.HasPrefix(path, "/emails/deliverability")},
 				tabSpec{admin, "/emails/settings", "Settings", strings.HasPrefix(path, "/emails/settings")},
 			)
 		}},
@@ -169,8 +169,8 @@ var modernAreas = []navArea{
 		},
 		tabs: func(c *Chrome, path string) []NavLink {
 			return buildTabs(
-				tabSpec{!c.IsReseller, "/backups/user", "User Backups", strings.HasPrefix(path, "/backups/user")},
-				tabSpec{!c.IsReseller, "/backups/system", "System Backups", strings.HasPrefix(path, "/backups/system")},
+				tabSpec{!c.IsReseller, "/backups/user", "User backups", strings.HasPrefix(path, "/backups/user")},
+				tabSpec{!c.IsReseller, "/backups/system", "System backups", strings.HasPrefix(path, "/backups/system")},
 				tabSpec{isEnterprise(c), "/user/import", "Import Account", hasAnyPrefix(path, "/user/import", "/import/")},
 			)
 		}},
@@ -184,28 +184,30 @@ var modernAreas = []navArea{
 			isFTP := strings.HasPrefix(path, "/services/ftp")
 			admin := !c.IsReseller
 			return buildTabs(
-				tabSpec{admin, "/services", "Service Status", !isLimits && !isLogs && !isPodman && !isFTP},
-				tabSpec{admin, "/services/limits", "Service Limits", isLimits},
-				tabSpec{admin, "/services/logs", "Log Files", isLogs},
+				tabSpec{admin, "/services", "Service status", !isLimits && !isLogs && !isPodman && !isFTP},
+				tabSpec{admin, "/services/limits", "Service limits", isLimits},
+				tabSpec{admin, "/services/logs", "Log files", isLogs},
 				tabSpec{admin, "/services/podman", "Podman", isPodman},
 				tabSpec{isEnterprise(c), "/services/ftp", "FTP", isFTP},
 			)
 		}},
 	{label: "Security", icon: securityIcon, menuID: "security-menu", show: func(c *Chrome) bool { return true },
-		match: func(c *Chrome, path string) bool { return strings.HasPrefix(path, "/security/") && !isAccountsPath(c, path) },
+		match: func(c *Chrome, path string) bool {
+			return strings.HasPrefix(path, "/security/") && !isAccountsPath(c, path)
+		},
 		tabs: func(c *Chrome, path string) []NavLink {
 			admin, reseller := !c.IsReseller, c.IsReseller
 			waf := strings.HasPrefix(path, "/security/waf")
 			return buildTabs(
 				tabSpec{admin, "/security/firewall", "Firewall", strings.HasPrefix(path, "/security/firewall")},
-				tabSpec{admin, "/security/waf", "Web Firewall (Coraza)", waf},
+				tabSpec{admin, "/security/waf", "Web firewall (Coraza)", waf},
 				// resellers don't get the WAF overview, their WAF pages start at their domains
-				tabSpec{reseller, "/security/waf/domains", "Web Firewall (Coraza)", waf},
+				tabSpec{reseller, "/security/waf/domains", "Web firewall (Coraza)", waf},
 				tabSpec{true, "/security/imunify", "ImunifyAV", strings.HasPrefix(path, "/security/imunify")},
-				tabSpec{admin, "/security/basic_auth", "Basic Auth", strings.HasPrefix(path, "/security/basic_auth")},
-				tabSpec{admin, "/security/2fa", "Two-Factor Authentication", strings.HasPrefix(path, "/security/2fa")},
+				tabSpec{admin, "/security/basic_auth", "Basic auth", strings.HasPrefix(path, "/security/basic_auth")},
+				tabSpec{admin, "/security/2fa", "Two-factor authentication", strings.HasPrefix(path, "/security/2fa")},
 				tabSpec{admin, "/security/passkeys", "Passkeys", strings.HasPrefix(path, "/security/passkeys")},
-				tabSpec{admin, "/security/blacklist-useragents", "Blocked User Agents", strings.HasPrefix(path, "/security/blacklist-useragents")},
+				tabSpec{admin, "/security/blacklist-useragents", "Blocked user agents", strings.HasPrefix(path, "/security/blacklist-useragents")},
 				tabSpec{admin, "/security/disable-admin", "Disable OpenAdmin", strings.HasPrefix(path, "/security/disable-admin")},
 			)
 		}},
@@ -213,10 +215,10 @@ var modernAreas = []navArea{
 		match: func(c *Chrome, path string) bool { return isServerPath(path) },
 		tabs: func(c *Chrome, path string) []NavLink {
 			return buildTabs(
-				tabSpec{true, "/server/resource-usage", "Resource Usage", strings.HasPrefix(path, "/server/resource-usage")},
-				tabSpec{true, "/server/crons", "Scheduled Actions", strings.HasPrefix(path, "/server/crons")},
+				tabSpec{true, "/server/resource-usage", "Resource usage", strings.HasPrefix(path, "/server/resource-usage")},
+				tabSpec{true, "/server/crons", "Scheduled actions", strings.HasPrefix(path, "/server/crons")},
 				tabSpec{!c.IsReseller, "/terminal", "Terminal", strings.HasPrefix(path, "/terminal")},
-				tabSpec{!c.IsReseller, "/server/processes", "Process Manager", strings.HasPrefix(path, "/server/processes")},
+				tabSpec{!c.IsReseller, "/server/processes", "Process manager", strings.HasPrefix(path, "/server/processes")},
 				tabSpec{!c.IsReseller, "/tasks", "Tasks", strings.HasPrefix(path, "/tasks")},
 			)
 		}},
@@ -224,14 +226,14 @@ var modernAreas = []navArea{
 		match: func(c *Chrome, path string) bool { return strings.HasPrefix(path, "/server/") && !isServerPath(path) },
 		tabs: func(c *Chrome, path string) []NavLink {
 			return buildTabs(
-				tabSpec{true, "/server/timezone", "Server Time", strings.HasPrefix(path, "/server/timezone")},
-				tabSpec{true, "/server/root-password", "Root Password", strings.HasPrefix(path, "/server/root-password")},
+				tabSpec{true, "/server/timezone", "Server time", strings.HasPrefix(path, "/server/timezone")},
+				tabSpec{true, "/server/root-password", "Root password", strings.HasPrefix(path, "/server/root-password")},
 				tabSpec{true, "/server/ssh", "SSH Access", strings.HasPrefix(path, "/server/ssh")},
-				tabSpec{true, "/server/reboot", "Server Reboot", strings.HasPrefix(path, "/server/reboot")},
+				tabSpec{true, "/server/reboot", "Server reboot", strings.HasPrefix(path, "/server/reboot")},
 				tabSpec{true, "/server/swap", "Swap", strings.HasPrefix(path, "/server/swap")},
 				tabSpec{true, "/server/migrate", "Migrate", strings.HasPrefix(path, "/server/migrate")},
-				tabSpec{isEnterprise(c), "/server/cluster", "Multi-Server", strings.HasPrefix(path, "/server/cluster")},
-				tabSpec{true, "/server/demo-mode", "Demo Mode", strings.HasPrefix(path, "/server/demo-mode")},
+				tabSpec{isEnterprise(c), "/server/cluster", "Multi-server", strings.HasPrefix(path, "/server/cluster")},
+				tabSpec{true, "/server/demo-mode", "Demo mode", strings.HasPrefix(path, "/server/demo-mode")},
 			)
 		}},
 
@@ -242,14 +244,14 @@ var modernAreas = []navArea{
 			return buildTabs(
 				tabSpec{admin, "/settings/general", "General", strings.HasPrefix(path, "/settings/general")},
 				tabSpec{admin, "/settings/open-panel", "OpenPanel", strings.HasPrefix(path, "/settings/open-panel")},
-				tabSpec{admin, "/settings/defaults", "User Defaults", strings.HasPrefix(path, "/settings/defaults")},
+				tabSpec{admin, "/settings/defaults", "User defaults", strings.HasPrefix(path, "/settings/defaults")},
 				tabSpec{admin, "/settings/modules", "Modules", strings.HasPrefix(path, "/settings/modules")},
 				tabSpec{admin && isEnterprise(c), "/settings/api", "API Access", strings.HasPrefix(path, "/settings/api")},
 				tabSpec{admin, "/settings/php", "PHP", strings.HasPrefix(path, "/settings/php")},
 				tabSpec{admin, "/settings/notifications", "Notifications", strings.HasPrefix(path, "/settings/notifications")},
 				tabSpec{admin, "/settings/updates", "Updates", strings.HasPrefix(path, "/settings/updates")},
 				tabSpec{true, "/settings/locales", "Locales", strings.HasPrefix(path, "/settings/locales")},
-				tabSpec{admin, "/settings/custom-code", "Custom Code", strings.HasPrefix(path, "/settings/custom-code")},
+				tabSpec{admin, "/settings/custom-code", "Custom code", strings.HasPrefix(path, "/settings/custom-code")},
 			)
 		}},
 	{label: "License & Support", icon: licenseIcon, menuID: "license-menu", show: adminOnly,
@@ -406,7 +408,7 @@ func DashboardTabs(c *Chrome) []NavLink {
 	tabs := buildTabs(
 		tabSpec{true, "/dashboard", "Dashboard", path == "/" || path == "/dashboard"},
 		tabSpec{true, "/notifications", "Notifications", strings.HasPrefix(path, "/notifications")},
-		tabSpec{c.SummaryTab, "/dashboard/summary", "Daily Summary", strings.HasPrefix(path, "/dashboard/summary")},
+		tabSpec{c.SummaryTab, "/dashboard/summary", "Daily summary", strings.HasPrefix(path, "/dashboard/summary")},
 		tabSpec{!c.IsReseller && isEnterprise(c), "/license", "License", hasAnyPrefix(path, "/license", "/support/")},
 		tabSpec{!c.IsReseller && !isEnterprise(c), "/license", "Upgrade", hasAnyPrefix(path, "/license", "/support/")},
 	)

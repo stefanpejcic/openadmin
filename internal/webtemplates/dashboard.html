@@ -3,23 +3,23 @@
 {{template "chrome_head" .}}
 {{/* the only pages that use jquery, the layout no longer loads it */}}
 <script src="/static/dist/js/jquery361.min.js"></script>
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div id="blocks-container" class="">
     <div class="">
         <div class="bg-white transition-all dark:bg-gray-950 overflow-hidden">
             <div class="obfuscate">
-<div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 px-6 pb-4 pt-4 sm:pt-6 lg:pt-8 dark:border-gray-800 dark:bg-gray-950" style="min-height:113px">
+<div x-data="{ showSection: false }" class="op-page-header border-b border-gray-200 px-4 py-6 sm:px-6 lg:px-8 lg:pt-8 dark:border-gray-800">
     <header>
-        <div class="flex flex-col items-start gap-2 text-center sm:flex-row sm:justify-between sm:text-start">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div class="grow" x-data="{
     tourDismissed: false,
     messages: [
@@ -40,19 +40,19 @@
     }
   }"
 >
-                <h1 class="mb-1 text-xl font-bold">Welcome {{.CurrentUser}}</h1>
+                <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Welcome {{.CurrentUser}}</h1>
                 {{if .TourShow}}
-                <h2 class="text-sm font-medium text-slate-500">
+                <p class="text-sm text-gray-500 dark:text-gray-500">
                     <span x-show="!tourDismissed" id="tour-prompt-row">
                         Want a quick guided tour of OpenPanel?
-                        <a href="#" id="tour-prompt-start" @click.prevent="OPTour.start(true)" class="text-indigo-600 hover:underline dark:text-indigo-400">Take the tour</a>
-                        <span class="text-slate-300 px-2">·</span>
-                        <a href="#" id="tour-prompt-skip" @click.prevent="tourDismissed = true; OPTour.markComplete()" class="hover:underline">Skip</a>
+                        <a href="#" id="tour-prompt-start" @click.prevent="OPTour.start(true)" class="text-blue-500 hover:underline hover:underline-offset-4">Take the tour</a>
+                        <span class="px-1.5 text-gray-300 dark:text-gray-700" aria-hidden="true">·</span>
+                        <a href="#" id="tour-prompt-skip" @click.prevent="tourDismissed = true; OPTour.markComplete()" class="hover:underline hover:underline-offset-4">Skip</a>
                     </span>
                     <span x-show="tourDismissed" x-text="message"></span>
-                </h2>
+                </p>
                 {{else}}
-                <h2 class="text-sm font-medium text-slate-500" x-text="message"></h2>
+                <p class="text-sm text-gray-500 dark:text-gray-500" x-text="message"></p>
                 {{end}}
             </div>
 
@@ -68,73 +68,55 @@
             <!-- END RESELER USAGE -->
             {{else}}
             <!-- STATISTICS -->
-<dl id="tour-quick-summary" class="flex flex-wrap items-center gap-x-12">
-    <a href="/server/cluster" style="text-decoration:none;">
+<dl id="tour-quick-summary" class="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4 lg:flex lg:flex-wrap lg:gap-x-12">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Servers</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.ClusterCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ {{if eq .LicenseType "Enterprise"}}&#8734;{{else}}1{{end}}</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Servers</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="/server/cluster" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.ClusterCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ {{if eq .LicenseType "Enterprise"}}&#8734;{{else}}1{{end}}</span></p></a></dd>
     </div>
-    </a>
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Containers</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.RunningContainers}}<span class="font-medium text-gray-400 dark:text-gray-600">/ {{if eq .LicenseType "Community"}}100{{else}}&#8734;{{end}}</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Containers</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="/services/podman" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.RunningContainers}}<span class="font-medium text-gray-400 dark:text-gray-600">/ {{if eq .LicenseType "Community"}}100{{else}}&#8734;{{end}}</span></p></a></dd>
     </div>
     {{if eq .LicenseType "Enterprise"}}
-    <a href="/users" style="text-decoration:none;">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Users</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.UserCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ &#8734;</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Users</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="/users" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.UserCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ &#8734;</span></p></a></dd>
     </div>
-    </a>
     {{else}}
-    <a href="https://my.openpanel.com/index.php?rp=/store/openpanel/enterprise-license" target="_blank" title="Managing more than 3 users is available on OpenPanel Enterprise edition." style="text-decoration:none;">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Users</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.UserCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ 3</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Users</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="https://my.openpanel.com/index.php?rp=/store/openpanel/enterprise-license" target="_blank" title="Managing more than 3 users is available on OpenPanel Enterprise edition." rel="noopener" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.UserCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ 3</span></p></a></dd>
     </div>
-    </a>
     {{end}}
     {{if eq .LicenseType "Enterprise"}}
-    <a href="/domains" style="text-decoration:none;">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Domains</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.DomainCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ &#8734;</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Domains</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="/domains" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.DomainCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ &#8734;</span></p></a></dd>
     </div>
-    </a>
     {{else}}
-    <a href="https://my.openpanel.com/index.php?rp=/store/openpanel/enterprise-license" target="_blank" title="Managing more than 50 domains is available on OpenPanel Enterprise edition." style="text-decoration:none;">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Domains</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.DomainCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ 50</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Domains</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="https://my.openpanel.com/index.php?rp=/store/openpanel/enterprise-license" target="_blank" title="Managing more than 50 domains is available on OpenPanel Enterprise edition." rel="noopener" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.DomainCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ 50</span></p></a></dd>
     </div>
-    </a>
     {{end}}
-    <a href="/domains" style="text-decoration:none;">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Websites</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.SiteCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ {{if eq .LicenseType "Community"}}50{{else}}&#8734;{{end}}</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Websites</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="/websites" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.SiteCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ {{if eq .LicenseType "Community"}}50{{else}}&#8734;{{end}}</span></p></a></dd>
     </div>
-    </a>
-    <a href="/plans" style="text-decoration:none;">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Packages</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.PlanCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ &#8734;</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Packages</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="/plans" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.PlanCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ &#8734;</span></p></a></dd>
     </div>
-    </a>
     {{if eq .LicenseType "Enterprise"}}
-    <a href="/emails/accounts" style="text-decoration:none;">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Emails</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.MailCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ &#8734;</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Emails</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="/emails/accounts" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.MailCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ &#8734;</span></p></a></dd>
     </div>
-    </a>
     {{else}}
-    <a href="https://my.openpanel.com/index.php?rp=/store/openpanel/enterprise-license" target="_blank" title="Managing email accounts is available on OpenPanel Enterprise edition." style="text-decoration:none;">
     <div>
-        <dt class="font-mono uppercase text-xs md:text-sm">Emails</dt>
-        <dd class="mt-1.5 flex items-center gap-2"><p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.MailCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ 0</span></p></dd>
+        <dt class="text-sm text-gray-500 dark:text-gray-500">Emails</dt>
+        <dd class="mt-1 flex items-center gap-2"><a href="https://my.openpanel.com/index.php?rp=/store/openpanel/enterprise-license" target="_blank" title="Managing email accounts is available on OpenPanel Enterprise edition." rel="noopener" class="rounded-md transition hover:opacity-75 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.MailCount}}<span class="font-medium text-gray-400 dark:text-gray-600">/ 0</span></p></a></dd>
     </div>
-    </a>
     {{end}}
 </dl>
             <!-- END STATISTICS -->
@@ -150,13 +132,13 @@
 
 {{if .IsReseller}}
 <dl class="my-4 grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-    <div class="relative w-full border p-6 text-left shadow-xs bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 hidden flex-col justify-between rounded sm:flex">
+    <div class="relative w-full border p-6 text-left shadow-xs bg-white dark:bg-raised border-gray-200 dark:border-gray-900 flex flex-col justify-between rounded-md">
         <div>
-            <p class="text-sm text-gray-500 dark:text-gray-500">OpenPanel Accounts</p>
-            <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.CurrentAccounts}}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-500">OpenPanel accounts</p>
+            <p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.CurrentAccounts}}</p>
         </div>
         <div>
-            <p class="mt-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+            <p class="mt-2 flex items-center justify-between text-sm tabular-nums text-gray-500 dark:text-gray-500">
                 <span>{{.AccountsPercent}}%</span>
                 <span>
                 {{.CurrentAccounts}}
@@ -165,37 +147,29 @@
                 </span>
             </p>
 
-            <div class="flex w-full items-center mt-2" role="progressbar"
-                aria-label="Progress bar"
-                aria-valuenow="0"
-                aria-valuemax="100">
-                <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
-                    <div class="h-full flex-col rounded-full bg-blue-500 dark:bg-blue-500" style="width: {{.AccountsPercent}}%;">
-                    </div>
+            <div class="mt-2 flex w-full items-center" role="meter" aria-label="Accounts used" aria-valuenow="{{.AccountsPercent}}" aria-valuemin="0" aria-valuemax="100">
+                <div class="relative flex h-2 w-full items-center overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                    <div class="h-full rounded-full {{.AccountsMeter}}" style="width: {{.AccountsPercent}}%;"></div>
                 </div>
             </div>
         </div>
 
     </div>
 
-    <div class="relative w-full border p-6 text-left shadow-xs bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 hidden flex-col justify-between rounded sm:flex">
+    <div class="relative w-full border p-6 text-left shadow-xs bg-white dark:bg-raised border-gray-200 dark:border-gray-900 flex flex-col justify-between rounded-md">
         <div>
-            <p class="text-sm text-gray-500 dark:text-gray-500">Disk Space Used</p>
-            <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.CurrentDiskGB}} GB</p>
+            <p class="text-sm text-gray-500 dark:text-gray-500">Disk space used</p>
+            <p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.CurrentDiskGB}} GB</p>
         </div>
         <div>
-            <p class="mt-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-500">
+            <p class="mt-2 flex items-center justify-between text-sm tabular-nums text-gray-500 dark:text-gray-500">
                 <span>{{.DiskPercent}}%</span>
                 <span>{{.CurrentDiskGB}} of {{if eq .MaxDiskGB "unlimited"}}&#8734;{{else}}{{.MaxDiskGB}}{{end}}</span>
             </p>
 
-            <div class="flex w-full items-center mt-2" role="progressbar"
-                aria-label="Progress bar"
-                aria-valuenow="0"
-                aria-valuemax="100">
-                <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
-                    <div class="h-full flex-col rounded-full bg-blue-500 dark:bg-blue-500" style="width: {{.DiskPercent}}%;">
-                    </div>
+            <div class="mt-2 flex w-full items-center" role="meter" aria-label="Disk space used" aria-valuenow="{{.DiskPercent}}" aria-valuemin="0" aria-valuemax="100">
+                <div class="relative flex h-2 w-full items-center overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                    <div class="h-full rounded-full {{.DiskMeter}}" style="width: {{.DiskPercent}}%;"></div>
                 </div>
             </div>
         </div>
@@ -205,28 +179,28 @@
 {{end}}
 
 
-<dl id="dashboard-widgets" class="my-4 grid grid-cols-1 gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+<dl id="dashboard-widgets" class="{{if .IsReseller}}-mx-6 -mb-4{{else}}-mx-6 -my-4{{end}} grid grid-cols-1 gap-px sm:grid-cols-1 md:grid-flow-row-dense md:grid-cols-2 lg:grid-cols-6">
 
 
 
         <div id="tour-usage-graphs" data-widget="usage" class="flex flex-col">
 <div class="flex flex-1 flex-col">
     <div id="usage_graphs" class="flex flex-1 flex-col">
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
-                <div>
-                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Resource Usage</h3>
+            <div class="flex items-start justify-between gap-4 pb-2">
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Resource usage</h3>
                     <p class="text-sm/6 text-gray-500 dark:text-gray-500">CPU &amp; RAM over the last hour.</p>
                 </div>
-                <a href="/server/resource-usage/history" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View history &rarr;</a>
+                <a href="/server/resource-usage/history" class="text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">View history &rarr;</a>
             </div>
 
-        <div class="flex flex-1 flex-col rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50 mt-2">
+        <div class="flex flex-1 flex-col">
             <div id="dashboard-resource-chart-wrap" class="flex flex-1 flex-col">
                 <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
                     <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-blue-500 inline-block rounded"></span>CPU %</span>
                     <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-violet-500 inline-block rounded"></span>RAM %</span>
                 </div>
-                <div style="position:relative;min-height:160px;flex:1">
+                <div class="relative max-h-80 min-h-40 flex-1">
                     <canvas id="dashboard-resource-chart"></canvas>
                 </div>
             </div>
@@ -236,6 +210,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="{{asset "/static/dist/js/charts.js"}}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     fetch('/server/resource-usage/history/data?minutes=60&cluster=all')
@@ -254,33 +229,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            var isDark = document.documentElement.classList.contains('dark') ||
-                         window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-            var tickColor = isDark ? '#6b7280' : '#9ca3af';
+            var th = opChart.theme();
+            var gridColor = th.grid;
+            var tickColor = th.tick;
 
             var labels = snapshots.map(function (s) { return s.ts.split(' ')[1] || s.ts; });
 
             // a line per server, lined up from the newest sample like the average
             var datasets = null;
             if (perServer.length > 1) {
-                var palette = ['59,130,246', '16,185,129', '245,158,11', '236,72,153', '139,92,246', '20,184,166', '239,68,68', '107,114,128'];
                 datasets = [];
                 document.querySelector('#dashboard-resource-chart-wrap .flex').innerHTML = '';
                 perServer.forEach(function (srv, i) {
-                    var rgb = palette[i % palette.length];
+                    var color = opChart.nth(i);
                     var pad = snapshots.length - srv.snapshots.length;
                     var at = function (pick) {
                         return snapshots.map(function (_, j) { var s = srv.snapshots[j - pad]; return s ? pick(s) : null; });
                     };
-                    var line = { borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false, spanGaps: true, borderColor: 'rgb(' + rgb + ')' };
+                    var line = { borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.3, fill: false, spanGaps: true, borderColor: color };
                     datasets.push(Object.assign({ label: srv.name + ' CPU %', data: at(function (s) { return s.cpu_pct; }) }, line));
                     datasets.push(Object.assign({ label: srv.name + ' RAM %', data: at(function (s) { return s.mem.pct; }), borderDash: [4, 3] }, line));
                     var key = document.createElement('span');
                     key.className = 'flex items-center gap-1 cursor-pointer';
                     key.title = 'Show only ' + srv.name;
                     key.dataset.server = srv.name;
-                    key.innerHTML = '<span class="w-3 h-0.5 inline-block rounded" style="background:rgb(' + rgb + ')"></span>';
+                    key.innerHTML = '<span class="w-3 h-0.5 inline-block rounded" style="background:' + color + '"></span>';
                     key.appendChild(document.createTextNode(srv.name));
                     document.querySelector('#dashboard-resource-chart-wrap .flex').appendChild(key);
                 });
@@ -294,8 +267,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         {
                             label: 'CPU %',
                             data: snapshots.map(function (s) { return s.cpu_pct; }),
-                            borderColor: 'rgb(59,130,246)',
-                            backgroundColor: 'rgba(59,130,246,0.10)',
+                            borderColor: opChart.rgb('blue'),
+                            backgroundColor: opChart.rgb('blue', 0.1),
                             borderWidth: 2,
                             pointRadius: 0,
                             pointHoverRadius: 4,
@@ -305,8 +278,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         {
                             label: 'RAM %',
                             data: snapshots.map(function (s) { return s.mem.pct; }),
-                            borderColor: 'rgb(139,92,246)',
-                            backgroundColor: 'rgba(139,92,246,0.10)',
+                            borderColor: opChart.rgb('violet'),
+                            backgroundColor: opChart.rgb('violet', 0.1),
                             borderWidth: 2,
                             pointRadius: 0,
                             pointHoverRadius: 4,
@@ -321,14 +294,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
                         legend: { display: false },
-                        tooltip: {
-                            backgroundColor: isDark ? '#1f2937' : '#fff',
-                            borderColor: isDark ? '#374151' : '#e5e7eb',
-                            borderWidth: 1,
-                            titleColor: isDark ? '#f9fafb' : '#111827',
-                            bodyColor: isDark ? '#9ca3af' : '#6b7280',
-                            padding: 10
-                        }
+                        tooltip: opChart.tooltip()
                     },
                     scales: {
                         x: {
@@ -336,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             grid: { display: false }
                         },
                         y: {
-                            min: 0, max: 100,
+                            min: 0, suggestedMax: 50,
                             ticks: { color: tickColor, callback: function (v) { return v + '%'; } },
                             grid: { color: gridColor }
                         }
@@ -369,15 +335,15 @@ document.addEventListener('DOMContentLoaded', function () {
         <div id="tour-tasks" data-widget="tasks" class="flex flex-col">
 <div class="flex flex-1 flex-col">
     <div id="tasks_widget" class="flex flex-1 flex-col">
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
-                <div>
-                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Tasks</h3>
+            <div class="flex items-start justify-between gap-4 pb-2">
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Tasks</h3>
                     <p class="text-sm/6 text-gray-500 dark:text-gray-500">Currently running background tasks.</p>
                 </div>
-                <a href="/tasks" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">View all &rarr;</a>
+                <a href="/tasks" class="text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">View all &rarr;</a>
             </div>
 
-        <div class="rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50 mt-2 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:208px">
+        <div class="max-h-52 overflow-y-auto">
             <ul id="dashboard-tasks-list" class="hidden divide-y divide-gray-200 dark:divide-gray-800 text-sm"></ul>
             <p id="dashboard-tasks-empty" class="text-sm text-gray-500 dark:text-gray-500 text-center py-6">No background tasks are currently running.</p>
         </div>
@@ -387,16 +353,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
 {{if and (eq .LicenseType "Enterprise") (not .IsReseller)}}
         <div id="cluster-health-widget" data-widget="cluster" class="flex flex-col">
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2">
-                <div>
-                    <h3 class="font-medium text-gray-900 dark:text-gray-50">Cluster</h3>
+            <div class="flex items-start justify-between gap-4 pb-2">
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Cluster</h3>
                     <p id="cluster-health-sub" class="text-sm/6 text-gray-500 dark:text-gray-500">Health of your servers.</p>
                 </div>
-                <a href="/server/cluster" class="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Manage &rarr;</a>
+                <a href="/server/cluster" class="text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">Manage &rarr;</a>
             </div>
-            <div class="mt-2 flex flex-col overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:208px">
+            <div class="mt-2 flex max-h-52 flex-col overflow-y-auto">
                 <ul id="cluster-health-list" class="hidden space-y-2 text-sm"></ul>
-                <p id="cluster-health-empty" class="flex-1 rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50 text-sm text-gray-500 dark:text-gray-500 text-center py-6">Loading...</p>
+                <p id="cluster-health-empty" class="text-sm text-gray-500 dark:text-gray-500 text-center py-6">Loading…</p>
             </div>
         </div>
 <script>
@@ -411,17 +377,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     // same three bars as the php versions on settings > defaults
     function bars(level) {
-        var colors = { ok: ['#10b981', '#10b981', '#10b981'], warn: ['#f97316', '#f97316', '#6b7280'], bad: ['#ef4444', '#6b7280', '#6b7280'], off: ['#6b7280', '#6b7280', '#6b7280'] }[level];
-        return '<span style="display:inline-flex;gap:2px;align-items:center">' + colors.map(function (c) {
-            return '<span style="display:inline-block;width:4px;height:14px;border-radius:2px;background:' + c + '"></span>';
-        }).join('') + '</span>';
+        var on = { ok: 'bg-emerald-500', warn: 'bg-orange-500', bad: 'bg-red-500', off: 'bg-gray-500' }[level];
+        var lit = { ok: 3, warn: 2, bad: 1, off: 3 }[level];
+        var out = '';
+        for (var i = 0; i < 3; i++) {
+            out += '<span class="inline-block h-3.5 w-1 rounded-sm ' + (i < lit ? on : 'bg-gray-300 dark:bg-gray-700') + '"></span>';
+        }
+        return '<span class="inline-flex items-center gap-0.5">' + out + '</span>';
     }
     var ICONS = {
-        domains: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m7.5-6.923c-.67.204-1.335.82-1.887 1.855A8 8 0 0 0 5.145 4H7.5zM4.09 4a9.3 9.3 0 0 1 .64-1.539 7 7 0 0 1 .597-.933A7.03 7.03 0 0 0 2.255 4zm-.582 3.5c.03-.877.138-1.718.312-2.5H1.674a7 7 0 0 0-.656 2.5zM4.847 5a12.5 12.5 0 0 0-.338 2.5H7.5V5zM8.5 5v2.5h2.99a12.5 12.5 0 0 0-.337-2.5zM4.51 8.5a12.5 12.5 0 0 0 .337 2.5H7.5V8.5zm3.99 0V11h2.653c.187-.765.306-1.608.338-2.5zM5.145 12q.208.58.468 1.068c.552 1.035 1.218 1.65 1.887 1.855V12zm.182 2.472a7 7 0 0 1-.597-.933A9.3 9.3 0 0 1 4.09 12H2.255a7 7 0 0 0 3.072 2.472M3.82 11a13.7 13.7 0 0 1-.312-2.5h-2.49c.062.89.291 1.733.656 2.5zm6.853 3.472A7 7 0 0 0 13.745 12H11.91a9.3 9.3 0 0 1-.64 1.539 7 7 0 0 1-.597.933M8.5 12v2.923c.67-.204 1.335-.82 1.887-1.855q.26-.487.468-1.068zm3.68-1h2.146c.365-.767.594-1.61.656-2.5h-2.49a13.7 13.7 0 0 1-.312 2.5m2.802-3.5a7 7 0 0 0-.656-2.5H12.18c.174.782.282 1.623.312 2.5zM11.27 2.461c.247.464.462.98.64 1.539h1.835a7 7 0 0 0-3.072-2.472c.218.284.418.598.597.933M10.855 4a8 8 0 0 0-.468-1.068C9.835 1.897 9.17 1.282 8.5 1.077V4z"/></svg>',
-        version: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2 2a1 1 0 0 1 1-1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 2 6.586zm3.5 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/></svg>',
-        bell: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"/></svg>',
-        sync: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/></svg>',
-        users: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-fill" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg>'
+        domains: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM9.71002 19.6674C8.74743 17.6259 8.15732 15.3742 8.02731 13H4.06189C4.458 16.1765 6.71639 18.7747 9.71002 19.6674ZM10.0307 13C10.1811 15.4388 10.8778 17.7297 12 19.752C13.1222 17.7297 13.8189 15.4388 13.9693 13H10.0307ZM19.9381 13H15.9727C15.8427 15.3742 15.2526 17.6259 14.29 19.6674C17.2836 18.7747 19.542 16.1765 19.9381 13ZM4.06189 11H8.02731C8.15732 8.62577 8.74743 6.37407 9.71002 4.33256C6.71639 5.22533 4.458 7.8235 4.06189 11ZM10.0307 11H13.9693C13.8189 8.56122 13.1222 6.27025 12 4.24799C10.8778 6.27025 10.1811 8.56122 10.0307 11ZM14.29 4.33256C15.2526 6.37407 15.8427 8.62577 15.9727 11H19.9381C19.542 7.8235 17.2836 5.22533 14.29 4.33256Z"/></svg>',
+        version: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M10.9042 2.10025L20.8037 3.51446L22.2179 13.414L13.0255 22.6063C12.635 22.9969 12.0019 22.9969 11.6113 22.6063L1.71184 12.7069C1.32131 12.3163 1.32131 11.6832 1.71184 11.2926L10.9042 2.10025ZM13.7327 10.5855C14.5137 11.3666 15.78 11.3666 16.5611 10.5855C17.3421 9.80448 17.3421 8.53815 16.5611 7.7571C15.78 6.97606 14.5137 6.97606 13.7327 7.7571C12.9516 8.53815 12.9516 9.80448 13.7327 10.5855Z"/></svg>',
+        bell: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M20 17H22V19H2V17H4V10C4 5.58172 7.58172 2 12 2C16.4183 2 20 5.58172 20 10V17ZM9 21H15V23H9V21Z"/></svg>',
+        sync: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M5.46257 4.43262C7.21556 2.91688 9.5007 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C9.84982 4 7.89777 4.84827 6.46023 6.22842L5.46257 4.43262ZM18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 9.86386 2.66979 7.88416 3.8108 6.25944L7 12H4C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg>',
+        users: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 22C4 17.5817 7.58172 14 12 14C16.4183 14 20 17.5817 20 22H4ZM12 13C8.685 13 6 10.315 6 7C6 3.685 8.685 1 12 1C15.315 1 18 3.685 18 7C18 10.315 15.315 13 12 13Z"/></svg>'
     };
     function stat(icon, label, value, href) {
         var inner = icon + esc(value);
@@ -454,10 +423,10 @@ document.addEventListener('DOMContentLoaded', function () {
               (s.unread ? stat(ICONS.bell, 'Unread notifications', s.unread, '/notifications' + only) : '') + sync
             : '';
         // problems get their own line under the server so the name and stats don't move
-        var color = level === 'bad' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400';
+        var color = level === 'bad' ? 'text-red-600 dark:text-red-400' : 'text-yellow-700 dark:text-yellow-400';
         var detail = s.error && !s.online ? state + ': ' + s.error : state;
         var stateLine = level === 'ok' || level === 'off' ? '' : '<a href="/server/cluster" class="mt-1 block truncate text-xs hover:underline ' + color + '" title="' + esc(detail) + '">' + esc(detail) + '</a>';
-        return '<li class="rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50"><div class="flex flex-wrap items-center gap-2 justify-between"><span class="flex items-center gap-2" title="' + esc(state) + '">' + bars(level) + '<span class="font-medium">' + esc(s.name) + (s.master ? ' (master)' : '') + (s.paused ? ' (paused)' : '') + '</span></span>' +
+        return '<li class="rounded-md bg-gray-50 p-3 dark:bg-gray-900"><div class="flex flex-wrap items-center gap-2 justify-between"><span class="flex items-center gap-2" title="' + esc(state) + '">' + bars(level) + '<span class="font-medium text-gray-900 dark:text-gray-50">' + esc(s.name) + (s.master ? ' (master)' : '') + (s.paused ? ' (paused)' : '') + '</span></span>' +
             '<span class="flex flex-wrap items-center gap-4 text-gray-500 dark:text-gray-500">' + stats + '</span></div>' + stateLine + '</li>';
     }
 
@@ -512,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 list.classList.remove('hidden');
                 list.innerHTML = tasks.slice(0, 6).map(function (t) {
                     return '<li class="py-2"><a href="' + (t.link || '/server/processes/' + t.pid + '/strace') + '" class="flex items-center justify-between gap-3 hover:underline">' +
-                        '<span class="truncate font-mono text-xs">' + esc(t.command) + '</span>' +
+                        '<span class="flex min-w-0 items-center gap-2"><span class="size-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true"></span><span class="truncate font-mono text-xs text-gray-900 dark:text-gray-50">' + esc(t.command) + '</span></span>' +
                         '<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">' + (t.server ? esc(t.server) + ' &middot; ' : '') + esc(t.time) + '</span>' +
                     '</a></li>';
                 }).join('');
@@ -531,14 +500,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     <div id="tour-user-activity" data-widget="activity" class="">
-                    <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">User Activity</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Real-time user activity log.</p></div></div>
+                    <div class="flex items-start justify-between gap-4 pb-2"><div class="min-w-0 flex-1"><h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">User activity</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Real-time user activity log.</p></div></div>
 
-                <div class="flex flex-1 flex-col gap-2 overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:60vh">
-                    <div id="activity-table" class="card-body card-body-scrollable card-body-scrollable-shadow">
+                <div class="-ml-1 mr-2 flex flex-1 flex-col gap-2 overflow-y-auto pl-1 pr-3 [scrollbar-gutter:stable]" style="height:60vh">
+                    <div id="activity-table">
                         <div class="mt-2">
-                            <ul role="list" id="activity-list" class="divide-y divide-gray-200 dark:divide-gray-800">
-                                <li id="shouldbehidden" class="text-sm text-gray-500 dark:text-gray-500">Users activity log will appear here.</li>
-                            </ul>
+                            <p id="shouldbehidden" class="py-6 text-center text-sm text-gray-500 dark:text-gray-500">User activity will appear here.</p>
+                            <ul role="list" id="activity-list" class="divide-y divide-gray-200 dark:divide-gray-800"></ul>
                         </div>
                     </div>
                 </div>
@@ -548,9 +516,9 @@ document.addEventListener('DOMContentLoaded', function () {
         <div id="tour-latest-news" data-widget="news" class="">
 <div>
     <div id="custom_message" class="">
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">Latest News</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">from the OpenPanel blog.</p></div></div>
+            <div class="flex items-start justify-between gap-4 pb-2"><div class="min-w-0 flex-1"><h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Latest news</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">From the OpenPanel blog.</p></div></div>
 
-        <div class="overflow-y-auto mt-2 divide-y divide-gray-200 dark:divide-gray-800 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" id="news-content" style="height:60vh"></div>
+        <div class="overflow-y-auto pr-3 [scrollbar-gutter:stable] mt-2 divide-y divide-gray-200 dark:divide-gray-800" id="news-content" style="height:60vh"></div>
     </div>
 </div>
 
@@ -627,7 +595,7 @@ const renderNewsItems = (items) => {
     newsContent.innerHTML = '';
     items.forEach(({ title, description, slug, image, formattedDate }) => {
         const newsItemDiv = document.createElement('div');
-        newsItemDiv.classList.add('flex', 'items-center', 'py-2');
+        newsItemDiv.classList.add('flex', 'items-start', 'py-2.5');
 
         if (image) {
             const imgLink = document.createElement('a');
@@ -636,7 +604,7 @@ const renderNewsItems = (items) => {
             const imgElement = document.createElement('img');
             imgElement.src = image;
             imgElement.alt = title;
-            imgElement.classList.add('news-img', 'h-12', 'flex-shrink-0', 'rounded-md', 'object-cover', 'me-3');
+            imgElement.classList.add('news-img', 'h-12', 'shrink-0', 'rounded-md', 'object-cover', 'me-3', 'ring-1', 'ring-gray-200', 'dark:ring-gray-800');
             imgElement.onerror = () => imgLink.remove();
             imgLink.appendChild(imgElement);
             newsItemDiv.appendChild(imgLink);
@@ -646,7 +614,7 @@ const renderNewsItems = (items) => {
         contentDiv.classList.add('flex-1');
 
         const titleElement = document.createElement('h3');
-        titleElement.classList.add('text-lg', 'font-semibold', 'leading-tight');
+        titleElement.classList.add('text-sm', 'leading-snug');
         const titleLink = document.createElement('a');
         titleLink.href = `https://openpanel.com/blog/${slug}`;
         titleLink.target = '_blank';
@@ -659,7 +627,7 @@ const renderNewsItems = (items) => {
         dateElement.textContent = formattedDate;
 
         const descriptionElement = document.createElement('p');
-        descriptionElement.classList.add('text-xs', 'capitalize', 'text-gray-600', 'dark:text-gray-400', 'mt-0.5');
+        descriptionElement.classList.add('text-xs', 'text-gray-600', 'dark:text-gray-400', 'mt-0.5', 'line-clamp-2');
         descriptionElement.textContent = description;
 
         contentDiv.appendChild(titleElement);
@@ -683,7 +651,7 @@ const renderNewsItems = (items) => {
             }
         } catch (error) {
             console.error('Error loading news:', error);
-            newsContent.innerHTML = '<p class="text-red-500">Error loading news</p>';
+            newsContent.innerHTML = '<p class="py-6 text-center text-sm text-gray-500">News is not available right now.</p>';
         }
     };
 
@@ -695,55 +663,55 @@ const renderNewsItems = (items) => {
 
 
     <div id="tour-system-info" data-widget="info" class="">
-                    <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start pb-2"><div><h3 class="font-medium text-gray-900 dark:text-gray-50">System Information</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Information about your server configuration.</p></div><select id="system-info-server" aria-label="Show system information for" class="hidden rounded border border-gray-300 bg-white px-2 py-1.5 font-medium text-gray-600 sm:text-xs dark:border-gray-700 dark:bg-gray-950 dark:text-gray-400"></select></div>
+                    <div class="flex items-start justify-between gap-4 pb-2"><div class="min-w-0 flex-1"><h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">System information</h3><p class="text-sm/6 text-gray-500 dark:text-gray-500">Information about your server configuration.</p><select id="system-info-server" aria-label="Show system information for" class="mt-2 hidden w-full max-w-60 rounded-md border border-gray-300 bg-white px-2 py-1.5 font-medium text-gray-600 sm:text-xs dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden"></select></div></div>
 
 
-                    <div class="grid grid-cols-1 gap-2 mt-2">
-                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                            <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Hostname</span>
-                            <span class="font-medium" id="system-hostname"></span>
+                    <div class="mt-2 divide-y divide-gray-200 text-sm dark:divide-gray-800">
+                        <div class="flex items-center justify-between gap-4 py-2.5">
+                            <span class="text-gray-600 dark:text-gray-400">Hostname</span>
+                            <span class="font-medium tabular-nums text-gray-900 dark:text-gray-50" id="system-hostname"></span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                            <span class="text-sm capitalize text-gray-600 dark:text-gray-400">IPv4 address</span>
-                            <span class="font-medium" id="system-ipv4">{{.PublicIP}}</span>
+                        <div class="flex items-center justify-between gap-4 py-2.5">
+                            <span class="text-gray-600 dark:text-gray-400">IPv4 address</span>
+                            <span class="font-medium tabular-nums text-gray-900 dark:text-gray-50" id="system-ipv4">{{.PublicIP}}</span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                            <span class="text-sm capitalize text-gray-600 dark:text-gray-400">OS</span>
-                            <span id="system-os" class="font-medium"></span>
+                        <div class="flex items-center justify-between gap-4 py-2.5">
+                            <span class="text-gray-600 dark:text-gray-400">OS</span>
+                            <span id="system-os" class="font-medium tabular-nums text-gray-900 dark:text-gray-50"></span>
                         </div>
                         <a href="/settings/updates" title="Click to manage Update Preferences">
-                            <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                                <span class="text-sm capitalize text-gray-600 dark:text-gray-400">OpenPanel version</span>
-                                <span id="system-openpanel" class="font-medium">{{.PanelVersion}}</span>
+                            <div class="flex items-center justify-between gap-4 rounded-md py-2.5 transition hover:bg-gray-50 dark:hover:bg-gray-900">
+                                <span class="text-gray-600 dark:text-gray-400">OpenPanel version</span>
+                                <span id="system-openpanel" class="font-medium tabular-nums text-gray-900 dark:text-gray-50">{{.PanelVersion}}</span>
                             </div>
                         </a>
-                        <a href="/server/timezone" title="Click to manage Server Time settings">
-                            <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                                <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Server Time</span>
-                                <span id="server-time" class="font-medium"></span>
+                        <a href="/server/timezone" title="Manage server time settings">
+                            <div class="flex items-center justify-between gap-4 rounded-md py-2.5 transition hover:bg-gray-50 dark:hover:bg-gray-900">
+                                <span class="text-gray-600 dark:text-gray-400">Server time</span>
+                                <span id="server-time" class="font-medium tabular-nums text-gray-900 dark:text-gray-50"></span>
                             </div>
                         </a>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                            <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Kernel</span>
-                            <span id="system-kernel" class="font-medium"></span>
+                        <div class="flex items-center justify-between gap-4 py-2.5">
+                            <span class="text-gray-600 dark:text-gray-400">Kernel</span>
+                            <span id="system-kernel" class="font-medium tabular-nums text-gray-900 dark:text-gray-50"></span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                            <span class="text-sm capitalize text-gray-600 dark:text-gray-400">CPU</span>
-                            <span id="system-cpu" class="font-medium truncate"></span>
+                        <div class="flex items-center justify-between gap-4 py-2.5">
+                            <span class="text-gray-600 dark:text-gray-400">CPU</span>
+                            <span id="system-cpu" class="truncate font-medium text-gray-900 dark:text-gray-50"></span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                            <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Uptime</span>
-                            <span id="system-uptime" class="font-medium"></span>
+                        <div class="flex items-center justify-between gap-4 py-2.5">
+                            <span class="text-gray-600 dark:text-gray-400">Uptime</span>
+                            <span id="system-uptime" class="font-medium tabular-nums text-gray-900 dark:text-gray-50"></span>
                         </div>
-                        <a href="/server/processes?sort=pid" title="Click to open Process Manager">
-                            <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                                <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Running Processes</span>
-                                <span id="system-processes" class="font-medium"></span>
+                        <a href="/server/processes?sort=pid" title="Click to open Process manager">
+                            <div class="flex items-center justify-between gap-4 rounded-md py-2.5 transition hover:bg-gray-50 dark:hover:bg-gray-900">
+                                <span class="text-gray-600 dark:text-gray-400">Running processes</span>
+                                <span id="system-processes" class="font-medium tabular-nums text-gray-900 dark:text-gray-50"></span>
                             </div>
                         </a>
-                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-800/50">
-                            <span class="text-sm capitalize text-gray-600 dark:text-gray-400">Package Updates</span>
-                            <span id="system-packages" class="font-medium"></span>
+                        <div class="flex items-center justify-between gap-4 py-2.5">
+                            <span class="text-gray-600 dark:text-gray-400">Package updates</span>
+                            <span id="system-packages" class="font-medium tabular-nums text-gray-900 dark:text-gray-50"></span>
                         </div>
                     </div>
 
@@ -768,7 +736,7 @@ const renderNewsItems = (items) => {
 // dashboard layout saved on the admin's account: widget order, width, collapsed widgets and the header buttons
 (function () {
     var saved = {{if .Layout}}{{.Layout}}{{else}}null{{end}};
-    var layout = Object.assign({ order: [], size: {}, collapsed: {} }, saved || {});
+    var layout = Object.assign({ order: [], size: {}, rows: {}, collapsed: {} }, saved || {});
     var grid = document.getElementById('dashboard-widgets');
     if (!grid) { return; }
     // default arrangement, a saved order or width replaces it
@@ -779,6 +747,9 @@ const renderNewsItems = (items) => {
     // widgets with their own collapse button
     var OWN_COLLAPSE = { summary: true };
     function sizeOf(id) { return Number(layout.size[id] || DEFAULT_SIZE[id] || 1); }
+    // height in blocks, a 2-block widget makes room for two 1-block ones stacked next to it
+    var DEFAULT_ROWS = { usage: 2 };
+    function rowsOf(id) { return Number(layout.rows[id] || DEFAULT_ROWS[id] || 1); }
 
     function widgets() { return Array.prototype.slice.call(grid.querySelectorAll(':scope > [data-widget]')); }
 
@@ -794,27 +765,52 @@ const renderNewsItems = (items) => {
     // width goes by a style rule so phones keep one column
     var style = document.createElement('style');
     style.textContent = '@media (min-width:768px){#dashboard-widgets>[data-size="2"],#dashboard-widgets>[data-size="3"]{grid-column:span 2}}' +
-        '@media (min-width:1024px){#dashboard-widgets>[data-size="2"]{grid-column:span 2}#dashboard-widgets>[data-size="3"]{grid-column:span 3}#dashboard-widgets>[data-rows="2"]{grid-row:span 2}}' +
-        // move and width controls show on hover, with a dashed outline so it's clear which widget they belong to
-        '#dashboard-widgets>[data-widget]:hover{outline:1px dashed #9ca3af;outline-offset:3px;border-radius:1px}' +
-        // tools float over the top right corner so the hidden ones don't squeeze the title
-        '#dashboard-widgets>[data-widget]{position:relative}' +
-        '#dashboard-widgets>[data-widget] .widget-tools{visibility:hidden;position:absolute;top:0;right:32px;z-index:5;padding:2px 4px;border-radius:.375rem}' +
-        '#dashboard-widgets>[data-widget]:hover .widget-tools,#dashboard-widgets.sorting .widget-tools{visibility:visible}' +
+        '@media (min-width:1024px){#dashboard-widgets>[data-widget]{grid-column:span 2}#dashboard-widgets>[data-size="1.5"]{grid-column:span 3}#dashboard-widgets>[data-size="2"]{grid-column:span 4}#dashboard-widgets>[data-size="3"]{grid-column:span 6}#dashboard-widgets>[data-rows="2"]{grid-row:span 2;align-self:stretch}}' +
+        // only the drag handle shows, the widths slide out from it on hover, focus or a tap
+        '#dashboard-widgets .widget-sizes{max-width:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-width 200ms cubic-bezier(0.16,1,0.3,1),opacity 150ms}' +
+        '#dashboard-widgets .widget-sizes.show{max-width:16rem;opacity:1;pointer-events:auto}' +
+        // while dragging, the free slot is a dashed drop zone and the picked widget lifts
+        '#dashboard-widgets>.widget-ghost{opacity:.4;outline:1px dashed #9ca3af;outline-offset:-6px}' +
+        '#dashboard-widgets>.widget-chosen{box-shadow:0 10px 15px -3px rgb(0 0 0/.25),0 4px 6px -4px rgb(0 0 0/.2)}' +
+        '#dashboard-widgets.sorting .widget-sizes{max-width:0;opacity:0}' +
+        // no gap filling while dragging, otherwise every move reshuffles the other widgets
+        '#dashboard-widgets.sorting{grid-auto-flow:row}' +
+        // heights drop down under the handle as a small vertical list
+        '#dashboard-widgets .widget-heights{opacity:0;pointer-events:none;transform:translateY(-4px);transition:opacity 150ms,transform 200ms cubic-bezier(0.16,1,0.3,1)}' +
+        '#dashboard-widgets .widget-heights.show{opacity:1;pointer-events:auto;transform:none}' +
+        '#dashboard-widgets.sorting .widget-heights{opacity:0;pointer-events:none}' +
         '[data-widget] .widget-hidden{display:none!important}' +
+        // long lists take the height of the other widgets in their row and scroll inside, never shorter than 24rem
+        '#dashboard-widgets>[data-widget="activity"],#dashboard-widgets>[data-widget="news"]{align-self:stretch;display:flex;flex-direction:column;min-height:24rem}' +
+        '#dashboard-widgets>[data-widget="news"]>div,#custom_message{display:flex;flex:1 1 auto;flex-direction:column;min-height:0}' +
+        '#dashboard-widgets>[data-widget="activity"]>.overflow-y-auto,#news-content{flex:1 1 0;min-height:0;height:auto!important}' +
+        '#dashboard-widgets>[data-widget].is-collapsed{align-self:start;grid-row:auto;min-height:0}' +
+        // a collapsed widget is just its title row, without the description or the line under it
+        '#dashboard-widgets>.is-collapsed [data-widget-head]{border-bottom:0;margin-bottom:0;padding-bottom:0}' +
+        '#dashboard-widgets>.is-collapsed [data-widget-head] h3~:not(a){display:none}' +
         // wider news gets bigger pictures
         '@media (min-width:1024px){#dashboard-widgets>[data-widget="news"][data-size="2"] .news-img{height:6rem}#dashboard-widgets>[data-widget="news"][data-size="3"] .news-img{height:8rem}}';
     document.head.appendChild(style);
 
     function header(w) {
+        var marked = w.querySelector('[data-widget-head]');
+        if (marked) { return marked; }
         var h = w.querySelector('h3');
-        return h ? (h.closest('.pb-2') || h.parentElement) : null;
+        var head = h ? (h.closest('.pb-2') || h.parentElement) : null;
+        if (!head) { return null; }
+        head.setAttribute('data-widget-head', '');
+        // title and description stay in one block so the tools centre on both lines, the line under it runs edge to edge
+        head.classList.remove('pb-2', 'items-start');
+        head.classList.add('items-center', '-mx-6', 'mb-5', 'border-b', 'border-gray-200', 'px-6', 'pb-4', 'dark:border-gray-800');
+        return head;
     }
 
     // collapsing hides everything but the widget's title row
     function setCollapsed(w, on) {
         var head = header(w);
         if (!head) { return; }
+        w.classList.toggle('is-collapsed', on);
+        requestAnimationFrame(fit);
         var keep = head;
         while (keep && keep !== w) {
             Array.prototype.forEach.call(keep.parentElement.children, function (sib) {
@@ -823,7 +819,7 @@ const renderNewsItems = (items) => {
             keep = keep.parentElement;
         }
         var btn = w.querySelector('.widget-chevron');
-        if (btn) { btn.style.transform = on ? 'rotate(180deg)' : ''; btn.title = on ? 'Expand' : 'Collapse'; }
+        if (btn) { btn.classList.toggle('rotate-180', on); btn.title = on ? 'Expand' : 'Collapse'; btn.setAttribute('aria-label', btn.title); btn.setAttribute('aria-expanded', String(!on)); }
     }
 
     function addChevron(w) {
@@ -832,13 +828,14 @@ const renderNewsItems = (items) => {
         // links like View all sit next to the title, the right side is for the collapse button
         var h3 = head.querySelector('h3');
         Array.prototype.forEach.call(head.querySelectorAll(':scope > a'), function (a) {
-            h3.style.display = 'inline';
+            h3.classList.add('inline');
             a.classList.add('ml-2');
             h3.parentElement.insertBefore(a, h3.nextSibling);
         });
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'widget-chevron shrink-0 rounded p-1 text-gray-500 cursor-pointer';
+        btn.className = 'widget-chevron inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2';
+        btn.setAttribute('aria-label', 'Collapse');
         btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg>';
         btn.addEventListener('click', function () {
             var id = w.dataset.widget;
@@ -855,16 +852,11 @@ const renderNewsItems = (items) => {
             var w = grid.querySelector(':scope > [data-widget="' + id + '"]');
             if (w) { grid.appendChild(w); }
         });
-        // a 2/3 widget followed by the two short 1/3 ones (tasks and cluster) spans two rows so those stack next to it, taller ones would get squeezed
-        var SHORT = { tasks: true, cluster: true };
-        var list = widgets();
-        list.forEach(function (w, i) {
-            var stack = sizeOf(w.dataset.widget) === 2 && list[i + 1] && list[i + 2] &&
-                sizeOf(list[i + 1].dataset.widget) === 1 && sizeOf(list[i + 2].dataset.widget) === 1 &&
-                SHORT[list[i + 1].dataset.widget] && SHORT[list[i + 2].dataset.widget];
-            if (stack) { w.dataset.rows = 2; } else { delete w.dataset.rows; }
+        widgets().forEach(function (w) {
+            if (rowsOf(w.dataset.widget) === 2) { w.dataset.rows = 2; } else { delete w.dataset.rows; }
         });
         widgets().forEach(function (w) {
+            w.classList.add('bg-white', 'px-6', 'py-5', 'ring-1', 'ring-gray-200', 'dark:bg-gray-950', 'dark:ring-gray-800');
             var size = sizeOf(w.dataset.widget);
             if (size > 1) { w.dataset.size = size; } else { delete w.dataset.size; }
             if (OWN_COLLAPSE[w.dataset.widget]) { addTools(w); return; }
@@ -872,14 +864,63 @@ const renderNewsItems = (items) => {
             addTools(w);
             setCollapsed(w, isCollapsed(w.dataset.widget));
         });
+        requestAnimationFrame(fit);
     }
 
-    var SIZE_BTN = 'cursor-pointer rounded border border-gray-300 px-1.5 py-0.5 text-xs dark:border-gray-700';
+    // after layout a widget with empty cells right of it in its row widens into them so the row has no hole
+    function fit() {
+        var list = widgets();
+        list.forEach(function (w) { w.style.gridColumn = ''; });
+        if (window.innerWidth < 1024) { return; }
+        var gb = grid.getBoundingClientRect();
+        var cs = getComputedStyle(grid);
+        var cols = cs.gridTemplateColumns.split(' ').length;
+        var gap = parseFloat(cs.columnGap) || 0;
+        var colW = (gb.width - gap * (cols - 1)) / cols;
+        var tracks = cs.gridTemplateRows.split(' ').map(parseFloat);
+        var tops = [], y = gb.top + (parseFloat(cs.paddingTop) || 0);
+        tracks.forEach(function (h) { tops.push(y); y += h + gap; });
+        var placed = list.map(function (w) {
+            var b = w.getBoundingClientRect();
+            var c0 = Math.round((b.left - gb.left) / (colW + gap));
+            var span = Math.max(1, Math.round((b.width + gap) / (colW + gap)));
+            var r0 = 0;
+            tops.forEach(function (t, i) { if (t <= b.top + 2) { r0 = i; } });
+            var rs = w.dataset.rows && !w.classList.contains('is-collapsed') ? 2 : 1;
+            return { w: w, c0: c0, span: span, r0: r0, rs: rs, top: b.top, bottom: b.bottom };
+        });
+        var occ = tracks.map(function () { return new Array(cols).fill(null); });
+        placed.forEach(function (p) {
+            for (var r = p.r0; r < p.r0 + p.rs && r < occ.length; r++) {
+                for (var c = p.c0; c < p.c0 + p.span && c < cols; c++) { occ[r][c] = p; }
+            }
+        });
+        occ.forEach(function (row, r) {
+            var c = 0;
+            while (c < cols) {
+                if (row[c]) { c++; continue; }
+                var start = c;
+                while (c < cols && !row[c]) { c++; }
+                var left = start > 0 ? row[start - 1] : null;
+                if (left && left.rs === 1 && left.r0 === r) {
+                    left.span += c - start;
+                    left.w.style.gridColumn = 'span ' + left.span + ' / span ' + left.span;
+                }
+            }
+        });
+    }
+    window.addEventListener('resize', function () { requestAnimationFrame(fit); });
+
+    var SIZE_BTN = 'cursor-pointer whitespace-nowrap rounded px-2 py-1 text-xs font-medium tabular-nums text-gray-500 ring-1 ring-transparent ring-inset transition hover:text-gray-900 aria-pressed:bg-white aria-pressed:text-gray-900 aria-pressed:shadow-sm dark:text-gray-400 dark:hover:text-gray-50 dark:aria-pressed:bg-gray-950 dark:aria-pressed:text-gray-50';
+    // the close function of whichever widget's width and height menus are open
+    var openTools = null;
     function markSize(bar, id) {
         bar.querySelectorAll('[data-size-btn]').forEach(function (b) {
             var on = Number(b.dataset.sizeBtn) === sizeOf(id);
-            b.style.fontWeight = on ? '700' : '';
-            b.style.borderColor = on ? '#4f46e5' : '';
+            b.setAttribute('aria-pressed', String(on));
+        });
+        bar.querySelectorAll('[data-rows-btn]').forEach(function (b) {
+            b.setAttribute('aria-pressed', String(Number(b.dataset.rowsBtn) === rowsOf(id)));
         });
     }
 
@@ -889,35 +930,109 @@ const renderNewsItems = (items) => {
         if (!head || head.querySelector('.widget-tools')) { return; }
         var id = w.dataset.widget;
         var bar = document.createElement('span');
-        bar.className = 'widget-tools flex items-center gap-1 bg-white dark:bg-gray-950';
-        var move = document.createElement('span');
-        move.className = 'widget-drag cursor-pointer rounded px-1 text-gray-500';
-        move.title = 'Drag to move';
-        move.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></svg>';
-        bar.appendChild(move);
-        [1, 2, 3].forEach(function (n) {
+        bar.className = 'widget-tools flex items-center gap-1';
+        var move = document.createElement('button');
+        move.type = 'button';
+        move.className = 'widget-drag inline-flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 active:cursor-grabbing dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2';
+        move.setAttribute('aria-label', 'Move widget, drag or use the arrow keys');
+        move.title = 'Drag or use the arrow keys to move';
+        // arrow keys move the widget one place, same as dragging it
+        move.addEventListener('keydown', function (e) {
+            var back = e.key === 'ArrowUp' || e.key === 'ArrowLeft';
+            var fwd = e.key === 'ArrowDown' || e.key === 'ArrowRight';
+            if (!back && !fwd) { return; }
+            e.preventDefault();
+            var all = widgets(), at = all.indexOf(w);
+            var other = all[at + (back ? -1 : 1)];
+            if (!other) { return; }
+            grid.insertBefore(w, back ? other : other.nextSibling);
+            layout.order = widgets().map(function (x) { return x.dataset.widget; });
+            apply(); save();
+            move.focus();
+        });
+        move.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" aria-hidden="true" class="remixicon" viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 7C9.32843 7 10 6.32843 10 5.5C10 4.67157 9.32843 4 8.5 4C7.67157 4 7 4.67157 7 5.5C7 6.32843 7.67157 7 8.5 7ZM8.5 13.5C9.32843 13.5 10 12.8284 10 12C10 11.1716 9.32843 10.5 8.5 10.5C7.67157 10.5 7 11.1716 7 12C7 12.8284 7.67157 13.5 8.5 13.5ZM10 18.5C10 19.3284 9.32843 20 8.5 20C7.67157 20 7 19.3284 7 18.5C7 17.6716 7.67157 17 8.5 17C9.32843 17 10 17.6716 10 18.5ZM15.5 7C16.3284 7 17 6.32843 17 5.5C17 4.67157 16.3284 4 15.5 4C14.6716 4 14 4.67157 14 5.5C14 6.32843 14.6716 7 15.5 7ZM17 12C17 12.8284 16.3284 13.5 15.5 13.5C14.6716 13.5 14 12.8284 14 12C14 11.1716 14.6716 10.5 15.5 10.5C16.3284 10.5 17 11.1716 17 12ZM15.5 20C16.3284 20 17 19.3284 17 18.5C17 17.6716 16.3284 17 15.5 17C14.6716 17 14 17.6716 14 18.5C14 19.3284 14.6716 20 15.5 20Z"/></svg>';
+        var sizes = document.createElement('span');
+        sizes.className = 'widget-sizes flex items-center gap-0.5 rounded-md bg-gray-100 p-0.5 dark:bg-gray-900';
+        var LABEL = { 1: '1/3', 1.5: '1/2', 2: '2/3', 3: 'Full' };
+        [1, 1.5, 2, 3].forEach(function (n) {
             var b = document.createElement('button');
             b.type = 'button';
             b.className = SIZE_BTN;
             b.dataset.sizeBtn = n;
-            b.title = n === 3 ? 'Full width' : n + '/3 width';
-            b.textContent = n + '/3';
+            b.textContent = LABEL[n];
+            b.title = n === 3 ? 'Full width' : LABEL[n] + ' width';
             b.addEventListener('click', function () {
                 if (n === (DEFAULT_SIZE[id] || 1)) { delete layout.size[id]; } else { layout.size[id] = n; }
                 apply(); markSize(bar, id); save();
             });
-            bar.appendChild(b);
+            sizes.appendChild(b);
+        });
+        var heights = document.createElement('span');
+        heights.className = 'widget-heights absolute right-0 top-full z-20 mt-1 flex w-36 flex-col gap-0.5 rounded-md bg-gray-100 p-0.5 shadow-lg dark:bg-gray-900';
+        var HEIGHT_ICON = {
+            1: '<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="4.5" width="11" height="7" rx="1.5"/></svg>',
+            2: '<svg viewBox="0 0 16 16" class="size-4 shrink-0" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2.5" y="1.5" width="11" height="5.5" rx="1.5"/><rect x="2.5" y="9" width="11" height="5.5" rx="1.5"/></svg>'
+        };
+        [1, 2].forEach(function (n) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = SIZE_BTN + ' flex items-center gap-2 py-1.5 text-left';
+            b.dataset.rowsBtn = n;
+            b.innerHTML = HEIGHT_ICON[n] + (n === 1 ? '1 block high' : '2 blocks high');
+            b.addEventListener('click', function () {
+                if (n === (DEFAULT_ROWS[id] || 1)) { delete layout.rows[id]; } else { layout.rows[id] = n; }
+                apply(); markSize(bar, id); save();
+            });
+            heights.appendChild(b);
+        });
+        var handle = document.createElement('span');
+        handle.className = 'relative';
+        handle.appendChild(move);
+        handle.appendChild(heights);
+        bar.appendChild(sizes);
+        bar.appendChild(handle);
+        // widths and heights stay open while the pointer or focus is on the handle or them, then close 3s later
+        var timer;
+        function closeMine() { clearTimeout(timer); sizes.classList.remove('show'); heights.classList.remove('show'); }
+        function showSizes() {
+            if (openTools && openTools !== closeMine) { openTools(); }
+            openTools = closeMine;
+            clearTimeout(timer); sizes.classList.add('show'); heights.classList.add('show');
+        }
+        function hideSoon() { clearTimeout(timer); timer = setTimeout(closeMine, 3000); }
+        [move, sizes, heights].forEach(function (el) {
+            el.addEventListener('mouseenter', showSizes);
+            el.addEventListener('mouseleave', hideSoon);
+            el.addEventListener('focusin', showSizes);
+            el.addEventListener('focusout', hideSoon);
+        });
+        move.addEventListener('click', function () {
+            if (sizes.classList.contains('show')) { closeMine(); } else { showSizes(); hideSoon(); }
+        });
+        // a click anywhere else or Escape closes them right away
+        document.addEventListener('pointerdown', function (e) {
+            if (sizes.classList.contains('show') && ![move, sizes, heights].some(function (el) { return el.contains(e.target); })) { closeMine(); }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && sizes.classList.contains('show')) { closeMine(); }
         });
         markSize(bar, id);
-        w.appendChild(bar);
+        var chev = head.querySelector('.widget-chevron');
+        bar.classList.add('ml-auto', 'shrink-0');
+        if (chev) { head.insertBefore(bar, chev); } else { head.appendChild(bar); }
     }
 
     window.Sortable && Sortable.create(grid, {
-        draggable: '[data-widget]', handle: '.widget-drag', animation: 150,
+        // a widget only swaps once the pointer is well inside its neighbour, and moves animate slowly enough to follow
+        draggable: '[data-widget]', handle: '.widget-drag', animation: 300, easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+        swapThreshold: 0.5, invertedSwapThreshold: 0.5, emptyInsertThreshold: 0, delayOnTouchOnly: true, delay: 150,
+        ghostClass: 'widget-ghost', chosenClass: 'widget-chosen',
         onStart: function () { grid.classList.add('sorting'); },
         onEnd: function () {
             grid.classList.remove('sorting');
             layout.order = widgets().map(function (w) { return w.dataset.widget; });
+            // re-check which widget spans two rows for the new order
+            apply();
             save();
         }
     });
@@ -926,8 +1041,9 @@ const renderNewsItems = (items) => {
     if (saved) {
         var reset = document.createElement('button');
         reset.type = 'button';
-        reset.className = 'mt-2 cursor-pointer text-xs text-gray-500 hover:underline dark:text-gray-400';
-        reset.textContent = 'Reset dashboard layout';
+        reset.className = 'mt-6 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-xs transition hover:bg-gray-50 hover:text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300 dark:hover:bg-gray-900/60 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2';
+        reset.title = 'Put the widgets back in their default order, widths and heights';
+        reset.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5.46257 4.43262C7.21556 2.91688 9.5007 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C9.84982 4 7.89777 4.84827 6.46023 6.22842L5.46257 4.43262ZM18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 9.86386 2.66979 7.88416 3.8108 6.25944L7 12H4C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg>Reset layout';
         reset.addEventListener('click', function () { save({}).then(function () { location.reload(); }); });
         grid.parentElement.insertBefore(reset, grid.nextSibling);
     }
@@ -952,7 +1068,7 @@ const renderNewsItems = (items) => {
             document.getElementById('system-uptime').textContent = formatUptime(data.uptime);
             document.getElementById('system-processes').textContent = data.running_processes;
             document.getElementById('system-packages').textContent = data.package_updates;
-            document.getElementById('server-time').textContent = data.time;
+            document.getElementById('server-time').textContent = formatServerTime(new Date(data.time));
             document.getElementById('system-openpanel').textContent = data.openpanel_version;
 
             startFakeTimeCounter(data.time);
@@ -1000,12 +1116,16 @@ function formatUptime(seconds) {
 }
 
 let fakeTimeCounter;
+function formatServerTime(d) {
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
 function startFakeTimeCounter(startTime) {
     let startDate = new Date(startTime);
     clearInterval(fakeTimeCounter);
     fakeTimeCounter = setInterval(() => {
         startDate.setSeconds(startDate.getSeconds() + 1);
-        document.getElementById('server-time').textContent = startDate.toLocaleString();
+        document.getElementById('server-time').textContent = formatServerTime(startDate);
     }, 1000);
 }
 

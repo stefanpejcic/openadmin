@@ -221,7 +221,7 @@ func TestServeResourceUsagePageRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(got))
 	}
-	for _, want := range []string{"Resource Usage", "Load", "CPU", "RAM", "Disk", "Network", "</html>"} {
+	for _, want := range []string{"Resource usage", "Load", "CPU", "RAM", "Disk", "Network", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}
@@ -268,7 +268,7 @@ func TestServeResourceUsageHistoryRendersHTMLAndJSON(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(got))
 	}
-	for _, want := range []string{"Resource Usage History", "Last 1 hour", `"cpu_pct":42`, "</html>"} {
+	for _, want := range []string{"Resource usage history", "Last 1 hour", `"cpu_pct":42`, "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}
@@ -525,5 +525,18 @@ func TestCountAccountConmonsSkipsRootAndExecSessions(t *testing.T) {
 		"hladni   /usr/bin/conmon --api-version 1 -c ghi -n mariadb\n"
 	if got := countAccountConmons(out); got != 2 {
 		t.Fatalf("got %d, want 2", got)
+	}
+}
+
+func TestIsExitCodeTreatsDnfUpdatesAvailableAsSuccess(t *testing.T) {
+	err := exec.Command("sh", "-c", "exit 100").Run()
+	if !isExitCode(err, 100) {
+		t.Fatalf("exit 100 not recognized: %v", err)
+	}
+	if isExitCode(exec.Command("sh", "-c", "exit 1").Run(), 100) {
+		t.Fatal("exit 1 treated as updates available")
+	}
+	if isExitCode(nil, 100) {
+		t.Fatal("nil error treated as exit 100")
 	}
 }

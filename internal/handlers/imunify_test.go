@@ -93,7 +93,7 @@ func TestServeImunifyGUINotInstalled(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"Not Installed", "Install ImunifyAV", "/security/imunify/install", "</html>"} {
+	for _, want := range []string{"isn't installed", "Install ImunifyAV", "/security/imunify/install", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}

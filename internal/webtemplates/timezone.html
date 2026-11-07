@@ -1,61 +1,70 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <header>
-        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div class="grow">
-                <h1 class="mb-1 text-xl font-bold">Change TimeZone</h1>
-                <h2 class="text-sm font-medium text-slate-500">Change timezone for the host OS and user panel.</h2>
+                <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Change timezone</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-500">Change timezone for the host OS and user panel.</p>
             </div>
-            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+            <div class="flex flex-none items-center gap-2">
             </div>
         </div>
     </header>
 </div>
 
-<div id="collapseAddNewUser">
-    <div id="create_user_form" class="sm:mx-auto sm:max-w-2xl" style="display:block;">
-                                <form method="POST" class="mt-8">
-                                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-
-                    <div class="px-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-                <div class="col-span-full">
-                    	<p class="mb-4 text-sm text-gray-900 dark:text-gray-50">Current timezone: <b>{{.CurrentTimezone}}</b></p>
-<label for="timezone">Select Timezone:</label>
-                    <div class="relative w-full flex mt-2">
-										<select name="timezone" id="timezone" class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
-                  {{range .AvailableTimezones}}
-											<option value="{{.}}" {{if eq . $.CurrentTimezone}}selected{{end}}>{{.}}</option>
-                  {{end}}
-										</select>
-                    </div>
-					<small class="form-hint">After change, <b>we recommend to restart the server</b> or at least the OpenAdmin and Cron services: <code>systemctl restart admin cron</code></small>
+<div class="px-4 py-6 sm:px-6 lg:px-8">
+    <div class="max-w-2xl">
+        {{if .Error}}
+        <div role="alert" class="mb-6 flex gap-3 rounded-md bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/70 dark:text-red-500">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"/></svg>
+            <p class="min-w-0">{{.Error}}</p>
+        </div>
+        {{end}}
+        <form method="POST" x-data="{ q: '', matches: null,
+            filter() {
+                const sel = this.$refs.tz, q = this.q.trim().toLowerCase().replace(/\s+/g, '_');
+                let n = 0, first = null;
+                for (const o of sel.options) { const hit = !q || o.value.toLowerCase().includes(q); o.hidden = !hit; if (hit) { n++; first = first || o; } }
+                this.matches = q ? n : null;
+                if (q && first && sel.selectedOptions[0] && sel.selectedOptions[0].hidden) sel.value = first.value;
+            } }">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <div class="max-w-md space-y-4">
+                <div>
+                    <label for="timezone-search" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Find a timezone</label>
+                    <input type="search" id="timezone-search" x-model="q" @input="filter()" aria-controls="timezone" autocomplete="off" placeholder="City or region, e.g. Tbilisi" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2">
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500" aria-live="polite" x-show="matches !== null" x-cloak x-text="matches === 0 ? 'No timezone matches. Try a city name in English.' : (matches === 1 ? '1 match' : matches + ' matches')"></p>
                 </div>
-
-</div>
-
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-
-            <div class="flex items-center justify-end space-x-4">
-                <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400">Change Timezone</button>
+                <div>
+                    <label for="timezone" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Timezone</label>
+                    <select name="timezone" id="timezone" x-ref="tz" {{if .FieldError}}aria-invalid="true" aria-describedby="timezone-error"{{end}} class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] mt-2 w-full">
+                        {{range .AvailableTimezones}}
+                        <option value="{{.}}" {{if eq . $.Selected}}selected{{end}}>{{.}}</option>
+                        {{end}}
+                    </select>
+                    {{with .FieldError}}<p id="timezone-error" class="mt-1.5 text-xs text-red-600 dark:text-red-400">{{.}}</p>{{end}}
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Current timezone: <span class="font-medium text-gray-900 dark:text-gray-50">{{.CurrentTimezone}}</span>{{with .CurrentTime}}, now {{.}}{{end}}</p>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-500">After changing it, restart the server, or at least the OpenAdmin and cron services: <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">systemctl restart admin cron</code></p>
+            </div>
+            <div class="mt-6 flex items-center justify-end gap-2 border-t border-gray-200 pt-6 dark:border-gray-800">
+                <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Change timezone</button>
             </div>
         </form>
     </div>
-
 </div>
-
     </main>
 
     {{template "chrome_after_main" .}}

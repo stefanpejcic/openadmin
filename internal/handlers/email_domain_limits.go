@@ -265,7 +265,7 @@ func (e *Emails) ServeDomainLimits(w http.ResponseWriter, r *http.Request) {
 		"SortDirection": sortDirection,
 		"BulkActions":   EmailDomainLimitsBulkActions(),
 		"Flashes":       auth.PopFlashes(w, r, e.Sessions),
-	}, r, "Email Rate Limits"))
+	}, r, "Email rate limits"))
 }
 
 var domainLimitSortKeys = map[string]bool{"domain": true, "owner": true, "usage": true, "limit": true, "id": true}

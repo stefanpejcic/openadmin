@@ -1,29 +1,70 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
-    <script defer src="/static/dist/js/flowbite312.min.js"></script>
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<form method="post">
+<form method="post" x-data="{ dirty: false }" @change="if (!$event.target.closest('[data-filter]')) dirty = true" @modules-dirty="dirty = true" @submit="dirty = false">
 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
 <div x-data="{
     searchQuery: '',
     toggleAll: null,
     filterType: '',
+    stateFilter: '',
+    areaFilter: '',
+    shown: -1,
+    areaCounts: {},
+    matchTotal: -1,
+    clearFilters() { this.searchQuery = ''; this.filterType = ''; this.stateFilter = ''; this.areaFilter = ''; },
     applyToAll(state) {
         this.toggleAll = state;
-        document.querySelectorAll('[data-row]:not([data-locked])').forEach(el => {
-            el.__x.$data.enabled = state;
+        this.$dispatch('modules-dirty');
+        document.querySelectorAll('section[data-area]:not([hidden]) [data-row]:not([data-locked]):not([hidden])').forEach(el => {
+            Alpine.$data(el).enabled = state;
         });
+    },
+    // one pass hides non-matching rows and areas left empty, run on every search or filter change
+    init() {
+        this.$watch('searchQuery', () => this.applyFilters());
+        this.$watch('filterType', () => this.applyFilters());
+        this.$watch('stateFilter', () => this.applyFilters());
+        this.$watch('areaFilter', v => { this.applyFilters(); history.replaceState(null, '', v ? '#area-' + v : location.pathname + location.search) });
+        // old #area-x links open that area as a filter
+        if (location.hash.startsWith('#area-')) this.areaFilter = location.hash.slice(6);
+        this.$nextTick(() => this.applyFilters());
+    },
+    applyFilters() {
+        const q = this.searchQuery.toLowerCase();
+        // per-area counts follow search and filters but not the area pick, so the side list shows where matches are
+        const counts = {};
+        let total = 0, shown = 0;
+        document.querySelectorAll('section[data-area]').forEach(sec => {
+            let n = 0;
+            sec.querySelectorAll('[data-row]').forEach(row => {
+                const on = !!row.querySelector('input[role=switch]')?.checked;
+                const match = (!q || row.dataset.search.includes(q))
+                    && this.matchesFilter(row.dataset.type)
+                    && (this.stateFilter === '' || (this.stateFilter === 'on') === on);
+                row.hidden = !match;
+                if (match) n++;
+            });
+            counts[sec.dataset.area] = n;
+            total += n;
+            const inArea = this.areaFilter === '' || sec.dataset.area === this.areaFilter;
+            sec.hidden = n === 0 || !inArea;
+            if (inArea) shown += n;
+        });
+        this.areaCounts = counts;
+        this.matchTotal = total;
+        this.shown = shown;
     },
     matchesFilter(type) {
         if (!this.filterType) return true;
@@ -33,17 +74,17 @@
 
 
 
-    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div x-data="{ showSection: false }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">Modules</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Enable/disable modules (options) for OpenPanel. <a href="https://openpanel.com/docs/admin/settings/modules/" target="_blank" class="hidden items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400">Documentation<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0"><path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path></svg></a></h2>
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Modules</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">{{len .Features}} modules in {{len .Groups}} areas. Turned-off modules disappear from every user's panel. <a href="https://openpanel.com/docs/admin/settings/modules/" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 text-blue-500 hover:underline hover:underline-offset-4">Documentation<svg class="remixicon inline size-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a></p>
                 </div>
 
-                <div class="flex flex-col items-center justify-center gap-2 rounded-sm px-2 sm:flex-row sm:justify-end sm:bg-transparent sm:px-0">
+                <div class="flex flex-none items-center gap-2">
                   <button id="tour-save-modules-btn" type="submit"
-                  class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Save Changes</button>
+                  class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Save changes</button>
                 </div>
             </div>
         </header>
@@ -52,160 +93,137 @@
 
 
 
-<div class="">
-  <div class="space-y-3">
-    <div class="px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-x-6 border-b border-gray-200 dark:border-gray-800">
-                <div id="tour-modules-filters" class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
-                    <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
-    <input x-model="searchQuery"  class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search modules..." type="search" @input="searchQuery = $event.target.value.trim()">
+<div>
+    <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-6 lg:px-8 dark:border-gray-800">
+        <div id="tour-modules-filters" data-filter class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <div class="relative w-full sm:w-72 sm:[&>input]:h-[30px]">
+                <input x-model="searchQuery" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-700/30 focus:border-blue-500 dark:focus:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search modules or paths…" aria-label="Search modules or paths…" type="search" @input="searchQuery = $event.target.value.trim()">
+                <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+                </div>
+            </div>
+            <select x-model="areaFilter" aria-label="Area" class="block w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 sm:h-[30px] sm:w-auto sm:py-0 xl:hidden dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:[color-scheme:dark] dark:focus:border-blue-700 dark:focus:ring-blue-700/30">
+                <option value="">All areas</option>
+                {{range .Groups}}<option value="{{.Key}}">{{.Name}} ({{len .Features}})</option>{{end}}
+            </select>
+            <div class="flex w-full flex-nowrap gap-0.5 rounded-md bg-gray-100 p-0.5 text-xs font-medium sm:w-fit dark:bg-gray-900" role="radiogroup" aria-label="Show">
+                <label class="flex-1 cursor-pointer select-none rounded px-2.5 py-1 text-center sm:flex-none text-gray-500 transition has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:text-gray-400 dark:has-[:checked]:bg-gray-950 dark:has-[:checked]:text-gray-50"><input type="radio" value="" x-model="stateFilter" class="sr-only">All</label>
+                <label class="flex-1 cursor-pointer select-none rounded px-2.5 py-1 text-center sm:flex-none text-gray-500 transition has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:text-gray-400 dark:has-[:checked]:bg-gray-950 dark:has-[:checked]:text-gray-50"><input type="radio" value="on" x-model="stateFilter" class="sr-only">Enabled</label>
+                <label class="flex-1 cursor-pointer select-none rounded px-2.5 py-1 text-center sm:flex-none text-gray-500 transition has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:text-gray-400 dark:has-[:checked]:bg-gray-950 dark:has-[:checked]:text-gray-50"><input type="radio" value="off" x-model="stateFilter" class="sr-only">Disabled</label>
+            </div>
+            <div class="flex w-full flex-nowrap gap-0.5 rounded-md bg-gray-100 p-0.5 text-xs font-medium sm:w-fit dark:bg-gray-900" role="radiogroup" aria-label="Edition">
+                <label class="flex-1 cursor-pointer select-none whitespace-nowrap rounded px-2.5 py-1 text-center sm:flex-none text-gray-500 transition has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:text-gray-400 dark:has-[:checked]:bg-gray-950 dark:has-[:checked]:text-gray-50"><input type="radio" value="" x-model="filterType" class="sr-only">Any edition</label>
+                <label class="flex-1 cursor-pointer select-none rounded px-2.5 py-1 text-center sm:flex-none text-gray-500 transition has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:text-gray-400 dark:has-[:checked]:bg-gray-950 dark:has-[:checked]:text-gray-50"><input type="radio" value="community" x-model="filterType" class="sr-only">Community</label>
+                <label class="flex-1 cursor-pointer select-none rounded px-2.5 py-1 text-center sm:flex-none text-gray-500 transition has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:text-gray-400 dark:has-[:checked]:bg-gray-950 dark:has-[:checked]:text-gray-50"><input type="radio" value="enterprise" x-model="filterType" class="sr-only">Enterprise</label>
+                <label class="flex-1 cursor-pointer select-none rounded px-2.5 py-1 text-center sm:flex-none text-gray-500 transition has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-blue-500 dark:text-gray-400 dark:has-[:checked]:bg-gray-950 dark:has-[:checked]:text-gray-50"><input type="radio" value="beta" x-model="filterType" class="sr-only">Beta</label>
+            </div>
+        </div>
+        <div id="tour-bulk-modules" class="flex items-center gap-2 sm:ml-auto">
+            <button type="button" @click="applyToAll(true)" :disabled="shown === 0" class="disabled:cursor-not-allowed disabled:opacity-50 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60" x-text="(searchQuery || filterType || stateFilter || areaFilter) && shown > 0 ? 'Enable ' + shown + ' shown' : 'Enable all'">Enable all</button>
+            <button type="button" @click="applyToAll(false)" :disabled="shown === 0" class="disabled:cursor-not-allowed disabled:opacity-50 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60" x-text="(searchQuery || filterType || stateFilter || areaFilter) && shown > 0 ? 'Disable ' + shown + ' shown' : 'Disable all'">Disable all</button>
+        </div>
+    </div>
 
-                        <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
-                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
-                                <path
-                                    d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"
-                                ></path>
-                            </svg>
+    <div class="grid grid-cols-1 xl:grid-cols-[16rem_minmax(0,1fr)]">
+        <nav aria-label="Module areas" class="hidden border-r border-gray-200 px-4 py-6 xl:block dark:border-gray-800">
+            <div class="space-y-0.5 text-sm">
+                <button type="button" @click="areaFilter = ''" :aria-pressed="(areaFilter === '').toString()" class="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-gray-600 hover:bg-gray-100 hover:text-gray-900 aria-pressed:bg-gray-100 aria-pressed:font-medium aria-pressed:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-pressed:bg-gray-900 dark:aria-pressed:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                    <span class="flex min-w-0 items-center gap-2"><svg class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H21ZM11 13H4V19H11V13ZM20 13H13V19H20V13ZM11 5H4V11H11V5ZM20 5H13V11H20V5Z"/></svg><span class="truncate">All modules</span></span>
+                    <span class="text-xs tabular-nums text-gray-400 dark:text-gray-600" x-text="matchTotal < 0 ? {{len .Features}} : matchTotal">{{len .Features}}</span>
+                </button>
+                {{range .Groups}}
+                <button type="button" @click="areaFilter = '{{.Key}}'" :aria-pressed="(areaFilter === '{{.Key}}').toString()" :class="areaCounts['{{.Key}}'] === 0 && areaFilter !== '{{.Key}}' ? 'opacity-50' : ''" class="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-gray-600 hover:bg-gray-100 hover:text-gray-900 aria-pressed:bg-gray-100 aria-pressed:font-medium aria-pressed:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-pressed:bg-gray-900 dark:aria-pressed:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                    <span class="flex min-w-0 items-center gap-2 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-gray-400">{{.Icon}}<span class="truncate">{{.Name}}</span></span>
+                    <span class="text-xs tabular-nums text-gray-400 dark:text-gray-600" x-text="areaCounts['{{.Key}}'] ?? {{len .Features}}">{{len .Features}}</span>
+                </button>
+                {{end}}
+            </div>
+        </nav>
+
+        <div id="tour-modules-grid" class="divide-y divide-gray-200 dark:divide-gray-800">
+            {{range .Groups}}
+            {{/* shown and onCount follow the rows inside, recounted on every switch change and bulk toggle */}}
+            <section id="area-{{.Key}}" aria-labelledby="area-{{.Key}}-title" class="scroll-mt-4"
+                data-area="{{.Key}}" x-data="{ onCount: 0, total: 0,
+                    recount() { setTimeout(() => {
+                        const rows = [...this.$el.querySelectorAll('[data-row]')];
+                        this.total = rows.length;
+                        this.onCount = rows.filter(r => r.querySelector('input[role=switch]')?.checked).length;
+                    }, 30) } }"
+                x-init="recount()"
+                @change="recount()" @modules-dirty.window="recount()">
+                <header class="flex items-center justify-between gap-4 bg-gray-50 px-4 py-3 sm:px-6 lg:px-8 dark:bg-gray-900/60">
+                    <div class="flex items-center gap-3">
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-md bg-white text-gray-600 ring-1 ring-gray-200 dark:bg-gray-950 dark:text-gray-400 dark:ring-gray-800 [&>svg]:size-4">{{.Icon}}</span>
+                        <div>
+                            <h2 id="area-{{.Key}}-title" class="text-sm font-semibold text-gray-900 dark:text-gray-50">{{.Name}}</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-500"><span x-text="onCount"></span> of <span x-text="total">{{len .Features}}</span> enabled</p>
                         </div>
                     </div>
-
-<div class="flex gap-1 justify-center sm:justify-start">
-
-  <button type="button" @click="filterType = ''" :class="filterType === '' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'" class="rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium transition">All</button>
-
-
-  <button type="button" @click="filterType = filterType === 'community' ? '' : 'community'" :class="filterType === 'community' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'" class="rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium transition">Community</button>
-
-  <button type="button" @click="filterType = filterType === 'enterprise' ? '' : 'enterprise'" :class="filterType === 'enterprise' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'" class="rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium transition">Enterprise</button>
-
-  <button type="button" @click="filterType = filterType === 'beta' ? '' : 'beta'" :class="filterType === 'beta' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 dark:bg-gray-800'" class="rounded border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs font-medium transition">BETA</button>
-</div>
-
-
-
-                </div>
-
-<div class="flex flex-wrap gap-3 justify-center sm:justify-end">
-
-
-<span id="tour-bulk-modules" class="inline-flex items-center gap-x-2.5 rounded-full bg-white px-2.5 py-1.5 text-xs ring-1 ring-inset ring-gray-200 dark:bg-gray-950 dark:ring-gray-800">
-  <button
-    type="button"
-    @click="applyToAll(true)"
-    class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"
-  ><svg class="remixicon -ml-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C17.5 22 22 17.5 22 12S17.5 2 12 2 2 6.5 2 12s4.5 10 10 10Zm5.5-12.5-6.5 6.5-4.2-4.2L8.2 10.3l2.3 2.3 5.1-5.1 1.4 1.4Z"></path></svg>Enable All
-  </button>
-
-    <span class="h-4 w-px bg-gray-200 dark:bg-gray-800"></span>
-
-  <button
-    type="button"
-    @click="applyToAll(false)"
-    class="inline-flex items-center gap-1.5 font-medium text-gray-900 dark:text-gray-50"
-  ><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon -ml-0.5 size-4 shrink-0 text-red-600 dark:text-red-500"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"></path></svg>Disable All
-  </button>
-</span>
-
-</div>
-
-    </div>
-
-<div class="m-8">
-
-
-<div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
-
-
-    <div class="md:col-span-3">
-
-
-<div id="tour-modules-grid" class="grid grid-cols-1 gap-4 md:grid-cols-3">
-
-
-
-
-  {{range .Features}}
-
-    {{/* Defensive against a features.json entry missing "type": a bare
-         `lower .type` would error out mid-render on a nil interface{} and
-         truncate the page, so the lookup is guarded with "with". */}}
-    {{$type := ""}}
-    {{with .type}}{{$type = lower .}}{{end}}
-    {{$isEnterprise := eq $type "enterprise"}}
-    {{$disableToggle := and $isEnterprise (ne $.LicenseType "Enterprise")}}
-    <div x-data="{ enabled: {{if .status}}true{{else}}false{{end}} }"
-        x-effect="if (typeof toggleAll === 'boolean' && !$el.hasAttribute('data-locked')) enabled = toggleAll"
-        data-row
-        x-show="(searchQuery === '' || '{{.title}}'.toLowerCase().includes(searchQuery.toLowerCase())) && matchesFilter('{{$type}}')"
-        {{if $disableToggle}} data-locked="true" {{end}}
-        class="relative w-full rounded-lg border text-left shadow-sm bg-white dark:bg-[#090E1A] border-gray-200 dark:border-gray-900 overflow-hidden p-0 flex flex-col h-full">
-      <div class="px-4 pb-6 pt-4">
-        <span class="text-sm text-gray-500">{{.link}}</span>
-        <div class="flex items-center gap-2 mt-4">
-          <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-50">
-            {{.title}}
-          </h4>
-
-
-                {{if eq $type "beta"}}
-<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-orange-500 dark:bg-orange-500" aria-hidden="true"></span>BETA</span>
-                {{else if eq $type "enterprise"}}
-                        {{if eq $.LicenseType "Enterprise"}}
-<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-blue-600 dark:bg-blue-400" aria-hidden="true"></span>Enterprise</span>
+                    <div class="flex items-center gap-1 text-xs">
+                        <button type="button" @click="$el.closest('section').querySelectorAll('[data-row]:not([data-locked]):not([hidden])').forEach(r => Alpine.$data(r).enabled = true); $dispatch('modules-dirty')" aria-label="Turn on every module in {{.Name}}" class="rounded-md px-2 py-1 font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Enable all</button>
+                        <button type="button" @click="$el.closest('section').querySelectorAll('[data-row]:not([data-locked]):not([hidden])').forEach(r => Alpine.$data(r).enabled = false); $dispatch('modules-dirty')" aria-label="Turn off every module in {{.Name}}" class="rounded-md px-2 py-1 font-medium text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Disable all</button>
+                    </div>
+                </header>
+                <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+                    {{range .Features}}
+                    {{/* a features.json entry without "type" would make a bare lower .type fail mid-render */}}
+                    {{$type := ""}}
+                    {{with .type}}{{$type = lower .}}{{end}}
+                    {{$isEnterprise := eq $type "enterprise"}}
+                    {{$disableToggle := and $isEnterprise (ne $.LicenseType "Enterprise")}}
+                    <li x-data="{ enabled: {{if .status}}true{{else}}false{{end}} }"
+                        x-effect="if (typeof toggleAll === 'boolean' && !$el.hasAttribute('data-locked')) enabled = toggleAll"
+                        data-row
+                        data-type="{{$type}}" data-search="{{lower (printf "%s %s %s" .title .link .description)}}"
+                        {{if $disableToggle}} data-locked="true" {{end}}
+                        class="flex items-center gap-4 px-4 py-2.5 hover:bg-gray-50 sm:px-6 lg:px-8 dark:hover:bg-gray-900/60">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="text-sm font-medium text-gray-900 dark:text-gray-50">{{sentenceCase .title}}</h3>
+                                {{if eq $type "beta"}}
+                                <span class="inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20">Beta</span>
+                                {{else if $isEnterprise}}
+                                <span class="inline-flex items-center whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{if eq $.LicenseType "Enterprise"}}bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20{{else}}bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20{{end}}">Enterprise</span>
+                                {{end}}
+                                {{if .help_link}}<a href="{{.help_link}}" target="_blank" rel="noopener" title="Documentation" class="inline-flex size-5 items-center justify-center rounded text-gray-400 transition hover:text-blue-500 dark:text-gray-600 dark:hover:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><span class="sr-only">Documentation for {{sentenceCase .title}}</span><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg></a>{{end}}
+                            </div>
+                            <p class="mt-0.5 max-w-3xl text-xs text-gray-500 sm:line-clamp-1 dark:text-gray-500" title="{{.link}}{{if .description}} · {{.description}}{{end}}"><span class="font-mono">{{if .link}}{{.link}}{{else}}—{{end}}</span>{{if .description}} · {{.description}}{{end}}</p>
+                            {{if $disableToggle}}<p id="needs-ent-{{.name}}" class="mt-0.5 text-xs text-gray-500 dark:text-gray-500">Needs an Enterprise license</p>{{end}}
+                        </div>
+                        {{if $disableToggle}}
+                        <label class="flex shrink-0 cursor-not-allowed items-center gap-2 text-xs">
+                            <span class="text-gray-400 dark:text-gray-600" x-show="!enabled" x-cloak aria-hidden="true">Disabled</span>
+                            <input type="checkbox" role="switch" class="peer sr-only" disabled :checked="enabled" aria-label="{{sentenceCase .title}}" aria-describedby="needs-ent-{{.name}}">
+                            <span class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-disabled:bg-gray-100 peer-disabled:ring-gray-300 peer-disabled:peer-checked:bg-blue-200 peer-disabled:[&>span]:shadow-none peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-disabled:bg-gray-800 dark:peer-disabled:ring-gray-700 dark:peer-disabled:peer-checked:bg-blue-900 dark:peer-disabled:peer-checked:ring-gray-900 dark:peer-disabled:[&>span]:bg-gray-500" aria-hidden="true"><span class="rounded-full bg-white shadow-lg transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50 size-4"></span></span>
+                        </label>
+                        <input type="checkbox" x-model="enabled" hidden name="{{.name}}" value="{{.name}}" :checked="enabled">
                         {{else}}
-<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-red-500 dark:bg-red-500" aria-hidden="true"></span>Enterprise</span>
+                        <label class="flex shrink-0 cursor-pointer items-center gap-2 text-xs">
+                            <span class="text-gray-500 dark:text-gray-500" x-show="!enabled" x-cloak aria-hidden="true">Disabled</span>
+                            <input type="checkbox" role="switch" id="mod-{{.name}}" class="peer sr-only" x-model="enabled" name="{{.name}}" value="{{.name}}"{{if .status}} checked{{end}} aria-label="{{sentenceCase .title}}">
+                            <span class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-checked:[&>span]:translate-x-4 dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500" aria-hidden="true"><span class="rounded-full bg-white shadow-lg transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50 size-4"></span></span>
+                        </label>
                         {{end}}
-                {{else if eq $type "community"}}
-<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-emerald-600 dark:bg-emerald-400" aria-hidden="true"></span>Community</span>
-                {{else}}
-<span class="inline-flex items-center whitespace-nowrap rounded px-2 py-1 text-xs ring-1 ring-inset bg-gray-50 ring-gray-500/30 dark:bg-gray-400/10 dark:ring-gray-400/20 gap-1.5 font-normal capitalize text-gray-700 dark:text-gray-300"><span class="size-2 shrink-0 bg-gray-500 dark:bg-gray-500" aria-hidden="true"></span>{{$type}}</span>
-                {{end}}
+                    </li>
+                    {{end}}
+                </ul>
+            </section>
+            {{end}}
+            <div x-show="shown === 0" x-cloak class="flex flex-col items-center px-4 py-16 text-center">
+                <span class="flex size-9 items-center justify-center rounded-md bg-white text-gray-400 shadow-xs ring-1 ring-gray-200 dark:bg-gray-950 dark:text-gray-600 dark:ring-gray-800"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/></svg></span>
+                <h2 class="mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50">No modules match these filters</h2>
+                <p class="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-500">Try another search, edition or area, or clear the filters to see all {{len .Features}} modules.</p>
+                <button type="button" @click="clearFilters()" class="mt-4 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Clear filters</button>
+            </div>
         </div>
-        <p class="mt-2 max-w-xl text-sm leading-6 text-gray-500">{{.description}}</p>
-      </div>
-      <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 p-4 dark:border-gray-900 dark:bg-gray-900 mt-auto">
-
-        <div class="flex items-center gap-3">
-
-
-          <button type="button" @click="enabled = !enabled" :aria-checked="enabled"
-            :class="enabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-950'"
-            class="inline-flex h-5 w-9 items-center rounded-full p-0.5 transition ring-1 ring-inset ring-black/5 dark:ring-gray-800 focus:outline-none"
-            {{if $disableToggle}} disabled aria-disabled="true"
-            class="opacity-50 cursor-not-allowed {{if .status}}bg-indigo-300 dark:bg-indigo-900{{else}}bg-gray-100 dark:bg-gray-800{{end}}" data-tooltip-target="tooltip-manage-{{.title}}" data-tooltip-placement="right"
-            {{end}}>
-            <span :class="enabled ? 'translate-x-4' : 'translate-x-0'"
-              class="h-4 w-4 transform rounded-full bg-white dark:bg-gray-50 transition"></span>
-          </button>
-          <input type="checkbox" x-model="enabled" hidden name="{{.name}}" value="{{.name}}"
-            :checked="enabled">
-        {{if not $disableToggle}}
-        <label class="text-sm leading-none text-gray-900 dark:text-gray-50" for="{{.name}}">Activate</label>
-        {{else}}
-        <div id="tooltip-manage-{{.title}}" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700">
-            Enterprise license is required to activate module.
-            <div class="tooltip-arrow" data-popper-arrow></div>
-        </div>
-        {{end}}
-        </div>
-
-        {{if .help_link}}
-        <a href="{{.help_link}}" target="_blank" class="inline-flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-500">Learn more
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
-            <path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path>
-          </svg>
-        </a>
-        {{end}}
-      </div>
     </div>
-  {{end}}
 
-</div>
-
-
-        <div class="col-span-full mt-6 flex justify-end"></div>
+    <div x-show="dirty" x-cloak x-transition.opacity role="status" class="fixed right-4 bottom-4 z-40 flex items-center gap-3 rounded-md border border-gray-200 bg-white py-2 pr-2 pl-4 shadow-lg sm:right-6 sm:bottom-6 dark:border-gray-800 dark:bg-gray-950">
+        <span class="text-sm text-gray-500 dark:text-gray-500">You have unsaved changes.</span>
+        <button type="button" @click="dirty = false; location.reload()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 border-transparent bg-transparent text-gray-900 hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-800/80">Discard</button>
+        <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600">Save changes</button>
     </div>
-</div>
-
 </div>
 
 </div>

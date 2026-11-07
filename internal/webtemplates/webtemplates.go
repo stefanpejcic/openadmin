@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,6 +27,19 @@ import (
 
 //go:embed *.html
 var files embed.FS
+
+var spaceUnitRe = regexp.MustCompile(`^([0-9.]+)([A-Za-z]+)$`)
+
+// an opencli command inside advice text, stopping before a sentence-ending period or comma
+var opencliCmdRe = regexp.MustCompile(`opencli(?: --?[\w-]+| [\w-]+(?:\.\d+)*)+`)
+
+// codeCommands escapes s and wraps any opencli command in it in <code>
+func codeCommands(s string) template.HTML {
+	esc := template.HTMLEscapeString(s)
+	return template.HTML(opencliCmdRe.ReplaceAllStringFunc(esc, func(cmd string) string {
+		return `<code class="rounded bg-yellow-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-yellow-900 dark:bg-yellow-500/10 dark:text-yellow-400">` + cmd + `</code>`
+	}))
+}
 
 var funcMap = template.FuncMap{
 	"asset":    assetURL,
@@ -94,6 +108,10 @@ var funcMap = template.FuncMap{
 	// formatDateTime is like formatDate but keeps seconds, and also parses
 	// a raw MySQL "2006-01-02 15:04:05" string (sql.NullString columns come
 	// back as the driver's raw text, not a parsed time.Time).
+	// spaceUnit puts a space between a size and its unit, 5GB -> 5 GB
+	"spaceUnit": func(s string) string {
+		return spaceUnitRe.ReplaceAllString(s, "$1 $2")
+	},
 	"formatDateTime": func(v interface{}) string {
 		switch t := v.(type) {
 		case time.Time:
@@ -103,6 +121,10 @@ var funcMap = template.FuncMap{
 			return t.Format("02.01.2006 15:04:05")
 		case string:
 			if parsed, err := time.Parse("2006-01-02 15:04:05", t); err == nil {
+				return parsed.Format("02.01.2006 15:04:05")
+			}
+			// setup time and usage snapshots come as RFC 3339, e.g. 2026-10-31T07:12:41Z
+			if parsed, err := time.Parse(time.RFC3339, t); err == nil {
 				return parsed.Format("02.01.2006 15:04:05")
 			}
 			return t
@@ -128,6 +150,7 @@ var funcMap = template.FuncMap{
 		return locale
 	},
 	"rstrip":    func(s, cutset string) string { return strings.TrimRight(s, cutset) },
+	"sizeLabel": SizeLabel,
 	"toInt": func(v interface{}) int {
 		switch t := v.(type) {
 		case int64:
@@ -230,6 +253,8 @@ var funcMap = template.FuncMap{
 		}
 		return strings.Join(words, " ")
 	},
+	"codeCommands": codeCommands,
+	"sentenceCase": sentenceCase,
 	"lastSegment": func(s, sep string) string {
 		parts := strings.Split(s, sep)
 		return parts[len(parts)-1]
@@ -484,4 +509,22 @@ func LoadEmailOverrides(logger *log.Logger) {
 			logger.Printf("webtemplates: using custom email template %s", path)
 		}
 	}
+}
+
+// SizeLabel turns plan sizes like "10G", "4g" or "512 M" into "10 GB", "4 GB", "512 MB" so table columns read the same
+func SizeLabel(v interface{}) string {
+	s := strings.TrimSpace(fmt.Sprint(v))
+	if v == nil || s == "" {
+		return ""
+	}
+	n := strings.TrimRight(s, "kKmMgGtTbB ")
+	unit := strings.ToUpper(strings.TrimSpace(s[len(n):]))
+	if _, err := strconv.ParseFloat(n, 64); err != nil {
+		return s
+	}
+	unit = strings.TrimSuffix(unit, "B")
+	if unit == "" {
+		return n
+	}
+	return n + " " + unit + "B"
 }

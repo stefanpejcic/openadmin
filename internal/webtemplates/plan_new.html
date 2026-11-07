@@ -1,43 +1,48 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div>
-    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div x-data="{ showSection: false }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">New Package</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Create a new hosting package for users.</h2>
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">New plan</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Create a new hosting plan for users.</p>
                 </div>
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <div class="flex flex-none items-center gap-2">
                 </div>
             </div>
     </header>
     </div>
 
 
-<div id="collapseAddNewUser" class="px-2">
+<div id="collapseAddNewUser" class="px-4 py-6 sm:px-6 lg:px-8">
 
-    <div class="sm:mx-auto sm:max-w-2xl" style="display:block;">
-        <form method="POST" class="mt-8 pb-6">
+    <div class="max-w-7xl">
+        <form method="POST" x-data="{ busy: false }" @submit="busy = true">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <section aria-labelledby="sec-plan" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-plan" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Plan</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">The name admins pick when creating a user. The description shows on the user's Server Information page.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
                 <div class="col-span-full sm:col-span-3">
                     {{template "macro_tooltip" (dict "ID" "name" "Label" "Name" "Description" "Enter your preferred plan name." "Required" true)}}
                     <div class="relative w-full mt-2">
                         <input
                             type="text"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="name" required="" value="{{index .FormData "name"}}" autofocus />
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="name" name="name" required="" value="{{index .FormData "name"}}" autofocus />
                     </div>
                 </div>
 
@@ -46,22 +51,28 @@
                     <div class="relative w-full mt-2">
                         <input
                             type="text"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="description" value="{{index .FormData "description"}}"/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="description" name="description" value="{{index .FormData "description"}}"/>
                     </div>
                 </div>
 
-            </div>
+                </div>
+            </section>
 
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+            <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>
 
 
-           <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <section aria-labelledby="sec-resources" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-resources" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Resources</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Hard limits for the user's containers, shared by all of their running services.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
                 <div class="col-span-full sm:col-span-3">
-                    {{template "macro_tooltip" (dict "ID" "disk_limit" "Label" "Disk (in GB)" "Description" "Disk Space in GB to allocate for user services, files, logs.." "Required" true)}}
+                    {{template "macro_tooltip" (dict "ID" "disk_limit" "Label" "Disk (GB)" "Description" "Disk space in GB for user services, files and logs." "Required" true)}}
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="disk_limit" required="" value="{{index .FormData "disk_limit"}}" min="0" />
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="disk_limit" name="disk_limit" required="" value="{{index .FormData "disk_limit"}}" min="0" />
                     </div>
                 </div>
 
@@ -70,7 +81,7 @@
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="inodes_limit" required="" value="{{index .FormData "inodes_limit"}}" min="0"/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="inodes_limit" name="inodes_limit" required="" value="{{index .FormData "inodes_limit"}}" min="0"/>
                     </div>
                 </div>
 
@@ -81,41 +92,47 @@
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="cpu" required="" value="{{index .FormData "cpu"}}" min="0" />
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="cpu" name="cpu" required="" value="{{index .FormData "cpu"}}" min="0" />
                     </div>
                 </div>
 
 
                 <div class="col-span-full sm:col-span-3">
-                    {{template "macro_tooltip" (dict "ID" "ram" "Label" "Memory (in GB)" "Description" "Limit the total memory (in GB) used by all running services combined for a user." "Required" true)}}
+                    {{template "macro_tooltip" (dict "ID" "ram" "Label" "Memory (GB)" "Description" "Limit the total memory (in GB) used by all running services combined for a user." "Required" true)}}
 
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="ram" required="" value="{{index .FormData "ram"}}" min="0" />
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="ram" name="ram" required="" value="{{index .FormData "ram"}}" min="0" />
                     </div>
                 </div>
 
 
 
                 <div class="col-span-full sm:col-span-3">
-                    {{template "macro_tooltip" (dict "ID" "bandwidth" "Label" "Port Speed" "Description" "Port Speed (or bandwidth) is the total speed user can use on this plan." "Required" true)}}
+                    {{template "macro_tooltip" (dict "ID" "bandwidth" "Label" "Port speed (Mbit/s)" "Description" "Port speed (or bandwidth) is the total speed a user can use on this plan." "Required" true)}}
 
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="bandwidth" required="" value="{{index .FormData "bandwidth"}}" min="0" />
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="bandwidth" name="bandwidth" required="" value="{{index .FormData "bandwidth"}}" min="0" />
                     </div>
                 </div>
 
 
 
-            </div>
+                </div>
+            </section>
 
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+            <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>
 
 
-           <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <section aria-labelledby="sec-limits" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-limits" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Account limits</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">How many of each the user can create, and which features they get.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
 
 
                 <div class="col-span-full sm:col-span-3">
@@ -123,18 +140,18 @@
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="domains_limit" value="{{index .FormData "domains_limit"}}" required="" min="0"/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="domains_limit" name="domains_limit" value="{{index .FormData "domains_limit"}}" required="" min="0"/>
                     </div>
                 </div>
 
 
                 <div class="col-span-full sm:col-span-3">
-                    {{template "macro_tooltip" (dict "ID" "websites_limit" "Label" "Websites" "Description" "Total number of websites that user can install/manage on this plan. Includes: WordPress, NodeJS, Python, Website Builder.." "Required" true)}}
+                    {{template "macro_tooltip" (dict "ID" "websites_limit" "Label" "Websites" "Description" "Total number of websites a user can install and manage on this plan, including WordPress, NodeJS, Python and Website Builder sites." "Required" true)}}
 
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="websites_limit" value="{{index .FormData "websites_limit"}}" required="" min="0"/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="websites_limit" name="websites_limit" value="{{index .FormData "websites_limit"}}" required="" min="0"/>
                     </div>
                 </div>
 
@@ -144,16 +161,16 @@
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="db_limit" value="{{index .FormData "db_limit"}}" min="0"/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="db_limit" name="db_limit" value="{{index .FormData "db_limit"}}" required="" min="0"/>
                     </div>
                 </div>
 
                 <div class="col-span-full sm:col-span-3">
-                    {{template "macro_tooltip" (dict "ID" "email_limit" "Label" "Email Accounts" "Description" "Total number of email accounts that user can create and manage on this plan." "Required" true)}}
+                    {{template "macro_tooltip" (dict "ID" "email_limit" "Label" "Email accounts" "Description" "Total number of email accounts that user can create and manage on this plan." "Required" true)}}
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="email_limit" value="{{index .FormData "email_limit"}}" required="" min="0"/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="email_limit" name="email_limit" value="{{index .FormData "email_limit"}}" required="" min="0"/>
                     </div>
                 </div>
 
@@ -162,7 +179,7 @@
                     <div class="relative w-full mt-2">
                         <input
                             type="text"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="max_email_quota" value="{{index .FormData "max_email_quota"}}" required=""/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="max_email_quota" name="max_email_quota" value="{{index .FormData "max_email_quota"}}" required=""/>
                     </div>
                 </div>
 
@@ -171,23 +188,23 @@
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="max_hourly_email" min="0" value="{{index .FormData "max_hourly_email"}}" required=""/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="max_hourly_email" name="max_hourly_email" min="0" value="{{index .FormData "max_hourly_email"}}" required=""/>
                     </div>
                 </div>
 
                 <div class="col-span-full sm:col-span-3">
-                    {{template "macro_tooltip" (dict "ID" "ftp_limit" "Label" "FTP Accounts" "Description" "Total number of FTP accounts that user can create and manage on this plan." "Required" true)}}
+                    {{template "macro_tooltip" (dict "ID" "ftp_limit" "Label" "FTP accounts" "Description" "Total number of FTP accounts that user can create and manage on this plan." "Required" true)}}
                     <div class="relative w-full mt-2">
                         <input
                             type="number"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="ftp_limit" value="{{index .FormData "ftp_limit"}}" required="" min="0"/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="ftp_limit" name="ftp_limit" value="{{index .FormData "ftp_limit"}}" required="" min="0"/>
                     </div>
                 </div>
 
                 <div class="col-span-full sm:col-span-3">
                     {{template "macro_tooltip" (dict "ID" "feature_set" "Label" "Feature set" "Description" "Feature set determines which features users on this plan have access to." "Required" true)}}
                     <div class="relative w-full mt-2">
-                        <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name="feature_set">
+                        <select class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full" id="feature_set" name="feature_set">
                             {{$selected := index .FormData "feature_set"}}
                             {{range .FeatureSets}}
                                 <option value="{{.}}" {{if or (eq . $selected) (eq . "default")}}selected{{end}}>{{.}}</option>
@@ -196,16 +213,23 @@
                     </div>
                 </div>
 
-            </div>
+                </div>
+            </section>
 
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
 
             {{if .HasEnterprise}}
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
+            <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>
+            <section aria-labelledby="sec-upsell" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3">
+                <div>
+                    <h2 id="sec-upsell" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Upsell</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">What users on this plan are offered when they hit a limit.</p>
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6 md:col-span-2">
                 <div class="col-span-full sm:col-span-3">
                     {{template "macro_tooltip" (dict "ID" "upsell_plan_id" "Label" "Upsell plan" "Description" "When users on this plan hit a limit, offer an upgrade to this higher-tier plan." "Required" false)}}
                     <div class="relative w-full mt-2">
-                        <select class="group/trigger flex w-full select-none items-center justify-between gap-2 truncate rounded border px-3 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 data-[placeholder]:text-gray-500 data-[placeholder]:dark:text-gray-500 bg-white dark:bg-gray-950 hover:bg-gray-50 hover:dark:bg-gray-950/50 data-[disabled]:bg-gray-100 data-[disabled]:text-gray-400 data-[disabled]:dark:border-gray-700 data-[disabled]:dark:bg-gray-800 data-[disabled]:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 mt-2" name="upsell_plan_id">
+                        <select class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full" id="upsell_plan_id" name="upsell_plan_id">
                             <option value="">None</option>
                             {{range .OtherPlans}}
                                 <option value="{{index . "id"}}">{{index . "name"}}</option>
@@ -219,17 +243,18 @@
                     <div class="relative w-full mt-2">
                         <input
                             type="url"
-                            class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden" name="upsell_url" placeholder="https://" value="{{index .FormData "upsell_url"}}"/>
+                            class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" id="upsell_url" name="upsell_url" placeholder="https://" value="{{index .FormData "upsell_url"}}"/>
                     </div>
                 </div>
-            </div>
+                </div>
+            </section>
             {{end}}
 
-            <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500" tremor-id="tremor-raw"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
-            <div class="flex items-center justify-end space-x-4 pb-6">
-                <a href="/plans" tabindex="-1" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600">Go back</a>
-                <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 disabled:bg-blue-300 disabled:text-white disabled:dark:bg-blue-800 disabled:dark:text-blue-400" type="submit">Create Plan</button>
+
+            <div class="mt-8 flex flex-col-reverse gap-2 border-t border-gray-200 pt-6 pb-6 sm:flex-row sm:justify-end dark:border-gray-800">
+                <a href="/plans" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</a>
+                <button :disabled="busy" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400" type="submit"><span x-show="busy" x-cloak class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span>Create plan</button>
             </div>
         </form>
     </div>

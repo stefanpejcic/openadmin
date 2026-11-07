@@ -319,9 +319,9 @@ func (a *Administrators) ServeEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title := "Change Password for " + target.Username
+	title := "Change password for " + target.Username
 	if action == "rename" {
-		title = "Rename Administrator " + target.Username
+		title = "Rename administrator " + target.Username
 	}
 	webtemplates.Render(w, "edit_admin.html", editAdminPageData{
 		Chrome:    buildChrome(r, title),

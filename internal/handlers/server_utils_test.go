@@ -122,7 +122,7 @@ func TestTimezoneServeShowsCurrentAndAvailable(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"Europe/Belgrade", "America/New_York", "Change TimeZone", "</html>"} {
+	for _, want := range []string{"Europe/Belgrade", "America/New_York", "Change timezone", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
@@ -158,6 +158,9 @@ func TestTimezoneSetRejectsInvalidZone(t *testing.T) {
 	if called {
 		t.Fatal("expected set-timezone to never be invoked for an invalid zone")
 	}
+	if !strings.Contains(string(body), "Pick a timezone from the list") || !strings.Contains(string(body), "</html>") {
+		t.Fatalf("expected the form back with an inline error, got %s", truncate(string(body)))
+	}
 }
 
 func TestTimezoneSetAcceptsValidZone(t *testing.T) {
@@ -174,14 +177,54 @@ func TestTimezoneSetAcceptsValidZone(t *testing.T) {
 	su := &ServerUtils{}
 	srv, client := newServerUtilsTestServer(t, su, "admin")
 
+	// the client follows the redirect, so this body is the page that shows the flash
 	resp, err := client.PostForm(srv.URL+"/server/timezone", url.Values{"timezone": {"Europe/Belgrade"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if setTo != "Europe/Belgrade" {
 		t.Fatalf("expected set-timezone to be called with Europe/Belgrade, got %q", setTo)
+	}
+	if !strings.Contains(string(body), "Timezone changed to Europe/Belgrade") {
+		t.Fatalf("expected a success flash after the redirect, got %s", truncate(string(body)))
+	}
+}
+
+func TestTimezoneSetShowsTimedatectlFailureOnPage(t *testing.T) {
+	withFixtureTimezones(t, []string{"Europe/Belgrade", "UTC"})
+	withStubbedTimedatectl(t, func(args ...string) (string, string, error) {
+		if len(args) > 0 && args[0] == "set-timezone" {
+			return "", "Failed to set time zone: Access denied", errors.New("exit status 1")
+		}
+		return "UTC", "", nil
+	})
+
+	su := &ServerUtils{}
+	srv, client := newServerUtilsTestServer(t, su, "admin")
+
+	resp, err := client.PostForm(srv.URL+"/server/timezone", url.Values{"timezone": {"Europe/Belgrade"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d", resp.StatusCode)
+	}
+	got := string(body)
+	if !strings.Contains(got, "Access denied") || !strings.Contains(got, `role="alert"`) || strings.HasPrefix(strings.TrimSpace(got), "{") {
+		t.Fatalf("expected the page with an error callout, got %s", truncate(got))
+	}
+}
+
+func TestLocalTimeIn(t *testing.T) {
+	if got := localTimeIn("UTC"); !strings.HasSuffix(got, "(UTC+00:00)") {
+		t.Fatalf("localTimeIn(UTC) = %q", got)
+	}
+	if got := localTimeIn("Not/AZone"); got != "" {
+		t.Fatalf("expected empty for an unknown zone, got %q", got)
 	}
 }
 
@@ -213,7 +256,7 @@ func TestDemoModeRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"Demo Mode", "</html>"} {
+	for _, want := range []string{"Demo mode", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
@@ -234,7 +277,7 @@ func TestRootPasswordRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"Change Root Password", "name=\"password\"", "</html>"} {
+	for _, want := range []string{"Change root password", "name=\"password\"", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
@@ -257,7 +300,7 @@ func TestRootPasswordRejectsEmptyPassword(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "Password cannot be empty.") {
+	if !strings.Contains(string(body), "Use a password of 6 to 30 characters") {
 		t.Fatalf("expected empty-password flash, got %s", truncate(string(body)))
 	}
 	if called {
@@ -284,7 +327,7 @@ func TestRootPasswordSuccessFlow(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "SSH password changed successfully!") {
+	if !strings.Contains(string(body), "Root password changed.") {
 		t.Fatalf("expected success flash, got %s", truncate(string(body)))
 	}
 	if gotStdin != "newpw123\nnewpw123\n" {

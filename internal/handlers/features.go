@@ -190,7 +190,7 @@ func (f *Features) serveIndex(w http.ResponseWriter, r *http.Request, currentUse
 	webtemplates.Render(w, "settings_features_index.html", mergeChrome(map[string]interface{}{
 		"Files":   files,
 		"Flashes": auth.PopFlashes(w, r, f.Sessions),
-	}, r, "Feature Manager"))
+	}, r, "Feature manager"))
 }
 
 func (f *Features) servePlan(w http.ResponseWriter, r *http.Request, plan string, currentUser *admindb.User, resellerDir string) {
@@ -351,7 +351,7 @@ func (f *Features) servePlan(w http.ResponseWriter, r *http.Request, plan string
 		"Plan":     plan,
 		"Features": allFeatures,
 		"Flashes":  auth.PopFlashes(w, r, f.Sessions),
-	}, r, "Feature Manager"))
+	}, r, "Feature manager"))
 }
 
 // FeatureSetPathForPlan resolves the feature-set .txt file for a plan,

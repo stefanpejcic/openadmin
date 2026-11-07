@@ -508,12 +508,12 @@ func TestServeUpdatesGetRendersHTML(t *testing.T) {
 	resp.Body.Close()
 	got := string(body)
 	for _, want := range []string{
-		"Update Settings",
+		"Update settings",
 		"10.0",
 		"10.5",
 		"Start update to 10.5",
 		"2024-01-01.log",
-		"Downgrade",
+		"Roll back",
 		"</html>",
 	} {
 		if !strings.Contains(got, want) {
@@ -571,7 +571,7 @@ func TestServeUpdatesGetUsesEnvVersionAfterUpdateWithoutRestart(t *testing.T) {
 	if strings.Contains(got, "Start update to 10.1") {
 		t.Fatalf("expected no update button once .env is on the latest version, got %s", truncate(got))
 	}
-	if !strings.Contains(got, `<div id="installed_version" class="relative w-full mt-2">10.1`) {
+	if !strings.Contains(got, `<div id="installed_version" class="relative mt-2 flex w-full items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-50">10.1`) {
 		t.Fatalf("expected installed version from .env, got %s", truncate(got))
 	}
 }

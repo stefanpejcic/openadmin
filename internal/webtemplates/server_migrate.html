@@ -1,34 +1,34 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div>
-    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div x-data="{ showSection: false }" class="op-page-header px-4 pt-4 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">Server Migration</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Initiate and monitor a full migration to another server.</h2>
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Server migration</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Initiate and monitor a full migration to another server.</p>
                 </div>
-                <div class="flex flex-none items-center justify-center gap-2 sm:justify-end">
-                    <a href="/server/migrate/logs" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60">View Logs</a>
+                <div class="flex flex-none items-center gap-2 sm:justify-end">
+                    <a href="/server/migrate/logs" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">View logs</a>
                 </div>
             </div>
         </header>
     </div>
 
-    <div id="collapseAddNewUser" class="px-4">
-        <div class="sm:mx-auto sm:max-w-2xl" style="display:block;">
-            <form class="mt-8 space-y-2" method="POST" action="">
+    <div id="collapseAddNewUser" class="px-4 py-6 sm:px-6 lg:px-8">
+        <div class="max-w-2xl" style="display:block;">
+            <form class="space-y-4" method="POST" action="">
                 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
                 {{if .MigrateStarted}}
@@ -40,12 +40,12 @@
             .then(res => res.json())
             .then(data => {
                 const out = document.getElementById('migration_output');
-                out.textContent = data.output || "Waiting for output...";
+                out.textContent = data.output || "Waiting for output…";
                 out.scrollTop = out.scrollHeight;
 
                 if (data.status === "finished") {
                     opStop(pollInterval);
-                    showToast("Migration finished successfully!", 'success');
+                    showToast("Migration finished.", 'success');
                     document.getElementById("progress_migrate").classList.add("hidden");
                     document.getElementById("success_migrate").classList.remove("hidden");
                 }
@@ -63,56 +63,43 @@
 
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
                     <div class="col-span-full">
-                        <ul id="migration_actions" class="space-y-2 text-gray-500 list-inside dark:text-gray-400">
+                        <ul id="migration_actions" class="space-y-2 text-sm text-gray-500 dark:text-gray-500">
 
-                            <li id="success_migrate" class="hidden flex items-center justify-center">
+                            <li id="success_migrate" class="hidden flex items-center gap-2">
                                 Migration process completed.
                             </li>
 
-                            <li id="progress_migrate" class="flex items-center justify-center">
-                                <div role="status">
-                                    <svg aria-hidden="true" class="w-4 h-4 me-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600"
-                                         viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
-                                        <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
-                                    </svg>
-                                    <span class="sr-only">Loading...</span>
-                                </div>
-                                Server migration is in progress...
+                            <li id="progress_migrate" class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4 animate-spin"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44063 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"></path></svg>
+                                Server migration is in progress…
                             </li>
                         </ul>
 
-                        <pre id="migration_output" class="mt-4 text-xs bg-gray-100 dark:bg-gray-800 text-emerald-500 p-4 rounded overflow-x-auto overflow-y-auto  [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500" style="height:60vh"></pre>
+                        <pre id="migration_output" class="mt-4 overflow-auto whitespace-pre-wrap rounded-md bg-gray-950 p-4 text-left font-mono text-xs leading-5 text-gray-200 ring-1 ring-gray-800" style="height:60vh"></pre>
                     </div>
                 </div>
 
                 {{else}}
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-                    <div class="col-span-full">
-                        <p class="mt-1 text-sm text-gray-500">
-                            Enter the remote server information and initiate a migration.
-                        </p>
-                    </div>
+                <p class="text-sm text-gray-500 dark:text-gray-500">Enter the remote server details to start a migration.</p>
+
+                <div>
+                    <label for="tour-migrate-host" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Remote host</label>
+                    <input id="tour-migrate-host" type="text" name="host" placeholder="1.2.3.4" required autocomplete="off" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2">
                 </div>
 
-                <input id="tour-migrate-host" type="text" name="host" placeholder="Remote Host (e.g. 1.2.3.4)" required
-                       class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
-
-                <input type="text" name="root" placeholder="Username (usually root)" required
-                       class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
-
-                <input type="password" name="password" placeholder="Password" required
-                       class="relative block w-full appearance-none border px-2.5 py-2 shadow-sm outline-none rounded-l transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950">
-
-                <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500">
-                    <div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div>
+                <div>
+                    <label for="migrate-root" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Username</label>
+                    <input id="migrate-root" type="text" name="root" value="" placeholder="root" required autocomplete="off" aria-describedby="migrate-root-help" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2">
+                    <p id="migrate-root-help" class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Usually root.</p>
                 </div>
 
-                <div class="flex items-center justify-end space-x-4">
-                    <button type="submit"
-                            class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-500 dark:hover:bg-blue-600 disabled:bg-blue-300">
-                        Start Migration
-                    </button>
+                <div>
+                    <label for="migrate-password" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Password</label>
+                    <input id="migrate-password" type="password" name="password" required autocomplete="off" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2">
+                </div>
+
+                <div class="flex items-center justify-end border-t border-gray-200 pt-6 dark:border-gray-800">
+                    <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Start migration</button>
                 </div>
                 {{end}}
             </form>

@@ -251,13 +251,16 @@ func TestServeFirewallSettingsUnavailable(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404 when csf isn't available, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 when csf isn't installed, got %d", resp.StatusCode)
 	}
 	got := string(body)
-	for _, want := range []string{"ConfigServer Firewall (CSF) is not available on this system.", "</html>"} {
+	for _, want := range []string{"ConfigServer Firewall (CSF) is not installed on this server.", `id="csf-not-installed"`, "</html>"} {
 		if !strings.Contains(got, want) {
-			t.Fatalf("expected chrome-wrapped error page to contain %q, got %s", want, truncate(got))
+			t.Fatalf("expected the not-installed page to contain %q, got %s", want, truncate(got))
 		}
+	}
+	if strings.Contains(got, `id="error-code"`) {
+		t.Fatalf("expected the not-installed page, not the error page, got %s", truncate(got))
 	}
 }

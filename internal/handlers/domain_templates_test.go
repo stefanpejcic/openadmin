@@ -122,10 +122,10 @@ func TestServeDomainTemplatesRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	if n := strings.Count(got, "This file is changed from the default"); n != 5 {
+	if n := strings.Count(got, "Changed from the default"); n != 5 {
 		t.Fatalf("expected the changed-from-default note on all 5 config editors, got %d", n)
 	}
-	for _, want := range []string{"caddy content", "Edit VirtualHost Templates", "function restoreComponentFor", "</html>"} {
+	for _, want := range []string{"caddy content", "Edit VirtualHost templates", "function restoreComponentFor", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
@@ -140,7 +140,7 @@ func TestServeDomainTemplatesRendersHTML(t *testing.T) {
 	body, _ = io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got = string(body)
-	for _, want := range []string{"Edit Domain Templates", "Suspension Reasons", "reason_name__dmca", "Copyright / DMCA", "</html>"} {
+	for _, want := range []string{"Edit domain templates", "Suspension reasons", "reason_name__dmca", "Copyright / DMCA", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}

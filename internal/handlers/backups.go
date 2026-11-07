@@ -283,7 +283,7 @@ func (b *Backups) ServeUserBackups(w http.ResponseWriter, r *http.Request) {
 		"RunsLog":         backupsReadLastLines(DockerBackupLogPath, 500),
 		"CSRFToken":       csrf.Token(r),
 		"Flashes":         auth.PopFlashes(w, r, b.Sessions),
-	}, r, "User Backups"))
+	}, r, "User backups"))
 }
 
 // ServeUserBackupsSettings handles POST /backups/user/settings: the
@@ -594,7 +594,7 @@ func (b *Backups) ServeSystemBackups(w http.ResponseWriter, r *http.Request) {
 		"CSRFToken":         csrf.Token(r),
 		"Flashes":           auth.PopFlashes(w, r, b.Sessions),
 		"BulkActions":       SystemBackupsBulkActions(),
-	}, r, "System Backups"))
+	}, r, "System backups"))
 }
 
 // backupActionResult / pendingBackupAction mirror

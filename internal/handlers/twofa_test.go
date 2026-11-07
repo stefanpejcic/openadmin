@@ -64,7 +64,7 @@ func newTwoFATestServer(t *testing.T) (*httptest.Server, *http.Client, *admindb.
 	return srv, client, db
 }
 
-var secretRe = regexp.MustCompile(`<code class="font-mono">([A-Z2-7]+)</code>`)
+var secretRe = regexp.MustCompile(`data-secret="([A-Z2-7]+)"`)
 
 func TestTwoFASettingsGeneratesAndReusesPendingSecret(t *testing.T) {
 	srv, client, _ := newTwoFATestServer(t)

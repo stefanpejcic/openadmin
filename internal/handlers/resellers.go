@@ -398,13 +398,13 @@ func (rs *Resellers) ServeEditForm(w http.ResponseWriter, r *http.Request) {
 		webtemplates.Render(w, "users_rename_reseller.html", mergeChrome(map[string]interface{}{
 			"Username": user.Username,
 			"Flashes":  auth.PopFlashes(w, r, rs.Sessions),
-		}, r, "Rename Reseller: "+user.Username))
+		}, r, "Rename reseller: "+user.Username))
 	case "password":
 		webtemplates.Render(w, "users_password_reseller.html", mergeChrome(map[string]interface{}{
 			"Username":    user.Username,
 			"SelfService": false,
 			"Flashes":     auth.PopFlashes(w, r, rs.Sessions),
-		}, r, "Change Password for Reseller: "+user.Username))
+		}, r, "Change password for reseller: "+user.Username))
 	case "update":
 		rd := readResellerData(username)
 		var plans []paneldb.RowMap
@@ -436,7 +436,7 @@ func (rs *Resellers) ServeAccount(w http.ResponseWriter, r *http.Request) {
 		"Self":         currentUser.Username,
 		"ResellerData": rd,
 		"Flashes":      auth.PopFlashes(w, r, rs.Sessions),
-	}, r, "Change Password"))
+	}, r, "Change password"))
 }
 
 // invalidLogoURLMessage is shown for a logo URL validResellerLogoURL rejects

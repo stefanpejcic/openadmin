@@ -1,23 +1,23 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <header>
-        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div class="grow">
-                <h1 class="mb-1 text-xl font-bold">Email Queue</h1>
-                <h2 class="text-sm font-medium text-slate-500">View, delete, and attempt to deliver queued messages that the system has not yet delivered to their destinations.</h2>
+                <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Email queue</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-500">View, delete, and attempt to deliver queued messages that the system has not yet delivered to their destinations.</p>
             </div>
-            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                <button onclick="location.reload()" class="inline-flex items-center gap-1.5 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>Refresh</button>
+            <div class="flex flex-none items-center gap-2">
+                <button type="button" onclick="location.reload()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5.46257 4.43262C7.21556 2.91688 9.5007 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C9.84982 4 7.89777 4.84827 6.46023 6.22842L5.46257 4.43262ZM18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 9.86386 2.66979 7.88416 3.8108 6.25944L7 12H4C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg>Refresh</button>
             </div>
         </div>
     </header>
@@ -38,6 +38,10 @@ function queueManager() {
             }
         },
         async doAction(action, scope) {
+            if (action === 'delete') {
+                const n = scope === 'all' ? 'every queued message' : this.selected.length + ' selected message' + (this.selected.length === 1 ? '' : 's');
+                if (!(await window.opConfirm('Delete ' + n + '? They will not be delivered.'))) return;
+            }
             const ids = scope === 'all' ? [] : this.selected;
             const body = new URLSearchParams({ action, scope });
             ids.forEach(id => body.append('queue_ids', id));
@@ -56,10 +60,10 @@ function queueManager() {
 </script>
 
 <div x-data="queueManager()" class="space-y-3">
-    <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+    <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
         <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
             <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
-                <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search queue..." type="search" />
+                <input x-model="searchQuery" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search queue…" aria-label="Search queue…" type="search" />
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                 </div>
@@ -68,56 +72,44 @@ function queueManager() {
 
         <div class="flex items-center gap-2">
             {{if .Queue}}
-            <span class="text-sm text-gray-500 dark:text-gray-400">{{len .Queue}} message{{if ne (len .Queue) 1}}s{{end}}</span>
+            <span class="text-sm text-gray-500 dark:text-gray-500">{{len .Queue}} message{{if ne (len .Queue) 1}}s{{end}}</span>
             {{end}}
 
             <template x-if="selected.length > 0">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm text-gray-500 dark:text-gray-400" x-text="selected.length + ' selected'"></span>
-                    <button @click="doAction('retry', 'selected')" class="inline-flex items-center gap-1.5 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/></svg>
-                        Retry selected
-                    </button>
-                    <button @click="doAction('delete', 'selected')" class="inline-flex items-center gap-1.5 rounded border border-red-300 dark:border-red-800 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                        Delete selected
-                    </button>
+                    <span class="text-sm text-gray-500 dark:text-gray-500" x-text="selected.length + ' selected'"></span>
+                    <button type="button" @click="doAction('retry', 'selected')" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5.46257 4.43262C7.21556 2.91688 9.5007 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C9.84982 4 7.89777 4.84827 6.46023 6.22842L5.46257 4.43262ZM18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 9.86386 2.66979 7.88416 3.8108 6.25944L7 12H4C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg>Retry selected</button>
+                    <button type="button" @click="doAction('delete', 'selected')" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM9 11H11V17H9V11ZM13 11H15V17H13V11ZM9 4V6H15V4H9Z"/></svg>Delete selected</button>
                 </div>
             </template>
 
             {{if .Queue}}
-            <button @click="doAction('retry', 'all')" class="inline-flex items-center gap-1.5 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/></svg>
-                Retry all
-            </button>
-            <button @click="doAction('delete', 'all')" class="inline-flex items-center gap-1.5 rounded border border-red-300 dark:border-red-800 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                Delete all
-            </button>
+            <button type="button" @click="doAction('retry', 'all')" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5.46257 4.43262C7.21556 2.91688 9.5007 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C9.84982 4 7.89777 4.84827 6.46023 6.22842L5.46257 4.43262ZM18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 9.86386 2.66979 7.88416 3.8108 6.25944L7 12H4C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg>Retry all</button>
+            <button type="button" @click="doAction('delete', 'all')" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM9 11H11V17H9V11ZM13 11H15V17H13V11ZM9 4V6H15V4H9Z"/></svg>Delete all</button>
             {{end}}
         </div>
     </div>
 
-    <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+    <div class="relative overflow-y-auto">
         <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
             <thead>
-                <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
-                    <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs w-10">
+                <tr class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 border-y border-gray-200 dark:border-gray-800">
+                    <th scope="col" class="w-10 py-2.5 pl-4">
                         {{if .Queue}}
                         <input type="checkbox"
                             data-all-ids="{{toJSON .QueueIDs}}"
                             @change="toggleAll(JSON.parse($el.dataset.allIds))"
                             :checked="selected.length === {{len .Queue}}"
-                            class="rounded border-gray-300 dark:border-gray-700 text-blue-600">
+                            aria-label="Select all messages">
                         {{end}}
                     </th>
-                    <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Queue ID</th>
-                    <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Queue</th>
-                    <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">From</th>
-                    <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">To</th>
-                    <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Size</th>
-                    <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Arrival</th>
-                    <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Reason</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Queue ID</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Queue</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">From</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">To</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Size</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Arrival</th>
+                    <th scope="col" class="px-4 py-2.5 text-left text-xs font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Reason</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -125,55 +117,54 @@ function queueManager() {
             {{if .Queue}}
                 {{range .Queue}}
                 <tr x-show="searchQuery === '' || '{{.sender}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.queue_id}}'.toLowerCase().includes(searchQuery.toLowerCase())"
-                    class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900"
-                    :class="selected.includes('{{.queue_id}}') ? 'bg-blue-50 dark:bg-blue-900/10' : ''">
+                    class="group hover:bg-gray-50 dark:hover:bg-gray-900/60"
+                    :class="selected.includes('{{.queue_id}}') ? 'bg-gray-50 dark:bg-gray-900' : ''" :aria-selected="selected.includes('{{.queue_id}}')">
 
-                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
-                        <input type="checkbox" value="{{.queue_id}}" x-model="selected"
-                            class="rounded border-gray-300 dark:border-gray-700 text-blue-600">
+                    <td class="w-10 py-2.5 pl-4">
+                        <input type="checkbox" value="{{.queue_id}}" x-model="selected" aria-label="Select message {{.queue_id}}">
                     </td>
 
-                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 font-mono">
+                    <td class="px-4 py-2.5 text-sm font-mono font-medium whitespace-nowrap text-gray-900 dark:text-gray-50">
                         {{.queue_id}}
                     </td>
 
-                    <td class="p-4 text-sm relative whitespace-nowrap py-1">
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
                         {{if eq .queue_name "deferred"}}
-                        <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">deferred</span>
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20">Deferred</span>
                         {{else if eq .queue_name "active"}}
-                        <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">active</span>
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span>
                         {{else if eq .queue_name "hold"}}
-                        <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">hold</span>
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Hold</span>
                         {{else}}
-                        <span class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{{.queue_name}}</span>
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">{{.queue_name}}</span>
                         {{end}}
                     </td>
 
-                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
                         {{.sender}}
                     </td>
 
-                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
                         {{range .recipients}}
                         <div>{{.address}}</div>
                         {{end}}
                     </td>
 
-                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
                         {{kbRound1 .message_size}} KB
                     </td>
 
-                    <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400">
+                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
                         {{unixDateTimeUTC .arrival_time}}
                     </td>
 
-                    <td class="p-4 text-sm relative py-1 text-gray-500 dark:text-gray-500 max-w-xs truncate">
+                    <td class="max-w-xs truncate px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400">
                         {{$reason := ""}}
                         {{if .recipients}}{{$reason = (index .recipients 0).delay_reason}}{{end}}
                         {{if $reason}}
                         <span title="{{$reason}}">{{jinjaTruncate $reason 60}}</span>
                         {{else}}
-                        —
+                        <span class="text-gray-400 dark:text-gray-600">—</span>
                         {{end}}
                     </td>
 
@@ -181,7 +172,7 @@ function queueManager() {
                 {{end}}
             {{else}}
             <tr>
-                <td colspan="8" class="p-6 text-center text-gray-500 dark:text-gray-400">
+                <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">
                     Queue is empty.
                 </td>
             </tr>
@@ -195,20 +186,13 @@ function queueManager() {
 {{else if eq .MailserverStatus "not_installed"}}
 {{template "installer" (dict "ID" "mailserver-install" "Name" "the mailserver" "Text" "The mailserver hosts email accounts for your users' domains." "Action" "/emails/install" "Status" "/emails/install/status" "Open" "/emails/queue" "OpenLabel" "Open Emails" "Installing" .Installing "CSRFToken" .CSRFToken "IsReseller" .IsReseller)}}
 {{else if eq .MailserverStatus "stopped"}}
-<!-- Intentional quirk preserved: the dark-mode media-query selector is
-     missing its leading "." so it never matches (`next-error-h1` instead of
-     `.next-error-h1`). -->
-<div style="
-        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-        height: 90vh;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    "><div><style>.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}</style><h1 class="next-error-h1" style="display:inline-block;margin:0 20px 0 0;padding:0 23px 0 0;font-size:24px;font-weight:500;vertical-align:top;line-height:49px">Not Running</h1><div style="display:inline-block"><h2 style="font-size:14px;font-weight:400;line-height:49px;margin:0">The Mailserver is not currently running. Start it <a class="inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400" href="/services">from the Services page</a>.</h2></div></div></div>
+<div class="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
+    <span class="flex size-10 items-center justify-center rounded-md bg-white shadow-xs ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5 text-gray-400 dark:text-gray-500" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"/></svg></span>
+    <h2 class="mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50">Mail server isn't running</h2>
+    <p class="mt-1 max-w-md text-sm text-gray-500 dark:text-gray-500">The mail server isn't running. Start it <a class="text-blue-500 hover:underline hover:underline-offset-4" href="/services">from the Services page</a>.</p>
+</div>
 {{else}}
-Mailserver status not detected!
+<p class="px-4 py-6 text-sm text-gray-500 dark:text-gray-500 sm:px-6 lg:px-8">Mailserver status not detected.</p>
 {{end}}
 
     </main>

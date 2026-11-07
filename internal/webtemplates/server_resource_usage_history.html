@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <!-- START templates/server/resource_usage_history.html -->
@@ -16,16 +16,16 @@
 <div class="min-h-screen">
 
   <!-- Page Header -->
-  <div class="border-b flex flex-col border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950 p-4 sm:p-6 lg:p-8 sm:flex-row sm:items-center sm:justify-between">
+  <div class="op-page-header border-b flex flex-col border-gray-200 dark:border-gray-800 p-4 sm:p-6 lg:p-8 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="mb-1 text-xl font-bold">Resource Usage History</h1>
-      <p class="text-sm font-medium text-slate-500">Last {{.PeriodLabel}}</p>
+      <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Resource usage history</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-500">Last {{.PeriodLabel}}</p>
     </div>
     <div class="mt-3 sm:mt-0 flex flex-wrap items-center gap-2">
 
       <!-- Time range selector -->
-      <select onchange="location.href='?minutes='+this.value+'&view={{.View}}'"
-              class="rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+      <select aria-label="Time range" onchange="location.href='?minutes='+this.value+'&view={{.View}}'"
+              class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2.5 py-1.5 text-xs dark:[color-scheme:dark] cursor-pointer">
         <option value="5" {{if eq .Minutes 5}}selected{{end}}>Last 5 minutes</option>
         <option value="15" {{if eq .Minutes 15}}selected{{end}}>Last 15 minutes</option>
         <option value="30" {{if eq .Minutes 30}}selected{{end}}>Last 30 minutes</option>
@@ -40,45 +40,30 @@
       </select>
 
       <!-- View toggle -->
-      <div class="flex items-center gap-1">
-        <a href="?minutes={{.Minutes}}&view=line"
-           title="Line chart"
-           class="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition-colors
-                  {{if eq .View "line"}}border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900{{else}}border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800{{end}}">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 20h18"/>
-          </svg>
+      <div class="inline-flex items-center gap-1 rounded-md bg-gray-100 p-1 dark:bg-gray-900">
+        <a href="?minutes={{.Minutes}}&view=line" role="button" aria-label="Line chart" title="Line chart" aria-pressed="{{if eq .View "line"}}true{{else}}false{{end}}" class="inline-flex items-center justify-center whitespace-nowrap rounded px-2 py-1 text-sm font-medium text-gray-500 ring-1 ring-transparent ring-inset transition hover:text-gray-700 aria-selected:bg-white aria-selected:text-gray-900 aria-selected:shadow-sm aria-pressed:bg-white aria-pressed:text-gray-900 aria-pressed:shadow-sm dark:text-gray-400 dark:hover:text-gray-200 dark:aria-selected:bg-gray-950 dark:aria-selected:text-gray-50 dark:aria-pressed:bg-gray-950 dark:aria-pressed:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3V19H21V21H3V3H5ZM20.2929 6.29289L21.7071 7.70711L16 13.4142L13 10.415L8.70711 14.7071L7.29289 13.2929L13 7.58579L16 10.585L20.2929 6.29289Z"/></svg>
         </a>
-        <a href="?minutes={{.Minutes}}&view=grid"
-           title="Grid / table"
-           class="inline-flex items-center gap-2 rounded border px-3 py-2 text-sm font-medium transition-colors
-                  {{if eq .View "grid"}}border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:hover:bg-gray-900{{else}}border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800{{end}}">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 6h18M3 14h18M3 18h18"/>
-          </svg>
+        <a href="?minutes={{.Minutes}}&view=grid" role="button" aria-label="Grid view" title="Grid / table" aria-pressed="{{if eq .View "grid"}}true{{else}}false{{end}}" class="inline-flex items-center justify-center whitespace-nowrap rounded px-2 py-1 text-sm font-medium text-gray-500 ring-1 ring-transparent ring-inset transition hover:text-gray-700 aria-selected:bg-white aria-selected:text-gray-900 aria-selected:shadow-sm aria-pressed:bg-white aria-pressed:text-gray-900 aria-pressed:shadow-sm dark:text-gray-400 dark:hover:text-gray-200 dark:aria-selected:bg-gray-950 dark:aria-selected:text-gray-50 dark:aria-pressed:bg-gray-950 dark:aria-pressed:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4H21V6H3V4ZM3 19H21V21H3V19ZM3 14H21V16H3V14ZM3 9H21V11H3V9Z"/></svg>
         </a>
       </div>
 
       <!-- Refresh button -->
-      <button onclick="location.reload()"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-        </svg>
+      <button type="button" onclick="location.reload()"
+              class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5.46257 4.43262C7.21556 2.91688 9.5007 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C9.84982 4 7.89777 4.84827 6.46023 6.22842L5.46257 4.43262ZM18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 9.86386 2.66979 7.88416 3.8108 6.25944L7 12H4C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg>
         Refresh
       </button>
     </div>
   </div>
 
   <!-- No data state -->
-  <div id="no-data" class="hidden p-6 text-center">
-    <div class="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-      <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-      </svg>
-    </div>
-    <p class="text-sm font-medium text-gray-900 dark:text-gray-50">No snapshots found</p>
+  <div id="no-data" class="hidden px-4 py-16 text-center">
+    <span class="mx-auto flex size-10 items-center justify-center rounded-md bg-white shadow-xs ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800">
+      <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5 text-gray-400 dark:text-gray-500" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12H5V21H3V12ZM19 8H21V21H19V8ZM11 2H13V21H11V2Z"/></svg>
+    </span>
+    <h3 class="mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50">No snapshots found</h3>
     <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">No data for the selected time range. Try a longer period.</p>
   </div>
 
@@ -89,25 +74,25 @@
     <div id="view-line" class="{{if ne .View "line"}}hidden{{end}} space-y-4 p-4 sm:p-6 lg:p-8">
 
       <!-- CPU + Load chart -->
-      <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">CPU &amp; Load Average</h2>
-          <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+      <div class="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-900 dark:bg-raised">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div><h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">CPU &amp; load average</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-500">CPU use in percent, with the 1 and 5 minute load average.</p></div>
+          <div data-static-legend class="flex shrink-0 items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
             <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-blue-500 inline-block rounded"></span>CPU %</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-orange-400 inline-block rounded"></span>1m load</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-amber-300 inline-block rounded"></span>5m load</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-orange-500 inline-block rounded"></span>1m load</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-amber-500 inline-block rounded"></span>5m load</span>
           </div>
         </div>
         <div style="position:relative;height:200px"><canvas id="chart-cpu"></canvas></div>
       </div>
 
       <!-- Memory + Swap chart -->
-      <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Memory &amp; Swap</h2>
-          <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+      <div class="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-900 dark:bg-raised">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div><h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Memory &amp; swap</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-500">RAM and swap in use, in percent of the total.</p></div>
+          <div data-static-legend class="flex shrink-0 items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
             <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-violet-500 inline-block rounded"></span>RAM %</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-pink-400 inline-block rounded"></span>Swap %</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-pink-500 inline-block rounded"></span>Swap %</span>
           </div>
         </div>
         <div style="position:relative;height:180px"><canvas id="chart-mem"></canvas></div>
@@ -115,23 +100,23 @@
 
       <!-- Disk + Web connections chart -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50 mb-3">Disk Usage %</h2>
+        <div class="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-900 dark:bg-raised">
+          <div class="mb-3"><h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Disk usage</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-500">Space used on the root disk, in percent.</p></div>
           <div style="position:relative;height:160px"><canvas id="chart-disk"></canvas></div>
         </div>
-        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50 mb-3">Web Connections</h2>
+        <div class="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-900 dark:bg-raised">
+          <div class="mb-3"><h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Web connections</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-500">Open connections to the web server.</p></div>
           <div style="position:relative;height:160px"><canvas id="chart-conn"></canvas></div>
         </div>
       </div>
 
       <!-- Check results over time -->
-      <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Health Checks</h2>
-          <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+      <div class="rounded-md border border-gray-200 bg-white p-4 dark:border-gray-900 dark:bg-raised">
+        <div class="flex items-start justify-between gap-4 mb-3">
+          <div><h2 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Health checks</h2><p class="mt-1 text-sm text-gray-500 dark:text-gray-500">Checks that passed, warned or failed at each snapshot.</p></div>
+          <div data-static-legend class="flex shrink-0 items-center gap-3 text-xs text-gray-500 dark:text-gray-500">
             <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-emerald-500 inline-block rounded"></span>Pass</span>
-            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-400 inline-block rounded"></span>Warn</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500 inline-block rounded"></span>Warn</span>
             <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-red-500 inline-block rounded"></span>Fail</span>
           </div>
         </div>
@@ -140,15 +125,15 @@
     </div>
 
     <!-- ── GRID VIEW ── -->
-    <div id="view-grid" class="{{if ne .View "grid"}}hidden{{end}} -mx-4 sm:-mx-6 lg:-mx-8" x-data="snapshotTable()" x-init="init()">
+    <div id="view-grid" class="{{if ne .View "grid"}}hidden{{end}}" x-data="snapshotTable()" x-init="init()">
       <div class="space-y-3">
 
         <!-- Toolbar: search + columns toggle -->
-        <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+        <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
           <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
             <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
-              <input x-model="searchQuery" type="search" placeholder="Search snapshots..."
-                     class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8">
+              <input x-model="searchQuery" type="search" placeholder="Search snapshots…" aria-label="Search snapshots…"
+                     class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-700/30 focus:border-blue-500 dark:focus:border-blue-700 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8 shadow-xs">
               <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
               </div>
@@ -158,24 +143,21 @@
           <div class="flex items-center gap-2">
             <!-- Columns dropdown -->
             <div class="relative" x-data="{ open: false }" @click.away="open = false">
-              <button @click="open = !open" type="button"
-                      class="relative items-center justify-center whitespace-nowrap rounded border text-center font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 ml-auto hidden gap-x-2 px-2 py-1.5 text-sm sm:text-xs lg:flex cursor-pointer">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4"><path d="M5 7C5 6.17157 5.67157 5.5 6.5 5.5C7.32843 5.5 8 6.17157 8 7C8 7.82843 7.32843 8.5 6.5 8.5C5.67157 8.5 5 7.82843 5 7ZM6.5 3.5C4.567 3.5 3 5.067 3 7C3 8.933 4.567 10.5 6.5 10.5C8.433 10.5 10 8.933 10 7C10 5.067 8.433 3.5 6.5 3.5ZM12 8H20V6H12V8ZM16 17C16 16.1716 16.6716 15.5 17.5 15.5C18.3284 15.5 19 16.1716 19 17C19 17.8284 18.3284 18.5 17.5 18.5C16.6716 18.5 16 17.8284 16 17ZM17.5 13.5C15.567 13.5 14 15.067 14 17C14 18.933 15.567 20.5 17.5 20.5C19.433 20.5 21 18.933 21 17C21 15.067 19.433 13.5 17.5 13.5ZM4 16V18H12V16H4Z"></path></svg>
-                Show Columns
+              <button @click="open = !open" type="button" :aria-expanded="open" aria-haspopup="true" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">
+                Show columns
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0 text-gray-500"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
               </button>
 
-              <div x-show="open" x-transition
-                   class="absolute right-0 z-10 mt-1 text-sm shadow-md border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-50 dark:bg-gray-950 divide-y divide-gray-100 rounded-lg shadow-sm w-72 dark:divide-gray-600">
-                <ul class="p-2 space-y-1">
+              <div x-show="open" x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                   class="absolute right-0 mt-1 w-72 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
+                <ul>
                   <template x-for="col in columnList" :key="col.key">
                     <li>
-                      <div class="flex py-1 rounded-sm hover:bg-gray-100 dark:hover:bg-gray-600">
-                        <label class="inline-flex items-center w-full cursor-pointer">
-                          <input type="checkbox" :checked="columns[col.key]" @change="columns[col.key] = $event.target.checked; saveColumns()" class="sr-only peer">
-                          <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-500 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
-                          <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300" x-text="col.label"></span>
-                        </label>
-                      </div>
+                      <label class="flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50 justify-between">
+                        <span x-text="col.label"></span>
+                        <input type="checkbox" role="switch" :checked="columns[col.key]" @change="columns[col.key] = $event.target.checked; saveColumns()" class="peer sr-only">
+                        <span class="relative inline-flex shrink-0 cursor-pointer items-center rounded-full bg-gray-200 p-0.5 shadow-inner ring-1 ring-black/5 ring-inset transition-colors duration-150 peer-checked:bg-blue-500 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500 peer-disabled:cursor-not-allowed peer-disabled:bg-gray-100 peer-disabled:ring-gray-300 peer-disabled:peer-checked:bg-blue-200 peer-disabled:[&>span]:shadow-none dark:bg-gray-950 dark:ring-gray-800 dark:peer-checked:bg-blue-500 dark:peer-checked:ring-blue-500 dark:peer-disabled:bg-gray-800 dark:peer-disabled:ring-gray-700 dark:peer-disabled:peer-checked:bg-blue-900 dark:peer-disabled:peer-checked:ring-gray-900 dark:peer-disabled:[&>span]:bg-gray-500 h-5 w-9 peer-checked:[&>span]:translate-x-4"><span class="rounded-full bg-white shadow-lg transition-transform duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] dark:bg-gray-50 size-4"></span></span>
+                      </label>
                     </li>
                   </template>
                 </ul>
@@ -185,152 +167,68 @@
         </div>
 
         <!-- Table -->
-        <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500 h-screen">
+        <div class="relative overflow-y-auto min-h-screen">
           <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
             <thead>
-              <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+              <tr class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 border-y border-gray-200 dark:border-gray-800">
 
-                <th x-show="multi" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('server')"><span>Server</span></div>
+                <th scope="col" x-show="multi" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('server')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Server<svg x-show="sortKey==='server' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='server' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='server' && sortDir==='asc') && !(sortKey==='server' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='server' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='server' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
-                <th x-show="columns.ts" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('ts')">
-                    <span>Timestamp</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='ts' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='ts' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.ts" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('ts')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Timestamp<svg x-show="sortKey==='ts' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='ts' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='ts' && sortDir==='asc') && !(sortKey==='ts' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='ts' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='ts' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.cpu" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('cpu')">
-                    <span>CPU %</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='cpu' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='cpu' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.cpu" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('cpu')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">CPU %<svg x-show="sortKey==='cpu' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='cpu' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='cpu' && sortDir==='asc') && !(sortKey==='cpu' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='cpu' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='cpu' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.load1" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('load1')">
-                    <span>Load 1m</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load1' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load1' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.load1" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('load1')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Load 1m<svg x-show="sortKey==='load1' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='load1' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='load1' && sortDir==='asc') && !(sortKey==='load1' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='load1' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='load1' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.load5" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('load5')">
-                    <span>Load 5m</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load5' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load5' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.load5" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('load5')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Load 5m<svg x-show="sortKey==='load5' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='load5' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='load5' && sortDir==='asc') && !(sortKey==='load5' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='load5' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='load5' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.load15" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('load15')">
-                    <span>Load 15m</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load15' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='load15' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.load15" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('load15')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Load 15m<svg x-show="sortKey==='load15' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='load15' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='load15' && sortDir==='asc') && !(sortKey==='load15' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='load15' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='load15' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.mem" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('mem')">
-                    <span>RAM %</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='mem' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='mem' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.mem" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('mem')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">RAM %<svg x-show="sortKey==='mem' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='mem' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='mem' && sortDir==='asc') && !(sortKey==='mem' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='mem' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='mem' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.memused" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('memused')">
-                    <span>RAM Used</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='memused' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='memused' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.memused" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('memused')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">RAM Used<svg x-show="sortKey==='memused' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='memused' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='memused' && sortDir==='asc') && !(sortKey==='memused' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='memused' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='memused' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.swap" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('swap')">
-                    <span>Swap %</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='swap' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='swap' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.swap" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('swap')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Swap %<svg x-show="sortKey==='swap' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='swap' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='swap' && sortDir==='asc') && !(sortKey==='swap' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='swap' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='swap' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.disk" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('disk')">
-                    <span>Disk %</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='disk' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='disk' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.disk" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('disk')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Disk %<svg x-show="sortKey==='disk' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='disk' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='disk' && sortDir==='asc') && !(sortKey==='disk' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='disk' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='disk' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.conn" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('conn')">
-                    <span>Web Conn</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='conn' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='conn' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.conn" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('conn')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Web conn<svg x-show="sortKey==='conn' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='conn' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='conn' && sortDir==='asc') && !(sortKey==='conn' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='conn' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='conn' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.status" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('status')">
-                    <span>Status</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='status' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='status' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.status" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('status')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Status<svg x-show="sortKey==='status' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='status' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='status' && sortDir==='asc') && !(sortKey==='status' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='status' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='status' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.pass" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('pass')">
-                    <span>Pass</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='pass' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='pass' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.pass" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('pass')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Pass<svg x-show="sortKey==='pass' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='pass' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='pass' && sortDir==='asc') && !(sortKey==='pass' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='pass' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='pass' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.warn" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('warn')">
-                    <span>Warn</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='warn' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='warn' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.warn" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('warn')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Warn<svg x-show="sortKey==='warn' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='warn' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='warn' && sortDir==='asc') && !(sortKey==='warn' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='warn' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='warn' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
-                <th x-show="columns.fail" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                  <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900" @click="sortBy('fail')">
-                    <span>Fail</span>
-                    <div class="-space-y-2">
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='fail' && sortDir==='desc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/></svg>
-                      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" :class="sortKey==='fail' && sortDir==='asc' ? 'opacity-30' : 'text-gray-900 dark:text-gray-50'"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/></svg>
-                    </div>
-                  </div>
+                <th scope="col" x-show="columns.fail" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                  <button type="button" @click="sortBy('fail')" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Fail<svg x-show="sortKey==='fail' && sortDir==='asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortKey==='fail' && sortDir==='desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortKey==='fail' && sortDir==='asc') && !(sortKey==='fail' && sortDir==='desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortKey==='fail' && sortDir==='asc') ? ', sorted ascending' : (sortKey==='fail' && sortDir==='desc') ? ', sorted descending' : ''"></span></button>
                 </th>
 
               </tr>
@@ -338,52 +236,53 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 
               <template x-for="(s, i) in filteredSorted" :key="(s.server || '') + s.ts + i">
-                <tr class="[&_td:last-child]:pr-4 [&_td:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                <tr class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
 
-                  <td x-show="multi" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 text-left" x-text="s.server"></td>
-                  <td x-show="columns.ts" class="p-4 text-sm relative whitespace-nowrap py-1 font-mono text-gray-500 dark:text-gray-400 first:w-10 text-left" x-text="s.ts"></td>
+                  <td x-show="multi" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 text-left" x-text="s.server"></td>
+                  <td x-show="columns.ts" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-mono text-gray-500 dark:text-gray-500 first:w-10 text-left" x-text="s.ts"></td>
 
-                  <td x-show="columns.cpu" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium first:w-10 text-left"
-                      :class="s.cpu_pct > 80 ? 'text-red-600 dark:text-red-400' : s.cpu_pct > 60 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-gray-50'"
+                  <td x-show="columns.cpu" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium first:w-10 text-left"
+                      :class="s.cpu_pct >= 90 ? 'text-red-600 dark:text-red-500' : s.cpu_pct >= 70 ? 'text-yellow-700 dark:text-yellow-500' : 'text-gray-900 dark:text-gray-50'"
                       x-text="s.cpu_pct + '%'"></td>
 
-                  <td x-show="columns.load1"  class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['1m']"></td>
-                  <td x-show="columns.load5"  class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['5m']"></td>
-                  <td x-show="columns.load15" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['15m']"></td>
+                  <td x-show="columns.load1"  class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['1m']"></td>
+                  <td x-show="columns.load5"  class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['5m']"></td>
+                  <td x-show="columns.load15" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.load['15m']"></td>
 
-                  <td x-show="columns.mem" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium first:w-10 text-left"
-                      :class="s.mem.pct > 85 ? 'text-red-600 dark:text-red-400' : s.mem.pct > 70 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-gray-50'"
+                  <td x-show="columns.mem" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium first:w-10 text-left"
+                      :class="s.mem.pct >= 90 ? 'text-red-600 dark:text-red-500' : s.mem.pct >= 70 ? 'text-yellow-700 dark:text-yellow-500' : 'text-gray-900 dark:text-gray-50'"
                       x-text="s.mem.pct + '%'"></td>
 
-                  <td x-show="columns.memused" class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 dark:text-gray-400 first:w-10 text-left" x-text="fmtMb(s.mem.used_mb)"></td>
+                  <td x-show="columns.memused" class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 first:w-10 text-left" x-text="fmtMb(s.mem.used_mb)"></td>
 
-                  <td x-show="columns.swap"   class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.swap.pct + '%'"></td>
+                  <td x-show="columns.swap"   class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.swap.pct + '%'"></td>
 
-                  <td x-show="columns.disk" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium first:w-10 text-left"
-                      :class="s.disk_pct > 90 ? 'text-red-600 dark:text-red-400' : s.disk_pct > 75 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-900 dark:text-gray-50'"
+                  <td x-show="columns.disk" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium first:w-10 text-left"
+                      :class="s.disk_pct >= 90 ? 'text-red-600 dark:text-red-500' : s.disk_pct >= 70 ? 'text-yellow-700 dark:text-yellow-500' : 'text-gray-900 dark:text-gray-50'"
                       x-text="s.disk_pct + '%'"></td>
 
-                  <td x-show="columns.conn"   class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.web_conn"></td>
+                  <td x-show="columns.conn"   class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left" x-text="s.web_conn"></td>
 
-                  <td x-show="columns.status" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
-                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-semibold ring-1"
+                  <td x-show="columns.status" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">
+                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset"
                           :class="{
-                            'bg-emerald-50 text-emerald-800 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20': s.status === 0,
-                            'bg-yellow-50 text-yellow-800 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20': s.status === 1,
-                            'bg-red-50 text-red-800 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20': s.status === 2
+                            'bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20': s.status === 0,
+                            'bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20': s.status === 1,
+                            'bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20': s.status === 2,
+                            'bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20': ![0, 1, 2].includes(s.status)
                           }"
                           x-text="['OK','Warning','Critical'][s.status] ?? 'Unknown'"></span>
                   </td>
 
-                  <td x-show="columns.pass" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-emerald-600 dark:text-emerald-400 first:w-10 text-left" x-text="s.pass"></td>
-                  <td x-show="columns.warn" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-yellow-600 dark:text-yellow-400 first:w-10 text-left" x-text="s.warn"></td>
-                  <td x-show="columns.fail" class="p-4 text-sm relative whitespace-nowrap py-1 font-medium text-red-600 dark:text-red-400 first:w-10 text-left" x-text="s.fail"></td>
+                  <td x-show="columns.pass" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-emerald-600 dark:text-emerald-400 first:w-10 text-left" x-text="s.pass"></td>
+                  <td x-show="columns.warn" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-yellow-600 dark:text-yellow-400 first:w-10 text-left" x-text="s.warn"></td>
+                  <td x-show="columns.fail" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-red-600 dark:text-red-400 first:w-10 text-left" x-text="s.fail"></td>
 
                 </tr>
               </template>
 
               <tr x-show="filteredSorted.length === 0">
-                <td colspan="14" class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">No snapshots match your search.</td>
+                <td colspan="14" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">No snapshots match your search.</td>
               </tr>
 
             </tbody>
@@ -391,10 +290,10 @@
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-2 flex items-center justify-between">
+        <div class="px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between">
           <div></div>
           <div class="flex items-center gap-x-6 lg:gap-x-8">
-            <p class="text-sm tabular-nums text-gray-500 sm:block">Showing <span class="font-medium text-gray-900 dark:text-gray-50" x-text="filteredSorted.length"></span> of <span class="font-medium text-gray-900 dark:text-gray-50" x-text="allRows.length"></span></p>
+            <p class="text-sm tabular-nums text-gray-500 dark:text-gray-500 sm:block">Showing <span class="font-medium text-gray-900 dark:text-gray-50" x-text="filteredSorted.length"></span> of <span class="font-medium text-gray-900 dark:text-gray-50" x-text="allRows.length"></span></p>
           </div>
         </div>
 
@@ -406,6 +305,7 @@
 
 <!-- Chart.js CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="{{asset "/static/dist/js/charts.js"}}"></script>
 
 <script>
 (function () {
@@ -424,19 +324,11 @@
     return mb >= 1024 ? (mb / 1024).toFixed(1) + " GB" : mb + " MB";
   }
 
-  const STATUS_LABEL = { 0: "OK", 1: "Warning", 2: "Critical" };
-  const STATUS_COLOR = {
-    0: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
-    1: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
-    2: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
-  };
 
   // Detect dark mode for chart colors
-  const isDark = document.documentElement.classList.contains("dark") ||
-                 window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const gridColor  = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
-  const tickColor  = isDark ? "#6b7280" : "#9ca3af";
-  const chartFont  = { family: "inherit", size: 11 };
+  const th = opChart.theme();
+  const gridColor  = th.grid;
+  const tickColor  = th.tick;
 
   const CHART_DEFAULTS = {
     responsive: true,
@@ -444,22 +336,15 @@
     interaction: { mode: "index", intersect: false },
     plugins: {
       legend: { display: false },
-      tooltip: {
-        backgroundColor: isDark ? "#1f2937" : "#fff",
-        borderColor: isDark ? "#374151" : "#e5e7eb",
-        borderWidth: 1,
-        titleColor: isDark ? "#f9fafb" : "#111827",
-        bodyColor: isDark ? "#9ca3af" : "#6b7280",
-        padding: 10
-      }
+      tooltip: opChart.tooltip()
     },
     scales: {
       x: {
-        ticks: { color: tickColor, font: chartFont, maxTicksLimit: 8 },
-        grid: { color: gridColor }
+        ticks: { color: tickColor, maxTicksLimit: 8 },
+        grid: { display: false }
       },
       y: {
-        ticks: { color: tickColor, font: chartFont },
+        ticks: { color: tickColor },
         grid: { color: gridColor }
       }
     }
@@ -481,9 +366,9 @@
     return Object.assign({
       label, data,
       borderColor: color,
-      backgroundColor: color.replace(")", ",0.10)").replace("rgb", "rgba"),
+      backgroundColor: color.replace(")", ",0.1)").replace("rgb", "rgba"),
       borderWidth: 2,
-      pointRadius: data.length > 60 ? 0 : 2,
+      pointRadius: 0,
       pointHoverRadius: 4,
       tension: 0.3,
       fill: false
@@ -509,9 +394,9 @@
       data: {
         labels,
         datasets: [
-          lineDataset("CPU %",   snapshots.map(s => s.cpu_pct),              "rgb(59,130,246)"),
-          lineDataset("Load 1m", snapshots.map(s => parseFloat(s.load["1m"])), "rgb(251,146,60)"),
-          lineDataset("Load 5m", snapshots.map(s => parseFloat(s.load["5m"])), "rgb(253,224,71)")
+          lineDataset("CPU %",   snapshots.map(s => s.cpu_pct),              opChart.rgb("blue")),
+          lineDataset("Load 1m", snapshots.map(s => parseFloat(s.load["1m"])), opChart.rgb("orange")),
+          lineDataset("Load 5m", snapshots.map(s => parseFloat(s.load["5m"])), opChart.rgb("amber"))
         ]
       },
       options: mergeDeep(CHART_DEFAULTS, {
@@ -525,8 +410,8 @@
       data: {
         labels,
         datasets: [
-          lineDataset("RAM %",  snapshots.map(s => s.mem.pct),  "rgb(139,92,246)"),
-          lineDataset("Swap %", snapshots.map(s => s.swap.pct), "rgb(244,114,182)")
+          lineDataset("RAM %",  snapshots.map(s => s.mem.pct),  opChart.rgb("violet")),
+          lineDataset("Swap %", snapshots.map(s => s.swap.pct), opChart.rgb("pink"))
         ]
       },
       options: mergeDeep(CHART_DEFAULTS, {
@@ -543,7 +428,7 @@
       data: {
         labels,
         datasets: [
-          lineDataset("Disk %", snapshots.map(s => s.disk_pct), "rgb(234,88,12)", { fill: true })
+          lineDataset("Disk %", snapshots.map(s => s.disk_pct), opChart.rgb("amber"), { fill: true })
         ]
       },
       options: mergeDeep(CHART_DEFAULTS, {
@@ -557,7 +442,7 @@
       data: {
         labels,
         datasets: [
-          lineDataset("Connections", snapshots.map(s => s.web_conn), "rgb(20,184,166)", { fill: true })
+          lineDataset("Connections", snapshots.map(s => s.web_conn), opChart.rgb("cyan"), { fill: true })
         ]
       },
       options: CHART_DEFAULTS
@@ -569,9 +454,9 @@
       data: {
         labels,
         datasets: [
-          lineDataset("Pass", snapshots.map(s => s.pass), "rgb(16,185,129)"),
-          lineDataset("Warn", snapshots.map(s => s.warn), "rgb(234,179,8)"),
-          lineDataset("Fail", snapshots.map(s => s.fail), "rgb(239,68,68)")
+          lineDataset("Pass", snapshots.map(s => s.pass), opChart.rgb("emerald")),
+          lineDataset("Warn", snapshots.map(s => s.warn), opChart.rgb("yellow")),
+          lineDataset("Fail", snapshots.map(s => s.fail), opChart.rgb("red"))
         ]
       },
       options: mergeDeep(CHART_DEFAULTS, {
@@ -583,16 +468,17 @@
 
   // one line per server for each chart, like the dashboard widget
   function drawPerServer(perServer) {
-    const palette = ["59,130,246", "16,185,129", "245,158,11", "236,72,153", "139,92,246", "20,184,166", "239,68,68", "107,114,128"];
     const longest = perServer.reduce((a, p) => p.snapshots.length > a.snapshots.length ? p : a, perServer[0]);
     const labels = longest.snapshots.map(s => fmtTs(s.ts));
     const per = (pick, opts) => perServer.map((p, i) => {
       const pad = longest.snapshots.length - p.snapshots.length;
       const data = labels.map((_, j) => { const s = p.snapshots[j - pad]; return s ? pick(s) : null; });
-      return lineDataset(p.name, data, "rgb(" + palette[i % palette.length] + ")", Object.assign({ spanGaps: true }, opts || {}));
+      return lineDataset(p.name, data, opChart.nth(i), Object.assign({ spanGaps: true }, opts || {}));
     });
-    const legend = { plugins: { legend: { display: true, labels: { color: tickColor, font: chartFont, boxWidth: 12 } } } };
+    const legend = { plugins: { legend: { display: true, position: "top", align: "end", labels: { color: tickColor } } } };
     if (VIEW !== "line") return;
+    // the static legends name metric colors, per-server lines use server colors instead
+    document.querySelectorAll("[data-static-legend]").forEach(el => el.classList.add("hidden"));
     new Chart(document.getElementById("chart-cpu"), { type: "line", data: { labels, datasets: per(s => s.cpu_pct) },
       options: mergeDeep(mergeDeep(CHART_DEFAULTS, legend), { scales: { y: { min: 0, suggestedMax: 100 } } }) });
     new Chart(document.getElementById("chart-mem"), { type: "line", data: { labels, datasets: per(s => s.mem.pct) },

@@ -204,7 +204,7 @@ func (l *Logs) ServeIndex(w http.ResponseWriter, r *http.Request) {
 		"OtherLogs":     sortedLogEntries(logFiles, allNames...),
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, l.Sessions),
-	}, r, "Log Viewer"))
+	}, r, "Log viewer"))
 }
 
 // ServeEditLogs handles GET/POST /services/logs/edit.
@@ -254,7 +254,7 @@ func (l *Logs) ServeEditLogs(w http.ResponseWriter, r *http.Request) {
 		"Data":      string(pretty),
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, l.Sessions),
-	}, r, "Edit Log Paths"))
+	}, r, "Edit log paths"))
 }
 
 // ServeViewLog handles GET/POST/DELETE /services/logs/raw.
@@ -399,7 +399,7 @@ func (l *Logs) ServeUpdateLogsSettings(w http.ResponseWriter, r *http.Request) {
 		"LogFiles":  loadGlobLogFiles(UpdateLogsDir, "*.log"),
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, l.Sessions),
-	}, r, "Update Logs Viewer"))
+	}, r, "Update logs viewer"))
 }
 
 // ServeCrashlogsSettings handles GET/POST /services/crashlogs/log/.
@@ -408,7 +408,7 @@ func (l *Logs) ServeCrashlogsSettings(w http.ResponseWriter, r *http.Request) {
 		"LogFiles":  loadGlobLogFiles(CrashLogsDir, "*.txt"),
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, l.Sessions),
-	}, r, "Crash Logs Viewer"))
+	}, r, "Crash logs viewer"))
 }
 
 // serveRawInDir is the shared GET/POST/DELETE implementation behind

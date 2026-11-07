@@ -241,7 +241,7 @@ func TestUsersDetailRendersHTML(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"alice", "alice@example.com", "Statistics", "Suspend user account", "Delete user account", "</html>"} {
+	for _, want := range []string{"alice", "alice@example.com", "Statistics", "Suspend user account", "Delete account permanently", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}
@@ -501,7 +501,7 @@ func TestServeCreateUserGetRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(got))
 	}
-	for _, want := range []string{"Create User Account", "Starter", "Webserver", "Database type", "</html>"} {
+	for _, want := range []string{"Create user account", "Starter", "Webserver", "Database type", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}
@@ -1036,7 +1036,7 @@ func TestUsersListUsageColumnsLineUp(t *testing.T) {
 		t.Fatal("the Usage column should be gone")
 	}
 	for _, col := range []string{"memory_limit", "cpu_limit", "disk_limit", "inodes_limit"} {
-		if n := strings.Count(page, `<th x-show="columns.`+col+`"`); n != 1 {
+		if n := strings.Count(page, `<th scope="col" x-show="columns.`+col+`"`); n != 1 {
 			t.Fatalf("expected one %s header, got %d", col, n)
 		}
 		if n := strings.Count(page, `<td x-show="columns.`+col+`"`); n != 1 {
@@ -1044,12 +1044,12 @@ func TestUsersListUsageColumnsLineUp(t *testing.T) {
 		}
 	}
 	for _, key := range []string{"memory", "cpu", "disk", "inodes"} {
-		if !strings.Contains(page, "/users?sort="+key+"&amp;direction=desc") && !strings.Contains(page, "/users?sort="+key+"&direction=desc") {
+		if !strings.Contains(page, "/users?sort="+key+"&amp;direction=") && !strings.Contains(page, "/users?sort="+key+"&direction=") {
 			t.Fatalf("missing sort link for %s", key)
 		}
 	}
-	if strings.Count(page, "<th x-show=") != strings.Count(page, "<td x-show=") {
-		t.Fatalf("header/cell count mismatch: %d th vs %d td", strings.Count(page, "<th x-show="), strings.Count(page, "<td x-show="))
+	if strings.Count(page, `<th scope="col" x-show=`) != strings.Count(page, "<td x-show=") {
+		t.Fatalf("header/cell count mismatch: %d th vs %d td", strings.Count(page, `<th scope="col" x-show=`), strings.Count(page, "<td x-show="))
 	}
 	if !regexp.MustCompile(`columns\.passkeys"[^>]*>2</td>`).MatchString(page) {
 		t.Fatal("expected the passkey count in the row")

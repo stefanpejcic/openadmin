@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"os"
 
@@ -126,19 +127,21 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"CSRFToken":         csrf.Token(r),
-		"Flashes":           auth.PopFlashes(w, r, c.Sessions),
-		"HasEnterprise":     hasEnterpriseAccess(r, c.LicenseChecker),
-		"CustomCSS":         fileContents["custom_css"],
-		"CustomJS":          fileContents["custom_js"],
-		"InHeader":          fileContents["in_header"],
-		"InFooter":          fileContents["in_footer"],
-		"CustomSection":     fileContents["custom_section"],
-		"WelcomeEmail":      fileContents["welcome_email"],
-		"PostUpdate":        fileContents["post_update"],
-		"PreStartup":        fileContents["pre_startup"],
-		"WPThemes":          fileContents["wp_themes"],
-		"WPPlugins":         fileContents["wp_plugins"],
+		"CSRFToken":     csrf.Token(r),
+		"Flashes":       auth.PopFlashes(w, r, c.Sessions),
+		"HasEnterprise": hasEnterpriseAccess(r, c.LicenseChecker),
+		"CustomCSS":     fileContents["custom_css"],
+		"CustomJS":      fileContents["custom_js"],
+		"InHeader":      fileContents["in_header"],
+		"InFooter":      fileContents["in_footer"],
+		"CustomSection": fileContents["custom_section"],
+		"WelcomeEmail":  fileContents["welcome_email"],
+		"PostUpdate":    fileContents["post_update"],
+		"PreStartup":    fileContents["pre_startup"],
+		"WPThemes":      fileContents["wp_themes"],
+		"WPPlugins":     fileContents["wp_plugins"],
 	}
-	webtemplates.Render(w, "settings_custom_code.html", mergeChrome(data, r, "Custom Code"))
+	if err := webtemplates.Render(w, "settings_custom_code.html", mergeChrome(data, r, "Custom code")); err != nil {
+		log.Printf("render settings_custom_code.html: %v", err)
+	}
 }

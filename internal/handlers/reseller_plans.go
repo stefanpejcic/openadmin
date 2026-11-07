@@ -242,7 +242,7 @@ func (rp *ResellerPlans) ServeList(w http.ResponseWriter, r *http.Request) {
 		"SortDirection": sortDirection,
 		"Plans":         rp.userPlans(),
 		"Flashes":       auth.PopFlashes(w, r, sessions),
-	}, r, "Reseller Packages"))
+	}, r, "Reseller packages"))
 }
 
 // ServeEdit handles GET /plans/resellers/{name}

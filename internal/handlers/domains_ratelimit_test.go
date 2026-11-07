@@ -180,7 +180,7 @@ func TestServeRateLimitRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status %d: %s", resp.StatusCode, page)
 	}
-	for _, want := range []string{"Rate Limiting", `value="300"`, `value="6000"`, "a.com", "john", "b.com", "/domains/ratelimit/bulk", "Custom limits", "</html>"} {
+	for _, want := range []string{"Rate limiting", `value="300"`, `value="6000"`, "a.com", "john", "b.com", "/domains/ratelimit/bulk", "Custom limits", "</html>"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("page is missing %q", want)
 		}

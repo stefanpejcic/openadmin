@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -50,9 +51,11 @@ type dashboardResellerData struct {
 	MaxAccounts     string
 	CurrentAccounts string
 	AccountsPercent string
+	AccountsMeter   string `json:"-"`
 	CurrentDiskGB   string
 	MaxDiskGB       string
 	DiskPercent     string
+	DiskMeter       string `json:"-"`
 	AllowedPlans    []string
 }
 
@@ -109,6 +112,19 @@ func blocksToGB(blocks interface{}) string {
 
 // dashboardPercent computes current/max*100, rounded to 1 decimal, or 0 if
 // either side is zero/not a number (e.g. max == "unlimited").
+// meterFillClass colors a usage meter, blue below 70%, yellow from 70%, red from 90%
+func meterFillClass(pct string) string {
+	p, _ := strconv.ParseFloat(pct, 64)
+	switch {
+	case p >= 90:
+		return "bg-red-500"
+	case p >= 70:
+		return "bg-yellow-500"
+	default:
+		return "bg-blue-500"
+	}
+}
+
 func dashboardPercent(current, max string) string {
 	c, cerr := strconv.ParseFloat(current, 64)
 	m, merr := strconv.ParseFloat(max, 64)
@@ -193,7 +209,7 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 		_ = d.AdminDB.SetPref(u.ID, summarySeenPref, s.Date)
 	}
 	webtemplates.Render(w, "dashboard_summary.html", dashboardPageData{
-		Chrome:  buildChrome(r, "Daily Summary"),
+		Chrome:  buildChrome(r, "Daily summary"),
 		Flashes: auth.PopFlashes(w, r, d.Sessions),
 		Summary: s,
 	})
@@ -201,7 +217,7 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 
 const summarySeenPref = "summary_seen"
 
-// SummaryNeedsAttention puts the orange dot on the Daily Summary tab
+// SummaryNeedsAttention puts the orange dot on the Daily summary tab
 func (d *Dashboard) SummaryNeedsAttention(r *http.Request) bool {
 	if !summaryEnabled() {
 		return false
@@ -421,6 +437,8 @@ func (d *Dashboard) serveResellerDashboard(w http.ResponseWriter, r *http.Reques
 		DiskPercent:     dashboardPercent(currentDiskGB, maxDiskGB),
 		AllowedPlans:    allowedPlans,
 	}
+	data.AccountsMeter = meterFillClass(data.AccountsPercent)
+	data.DiskMeter = meterFillClass(data.DiskPercent)
 
 	if wantJSON {
 		writeJSON(w, data)
@@ -625,19 +643,25 @@ func packageUpdatesCount() string {
 	}
 	if _, err := exec.LookPath("dnf"); err == nil {
 		out, err := exec.Command("dnf", "check-update").Output()
-		if err != nil {
+		if err != nil && !isExitCode(err, 100) {
 			return "Unavailable"
 		}
 		return strconv.Itoa(countUpdateLines(string(out), "Last metadata"))
 	}
 	if _, err := exec.LookPath("yum"); err == nil {
 		out, err := exec.Command("yum", "check-update").Output()
-		if err != nil {
+		if err != nil && !isExitCode(err, 100) {
 			return "Unavailable"
 		}
 		return strconv.Itoa(countUpdateLines(string(out), "Loaded plugins"))
 	}
 	return "Unavailable"
+}
+
+// dnf and yum check-update exit 100 when updates are available
+func isExitCode(err error, code int) bool {
+	var ee *exec.ExitError
+	return errors.As(err, &ee) && ee.ExitCode() == code
 }
 
 func countUpdateLines(output, skipPrefix string) int {
@@ -1253,7 +1277,7 @@ func loadResourceUsageSnapshots(minutes int) []json.RawMessage {
 func (d *Dashboard) ServeResourceUsagePage(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "system_resources.html", mergeChrome(map[string]interface{}{
 		"Flashes": auth.PopFlashes(w, r, d.Sessions),
-	}, r, "Resource Usage"))
+	}, r, "Resource usage"))
 }
 
 // ServeResourceUsageHistory handles GET /server/resource-usage/history.
@@ -1286,7 +1310,7 @@ func (d *Dashboard) ServeResourceUsageHistory(w http.ResponseWriter, r *http.Req
 		"PeriodLabel":   resourceUsagePeriodLabel(minutes),
 		"View":          view,
 		"Flashes":       auth.PopFlashes(w, r, d.Sessions),
-	}, r, "Resource Usage History"))
+	}, r, "Resource usage history"))
 }
 
 // ServeResourceUsageHistoryData handles GET

@@ -123,7 +123,7 @@ func TestDNSZoneEditorListsDomainsWhenNoDomainGiven(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
 	got := string(body)
-	for _, want := range []string{"Select domain name", "example.com", "</html>"} {
+	for _, want := range []string{"DNS zone editor", "Open one to see and edit its DNS records", `href="/domains/dns/example.com"`, "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q, got %s", want, truncate(got))
 		}
