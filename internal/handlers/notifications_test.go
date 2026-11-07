@@ -370,3 +370,19 @@ func TestNotificationsViewFiltersAndPages(t *testing.T) {
 		t.Errorf("search should match the title, got %d", rows(got))
 	}
 }
+
+func TestNotificationLogLinkBackupGoesToLogViewer(t *testing.T) {
+	orig := LogPathsFile
+	LogPathsFile = filepath.Join(t.TempDir(), "log_paths.json")
+	t.Cleanup(func() { LogPathsFile = orig })
+	os.WriteFile(LogPathsFile, []byte(`{"OpenAdmin Backups Log":"/var/log/openpanel/admin/docker-backup.log"}`), 0644)
+
+	text, href := notificationLogLink("/var/log/openpanel/admin/docker-backup.log")
+	if text != "View log" || href != "/services/logs?log_name=OpenAdmin+Backups+Log" {
+		t.Fatalf("got %q %q", text, href)
+	}
+	text, href = notificationLogLink(filepath.Join(UpdateLogsDir, "2.0.12.log"))
+	if text != "View update log" || href != "/settings/updates/log/?log_name=2.0.12.log" {
+		t.Fatalf("got %q %q", text, href)
+	}
+}
