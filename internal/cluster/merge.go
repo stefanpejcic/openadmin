@@ -1069,20 +1069,35 @@ func (m *Manager) createFormPicker(page []byte, path, activeID string, u *admind
 	}
 }
 
-// newUserForm is where an account gets created, picking a server opens the form of that server since plans and options are per server
-const newUserForm = `<form id="userForm"`
+// picking a server opens the form of that server since plans and options are per server, the picker goes first in the form's first field grid
+// section set means the picker gets its own Server section before that one instead of a spot in a field grid
+type pickerSpot struct{ fields, section, form string }
 
-// accountFields is the Account section's field grid, the picker goes first in it so it sits under the Account heading
-const accountFields = `id="user-account-fields"`
+var pickerSpots = map[string]pickerSpot{
+	"/user/new":    {fields: `id="user-account-fields"`, form: `<form id="userForm"`},
+	"/user/import": {section: `<section aria-labelledby="backup_type_label"`, form: `<form id="userimportForm"`},
+}
 
-func (m *Manager) serverPicker(page []byte, activeID string, u *admindb.User) []byte {
-	if at := bytes.Index(page, []byte(accountFields)); at >= 0 {
+const serverSectionOpen = `<section aria-labelledby="sec-cluster-server" class="grid grid-cols-1 gap-x-14 gap-y-6 md:grid-cols-3"><div><h2 id="sec-cluster-server" class="text-sm font-semibold text-gray-900 dark:text-gray-50">Server</h2><p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">The server the account goes to, picking another one opens its form.</p></div><div class="md:col-span-2">`
+const serverSectionClose = `</div></section><div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800" role="separator"></div>`
+
+func (m *Manager) serverPicker(page []byte, path, activeID string, u *admindb.User) []byte {
+	spot, ok := pickerSpots[path]
+	if !ok {
+		return page
+	}
+	if spot.section != "" {
+		if at := bytes.Index(page, []byte(spot.section)); at >= 0 {
+			return insertAt(page, at, serverSectionOpen+m.pickerHTML("", path, activeID, u)+serverSectionClose)
+		}
+	}
+	if at := bytes.Index(page, []byte(spot.fields)); spot.fields != "" && at >= 0 {
 		if end := bytes.IndexByte(page[at:], '>'); end >= 0 {
-			return insertPicker(page, at+end+1, "col-span-full", m, "/user/new", activeID, u)
+			return insertPicker(page, at+end+1, "col-span-full", m, path, activeID, u)
 		}
 	}
 	// older nodes don't have the grid id yet
-	at := bytes.Index(page, []byte(newUserForm))
+	at := bytes.Index(page, []byte(spot.form))
 	if at < 0 {
 		return page
 	}
@@ -1090,7 +1105,7 @@ func (m *Manager) serverPicker(page []byte, activeID string, u *admindb.User) []
 	if end < 0 {
 		return page
 	}
-	return insertServerPicker(page, at+end+1, m, "/user/new", activeID, u)
+	return insertServerPicker(page, at+end+1, m, path, activeID, u)
 }
 
 func insertServerPicker(page []byte, at int, m *Manager, path, activeID string, u *admindb.User) []byte {
@@ -1098,6 +1113,17 @@ func insertServerPicker(page []byte, at int, m *Manager, path, activeID string, 
 }
 
 func insertPicker(page []byte, at int, wrapClass string, m *Manager, path, activeID string, u *admindb.User) []byte {
+	return insertAt(page, at, m.pickerHTML(wrapClass, path, activeID, u))
+}
+
+func insertAt(page []byte, at int, s string) []byte {
+	out := make([]byte, 0, len(page)+len(s))
+	out = append(out, page[:at]...)
+	out = append(out, s...)
+	return append(out, page[at:]...)
+}
+
+func (m *Manager) pickerHTML(wrapClass, path, activeID string, u *admindb.User) string {
 	option := func(id, name string, online bool) string {
 		attrs := ""
 		if id == activeID {
@@ -1120,10 +1146,7 @@ func insertPicker(page []byte, at int, wrapClass string, m *Manager, path, activ
 		b.WriteString(option(n.ID, n.Name, online))
 	}
 	b.WriteString(`</select></div></div>`)
-	out := make([]byte, 0, len(page)+b.Len())
-	out = append(out, page[:at]...)
-	out = append(out, b.String()...)
-	return append(out, page[at:]...)
+	return b.String()
 }
 
 func (m *Manager) mergePage(page []byte, r *http.Request, activeID, activeName string, u *admindb.User, next http.Handler) []byte {
@@ -1131,15 +1154,8 @@ func (m *Manager) mergePage(page []byte, r *http.Request, activeID, activeName s
 }
 
 func (m *Manager) mergePageBody(page []byte, r *http.Request, activeID, activeName string, u *admindb.User, next http.Handler) []byte {
-	if r.URL.Path == "/user/new" {
-		return m.serverPicker(page, activeID, u)
-	}
-	if r.URL.Path == "/user/import" {
-		if at := bytes.Index(page, []byte(`<form id="userimportForm"`)); at >= 0 {
-			if end := bytes.IndexByte(page[at:], '>'); end >= 0 {
-				return insertServerPicker(page, at+end+1, m, r.URL.Path, activeID, u)
-			}
-		}
+	if _, ok := pickerSpots[r.URL.Path]; ok {
+		return m.serverPicker(page, r.URL.Path, activeID, u)
 	}
 	if match := userPageRe.FindStringSubmatch(r.URL.Path); match != nil {
 		return m.transferPicker(page, match[1], activeID)

@@ -964,7 +964,7 @@ window.TOUR_STEPS = [
         path: '/server/resource-usage',
         element: '#tour-tab-load',
         title: 'Load',
-        description: 'Click Load to show the server load.',
+        description: 'Server load average over the last minutes.',
         side: 'bottom',
         align: 'start'
     },
@@ -972,7 +972,7 @@ window.TOUR_STEPS = [
         path: '/server/resource-usage',
         element: '#tour-tab-ram',
         title: 'RAM',
-        description: 'Click RAM to show RAM and swap, with the option to drop cache and clear swap.',
+        description: 'RAM and swap usage, with the option to drop cache and clear swap.',
         side: 'bottom',
         align: 'start'
     },
@@ -980,7 +980,7 @@ window.TOUR_STEPS = [
         path: '/server/resource-usage',
         element: '#tour-tab-cpu',
         title: 'CPU',
-        description: 'Click CPU to view CPU usage per core.',
+        description: 'CPU usage per core.',
         side: 'bottom',
         align: 'start'
     },
@@ -988,7 +988,7 @@ window.TOUR_STEPS = [
         path: '/server/resource-usage',
         element: '#tour-tab-disk',
         title: 'Disk',
-        description: 'Click Disk to view disk usage and IO.',
+        description: 'Disk usage of the root filesystem.',
         side: 'bottom',
         align: 'start'
     },
@@ -996,7 +996,7 @@ window.TOUR_STEPS = [
         path: '/server/resource-usage',
         element: '#tour-tab-network',
         title: 'Network',
-        description: 'Click Network to view network IO.',
+        description: 'Network IO across all interfaces.',
         side: 'bottom',
         align: 'start'
     },

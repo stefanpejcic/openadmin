@@ -138,50 +138,6 @@ document.addEventListener("visibilitychange", () => {
 });
 })();
 
-// the "..." row menus open on hover, each page keeps one shared menu per table
-(function () {
-    let hideTimer = null;
-    let openBtn = null;
-    function menuFor(btn) {
-        const match = btn.className.match(/([\w-]+)-menu-btn/);
-        return match ? document.getElementById(match[1] + '-menu') : null;
-    }
-    // hover already opened it, a real click on the same button would toggle it shut again
-    document.addEventListener('click', e => {
-        const btn = e.isTrusted && e.target.closest && e.target.closest('[class*="-menu-btn"]');
-        const menu = btn && menuFor(btn);
-        if (btn && btn === openBtn && menu && !menu.classList.contains('hidden')) {
-            e.stopImmediatePropagation();
-        }
-    }, true);
-    document.addEventListener('mouseover', e => {
-        const btn = e.target.closest && e.target.closest('[class*="-menu-btn"]');
-        if (btn) {
-            clearTimeout(hideTimer);
-            const menu = menuFor(btn);
-            if (menu && (menu.classList.contains('hidden') || openBtn !== btn)) {
-                btn.click();
-                openBtn = btn;
-            }
-            return;
-        }
-        if (openBtn) {
-            const menu = menuFor(openBtn);
-            if (menu && menu.contains(e.target)) {
-                clearTimeout(hideTimer);
-                return;
-            }
-            clearTimeout(hideTimer);
-            const leaving = openBtn;
-            hideTimer = setTimeout(() => {
-                const m = menuFor(leaving);
-                if (m && !m.classList.contains('hidden')) document.body.click();
-                openBtn = null;
-            }, 250);
-        }
-    });
-})();
-
 // server flashes become toasts with their own category, errors stay until closed
 document.addEventListener('DOMContentLoaded', () => {
     const box = document.getElementById('op-flashes');

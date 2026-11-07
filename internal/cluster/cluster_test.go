@@ -405,7 +405,7 @@ func TestServerPickerOpensTheChosenServersForm(t *testing.T) {
 	m := &Manager{loaded: true, Hostname: "stefan", state: State{Role: RoleMaster, SeedHex: "aa", Nodes: []Node{{ID: "n1", Name: "petar"}, {ID: "n2", Name: "lazar"}}}}
 	m.health = map[string]NodeHealth{"n2": {Online: false}}
 	page := []byte(`<main><form id="userForm" class="mt-8"><input name="admin_username"></form></main>`)
-	out := string(m.serverPicker(page, "n1", &admindb.User{ID: 1}))
+	out := string(m.serverPicker(page, "/user/new", "n1", &admindb.User{ID: 1}))
 	if !strings.Contains(out, `<form id="userForm" class="mt-8"><div class="mb-4">`) {
 		t.Fatalf("picker isn't first in the form: %s", out)
 	}
@@ -415,11 +415,15 @@ func TestServerPickerOpensTheChosenServersForm(t *testing.T) {
 	if !strings.Contains(out, "/_cluster/open?") || !strings.Contains(out, "sig=") {
 		t.Fatalf("options must be signed open links: %s", out)
 	}
-	inGrid := string(m.serverPicker([]byte(`<form id="userForm"><section><div id="user-account-fields" class="grid"><input name="admin_username"></div></section></form>`), "n1", &admindb.User{ID: 1}))
+	inGrid := string(m.serverPicker([]byte(`<form id="userForm"><section><div id="user-account-fields" class="grid"><input name="admin_username"></div></section></form>`), "/user/new", "n1", &admindb.User{ID: 1}))
 	if !strings.Contains(inGrid, `<div id="user-account-fields" class="grid"><div class="col-span-full"><label`) {
 		t.Fatalf("picker isn't first in the account fields: %s", inGrid)
 	}
-	if string(m.serverPicker([]byte("<main>no form</main>"), "n1", &admindb.User{ID: 1})) != "<main>no form</main>" {
+	imp := string(m.serverPicker([]byte(`<form id="userimportForm"><section aria-labelledby="backup_type_label"><input name="file"></section></form>`), "/user/import", "n1", &admindb.User{ID: 1}))
+	if !strings.Contains(imp, `<form id="userimportForm"><section aria-labelledby="sec-cluster-server"`) || !strings.Contains(imp, `role="separator"></div><section aria-labelledby="backup_type_label">`) {
+		t.Fatalf("import page should get its own Server section before Backup type: %s", imp)
+	}
+	if string(m.serverPicker([]byte("<main>no form</main>"), "/user/new", "n1", &admindb.User{ID: 1})) != "<main>no form</main>" {
 		t.Fatal("page without the form changed")
 	}
 }
