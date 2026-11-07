@@ -240,9 +240,9 @@ func (s *ServerUtils) handleRootPasswordPost(w http.ResponseWriter, r *http.Requ
 
 	verifyOut, _, err := passwdRun("", "--status", "root")
 	if err == nil && strings.Contains(verifyOut, "P") {
-		auth.AddFlash(w, r, s.Sessions, "Root password changed. Use it for SSH and the server console from now on.", "success")
+		_ = auth.AddFlash(w, r, s.Sessions, "Root password changed. Use it for SSH and the server console from now on.", "success")
 	} else {
-		auth.AddFlash(w, r, s.Sessions, "Password change verification failed. Run passwd -S root on the server to check whether the new password was set.", "error")
+		_ = auth.AddFlash(w, r, s.Sessions, "Password change verification failed. Run passwd -S root on the server to check whether the new password was set.", "error")
 	}
 	http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 }
