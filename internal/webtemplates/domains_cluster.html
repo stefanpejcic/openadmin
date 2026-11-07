@@ -1,57 +1,55 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="{ searchQuery: '' }">
-    <div x-data="{ showSection: false }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div x-data="{ showSection: false }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">DNS Cluster Management</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Manage DNS servers.</h2>
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">DNS cluster management</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Manage DNS servers.</p>
                 </div>
-                <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
+                <div class="flex flex-none items-center gap-2">
 
                     {{if .Enabled}}
-                    <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Add Server</a>
+                    <button type="button" @click="showSection = !showSection" :aria-expanded="showSection.toString()" aria-controls="dns-form" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Add server</button>
                     {{end}}
 
                     <form method="POST" action="/domains/dns-cluster">
                         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                         <input type="hidden" name="action" value="{{if .Enabled}}disable{{else}}enable{{end}}">
-                        <button id="tour-dns-cluster-toggle" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400" type="submit">{{if .Enabled}}Disable{{else}}Enable{{end}} DNS Clustering</button>
+                        <button id="tour-dns-cluster-toggle" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600" type="submit">{{if .Enabled}}Disable{{else}}Enable{{end}} DNS Clustering</button>
                     </form>
                 </div>
             </div>
 
-        <div :class="{ 'hidden': !showSection }" class="mt-8 w-full md:items-stretch md:space-x-4 hidden">
+        <div :class="{ 'hidden': !showSection }" class="mt-6 w-full hidden rounded-md border border-gray-200 bg-white p-6 text-left shadow-xs dark:border-gray-900 dark:bg-raised">
 
-<div class="sm:mx-auto" style="display:block;">
+<div class="max-w-2xl" style="display:block;">
     <form method="POST" id="dns-form" action="/domains/dns-cluster">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <input type="hidden" name="action" value="create">
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
-            <div class="col-span-full sm:col-span-2"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="ip">IP address<span class="text-red-500 dark:text-red-500">*</span></label>
-                <div class="relative w-full mt-2"><input type="text" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:border-blue-500 focus:dark:border-blue-700" name="ip" id="ip" pattern="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
- title="Currently only IPv4 is supported." required autofocus placeholder="IP address">
-                 <div id="ip-message" class="mt-1 text-sm text-gray-600 dark:text-gray-400"></div>
+            <div class="col-span-full sm:col-span-2"><label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="ip">IP address<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span></label>
+                <div class="relative w-full mt-2"><input type="text" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" aria-describedby="ip-message" name="ip" id="ip" pattern="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+ title="Only IPv4 is supported for now." required autofocus placeholder="203.0.113.10">
+                 <p id="ip-message" role="alert" class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Only IPv4 is supported for now.</p>
  </div>
             </div>
 
-            <div class="col-span-full sm:col-span-2 flex flex-col justify-center h-full">
-            <div class="relative w-full mt-2">
-                <button type="submit" id="submit-btn" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 border-transparent text-white dark:text-gray-900 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 disabled:bg-indigo-100 disabled:text-gray-400 disabled:dark:bg-indigo-800 disabled:dark:text-indigo-400">Add</button>
-            </div>
+            <div class="col-span-full sm:col-span-2">
+                <button type="submit" id="submit-btn" disabled class="sm:mt-6 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400"><span id="submit-spinner" class="hidden"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span>Add server</button>
             </div>
 
         </div>
@@ -62,41 +60,50 @@
 const ipInput = document.getElementById('ip');
 const submitBtn = document.getElementById('submit-btn');
 const ipMessage = document.getElementById('ip-message');
+const ipHint = 'Only IPv4 is supported for now.';
+const ipv4Pattern = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+let ipTimer = null;
+let ipAbort = null;
 
-ipInput.addEventListener('input', async () => {
-    const ip = ipInput.value.trim();
+function setIPState(text, kind) {
+    ipMessage.textContent = text;
+    const colors = { error: 'text-red-600 dark:text-red-400', ok: 'text-emerald-600 dark:text-emerald-400', info: 'text-gray-500 dark:text-gray-500' };
+    ipMessage.className = 'mt-1.5 text-xs ' + colors[kind];
+    if (kind === 'error') ipInput.setAttribute('aria-invalid', 'true'); else ipInput.removeAttribute('aria-invalid');
+    submitBtn.disabled = kind !== 'ok';
+}
 
-    ipMessage.textContent = '';
-    submitBtn.disabled = true;
-
-    const ipv4Pattern = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    if (!ipv4Pattern.test(ip)) {
-        ipMessage.textContent = 'Invalid IPv4 address.';
-        ipMessage.className = 'mt-1 text-sm text-red-500';
-        return;
-    }
-
-    ipMessage.textContent = 'Checking SSH connectivity…';
-    ipMessage.className = 'mt-1 text-sm text-gray-500';
-
+async function checkIP(ip) {
+    // drop the previous check so a slow reply can't overwrite a newer one
+    if (ipAbort) ipAbort.abort();
+    ipAbort = new AbortController();
+    const signal = ipAbort.signal;
+    setIPState('Checking SSH connectivity…', 'info');
     try {
-        const response = await fetch(`/domains/dns-cluster/${ip}`);
+        const response = await fetch(`/domains/dns-cluster/${ip}`, { signal });
         const data = await response.json();
-
-        if (data.status === 'success') {
-            ipMessage.textContent = 'Connection established ✓';
-            ipMessage.className = 'mt-1 text-sm text-green-600 dark:text-green-400';
-            submitBtn.disabled = false;
-        } else {
-            ipMessage.textContent = `SSH failed ✗ ${data.error || ''}`;
-            ipMessage.className = 'mt-1 text-sm text-red-500';
-            submitBtn.disabled = true;
-        }
+        if (signal.aborted) return;
+        if (data.status === 'success') setIPState('SSH connection works.', 'ok');
+        else setIPState(`SSH connection failed${data.error ? ': ' + data.error : '.'}`, 'error');
     } catch (err) {
-        ipMessage.textContent = 'Error connecting to server.';
-        ipMessage.className = 'mt-1 text-sm text-red-500';
-        submitBtn.disabled = true;
+        if (err.name === 'AbortError') return;
+        setIPState("Couldn't reach the server.", 'error');
     }
+}
+
+ipInput.addEventListener('input', () => {
+    clearTimeout(ipTimer);
+    if (ipAbort) ipAbort.abort();
+    const ip = ipInput.value.trim();
+    if (!ip) { setIPState(ipHint, 'info'); return; }
+    if (!ipv4Pattern.test(ip)) { setIPState('Enter a valid IPv4 address.', 'error'); return; }
+    submitBtn.disabled = true;
+    ipTimer = setTimeout(() => checkIP(ip), 300);
+});
+
+document.getElementById('dns-form').addEventListener('submit', () => {
+    submitBtn.disabled = true;
+    document.getElementById('submit-spinner').className = 'inline-flex';
 });
 </script>
 
@@ -110,11 +117,11 @@ ipInput.addEventListener('input', async () => {
 {{if .Enabled}}
     <div x-data="{ searchQuery: '' }">
         <div class="space-y-3">
-            <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+            <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
                 <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
 
                     <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
-    <input x-model="searchQuery" class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 pl-8" placeholder="Search by IP address..." type="search" @input="searchQuery = $event.target.value.trim()">
+    <input aria-label="Search by IP address…" x-model="searchQuery" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-1.5 pl-8 text-sm" placeholder="Search by IP address…" type="search" @input="searchQuery = $event.target.value.trim()">
 
                         <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0">
@@ -125,20 +132,20 @@ ipInput.addEventListener('input', async () => {
                 </div>
 
             </div>
-            <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2  [&::-webkit-scrollbar-track]:bg-gray-100  [&::-webkit-scrollbar-thumb]:bg-gray-300  dark:[&::-webkit-scrollbar-track]:bg-neutral-700  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+            <div class="relative overflow-y-auto">
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="exiting_users">
                     <thead class="">
-                        <tr class="[&amp;_td:last-child]:pr-4 [&amp;_th:last-child]:pr-4 [&amp;_td:first-child]:pl-4 [&amp;_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
+                        <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 border-y border-gray-200 dark:border-gray-800">
 
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">Server</th>
+                            <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-3.5 text-sm tabular-nums">Server</th>
 
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">Status</th>
+                            <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-3.5 text-sm tabular-nums">Status</th>
 
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">Create Zones</th>
+                            <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-3.5 text-sm tabular-nums">Create zones</th>
 
-                            <th class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs tabular-nums">Synchronize Changes</th>
+                            <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-3.5 text-sm tabular-nums">Synchronize changes</th>
 
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-right">Edit</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-3.5 text-sm text-right"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -146,21 +153,23 @@ ipInput.addEventListener('input', async () => {
 {{$allowTransferSet := .AllowTransferSet}}
 {{$alsoNotifySet := .AlsoNotifySet}}
 {{range .AllIPs}}
-                        <tr x-show="searchQuery === '' || '{{.}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 group hover:bg-gray-50 hover:dark:bg-gray-900">
+                        <tr x-show="searchQuery === '' || '{{.}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400">
+                            <td class="relative p-4 text-sm whitespace-nowrap font-medium tabular-nums text-gray-900 dark:text-gray-50">
                             {{.}}
                             </td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if index $allowTransferSet .}}✔️{{else}}❌{{end}}</td>
+                            <td class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if index $allowTransferSet .}}<svg class="remixicon inline size-4 text-emerald-600 dark:text-emerald-500" role="img" aria-label="Yes" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg>{{else}}<svg class="remixicon inline size-4 text-gray-400 dark:text-gray-600" role="img" aria-label="No" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"/></svg>{{end}}</td>
 
-                            <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if index $alsoNotifySet .}}✔️{{else}}❌{{end}}</td>
+                            <td class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-left">{{if index $alsoNotifySet .}}<svg class="remixicon inline size-4 text-emerald-600 dark:text-emerald-500" role="img" aria-label="Yes" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg>{{else}}<svg class="remixicon inline size-4 text-gray-400 dark:text-gray-600" role="img" aria-label="No" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"/></svg>{{end}}</td>
 
-                              <td class="p-4 text-sm relative whitespace-nowrap py-1 text-gray-600 first:w-10 dark:text-gray-400 text-right">
+                              <td class="relative p-4 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-right">
 
                               </td>
 
                         </tr>
+{{else}}
+                        <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">No servers in the cluster yet.</td></tr>
 {{end}}
 
                     </tbody>
@@ -172,20 +181,18 @@ ipInput.addEventListener('input', async () => {
     </div>
 {{else}}
 
-<div class="m-8">
+<div class="px-4 py-6 sm:px-6 lg:px-8">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
 
                     <div class="col-span-full">
-    <p class="mt-1 text-sm leading-6 text-gray-500"><b>DNS clustering</b> allows you to synchronize DNS records from one OpenPanel server to other machines.
+    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500"><span class="font-medium text-gray-900 dark:text-gray-50">DNS clustering</span> lets you to synchronize DNS records from one OpenPanel server to other machines.
     </p>
 
-    <p class="mt-1 text-sm leading-6 text-gray-500">In order to synchronize your DNS records, all machines in the cluster must be running BIND9 - either from OpenPanel installation or as a standalone service/container. <a class="ml-1 inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400"
+    <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">In order to synchronize your DNS records, all machines in the cluster must be running BIND9, either from the OpenPanel installation or as a standalone service or container. <a class="ml-1 inline-flex items-center gap-1 text-blue-500 hover:underline hover:underline-offset-4"
                 href="https://openpanel.com/docs/articles/domains/how-to-setup-dns-cluster-in-openpanel/"
-                target="_blank">
-                    View Documentation
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-4 shrink-0">
-                        <path d="M10 6V8H5V19H16V14H18V20C18 20.5523 17.5523 21 17 21H4C3.44772 21 3 20.5523 3 20V7C3 6.44772 3.44772 6 4 6H10ZM21 3V11H19L18.9999 6.413L11.2071 14.2071L9.79289 12.7929L17.5849 5H13V3H21Z"></path>
-                    </svg>
+                target="_blank" rel="noopener">
+                    View documentation
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg>
                 </a></p>
 
                     </div>

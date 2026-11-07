@@ -212,7 +212,7 @@ func TestServeAccountsHTMLEmptyState(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	for _, want := range []string{"Click to refresh data", "FTP", "</html>"} {
+	for _, want := range []string{"Refresh data", "FTP", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}

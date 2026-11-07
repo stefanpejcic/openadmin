@@ -53,7 +53,7 @@ func (t *TwoFA) ServeSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := twoFASettingsPageData{
-		Chrome:      buildChrome(r, "Two-Factor Authentication"),
+		Chrome:      buildChrome(r, "Two-factor authentication"),
 		TOTPEnabled: user.TOTPEnabled,
 		CSRFToken:   csrf.Token(r),
 		Flashes:     auth.PopFlashes(w, r, t.Sessions),

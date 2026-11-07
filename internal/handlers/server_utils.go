@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -114,8 +116,22 @@ type timezonePageData struct {
 	webtemplates.Chrome
 	AvailableTimezones []string
 	CurrentTimezone    string
+	CurrentTime        string // local time and UTC offset in the current zone, empty if the zone can't be loaded
+	Selected           string
+	FieldError         string
+	Error              string
 	CSRFToken          string
 	Flashes            []auth.Flash
+}
+
+// localTimeIn returns "21:17 (UTC+04:00)" for zone, or "" when the zone isn't installed
+func localTimeIn(zone string) string {
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return ""
+	}
+	now := time.Now().In(loc)
+	return now.Format("15:04") + " (UTC" + now.Format("-07:00") + ")"
 }
 
 // ServeTimezone handles GET/POST /server/timezone, mirroring
@@ -128,27 +144,45 @@ func (s *ServerUtils) ServeTimezone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data := timezonePageData{
+		Chrome:             buildChrome(r, "Timezone"),
+		AvailableTimezones: zones,
+		CurrentTimezone:    current,
+		CurrentTime:        localTimeIn(current),
+		Selected:           current,
+		CSRFToken:          csrf.Token(r),
+	}
+
 	if r.Method == http.MethodPost {
 		selected := r.FormValue("timezone")
 		if !containsString(zones, selected) {
-			writeJSONError(w, http.StatusBadRequest, "Invalid timezone: "+selected)
+			data.FieldError = "Pick a timezone from the list. \"" + selected + "\" isn't one this server knows."
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			if err := webtemplates.Render(w, "timezone.html", data); err != nil {
+				log.Printf("render timezone.html: %v", err)
+			}
 			return
 		}
 		if _, stderr, err := timedatectlRun("set-timezone", selected); err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "Error changing timezone to "+selected+": "+stderr)
+			data.Selected = selected
+			data.Error = "Couldn't change the timezone to " + selected + ": " + strings.TrimSpace(stderr) + ". Check that timedatectl works on the host, then try again."
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusInternalServerError)
+			if err := webtemplates.Render(w, "timezone.html", data); err != nil {
+				log.Printf("render timezone.html: %v", err)
+			}
 			return
 		}
+		_ = auth.AddFlash(w, r, s.Sessions, "Timezone changed to "+selected+". Restart admin and cron (systemctl restart admin cron) so they use it too.", "success")
 		http.Redirect(w, r, "/server/timezone", http.StatusSeeOther)
 		return
 	}
 
-	webtemplates.Render(w, "timezone.html", timezonePageData{
-		Chrome:             buildChrome(r, "Timezone"),
-		AvailableTimezones: zones,
-		CurrentTimezone:    current,
-		CSRFToken:          csrf.Token(r),
-		Flashes:            auth.PopFlashes(w, r, s.Sessions),
-	})
+	data.Flashes = auth.PopFlashes(w, r, s.Sessions)
+	if err := webtemplates.Render(w, "timezone.html", data); err != nil {
+		log.Printf("render timezone.html: %v", err)
+	}
 }
 
 func containsString(list []string, v string) bool {
@@ -184,7 +218,7 @@ func (s *ServerUtils) ServeRootPassword(w http.ResponseWriter, r *http.Request) 
 	}
 
 	webtemplates.Render(w, "root_password.html", rootPasswordPageData{
-		Chrome:    buildChrome(r, "Root Password"),
+		Chrome:    buildChrome(r, "Root password"),
 		CSRFToken: csrf.Token(r),
 		Flashes:   auth.PopFlashes(w, r, s.Sessions),
 	})
@@ -192,23 +226,23 @@ func (s *ServerUtils) ServeRootPassword(w http.ResponseWriter, r *http.Request) 
 
 func (s *ServerUtils) handleRootPasswordPost(w http.ResponseWriter, r *http.Request) {
 	password := r.FormValue("password")
-	if password == "" {
-		auth.AddFlash(w, r, s.Sessions, "Password cannot be empty.", "error")
+	if len(password) < 6 || len(password) > 30 || strings.Contains(password, "'") {
+		_ = auth.AddFlash(w, r, s.Sessions, "Use a password of 6 to 30 characters, without apostrophes.", "error")
 		http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 		return
 	}
 
 	if _, stderr, err := passwdRun(password+"\n"+password+"\n", "root"); err != nil {
-		auth.AddFlash(w, r, s.Sessions, "Error changing password: "+stderr, "error")
+		_ = auth.AddFlash(w, r, s.Sessions, "Couldn't change the root password: "+strings.TrimSpace(stderr), "error")
 		http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 		return
 	}
 
 	verifyOut, _, err := passwdRun("", "--status", "root")
 	if err == nil && strings.Contains(verifyOut, "P") {
-		auth.AddFlash(w, r, s.Sessions, "SSH password changed successfully!", "success")
+		_ = auth.AddFlash(w, r, s.Sessions, "Root password changed. Use it for SSH and the server console from now on.", "success")
 	} else {
-		auth.AddFlash(w, r, s.Sessions, "Password change verification failed.", "error")
+		_ = auth.AddFlash(w, r, s.Sessions, "Password change verification failed. Run passwd -S root on the server to check whether the new password was set.", "error")
 	}
 	http.Redirect(w, r, "/server/root-password", http.StatusSeeOther)
 }
@@ -263,7 +297,7 @@ func (s *ServerUtils) ServeDemoMode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webtemplates.Render(w, "demo_mode.html", demoModePageData{
-		Chrome:    buildChrome(r, "Demo Mode"),
+		Chrome:    buildChrome(r, "Demo mode"),
 		DemoMode:  config.Openpanel().Get("PANEL", "demo_mode", "off"),
 		CSRFToken: csrf.Token(r),
 		Flashes:   auth.PopFlashes(w, r, s.Sessions),

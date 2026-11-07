@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/gorilla/csrf"
@@ -98,6 +100,30 @@ func copyFileWithMode(src, dst string) error {
 	return os.WriteFile(dst, data, mode)
 }
 
+// a resource record line: "name TTL IN TYPE" or an indented "IN TYPE" continuing the previous name
+var zoneRecordRe = regexp.MustCompile(`(?m)^[^;$\s][^;\n]*\sIN\s+[A-Z]+\s|^[ \t]+[^;\n]*\bIN\s+[A-Z]+\s`)
+
+// addZoneSummary adds whether the domain's zone file exists, its record count and when it last changed, for the zone list
+func addZoneSummary(row paneldb.RowMap, domain string) {
+	row["zone_exists"] = false
+	if !isDomain(domain) {
+		return
+	}
+	path := filepath.Join(BindZonesDir, domain+".zone")
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return
+	}
+	row["zone_exists"] = true
+	row["zone_modified"] = info.ModTime()
+	// zone files are small, skip counting anything unusually large
+	if info.Size() < 1<<20 {
+		if b, err := os.ReadFile(path); err == nil {
+			row["zone_records"] = len(zoneRecordRe.FindAll(b, -1))
+		}
+	}
+}
+
 // latestBackupFile returns the lexicographically-last match for pattern,
 // which is the newest backup since the filename suffix is a
 // YYYYMMDDHHMMSS timestamp.
@@ -139,13 +165,17 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 			u, _ := row["domain_url"].(string)
 			return scope.AllowsDomain(u)
 		})
+		for _, row := range domains {
+			u, _ := row["domain_url"].(string)
+			addZoneSummary(row, u)
+		}
 		webtemplates.Render(w, "domains_dns_zone_editor.html", mergeChrome(map[string]interface{}{
 			"Domains":     domains,
 			"MySQLIsDown": mysqlIsDown,
 			"DomainName":  "",
 			"CSRFToken":   csrf.Token(r),
 			"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-		}, r, "DNS Zone Editor"))
+		}, r, "DNS zone editor"))
 		return
 	}
 
@@ -189,7 +219,7 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 			}
 
 			zonePath := filepath.Join(BindZonesDir, domainName+".zone")
-			_, stderr, exitCode, verr := dnsZoneValidateRun(domainName, zonePath)
+			stdout, stderr, exitCode, verr := dnsZoneValidateRun(domainName, zonePath)
 			if verr != nil {
 				return verr
 			}
@@ -212,7 +242,8 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 					return err
 				}
 			}
-			auth.AddFlash(w, r, h.Sessions, "Zone file validation failed. Changes reverted. Error: "+stderr, "error")
+			// named-checkzone reports zone errors on stdout
+			_ = auth.AddFlash(w, r, h.Sessions, "Zone file validation failed. Changes reverted. Error: "+strings.TrimSpace(stdout+" "+stderr), "error")
 			return nil
 		}()
 
@@ -252,7 +283,7 @@ func (h *DNSZoneEditor) ServeEditDNSZone(w http.ResponseWriter, r *http.Request)
 		"HasTmpFileContent": hasTmpFileContent,
 		"CSRFToken":         csrf.Token(r),
 		"Flashes":           auth.PopFlashes(w, r, h.Sessions),
-	}, r, "DNS Zone Editor"))
+	}, r, "DNS zone editor"))
 }
 
 // defaultBackupTimestamp formats the current time as YYYYMMDDHHMMSS;

@@ -198,7 +198,7 @@ func TestServicesEditRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Edit Services", "caddy", "</html>"} {
+	for _, want := range []string{"Edit services", "caddy", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}

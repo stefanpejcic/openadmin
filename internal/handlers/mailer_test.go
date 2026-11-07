@@ -389,7 +389,7 @@ func TestParseEmailUsageItems(t *testing.T) {
 	if len(items) != 3 {
 		t.Fatalf("expected 3 items, got %d", len(items))
 	}
-	if items[0].Label != "Over 85%" || items[0].Color != "#d97706" || items[0].Width != 87 {
+	if items[0].Label != "Over 85%" || items[0].Color != "#ca8a04" || items[0].Width != 87 {
 		t.Errorf("over limit item wrong: %+v", items[0])
 	}
 	if items[1].Label != "OK" || items[1].Color != "#059669" {

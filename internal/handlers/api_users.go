@@ -478,11 +478,8 @@ func (a *APIUsers) handlePatch(w http.ResponseWriter, r *http.Request, username 
 	}
 }
 
+// a DELETE carries no body, so there's no JSON content type to insist on
 func (a *APIUsers) handleDelete(w http.ResponseWriter, r *http.Request, username string) {
-	if !isJSONRequest(r) {
-		writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
-		return
-	}
 	if username == "" {
 		writeJSONError(w, http.StatusBadRequest, "Missing username")
 		return

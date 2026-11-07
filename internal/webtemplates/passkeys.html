@@ -1,85 +1,81 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="{ searchQuery: '' }">
-    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">Passkeys</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Sign in to OpenAdmin without a password using a fingerprint, face scan, device PIN, or security key.</h2>
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Passkeys</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Sign in to OpenAdmin without a password using a fingerprint, face scan, device PIN, or security key.</p>
                 </div>
             </div>
         </header>
     </div>
 
-    <div class="m-8">
+    <div class="px-4 py-6 sm:px-6 lg:px-8">
 
-        <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
             <div>
-                <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Your passkeys</h2>
-                <p class="mt-1 text-sm leading-6 text-gray-500">Passkeys registered to your account. Any of them can be used to sign in from the login page.</p>
+                <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Your passkeys</h2>
+                <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Passkeys registered to your account. Any of them can be used to sign in from the login page.</p>
             </div>
-            <div class="md:col-span-2">
+            <div class="lg:col-span-2">
 
                 {{if .Passkeys}}
                 <div class="space-y-3 max-w-lg">
                     {{range .Passkeys}}
-                    <div class="flex items-center justify-between rounded border border-gray-200 dark:border-gray-800 p-3">
+                    <div class="flex items-center justify-between gap-4 rounded-md border border-gray-200 p-3 dark:border-gray-800">
                         <div>
                             <form method="post" action="/security/passkeys/rename" class="flex items-center gap-2">
                                 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                                 <input type="hidden" name="id" value="{{.ID}}">
-                                <input type="text" name="name" value="{{.Name}}" maxlength="100" class="relative block appearance-none rounded border px-2.5 py-1 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"/>
-                                <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-2.5 py-1 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" type="submit">Rename</button>
+                                <input type="text" name="name" value="{{.Name}}" maxlength="100" aria-label="Passkey name" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm w-56"/>
+                                <button class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600" type="submit">Rename</button>
                             </form>
-                            <p class="mt-1 text-xs text-gray-500">Added {{.CreatedAt}}</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">Added {{.CreatedAt}}</p>
                         </div>
-                        <form method="post" action="/security/passkeys/delete" onsubmit="return confirm('Remove this passkey? You will no longer be able to sign in with it.');">
+                        <form method="post" action="/security/passkeys/delete" data-confirm="Remove this passkey? You won't be able to sign in with it anymore.">
                             <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                             <input type="hidden" name="id" value="{{.ID}}">
-                            <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-transparent text-white bg-red-600 hover:bg-red-500 cursor-pointer" type="submit">Remove</button>
+                            <button class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400" type="submit">Remove</button>
                         </form>
                     </div>
                     {{end}}
                 </div>
                 {{else}}
-                <div class="rounded border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-950 max-w-lg">
-                    No passkeys registered yet.
-                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-500">No passkeys registered yet.</p>
                 {{end}}
 
             </div>
         </div>
 
-        <div class="mt-8 grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div class="mt-8 grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
             <div>
-                <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Add a passkey</h2>
-                <p class="mt-1 text-sm leading-6 text-gray-500">Your browser will prompt you to use your device's fingerprint/face recognition, PIN, or a security key. Requires a supported browser and HTTPS.</p>
+                <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Add a passkey</h2>
+                <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Your browser asks for your fingerprint, face, device PIN or a security key. Requires a supported browser and HTTPS.</p>
             </div>
-            <div class="md:col-span-2 max-w-sm">
+            <div class="lg:col-span-2 max-w-sm">
                 {{if not .WebauthnCapable}}
-                <div id="tour-passkeys-needs-domain" class="rounded border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-700 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-400">
-                    Passkeys require OpenAdmin to be accessed over a domain name (not an IP address). Set up a custom domain to use this feature.
-                </div>
+                <div id="tour-passkeys-needs-domain" class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg><div>Passkeys require OpenAdmin to be accessed over a domain name (not an IP address). Set up a custom domain to use this feature.</div></div>
                 {{else}}
-                <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="passkey-name">Name for this passkey</label>
-                <div class="relative w-100 mt-2">
-                    <input type="text" id="passkey-name" maxlength="100" placeholder="e.g. MacBook Touch ID" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"/>
+                <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="passkey-name">Name for this passkey</label>
+                <div class="relative mt-2 w-full">
+                    <input type="text" id="passkey-name" maxlength="100" placeholder="MacBook Touch ID" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm"/>
                 </div>
-                <button id="add-passkey-btn" type="button" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-transparent text-white bg-indigo-600 hover:bg-indigo-500 mt-4 cursor-pointer">Add passkey</button>
-                <p id="passkey-error" class="mt-2 text-sm text-red-600 hidden"></p>
-                <p id="passkey-unsupported" class="mt-2 text-sm text-gray-500 hidden">Your browser does not support passkeys.</p>
+                <button id="add-passkey-btn" type="button" class="mt-4 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400"><span id="add-passkey-spinner" class="hidden"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span>Add passkey</button>
+                <p id="passkey-error" role="alert" class="mt-2 hidden text-sm text-red-600 dark:text-red-500"></p>
+                <p id="passkey-unsupported" class="mt-2 text-sm text-gray-500 hidden dark:text-gray-500">Your browser does not support passkeys.</p>
                 {{end}}
             </div>
         </div>
@@ -116,7 +112,12 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    const spinner = document.getElementById('add-passkey-spinner');
+    const setBusy = on => { addBtn.disabled = on; spinner.className = on ? 'inline-flex' : 'hidden'; };
+
     addBtn.addEventListener('click', async function () {
+        if (addBtn.disabled) return;
+        setBusy(true);
         errorEl.classList.add('hidden');
         const name = document.getElementById('passkey-name').value.trim() || 'Passkey';
 
@@ -158,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (err) {
             errorEl.textContent = err.message || 'Passkey registration failed.';
             errorEl.classList.remove('hidden');
+            setBusy(false);
         }
     });
 });

@@ -177,7 +177,7 @@ func TestServeLimitsGetHTML(t *testing.T) {
 		`name="NGINX_CPU"`, `value="1.5"`,
 		`name="NGINX_RAM"`, `value="512M"`,
 		`name="NGINX_ENABLED"`, `<select`,
-		"Service Limits", "</html>",
+		"Service limits", "</html>",
 	} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))

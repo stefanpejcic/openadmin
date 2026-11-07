@@ -318,10 +318,10 @@ func TestServeLocalesGetRendersHTML(t *testing.T) {
 	resp.Body.Close()
 	got := string(body)
 	for _, want := range []string{
-		"Languages (Locales)",
+		"Languages (locales)",
 		"en-us",
 		"fr-fr",
-		"Set as Default",
+		"Set as default",
 		"</html>",
 	} {
 		if !strings.Contains(got, want) {
@@ -460,7 +460,7 @@ func TestServeLocalesGetFlagsUpdates(t *testing.T) {
 	if !strings.Contains(string(body), "Update available for sr-rs.") {
 		t.Fatalf("expected update notice for sr-rs only, got %s", truncate(string(body)))
 	}
-	if !strings.Contains(string(body), "Update All (1)") {
+	if !strings.Contains(string(body), "Update all (1)") {
 		t.Fatalf("expected Update All button, got %s", truncate(string(body)))
 	}
 }

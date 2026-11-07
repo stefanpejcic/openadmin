@@ -48,6 +48,15 @@ type swapStatus struct {
 	ManagedFileExists bool
 }
 
+// mbToGB formats MB as GB with 2 decimals, matching the GB resize input
+func mbToGB(mb int64) string { return fmt.Sprintf("%.2f GB", float64(mb)/1024) }
+
+func (d swapDeviceInfo) SizeGB() string { return mbToGB(d.SizeMB) }
+func (d swapDeviceInfo) UsedGB() string { return mbToGB(d.UsedMB) }
+func (s swapStatus) TotalGB() string    { return mbToGB(s.TotalMB) }
+func (s swapStatus) UsedGB() string     { return mbToGB(s.UsedMB) }
+func (s swapStatus) FreeGB() string     { return mbToGB(s.FreeMB) }
+
 // swapFreeRun/swapShowRun are injectable so tests never actually shell out.
 var (
 	swapFreeRun = func() (string, error) {

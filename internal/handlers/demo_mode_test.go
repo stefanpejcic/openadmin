@@ -34,7 +34,7 @@ func TestDemoModeServeReflectsConfig(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{"Enable Demo Mode", "</html>"} {
+	for _, want := range []string{"Enable demo mode", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected the 'off' state's content in page, got %s", truncate(got))
 		}

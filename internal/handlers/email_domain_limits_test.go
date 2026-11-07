@@ -160,7 +160,7 @@ func TestServeDomainLimitsGUIMode(t *testing.T) {
 	if !strings.Contains(string(body), "stefan") || !strings.Contains(string(body), "42") {
 		t.Fatalf("expected the current counter joined into the rule row, got %s", truncate(string(body)))
 	}
-	for _, want := range []string{"Email Rate Limits", "postfwd", "</html>"} {
+	for _, want := range []string{"Email rate limits", "postfwd", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}
@@ -181,7 +181,7 @@ func TestServeDomainLimitsRawModeRendersHTML(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, truncate(string(body)))
 	}
-	for _, want := range []string{"Editing file:", PostfwdConfigPath, "id=limit_stefan_stefan_rs", "</html>"} {
+	for _, want := range []string{"Editing file", PostfwdConfigPath, "id=limit_stefan_stefan_rs", "</html>"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(string(body)))
 		}

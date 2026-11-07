@@ -9,10 +9,12 @@ function updatePublicIP(username, ip) {
 
         const span = document.createElement('span');
         span.title = "Dedicated IP";
-        span.className = "flex size-4 shrink-0 items-center justify-center rounded-full bg-blue-500 ring-2 ring-white dark:bg-blue-500 dark:ring-[#090E1A]";
+        span.setAttribute('role', 'img');
+        span.setAttribute('aria-label', 'Dedicated IP');
+        span.className = "flex size-4 shrink-0 items-center justify-center rounded-full bg-blue-500 ring-2 ring-white dark:bg-blue-500 dark:ring-raised";
 
         span.innerHTML = `
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-2.5 text-white dark:text-white"><path d="M11.9998 17L6.12197 20.5902L7.72007 13.8906L2.48926 9.40983L9.35479 8.85942L11.9998 2.5L14.6449 8.85942L21.5104 9.40983L16.2796 13.8906L17.8777 20.5902L11.9998 17Z"></path></svg>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-2.5 text-white"><path d="M11.9998 17L6.12197 20.5902L7.72007 13.8906L2.48926 9.40983L9.35479 8.85942L11.9998 2.5L14.6449 8.85942L21.5104 9.40983L16.2796 13.8906L17.8777 20.5902L11.9998 17Z"></path></svg>
         `;
 
         element.appendChild(span);
@@ -50,15 +52,12 @@ fetch('/json/user_activity_status')
 
       onlineCell.textContent = '';
 
-      if (isActive) {
-        const dot = document.createElement('span');
-        dot.classList.add('user-status-dot');
-        dot.textContent = '●';
-        dot.style.color = 'green';
-        dot.style.fontSize = '0.9rem';
-        dot.style.verticalAlign = 'middle';
-        onlineCell.appendChild(dot);
-      }
+      const dot = document.createElement('span');
+      dot.className = 'user-status-dot inline-block size-2 rounded-full ' + (isActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-700');
+      dot.setAttribute('role', 'img');
+      dot.setAttribute('aria-label', isActive ? 'Online' : 'Offline');
+      dot.title = isActive ? 'Online' : 'Offline';
+      onlineCell.appendChild(dot);
     });
   })
   .catch(error => console.error('Error fetching user activity status:', error));
@@ -69,8 +68,9 @@ fetch('/json/user_activity_status')
 (function () {
   const tip = document.getElementById('row-tooltip');
   if (!tip) return;
-  let current = null;
+  let current = null, timer = null;
   function show(el) {
+    clearTimeout(timer);
     current = el;
     tip.textContent = el.dataset.tip;
     tip.classList.remove('invisible', 'opacity-0');
@@ -85,19 +85,46 @@ fetch('/json/user_activity_status')
     tip.style.top = Math.max(8, y) + 'px';
   }
   function hide() {
+    clearTimeout(timer);
     current = null;
     tip.classList.add('invisible', 'opacity-0');
   }
   document.addEventListener('mouseover', e => {
     const el = e.target.closest && e.target.closest('[data-tip]');
-    if (el !== current) el ? show(el) : hide();
+    if (el === current) return;
+    if (!el) return hide();
+    // pointer gets a short delay, keyboard focus opens right away
+    hide();
+    current = el;
+    timer = setTimeout(() => show(el), 200);
   });
   document.addEventListener('focusin', e => {
     const el = e.target.closest && e.target.closest('[data-tip]');
     if (el) show(el);
   });
   document.addEventListener('focusout', hide);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
   addEventListener('scroll', hide, true);
+
+  // the login tooltip opens to the left, so keep that much room before the button and it won't cover Created
+  let widest = 0;
+  document.querySelectorAll('td[data-login-col] a[data-tip]').forEach(el => {
+    tip.textContent = el.dataset.tip;
+    widest = Math.max(widest, tip.offsetWidth);
+  });
+  tip.textContent = '';
+  const cells = document.querySelectorAll('[data-login-col]'), wrap = cells.length && cells[0].closest('table').parentElement;
+  const pad = px => { cells.forEach(c => { c.style.paddingLeft = px + 'px'; }); return wrap.scrollWidth <= wrap.clientWidth; };
+  // biggest gap that still fits, never make the table scroll sideways because of it
+  function fitLoginGap() {
+    if (pad(widest)) return;
+    let lo = 48, hi = widest;
+    if (!pad(lo)) return;
+    while (hi - lo > 4) { const mid = (lo + hi) >> 1; if (pad(mid)) lo = mid; else hi = mid; }
+    pad(lo);
+  }
+  // again on load, alpine and the date formatting change column widths after this runs
+  if (widest && wrap) { fitLoginGap(); addEventListener('load', () => requestAnimationFrame(fitLoginGap)); addEventListener('resize', fitLoginGap); }
 })();
 
 

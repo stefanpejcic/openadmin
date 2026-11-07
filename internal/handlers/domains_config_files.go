@@ -78,7 +78,7 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 			"Username":    "",
 			"CSRFToken":   csrf.Token(r),
 			"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-		}, r, "Edit Main Webserver Configuration"))
+		}, r, "Edit main webserver configuration"))
 		return
 	}
 
@@ -127,7 +127,7 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 			confContent = string(content)
 		}
 	} else {
-		auth.AddFlash(w, r, h.Sessions, "Error reading main configuration file for user "+username+".", "error")
+		_ = auth.AddFlash(w, r, h.Sessions, "Error reading main configuration file for user "+username+".", "error")
 	}
 
 	webtemplates.Render(w, "domains_config_editor.html", mergeChrome(map[string]interface{}{
@@ -137,5 +137,5 @@ func (h *ConfigFileEditor) ServeEditConfigFile(w http.ResponseWriter, r *http.Re
 		"ConfContent": confContent,
 		"CSRFToken":   csrf.Token(r),
 		"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-	}, r, "Edit Main Webserver Configuration"))
+	}, r, "Edit main webserver configuration"))
 }

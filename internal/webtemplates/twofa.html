@@ -1,78 +1,81 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <div x-data="{ searchQuery: '' }">
-    <div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+    <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
-            <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
-                    <h1 class="mb-1 text-xl font-bold">Two-Factor Authentication</h1>
-                    <h2 class="text-sm font-medium text-slate-500">Protect your OpenAdmin account with an additional one-time code from an authenticator app.</h2>
+                    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Two-factor authentication</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">Protect your OpenAdmin account with an additional one-time code from an authenticator app.</p>
                 </div>
             </div>
         </header>
     </div>
 
-    <div id="tour-2fa" class="m-8">
+    <div id="tour-2fa" class="px-4 py-6 sm:px-6 lg:px-8">
 
         {{if .TOTPEnabled}}
-        <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
             <div>
-                <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Status</h2>
-                <p class="mt-1 text-sm leading-6 text-gray-500">Two-factor authentication is currently enabled on your account.</p>
+                <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Status</h2>
+                <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Two-factor authentication is enabled. You will be asked for a code from your authenticator app every time you sign in.</p>
             </div>
-            <div class="md:col-span-2">
-                <div class="rounded border border-green-200 bg-green-50 p-4 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
-                    Two-factor authentication is enabled. You will be asked for a code from your authenticator app every time you sign in.
-                </div>
+            <div class="lg:col-span-2">
+                <div class="flex gap-3 rounded-md bg-emerald-50 p-4 text-sm text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-500"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11.0026 16L18.0737 8.92893L16.6595 7.51472L11.0026 13.1716L8.17421 10.3431L6.75999 11.7574L11.0026 16Z"/></svg><div>Two-factor authentication is on. You'll be asked for a code from your authenticator app every time you sign in.</div></div>
 
                 <form method="post" action="/security/2fa/disable" class="mt-6 max-w-sm">
                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="password">Confirm your password to disable</label>
-                    <div class="relative w-100 mt-2">
-                        <input type="password" name="password" id="password" class="relative block w-full appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950" placeholder="Current password" required/>
+                    <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="password">Confirm your password to disable</label>
+                    <div class="relative mt-2 w-full">
+                        <input type="password" name="password" id="password" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" placeholder="Current password" required/>
                     </div>
-                    <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-transparent text-white bg-red-600 hover:bg-red-500 mt-4 cursor-pointer" type="submit">Disable two-factor authentication</button>
+                    <button class="mt-4 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400" type="submit">Disable two-factor authentication</button>
                 </form>
             </div>
         </div>
         {{else}}
-        <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
             <div>
-                <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">1. Scan QR code</h2>
-                <p class="mt-1 text-sm leading-6 text-gray-500">Scan this with Google Authenticator, Authy, or any other TOTP app.</p>
+                <h2 class="scroll-mt-10 flex items-center gap-3 text-sm font-semibold text-gray-900 dark:text-gray-50" aria-current="step"><span class="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-blue-600 ring-2 ring-blue-500 dark:text-blue-500" aria-hidden="true">1</span>Scan the QR code</h2>
+                <p class="mt-1 pl-9 text-sm/6 text-gray-500 dark:text-gray-500">Scan this with Google Authenticator, Authy or any other TOTP app.</p>
             </div>
-            <div class="md:col-span-2">
+            <div class="lg:col-span-2">
                 {{if .QRDataURI}}
-                <img src="{{.QRDataURI}}" alt="2FA QR code" class="rounded border border-gray-200 dark:border-gray-800" width="200" height="200"/>
-                <p class="mt-2 text-sm text-gray-500">Or enter this code manually: <code class="font-mono">{{.Secret}}</code></p>
+                <img src="{{.QRDataURI}}" alt="2FA QR code" class="rounded-md border border-gray-200 dark:border-gray-800" width="200" height="200"/>
+                <div x-data="{ shown: false }" data-secret="{{.Secret}}" class="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-500">
+                    <span>Or enter this code manually:</span>
+                    <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50 tracking-wider" x-text="shown ? $root.dataset.secret : '••••••••••••••••'">••••••••••••••••</code>
+                    <button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-transparent text-gray-900 hover:bg-gray-100 disabled:text-gray-400 dark:text-gray-50 dark:hover:bg-gray-800/80 dark:disabled:text-gray-600" @click="shown = !shown" :aria-pressed="shown.toString()" x-text="shown ? 'Hide' : 'Show'">Show</button>
+                    <button type="button" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600" @click="navigator.clipboard.writeText($root.dataset.secret).then(() => showToast('Code copied', 'success'))">Copy</button>
+                </div>
                 {{end}}
             </div>
         </div>
 
-        <div class="mt-8 grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+        <div class="mt-8 grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
             <div>
-                <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">2. Confirm code</h2>
-                <p class="mt-1 text-sm leading-6 text-gray-500">Enter the 6-digit code generated by your app to confirm setup and enable 2FA.</p>
+                <h2 class="scroll-mt-10 flex items-center gap-3 text-sm font-semibold text-gray-900 dark:text-gray-50"><span class="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium text-gray-500 ring-1 ring-gray-300 dark:ring-gray-700" aria-hidden="true">2</span>Enter the code</h2>
+                <p class="mt-1 pl-9 text-sm/6 text-gray-500 dark:text-gray-500">Enter the 6-digit code generated by your app to confirm setup and enable 2FA.</p>
             </div>
-            <div class="md:col-span-2">
+            <div class="lg:col-span-2">
                 <form method="post" action="/security/2fa/enable" class="max-w-sm">
                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                    <label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="code">Authentication code</label>
-                    <div class="relative w-100 mt-2">
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" name="code" id="code" class="relative block w-auto appearance-none rounded border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 text-center tracking-widest" placeholder="000000" required/>
+                    <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="code">Authentication code</label>
+                    <div class="relative mt-2 w-full">
+                        <input type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" name="code" id="code" class="font-mono tracking-widest block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm w-auto text-center" placeholder="000000" required/>
                     </div>
-                    <button class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out outline-none border-transparent text-white bg-indigo-600 hover:bg-indigo-500 mt-4 cursor-pointer" type="submit">Enable two-factor authentication</button>
+                    <button class="mt-4 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400" type="submit">Enable two-factor authentication</button>
                 </form>
             </div>
         </div>

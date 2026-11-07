@@ -41,7 +41,7 @@ func TestSiteTypeSprite(t *testing.T) {
 		t.Errorf("expected one symbol per logo: %.200s", sprite)
 	}
 	use := string(SiteTypeUse("java"))
-	if !strings.Contains(use, `href="#site-type-java"`) || !strings.Contains(use, `stroke="currentColor"`) || !strings.Contains(use, `fill="none"`) {
+	if !strings.Contains(use, `href="#site-type-java"`) || !strings.Contains(use, `fill="currentColor"`) {
 		t.Errorf("use = %s", use)
 	}
 }

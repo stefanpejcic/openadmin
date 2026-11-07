@@ -1,33 +1,33 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
 <style>[x-cloak] { display: none !important; }</style>
 
 <!-- Page header -->
-<div x-data="{ showSection: window.location.hash === '#add' }" class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div x-data="{ showSection: window.location.hash === '#add' }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <header>
-        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div class="grow">
-                <h1 class="mb-1 text-xl font-bold">Emails</h1>
-                <h2 class="text-sm font-medium text-slate-500">
+                <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Emails</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-500">
                     {{if .Emails}}
                         <b>{{len .Emails}}</b> email{{if gt (len .Emails) 1}}s{{end}} hosted on this server.
                     {{else}}
                         No emails yet.
                     {{end}}
-                </h2>
+                </p>
             </div>
             {{if .CanAddEmail}}
-            <div class="flex flex-none items-center justify-center gap-2 rounded-sm px-2 sm:justify-end sm:bg-transparent sm:px-0">
-                <a @click="showSection = !showSection" class="relative inline-flex items-center justify-center rounded border px-3 py-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0">Add Email</a>
+            <div class="flex flex-none items-center gap-2">
+                <button type="button" @click="showSection = !showSection" :aria-expanded="showSection" aria-controls="new-email-section" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Add email</button>
             </div>
             {{end}}
         </div>
@@ -35,48 +35,51 @@
 
     {{if .CanAddEmail}}
     <!-- same fields as the user panel's /emails/new -->
-    <div x-show="showSection" x-cloak class="mt-8 w-full">
-        <form method="POST" action="/emails/new" x-data="newEmailForm()" class="sm:mx-auto">
+    <div id="new-email-section" x-show="showSection" x-cloak class="mt-6 w-full rounded-md border border-gray-200 bg-white p-6 text-left shadow-xs dark:border-gray-900 dark:bg-raised">
+        <form method="POST" action="/emails/new" x-data="newEmailForm()" @submit="busy = true">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
                 <div class="col-span-full sm:col-span-3">
-                    <label class="text-sm font-medium" for="new_email_username">Email<span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="new_email_username">Email<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span></label>
                     <div class="mt-2 flex">
-                        <input type="text" name="username" id="new_email_username" required maxlength="64" pattern="[A-Za-z0-9._%+\-]+" title="Letters, numbers, and . _ % + -" placeholder="info" autocomplete="off" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
-                        <span class="inline-flex items-center border-y border-gray-300 bg-gray-100 px-2 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">@</span>
-                        <select name="domain" required x-model="domain" class="relative block w-full appearance-none rounded-r border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
+                        <input type="text" name="username" id="new_email_username" required maxlength="64" pattern="[A-Za-z0-9._%+\-]+" title="Letters, numbers, and . _ % + -" placeholder="info" autocomplete="off" class="block rounded-l-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm">
+                        <span class="inline-flex items-center border-y border-gray-300 bg-gray-50 px-2.5 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-500">@</span>
+                        <select name="domain" required x-model="domain" aria-label="Domain" class="block rounded-r-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full">
                             <option value="" disabled>Select a domain</option>
                             {{range .EmailDomains}}<option value="{{.Domain}}">{{.Domain}}</option>{{end}}
                         </select>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400" x-text="ownerOf(domain) ? 'Owner: ' + ownerOf(domain) : '{{if .EmailDomains}}Pick one of the domains on this server.{{else}}No domains yet, add one on the Domains page first.{{end}}'"></p>
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500" x-text="ownerOf(domain) ? 'Owner: ' + ownerOf(domain) : '{{if .EmailDomains}}Pick one of the domains on this server.{{else}}No domains yet, add one on the Domains page first.{{end}}'"></p>
                 </div>
                 <div class="col-span-full sm:col-span-3">
-                    <label class="text-sm font-medium" for="new_email_password">Password<span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="new_email_password">Password<span class="text-red-600 dark:text-red-500" aria-hidden="true"> *</span></label>
                     <div class="mt-2 flex">
-                        <input :type="showPassword ? 'text' : 'password'" name="password" id="new_email_password" x-model="password" required minlength="8" maxlength="128" pattern="\S+" title="8 or more characters, no spaces" autocomplete="new-password" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
-                        <button type="button" @click="generate()" tabindex="-1" class="border px-3 text-sm font-medium border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 cursor-pointer">Generate</button>
-                        <button type="button" @click="showPassword = !showPassword" tabindex="-1" class="rounded-r border px-3 text-sm font-medium border-black bg-black text-white hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 cursor-pointer" x-text="showPassword ? 'Hide' : 'Show'"></button>
+                        <div class="relative w-full">
+                            <input :type="showPassword ? 'text' : 'password'" name="password" id="new_email_password" x-model="password" required minlength="8" maxlength="128" pattern="\S+" title="8 or more characters, no spaces" autocomplete="new-password" class="block rounded-l-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm pr-10">
+                            <button type="button" @click="showPassword = !showPassword" :aria-label="showPassword ? 'Hide password' : 'Show password'" :aria-pressed="showPassword" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 absolute inset-y-0 right-1 my-auto"><span x-show="!showPassword"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12.0003 3C17.3924 3 21.8784 6.87976 22.8189 12C21.8784 17.1202 17.3924 21 12.0003 21C6.60812 21 2.12215 17.1202 1.18164 12C2.12215 6.87976 6.60812 3 12.0003 3ZM12.0003 19C16.2359 19 19.8603 16.052 20.7777 12C19.8603 7.94803 16.2359 5 12.0003 5C7.7646 5 4.14022 7.94803 3.22278 12C4.14022 16.052 7.7646 19 12.0003 19ZM12.0003 16.5C9.51498 16.5 7.50026 14.4853 7.50026 12C7.50026 9.51472 9.51498 7.5 12.0003 7.5C14.4855 7.5 16.5003 9.51472 16.5003 12C16.5003 14.4853 14.4855 16.5 12.0003 16.5ZM12.0003 14.5C13.381 14.5 14.5003 13.3807 14.5003 12C14.5003 10.6193 13.381 9.5 12.0003 9.5C10.6196 9.5 9.50026 10.6193 9.50026 12C9.50026 13.3807 10.6196 14.5 12.0003 14.5Z"/></svg></span><span x-show="showPassword" x-cloak><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M17.8827 19.2968C16.1814 20.3755 14.1638 21.0002 12.0003 21.0002C6.60812 21.0002 2.12215 17.1204 1.18164 12.0002C1.61832 9.62282 2.81932 7.5129 4.52047 5.93457L1.39366 2.80777L2.80788 1.39355L22.6069 21.1925L21.1927 22.6068L17.8827 19.2968ZM5.9356 7.3497C4.60673 8.56015 3.6378 10.1672 3.22278 12.0002C4.14022 16.0521 7.7646 19.0002 12.0003 19.0002C13.5997 19.0002 15.112 18.5798 16.4243 17.8384L14.396 15.8101C13.7023 16.2472 12.8808 16.5002 12.0003 16.5002C9.51498 16.5002 7.50026 14.4854 7.50026 12.0002C7.50026 11.1196 7.75317 10.2981 8.19031 9.60442L5.9356 7.3497ZM12.9139 14.328L9.67246 11.0866C9.5613 11.3696 9.50026 11.6777 9.50026 12.0002C9.50026 13.3809 10.6196 14.5002 12.0003 14.5002C12.3227 14.5002 12.6309 14.4391 12.9139 14.328ZM20.8068 16.5925L19.376 15.1617C20.0319 14.2268 20.5154 13.1586 20.7777 12.0002C19.8603 7.94818 16.2359 5.00016 12.0003 5.00016C11.1544 5.00016 10.3329 5.11773 9.55249 5.33818L7.97446 3.76015C9.22127 3.26959 10.5793 3.00016 12.0003 3.00016C17.3924 3.00016 21.8784 6.87992 22.8189 12.0002C22.5067 13.6998 21.8038 15.2628 20.8068 16.5925ZM11.7229 7.50857C11.8146 7.50299 11.9071 7.50016 12.0003 7.50016C14.4855 7.50016 16.5003 9.51488 16.5003 12.0002C16.5003 12.0933 16.4974 12.1858 16.4919 12.2775L11.7229 7.50857Z"/></svg></span></button>
+                        </div>
+                        <button type="button" @click="generate()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 -ml-px rounded-l-none">Generate</button>
                     </div>
                 </div>
                 <div class="col-span-full sm:col-span-2">
-                    <label class="text-sm font-medium" for="new_email_quota">Storage quota</label>
+                    <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="new_email_quota">Storage quota</label>
                     <div class="mt-2 flex">
-                        <input type="number" min="0" step="any" name="quota" id="new_email_quota" value="0" class="relative block w-full appearance-none rounded-l border px-2.5 py-2 shadow-sm outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 focus:dark:ring-blue-700/30 focus:border-blue-500 focus:dark:border-blue-700">
-                        <select name="unit" class="rounded-r border px-2 text-sm border-gray-300 bg-white text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50">
+                        <input type="number" min="0" step="any" name="quota" id="new_email_quota" value="0" class="block rounded-l-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm">
+                        <select name="unit" aria-label="Quota unit" class="block rounded-r-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] -ml-px">
                             <option value="k">KiB</option>
                             <option value="M">MiB</option>
                             <option value="G" selected>GiB</option>
                             <option value="T">TiB</option>
                         </select>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">0 for unlimited.</p>
+                    <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">0 for unlimited.</p>
                 </div>
                 <div class="col-span-full sm:col-span-2 flex items-center pt-6">
-                    <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="send_welcome" value="1" class="rounded border-gray-300 dark:border-gray-700"> Send welcome email</label>
+                    <span class="relative flex"><input id="new_email_send_welcome" type="checkbox" name="send_welcome" value="1" class="peer size-4 shrink-0 cursor-pointer appearance-none rounded border border-gray-300 bg-white shadow-xs transition checked:border-blue-500 checked:bg-blue-500 indeterminate:border-blue-500 indeterminate:bg-blue-500 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:shadow-none dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-blue-500 dark:indeterminate:border-blue-500 dark:indeterminate:bg-blue-500 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="pointer-events-none absolute inset-0 hidden size-4 p-0.5 text-white peer-checked:block peer-disabled:text-gray-400 dark:peer-disabled:text-gray-500"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></span><label for="new_email_send_welcome" class="ml-2 text-sm text-gray-900 dark:text-gray-50">Send welcome email</label>
                 </div>
-                <div class="col-span-full sm:col-span-2 flex items-end justify-end">
-                    <button type="submit" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border p-2.5 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out border-transparent text-white bg-blue-500 hover:bg-blue-600 cursor-pointer">Add Email</button>
+                <div class="col-span-full flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end dark:border-gray-800">
+                    <button type="button" @click="showSection = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                    <button type="submit" :disabled="busy" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400"><span x-show="busy" x-cloak class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span>Add email</button>
                 </div>
             </div>
         </form>
@@ -88,6 +91,7 @@
         return {
             domain: '',
             password: '',
+            busy: false,
             showPassword: false,
             ownerOf(domain) { return owners[(domain || '').trim().toLowerCase()] || ''; },
             generate() {
@@ -104,8 +108,11 @@
 
 {{if or (eq .MailserverStatus "running") .FromFile}}
 {{if .FromFile}}
-<div class="mx-6 mt-4 rounded border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-500/30 dark:bg-yellow-400/10 dark:text-yellow-400">
-    The mailserver is not running, these accounts are read from <code>postfix-accounts.cf</code>. Quota usage and account actions are unavailable until it is started again, new accounts can still be added.
+<div class="px-4 pt-4 sm:px-6 lg:px-8">
+    <div class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500">
+        <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg>
+        <p>The mailserver is not running, these accounts are read from <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">postfix-accounts.cf</code>. Quota usage and account actions are unavailable until it is started again, new accounts can still be added.</p>
+    </div>
 </div>
 {{end}}
 
@@ -119,13 +126,13 @@
 
     <!-- ── Toolbar ── -->
     <div class="space-y-3">
-        <div class="flex px-6 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+        <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
                 <!-- Search -->
                 <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
                     <input x-model="searchQuery"
-                           class="relative block w-full appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-gray-100 dark:bg-gray-950 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:dark:border-gray-700 disabled:dark:bg-gray-800 disabled:dark:text-gray-500 focus:ring-2 focus:ring-indigo-200 focus:dark:ring-indigo-700/30 focus:border-indigo-500 focus:dark:border-indigo-700 [&::--webkit-search-cancel-button]:hidden [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8"
-                           placeholder="Search emails..." type="search" />
+                           class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-1.5 text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8"
+                           placeholder="Search emails…" aria-label="Search emails…" type="search" />
                     <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                     </div>
@@ -135,82 +142,64 @@
         </div>
 
         <!-- ── Table ── -->
-        <div class="relative overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-neutral-700 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+        <div class="relative overflow-y-auto">
             {{template "bulk_open" (dict "Table" "#email_accounts_table" "Endpoint" "/emails/bulk")}}
             <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="email_accounts_table">
                 <thead>
-                    <tr class="border-y border-gray-200 dark:border-gray-800 [&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4">
+                    <tr class="border-y border-gray-200 dark:border-gray-800 [&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8">
                         {{template "bulk_head_checkbox" .}}
-                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                            <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
-                                <span>Email</span>
-                                <div class="-space-y-2">
-                                    <a href="#" @click.prevent="setSort('email', 'asc')"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 transition-opacity" :class="sortBy === 'email' && sortDir === 'asc' ? 'opacity-30' : 'opacity-100'"> <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/> </svg></a>
-                                    <a href="#" @click.prevent="setSort('email', 'desc')"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 transition-opacity" :class="sortBy === 'email' && sortDir === 'desc' ? 'opacity-30' : 'opacity-100'"> <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/> </svg></a>
-                                </div>
-                            </div>
+                        <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                            <button type="button" @click="if (sortBy === 'email' && sortDir === 'asc') { setSort('email', 'desc') } else { setSort('email', 'asc') }" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Email<svg x-show="sortBy === 'email' && sortDir === 'asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortBy === 'email' && sortDir === 'desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortBy === 'email' && sortDir === 'asc') && !(sortBy === 'email' && sortDir === 'desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortBy === 'email' && sortDir === 'asc') ? ', sorted ascending' : (sortBy === 'email' && sortDir === 'desc') ? ', sorted descending' : ''"></span></button>
                         </th>
-                        <th x-show="hasServers" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Server</th>
-                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">
-                            <div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900">
-                                <span>Quota</span>
-                                <div class="-space-y-2">
-                                    <a href="#" @click.prevent="setSort('quota', 'asc')"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 transition-opacity" :class="sortBy === 'quota' && sortDir === 'asc' ? 'opacity-30' : 'opacity-100'"> <path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"/> </svg></a>
-                                    <a href="#" @click.prevent="setSort('quota', 'desc')"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 transition-opacity" :class="sortBy === 'quota' && sortDir === 'desc' ? 'opacity-30' : 'opacity-100'"> <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"/> </svg></a>
-                                </div>
-                            </div>
+                        <th scope="col" x-show="hasServers" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Server</th>
+                        <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">
+                            <button type="button" @click="if (sortBy === 'quota' && sortDir === 'asc') { setSort('quota', 'desc') } else { setSort('quota', 'asc') }" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Quota<svg x-show="sortBy === 'quota' && sortDir === 'asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="sortBy === 'quota' && sortDir === 'desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!(sortBy === 'quota' && sortDir === 'asc') && !(sortBy === 'quota' && sortDir === 'desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="(sortBy === 'quota' && sortDir === 'asc') ? ', sorted ascending' : (sortBy === 'quota' && sortDir === 'desc') ? ', sorted descending' : ''"></span></button>
                         </th>
-                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Webmail</th>
-                        <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-end">Actions</th>
+                        <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-center">Webmail</th>
+                        <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-end"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 
                     <template x-for="[email, quota, pct, nodeId, server, openLink] in sortedEmails" :key="email">
                         <tr x-show="searchQuery === '' || email.toLowerCase().includes(searchQuery.toLowerCase())"
-                            class="group hover:bg-gray-50 hover:dark:bg-gray-900 [&_td:last-child]:pr-4 [&_td:first-child]:pl-4">
+                            class="group hover:bg-gray-50 dark:hover:bg-gray-900/60 has-[.bulk-select-box:checked]:bg-gray-50 dark:has-[.bulk-select-box:checked]:bg-gray-900 [&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8">
 
-                            <td class="w-10 py-4 pl-4 sm:pl-6 pr-2 align-middle">
-                                <input type="checkbox" class="bulk-select-box h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800"
+                            <td class="w-10 py-2.5 pl-4 align-middle">
+                                <input type="checkbox" class="bulk-select-box h-4 w-4"
                                        :value="(nodeId ? 'cluster:' + nodeId + ':' : '') + email" data-bulk-skip="" :checked="!!bulkSelected[(nodeId ? 'cluster:' + nodeId + ':' : '') + email]" @change="bulkToggle($event.target)" :aria-label="'Select ' + email">
                             </td>
 
                             <!-- Email -->
-                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" x-text="email"></td>
-                            <td x-show="hasServers" class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" x-text="server"></td>
+                            <td class="px-4 py-2.5 text-sm font-medium whitespace-nowrap text-gray-900 dark:text-gray-50" x-text="email"></td>
+                            <td x-show="hasServers" class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap" x-text="server"></td>
 
                             <!-- Quota + progress bar -->
-                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[180px]">
-                                <span x-text="quota"></span>
-                                <div class="h-2 w-32 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all duration-300"
-                                         :class="{
-                                             'bg-green-500':  pct < 75,
-                                             'bg-yellow-400': pct >= 75 && pct < 90,
-                                             'bg-red-500':    pct >= 90
-                                         }"
+                            <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[180px]">
+                                <span x-text="fmtQuota(quota)" :data-quota="quota"></span>
+                                <div role="meter" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="pct" :aria-label="'Quota used by ' + email" class="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                                    <div class="h-full rounded-full"
+                                         :class="pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-blue-500'"
                                          :style="'width:' + pct + '%'">
                                     </div>
                                 </div>
                             </td>
 
                             <!-- Webmail -->
-                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                            <td class="px-4 py-2.5 text-center text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                                 <a :href="openLink || '/emails/webmail/' + email" target="_blank"
-                                   :title="'Open webmail for ' + email"
-                                   class="inline-flex items-center text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 18h-7a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v7.5" /><path d="M3 6l9 6l9 -6" /><path d="M15 18h6" /><path d="M18 15l3 3l-3 3" /></svg>
+                                   :aria-label="'Open webmail for ' + email"
+                                   class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 -ml-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3C21.5523 3 22 3.44772 22 4V20.0066C22 20.5552 21.5447 21 21.0082 21H2.9918C2.44405 21 2 20.5551 2 20.0066V19H20V7.3L12 14.5L2 5.5V4C2 3.44772 2.44772 3 3 3H21ZM8 15V17H0V15H8ZM5 10V12H0V10H5ZM19.5659 5H4.43414L12 11.8093L19.5659 5Z"/></svg>
                                 </a>
                             </td>
 
                             <!-- Actions dropdown -->
-                            <td class="p-4 py-2 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap text-end">
+                            <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap text-end">
 {{if not .FromFile}}
-<button type="button" @click.stop="openMenu($event.currentTarget, email)" :aria-label="'Actions for ' + email"
-        class="relative inline-flex items-center justify-center whitespace-nowrap rounded border text-center text-sm font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-offset-2 outline-0 focus-visible:outline-2 outline-indigo-500 dark:outline-indigo-500 shadow-none border-transparent text-gray-900 dark:text-gray-50 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80 disabled:text-gray-400 disabled:dark:text-gray-600 group aspect-square p-1.5 hover:border hover:border-gray-300 data-[state=open]:border-gray-300 data-[state=open]:bg-gray-50 hover:dark:border-gray-700 data-[state=open]:dark:border-gray-700 data-[state=open]:dark:bg-gray-900 cursor-pointer">
-    <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 3">
-            <path d="M2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm6.041 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM14 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/>
-        </svg>
+<button type="button" @click.stop="openMenu($event.currentTarget, email)" :aria-label="'Actions for ' + email" aria-haspopup="menu" :aria-expanded="menuEmail === email"
+        class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8">
+    <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C10.9 3 10 3.9 10 5C10 6.1 10.9 7 12 7C13.1 7 14 6.1 14 5C14 3.9 13.1 3 12 3ZM12 17C10.9 17 10 17.9 10 19C10 20.1 10.9 21 12 21C13.1 21 14 20.1 14 19C14 17.9 13.1 17 12 17ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10Z"/></svg>
 </button>
 {{end}}
                             </td>
@@ -218,7 +207,7 @@
                     </template>
 
                     <tr x-show="emails.length === 0">
-                        <td colspan="5" class="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">
                             No email accounts yet.
                         </td>
                     </tr>
@@ -230,34 +219,13 @@
     </div>
 
     <!-- one actions menu for every row, opened by openMenu -->
-    <div x-show="menuEmail" x-ref="menu" x-cloak :style="menuPos" @click.outside="menuEmail = ''" @keydown.escape.window="menuEmail = ''" @scroll.window="menuEmail = ''" @resize.window="menuEmail = ''"
-         class="fixed z-50 rounded border p-1 shadow-xl shadow-black/[2.5%] bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 min-w-40 text-left cursor-pointer">
-        <ul class="py-2 text-sm text-gray-700 dark:text-gray-200">
-            <li class="flex">
-                <button @click="const e = menuEmail; menuEmail = ''; openPassword(e)"
-                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
-                    Change Password
-                </button>
-            </li>
-            <li class="flex">
-                <button @click="const e = menuEmail; menuEmail = ''; openQuota(e)"
-                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
-                    Set Quota
-                </button>
-            </li>
-            <li class="flex">
-                <button @click="const e = menuEmail; menuEmail = ''; openRestrict(e)"
-                        class="w-full group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 hover:bg-gray-100 hover:dark:bg-gray-900">
-                    Restrictions
-                </button>
-            </li>
-            <li class="flex">
-                <button @click="const e = menuEmail; menuEmail = ''; openDelete(e)"
-                        class="w-full text-left group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded py-1.5 pl-2 pr-1 transition-colors sm:text-sm text-red-600 hover:bg-gray-100 hover:dark:bg-gray-900">
-                    Delete Account
-                </button>
-            </li>
-        </ul>
+    <div x-show="menuEmail" x-ref="menu" x-cloak role="menu" aria-label="Account actions" :style="menuPos" @click.outside="menuEmail = ''" @keydown.escape.window="menuEmail = ''" @scroll.window="menuEmail = ''" @resize.window="menuEmail = ''"
+         class="fixed min-w-40 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
+        <button type="button" role="menuitem" @click="const e = menuEmail; menuEmail = ''; openPassword(e)" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50">Change password</button>
+        <button type="button" role="menuitem" @click="const e = menuEmail; menuEmail = ''; openQuota(e)" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50">Set quota</button>
+        <button type="button" role="menuitem" @click="const e = menuEmail; menuEmail = ''; openRestrict(e)" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50">Restrictions</button>
+        <div class="-mx-1 my-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+        <button type="button" role="menuitem" @click="const e = menuEmail; menuEmail = ''; openDelete(e)" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-red-600 dark:text-red-500">Delete account</button>
     </div>
 
 
@@ -265,38 +233,30 @@
          MODALS
     ════════════════════════════════════════════ -->
 
-    <!-- Backdrop -->
-    <template x-if="showPasswordModal || showQuotaModal || showRestrictModal || showDeleteModal">
-        <div class="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm"></div>
-    </template>
-
-
-    <!-- ── Change Password ── -->
-    <div x-show="showPasswordModal" x-cloak x-transition
-         class="fixed inset-0 z-40 flex items-center justify-center p-4">
-        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Change Password</h3>
-                <button @click="showPasswordModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+    <!-- ── Change password ── -->
+    <div x-show="showPasswordModal" x-cloak x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="showPasswordModal=false" @keydown.escape.window="showPasswordModal=false"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="emails-accounts-dialog-1-title" aria-describedby="emails-accounts-dialog-1-desc" x-trap.noscroll="showPasswordModal">
+        <div class="w-full max-w-lg rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">
+            <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4 dark:border-gray-900">
+                <div>
+                    <h3 id="emails-accounts-dialog-1-title" class="text-base font-semibold text-gray-900 dark:text-gray-50">Change password</h3>
+                    <p id="emails-accounts-dialog-1-desc" class="mt-1 text-sm text-gray-500 dark:text-gray-500">Set a new password for <span class="font-medium text-gray-900 dark:text-gray-50" x-text="activeEmail"></span>.</p>
+                </div>
+                <button type="button" aria-label="Close" @click="showPasswordModal=false" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 -mr-2 -mt-1"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"/></svg></button>
             </div>
-
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Set a new password for <span class="font-medium text-gray-700 dark:text-gray-300" x-text="activeEmail"></span>.
-            </p>
-
-            <input x-model="newPassword" type="password" placeholder="New password"
-                   class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3" />
-            <p x-show="passwordMsg" class="text-sm mb-3"
-               :class="passwordMsg.toLowerCase().includes('error') || passwordMsg.includes('fail') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
-               x-text="passwordMsg"></p>
-            <div class="flex justify-end gap-2">
-                <button @click="showPasswordModal=false"
-                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
-                <button @click="submitPassword()" :disabled="passwordLoading || !newPassword"
-                        class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition"
-                        x-text="passwordLoading ? 'Saving…' : 'Save'">
+            <div class="space-y-4 px-6 py-4">
+                <div>
+                    <label for="emails_change_password" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">New password</label>
+                    <input id="emails_change_password" x-model="newPassword" type="password" autocomplete="new-password" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2" />
+                </div>
+                <p x-show="passwordMsg" role="status" class="text-sm"
+                   :class="passwordMsg.toLowerCase().includes('error') || passwordMsg.includes('fail') ? 'text-red-600 dark:text-red-500' : 'text-emerald-600 dark:text-emerald-500'"
+                   x-text="passwordMsg"></p>
+            </div>
+            <div class="flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end dark:border-gray-900">
+                <button type="button" @click="showPasswordModal=false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                <button type="button" @click="submitPassword()" :disabled="passwordLoading || !newPassword" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">
+                    <span x-show="passwordLoading" class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span><span x-text="passwordLoading ? 'Saving…' : 'Save'"></span>
                 </button>
             </div>
         </div>
@@ -304,45 +264,35 @@
 
 
     <!-- ── Manage Quota ── -->
-    <div x-show="showQuotaModal" x-cloak x-transition
-         class="fixed inset-0 z-40 flex items-center justify-center p-4">
-        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Manage Quota</h3>
-                <button @click="showQuotaModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+    <div x-show="showQuotaModal" x-cloak x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="showQuotaModal=false" @keydown.escape.window="showQuotaModal=false"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="emails-accounts-dialog-2-title" aria-describedby="emails-accounts-dialog-2-desc" x-trap.noscroll="showQuotaModal">
+        <div class="w-full max-w-lg rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">
+            <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4 dark:border-gray-900">
+                <div>
+                    <h3 id="emails-accounts-dialog-2-title" class="text-base font-semibold text-gray-900 dark:text-gray-50">Manage quota</h3>
+                    <p id="emails-accounts-dialog-2-desc" class="mt-1 text-sm text-gray-500 dark:text-gray-500">Account <span class="font-medium text-gray-900 dark:text-gray-50" x-text="activeEmail"></span>.</p>
+                </div>
+                <button type="button" aria-label="Close" @click="showQuotaModal=false" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 -mr-2 -mt-1"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"/></svg></button>
             </div>
-
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Account: <span class="font-medium text-gray-700 dark:text-gray-300" x-text="activeEmail"></span>
-            </p>
-
-            <!-- Set / Remove toggle -->
-            <div class="flex gap-2 mb-4">
-                <button @click="quotaAction='set'"
-                        :class="quotaAction === 'set' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700'"
-                        class="flex-1 rounded border px-3 py-1.5 text-sm font-medium transition">Set quota</button>
-                <button @click="quotaAction='remove'"
-                        :class="quotaAction === 'remove' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700'"
-                        class="flex-1 rounded border px-3 py-1.5 text-sm font-medium transition">Remove quota</button>
+            <div class="space-y-4 px-6 py-4">
+                <div role="group" aria-label="Quota" class="inline-flex items-center gap-1 rounded-md bg-gray-100 p-1 dark:bg-gray-900">
+                    <button type="button" @click="quotaAction='set'" :aria-pressed="quotaAction === 'set'" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium text-gray-500 ring-1 ring-transparent ring-inset transition hover:text-gray-700 aria-selected:bg-white aria-selected:text-gray-900 aria-selected:shadow-sm aria-pressed:bg-white aria-pressed:text-gray-900 aria-pressed:shadow-sm dark:text-gray-400 dark:hover:text-gray-200 dark:aria-selected:bg-gray-950 dark:aria-selected:text-gray-50 dark:aria-pressed:bg-gray-950 dark:aria-pressed:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Set quota</button>
+                    <button type="button" @click="quotaAction='remove'" :aria-pressed="quotaAction === 'remove'" class="inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium text-gray-500 ring-1 ring-transparent ring-inset transition hover:text-gray-700 aria-selected:bg-white aria-selected:text-gray-900 aria-selected:shadow-sm aria-pressed:bg-white aria-pressed:text-gray-900 aria-pressed:shadow-sm dark:text-gray-400 dark:hover:text-gray-200 dark:aria-selected:bg-gray-950 dark:aria-selected:text-gray-50 dark:aria-pressed:bg-gray-950 dark:aria-pressed:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Remove quota</button>
+                </div>
+                <div x-show="quotaAction === 'set'">
+                    <label for="emails_quota_value" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Quota</label>
+                    <input id="emails_quota_value" x-model="quotaValue" type="text" aria-describedby="emails_quota_help" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2" />
+                    <p id="emails_quota_help" class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">A size with a unit, like 512M or 2G.</p>
+                </div>
+                <p x-show="quotaAction === 'remove'" class="text-sm text-gray-500 dark:text-gray-500">This removes any mailbox quota limit for this account.</p>
+                <p x-show="quotaMsg" role="status" class="text-sm"
+                   :class="quotaMsg.toLowerCase().includes('error') || quotaMsg.includes('fail') ? 'text-red-600 dark:text-red-500' : 'text-emerald-600 dark:text-emerald-500'"
+                   x-text="quotaMsg"></p>
             </div>
-
-            <input x-show="quotaAction === 'set'" x-model="quotaValue" type="text" placeholder="e.g. 512M or 2G"
-                   class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3" />
-            <p x-show="quotaAction === 'remove'" class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                This will remove any mailbox quota limit for this account.
-            </p>
-
-            <p x-show="quotaMsg" class="text-sm mb-3"
-               :class="quotaMsg.toLowerCase().includes('error') || quotaMsg.includes('fail') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
-               x-text="quotaMsg"></p>
-            <div class="flex justify-end gap-2">
-                <button @click="showQuotaModal=false"
-                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
-                <button @click="submitQuota()" :disabled="quotaLoading || (quotaAction==='set' && !quotaValue)"
-                        class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition"
-                        x-text="quotaLoading ? 'Applying…' : 'Apply'">
+            <div class="flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end dark:border-gray-900">
+                <button type="button" @click="showQuotaModal=false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                <button type="button" @click="submitQuota()" :disabled="quotaLoading || (quotaAction==='set' && !quotaValue)" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">
+                    <span x-show="quotaLoading" class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span><span x-text="quotaLoading ? 'Applying…' : 'Apply'"></span>
                 </button>
             </div>
         </div>
@@ -350,48 +300,41 @@
 
 
     <!-- ── Restrictions ── -->
-    <div x-show="showRestrictModal" x-cloak x-transition
-         class="fixed inset-0 z-40 flex items-center justify-center p-4">
-        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Email Restrictions</h3>
-                <button @click="showRestrictModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-            </div>
-
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Account: <span class="font-medium text-gray-700 dark:text-gray-300" x-text="activeEmail"></span>
-            </p>
-
-            <div class="grid grid-cols-2 gap-3 mb-4">
+    <div x-show="showRestrictModal" x-cloak x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="showRestrictModal=false" @keydown.escape.window="showRestrictModal=false"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="emails-accounts-dialog-3-title" aria-describedby="emails-accounts-dialog-3-desc" x-trap.noscroll="showRestrictModal">
+        <div class="w-full max-w-2xl rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">
+            <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4 dark:border-gray-900">
                 <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Action</label>
-                    <select x-model="restrictAction"
-                            class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="add">Add restriction</option>
-                        <option value="del">Remove restriction</option>
-                    </select>
+                    <h3 id="emails-accounts-dialog-3-title" class="text-base font-semibold text-gray-900 dark:text-gray-50">Email restrictions</h3>
+                    <p id="emails-accounts-dialog-3-desc" class="mt-1 text-sm text-gray-500 dark:text-gray-500">Account <span class="font-medium text-gray-900 dark:text-gray-50" x-text="activeEmail"></span>.</p>
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Restrict</label>
-                    <select x-model="restrictType"
-                            class="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="send">Sending</option>
-                        <option value="receive">Receiving</option>
-                    </select>
-                </div>
+                <button type="button" aria-label="Close" @click="showRestrictModal=false" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 -mr-2 -mt-1"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"/></svg></button>
             </div>
-
-            <p x-show="restrictMsg" class="text-sm mb-3"
-               :class="restrictMsg.toLowerCase().includes('error') || restrictMsg.includes('fail') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'"
-               x-text="restrictMsg"></p>
-            <div class="flex justify-end gap-2">
-                <button @click="showRestrictModal=false"
-                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
-                <button @click="submitRestrict()" :disabled="restrictLoading"
-                        class="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition"
-                        x-text="restrictLoading ? 'Applying…' : 'Apply'">
+            <div class="space-y-4 px-6 py-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="emails_restrict_action" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Action</label>
+                        <select id="emails_restrict_action" x-model="restrictAction" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full mt-2">
+                            <option value="add">Add restriction</option>
+                            <option value="del">Remove restriction</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="emails_restrict_type" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Restrict</label>
+                        <select id="emails_restrict_type" x-model="restrictType" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full mt-2">
+                            <option value="send">Sending</option>
+                            <option value="receive">Receiving</option>
+                        </select>
+                    </div>
+                </div>
+                <p x-show="restrictMsg" role="status" class="text-sm"
+                   :class="restrictMsg.toLowerCase().includes('error') || restrictMsg.includes('fail') ? 'text-red-600 dark:text-red-500' : 'text-emerald-600 dark:text-emerald-500'"
+                   x-text="restrictMsg"></p>
+            </div>
+            <div class="flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end dark:border-gray-900">
+                <button type="button" @click="showRestrictModal=false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                <button type="button" @click="submitRestrict()" :disabled="restrictLoading" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">
+                    <span x-show="restrictLoading" class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span><span x-text="restrictLoading ? 'Applying…' : 'Apply'"></span>
                 </button>
             </div>
         </div>
@@ -399,30 +342,34 @@
 
 
     <!-- ── Delete single ── -->
-    <div x-show="showDeleteModal" x-cloak x-transition
-         class="fixed inset-0 z-40 flex items-center justify-center p-4">
-        <div class="w-full sm:max-w-2xl  rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl p-6" @click.stop>
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-gray-50">Delete Account</h3>
-                <button @click="showDeleteModal=false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+    <div x-show="showDeleteModal" x-cloak x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="showDeleteModal=false" @keydown.escape.window="showDeleteModal=false"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="alertdialog" aria-modal="true" aria-labelledby="emails-accounts-dialog-4-title" aria-describedby="emails-accounts-dialog-4-desc" x-trap.noscroll="showDeleteModal">
+        <div class="w-full max-w-lg rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">
+            <div class="flex gap-4 px-6 pt-6">
+                <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8659 3.00017L22.3922 19.5002C22.6684 19.9785 22.5045 20.5901 22.0262 20.8662C21.8742 20.954 21.7017 21.0002 21.5262 21.0002H2.47363C1.92135 21.0002 1.47363 20.5525 1.47363 20.0002C1.47363 19.8246 1.51984 19.6522 1.60761 19.5002L11.1339 3.00017C11.41 2.52187 12.0216 2.358 12.4999 2.63414C12.6519 2.72191 12.7782 2.84815 12.8659 3.00017ZM4.20568 19.0002H19.7941L11.9999 5.50017L4.20568 19.0002ZM10.9999 16.0002H12.9999V18.0002H10.9999V16.0002ZM10.9999 9.00017H12.9999V14.0002H10.9999V9.00017Z"/></svg></span>
+                <div class="min-w-0">
+                    <h3 id="emails-accounts-dialog-4-title" class="text-base font-semibold text-gray-900 dark:text-gray-50">Delete <span x-text="activeEmail"></span>?</h3>
+                    <p id="emails-accounts-dialog-4-desc" class="mt-1 text-sm text-gray-500 dark:text-gray-500">This permanently deletes the account. You can't undo this.</p>
+                    <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-400">
+                        <li>All mail stored in the mailbox is lost</li>
+                        <li>The address stops receiving email</li>
+                    </ul>
+                </div>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                Permanently delete <span class="font-semibold text-gray-800 dark:text-gray-200" x-text="activeEmail"></span>?
-                All mail data will be lost and this cannot be undone.
-            </p>
-            <p x-show="deleteMsg" class="text-sm text-red-600 dark:text-red-400 mb-3" x-text="deleteMsg"></p>
-            <div class="flex justify-end gap-2">
-                <button @click="showDeleteModal=false"
-                        class="rounded border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">Cancel</button>
-                <button @click="submitDelete()" :disabled="deleteLoading"
-                        class="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 transition"
-                        x-text="deleteLoading ? 'Deleting…' : 'Delete'">
+            <div class="px-6 pt-4">
+                <label for="emails_delete_confirm" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Type <span class="font-mono" x-text="activeEmail"></span> to confirm</label>
+                <input id="emails_delete_confirm" x-model="deleteConfirm" type="text" autocomplete="off" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2" />
+                <p x-show="deleteMsg" role="alert" class="mt-3 text-sm text-red-600 dark:text-red-500" x-text="deleteMsg"></p>
+            </div>
+            <div class="mt-6 flex flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end dark:border-gray-900">
+                <button type="button" @click="showDeleteModal=false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                <button type="button" @click="submitDelete()" :disabled="deleteLoading || deleteConfirm !== activeEmail" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400">
+                    <span x-show="deleteLoading" class="inline-flex"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 animate-spin" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44078 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"/></svg></span><span x-text="deleteLoading ? 'Deleting…' : 'Delete account'"></span>
                 </button>
             </div>
         </div>
     </div>
+
 
 </div><!-- end x-data -->
 
@@ -469,6 +416,16 @@ function emailsApp() {
         sortBy: 'email',
         sortDir: 'asc',
 
+        // doveadm gives "( 5.0K / 2.0G ) [0%]", shown as "5 KB of 2 GB · 0%"
+        fmtQuota(q) {
+            const m = /\(\s*([\d.]+)\s*([KMGT]?)\s*\/\s*([\d.]+|~|-)?\s*([KMGT]?)\s*\)\s*\[?\s*([\d.]+)?\s*%?\s*\]?/i.exec(q || '');
+            if (!m) return q;
+            const size = (n, u) => (+n === 0 ? '0 B' : (+(+n).toFixed(2)) + ' ' + (u ? u.toUpperCase() + 'B' : 'B'));
+            const used = size(m[1], m[2]);
+            const limit = (!m[3] || m[3] === '~' || m[3] === '-' || +m[3] === 0) ? 'unlimited' : size(m[3], m[4]);
+            return used + ' of ' + limit + (m[5] !== undefined && limit !== 'unlimited' ? ' · ' + m[5] + '%' : '');
+        },
+
         get sortedEmails() {
             return [...this.emails].sort((a, b) => {
                 let valA, valB;
@@ -496,6 +453,7 @@ function emailsApp() {
             this.menuEmail = email;
             // flip above the button when it would run off the bottom of the window
             this.$nextTick(() => {
+                this.$refs.menu.querySelector('[role=menuitem]')?.focus();
                 const h = this.$refs.menu.offsetHeight;
                 if (r.bottom + 4 + h > window.innerHeight && r.top - 4 - h > 0) {
                     this.menuPos = 'top:' + (r.top - 4 - h) + 'px;' + right;
@@ -531,6 +489,7 @@ function emailsApp() {
 
         deleteLoading: false,
         deleteMsg: '',
+        deleteConfirm: '',
 
 
         quotaPct(quota) {
@@ -561,6 +520,7 @@ function emailsApp() {
         openDelete(email) {
             this.activeEmail = email;
             this.deleteMsg = '';
+            this.deleteConfirm = '';
             this.showDeleteModal = true;
         },
 
@@ -658,20 +618,14 @@ function emailsApp() {
 {{else if eq .MailserverStatus "not_installed"}}
 {{template "installer" (dict "ID" "mailserver-install" "Name" "the mailserver" "Text" "The mailserver hosts email accounts for your users' domains." "Action" "/emails/install" "Status" "/emails/install/status" "Open" "/emails/accounts" "OpenLabel" "Open Emails" "Installing" .Installing "CSRFToken" .CSRFToken "IsReseller" .IsReseller)}}
 {{else if eq .MailserverStatus "stopped"}}
-<!-- Intentional quirk preserved: the dark-mode media-query selector is
-     missing its leading "." so it never matches (`next-error-h1` instead of
-     `.next-error-h1`). -->
-<div style="
-        font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-        height: 90vh;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    "><div><style>.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}</style><h1 class="next-error-h1" style="display:inline-block;margin:0 20px 0 0;padding:0 23px 0 0;font-size:24px;font-weight:500;vertical-align:top;line-height:49px">Not Running</h1><div style="display:inline-block"><h2 style="font-size:14px;font-weight:400;line-height:49px;margin:0">The Mailserver is not currently running. Start it <a class="inline-flex items-center gap-1 text-indigo-600 hover:underline hover:underline-offset-4 dark:text-indigo-400" href="/services">from the Services page</a>.</h2></div></div></div>
+<div class="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
+    <span class="flex size-10 items-center justify-center rounded-md bg-white shadow-xs ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5 text-gray-400 dark:text-gray-500" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5 11H19V5H5V11ZM21 4V20C21 20.5523 20.5523 21 20 21H4C3.44772 21 3 20.5523 3 20V4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4ZM19 13H5V19H19V13ZM7 15H10V17H7V15ZM7 7H10V9H7V7Z"/></svg></span>
+    <h2 class="mt-4 text-sm font-semibold text-gray-900 dark:text-gray-50">Mail server isn't running</h2>
+    <p class="mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-500">The mail server is stopped. Start it from the Services page to manage mailboxes, forwarders and deliverability.</p>
+    <div class="mt-5"><a href="/services" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Open Services</a></div>
+</div>
 {{else}}
-Mailserver status not detected!
+<p class="px-4 py-6 text-sm text-gray-500 dark:text-gray-500 sm:px-6 lg:px-8">Mailserver status not detected.</p>
 {{end}}
 
     </main>

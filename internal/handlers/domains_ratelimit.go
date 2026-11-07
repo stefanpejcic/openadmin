@@ -240,7 +240,7 @@ func (h *DomainsRateLimit) ServeRateLimit(w http.ResponseWriter, r *http.Request
 		"CSRFToken":   csrf.Token(r),
 		"Flashes":     auth.PopFlashes(w, r, h.Sessions),
 		"BulkActions": RateLimitBulkActions(),
-	}, r, "Rate Limiting")
+	}, r, "Rate limiting")
 	webtemplates.Render(w, "domains_ratelimit.html", data)
 }
 

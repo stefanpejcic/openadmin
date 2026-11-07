@@ -1,22 +1,22 @@
 <!doctype html>
 <html lang="en" class="h-full" style="color-scheme: ">
 {{template "chrome_head" .}}
-<body class="bg-white-50 h-full antialiased dark:bg-gray-950">
+<body class="bg-white h-full antialiased dark:bg-gray-950">
 
 <div class="flex min-h-svh w-full">
     {{template "chrome_sidebar" .}}
     <div class="w-full overflow-hidden">
         {{template "chrome_topbar" .}}
 
-    <main id="no_margin_for_iframe" class="bg-white-50 antialiased dark:bg-gray-950 text-gray-800 dark:text-white min-h-[90vh]">
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div class="border-b border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950 sm:p-6 lg:p-8">
+<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <header>
-        <div class="flex flex-col gap-2 text-center sm:flex-row sm:items-center sm:justify-between sm:text-start">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div class="grow">
-                <h1 class="mb-1 text-xl font-bold">Swap</h1>
-                <h2 class="text-sm font-medium text-slate-500">View and manage the server's swap allocation.</h2>
+                <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Swap</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-500">View and manage the server's swap allocation.</p>
             </div>
         </div>
     </header>
@@ -29,8 +29,8 @@ function swapCSRFToken() {
 
 // swapAction fires an async resize/drop and polls /server/swap/action-status
 // until it completes, mirroring podmanImageAction in server_podman.html.
-function swapAction(action, body, loadingMessage, confirmMessage) {
-    if (confirmMessage && !confirm(confirmMessage)) return;
+async function swapAction(action, body, loadingMessage, confirmMessage) {
+    if (confirmMessage && !(await opConfirm(confirmMessage))) return;
 
     showToast(loadingMessage, 'loading', true);
 
@@ -81,7 +81,7 @@ function swapAction(action, body, loadingMessage, confirmMessage) {
 }
 
 function swapDrop() {
-    swapAction('drop', '', 'Clearing swap…');
+    swapAction('drop', '', 'Clearing swap…', 'Clear swap? Everything in swap moves back into RAM, which can briefly use a lot of memory and slow the server.');
 }
 
 function swapResize() {
@@ -97,52 +97,55 @@ function swapResize() {
 
 <div class="px-4 sm:px-6 lg:px-8 py-6 space-y-8">
 
-    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
         <div>
-            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Current usage</h2>
-            <p class="mt-1 text-sm leading-6 text-gray-500">Swap usage as reported by <code>free -m</code>.</p>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Current usage</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Swap usage as reported by <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">free -m</code>.</p>
         </div>
-        <div class="md:col-span-2">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div class="rounded border border-gray-200 dark:border-gray-800 p-4">
+        <div class="lg:col-span-2">
+            <div class="grid grid-cols-1 divide-y divide-gray-200 rounded-md border border-gray-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-gray-800 dark:border-gray-800">
+                <div class="p-4">
                     <p class="text-xs text-gray-500 dark:text-gray-500">Total</p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Swap.TotalMB}} MB</p>
+                    <p class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Swap.TotalGB}}</p>
                 </div>
-                <div class="rounded border border-gray-200 dark:border-gray-800 p-4">
+                <div class="p-4">
                     <p class="text-xs text-gray-500 dark:text-gray-500">Used</p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Swap.UsedMB}} MB ({{.Swap.UsedPercent}}%)</p>
+                    <p class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Swap.UsedGB}} ({{.Swap.UsedPercent}}%)</p>
+                    <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800" role="progressbar" aria-label="Swap used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{.Swap.UsedPercent}}">
+                        <div class="h-full rounded-full {{if ge .Swap.UsedPercent 90}}bg-red-500{{else if ge .Swap.UsedPercent 70}}bg-yellow-500{{else}}bg-blue-500{{end}}" style="width: {{.Swap.UsedPercent}}%"></div>
+                    </div>
                 </div>
-                <div class="rounded border border-gray-200 dark:border-gray-800 p-4">
+                <div class="p-4">
                     <p class="text-xs text-gray-500 dark:text-gray-500">Free</p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Swap.FreeMB}} MB</p>
+                    <p class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Swap.FreeGB}}</p>
                 </div>
             </div>
-            {{if gt .Swap.UsedPercent 90}}<p class="mt-3 text-sm text-amber-600 dark:text-amber-500">Swap is {{.Swap.UsedPercent}}% used, so the server is short on memory and slows down while it swaps. Recommended: add RAM, find and lower what's using it on <a href="/server/processes" class="font-medium underline hover:no-underline">Processes</a>, or increase swap below.</p>{{end}}
+            {{if gt .Swap.UsedPercent 90}}<div class="mt-3 flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg><p>Swap is {{.Swap.UsedPercent}}% used, so the server is short on memory and slows down while it swaps. Recommended: add RAM, find and lower what's using it on <a href="/server/processes" class="font-medium underline hover:no-underline">Processes</a>, or increase swap below.</p></div>{{end}}
 
             <div class="mt-4 relative overflow-x-auto">
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead>
-                        <tr class="[&_td:last-child]:pr-4 [&_th:last-child]:pr-4 [&_td:first-child]:pl-4 [&_th:first-child]:pl-4 border-y border-gray-200 dark:border-gray-800">
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Device</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Type</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Size</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Used</th>
-                            <th class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-1 text-sm sm:text-xs text-left">Priority</th>
+                        <tr class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 border-y border-gray-200 dark:border-gray-800">
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Device</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Type</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Size</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Used</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Priority</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                         {{if .Swap.Devices}}
                         {{range .Swap.Devices}}
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-900">
-                            <td class="p-4 text-sm text-gray-900 dark:text-gray-50">{{.Name}}</td>
-                            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{.Type}}</td>
-                            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{.SizeMB}} MB</td>
-                            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{.UsedMB}} MB</td>
-                            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{.Priority}}</td>
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 font-medium text-gray-900 dark:text-gray-50">{{.Name}}</td>
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.Type}}</td>
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.SizeGB}}</td>
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.UsedGB}}</td>
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.Priority}}</td>
                         </tr>
                         {{end}}
                         {{else}}
-                        <tr><td colspan="5" class="p-4 text-sm text-gray-400">No swap devices are currently active.</td></tr>
+                        <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">No swap devices are currently active.</td></tr>
                         {{end}}
                     </tbody>
                 </table>
@@ -152,32 +155,32 @@ function swapResize() {
 
     <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
-    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
         <div>
-            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Change allocation</h2>
-            <p class="mt-1 text-sm leading-6 text-gray-500">Recreates the swap file at <code>{{.SwapFilePath}}</code> with the new size and re-enables it. {{if .Swap.ManagedFileExists}}A managed swap file already exists.{{else}}No managed swap file exists yet -- this will create one.{{end}}</p>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Change allocation</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Recreates the swap file at <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">{{.SwapFilePath}}</code> with the new size and re-enables it. {{if .Swap.ManagedFileExists}}A managed swap file already exists.{{else}}No managed swap file exists yet -- this will create one.{{end}}</p>
         </div>
-        <div class="md:col-span-2" x-data="{ v: '{{.TotalGB}}' }">
+        <div class="lg:col-span-2" x-data="{ v: '{{.TotalGB}}' }">
             <div class="flex flex-wrap items-end gap-3">
                 <div>
-                    <label for="swap_size_gb" class="block text-sm font-medium text-gray-900 dark:text-gray-50 mb-1">Swap size (GB)</label>
-                    <input id="swap_size_gb" type="number" min="0.125" step="0.125" value="{{.TotalGB}}" @input="v = $event.target.value" autocomplete="off" class="relative block w-40 appearance-none rounded border px-2.5 py-1.5 outline-none transition sm:text-sm border-transparent dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-gray-100 dark:bg-gray-950">
+                    <label for="swap_size_gb" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Swap size <span class="font-normal text-gray-500">(GB)</span></label>
+                    <input id="swap_size_gb" type="number" min="0.125" step="0.125" value="{{.TotalGB}}" @input="v = $event.target.value" autocomplete="off" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 appearance-none px-2.5 py-2 text-sm w-40 mt-2">
                 </div>
-                <button type="button" onclick="swapResize()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-transparent text-white dark:text-white bg-blue-500 dark:bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-600 cursor-pointer">Apply</button>
+                <button type="button" onclick="swapResize()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-blue-500 text-white shadow-xs hover:bg-blue-600 disabled:bg-blue-300 dark:disabled:bg-blue-800 dark:disabled:text-blue-400">Apply</button>
             </div>
-            {{if .RecommendedGB}}<p x-show="{{if eq .Swap.TotalMB 0}}true{{else}}Number(v) < {{.RecommendedGB}}{{end}}" x-cloak class="mt-2 text-sm text-amber-600 dark:text-amber-500">{{if eq .Swap.TotalMB 0}}No swap is set up. {{end}}Recommended: at least {{.RecommendedGB}} GB of swap for this server's RAM, so it has room to swap instead of killing processes when memory runs out.</p>{{end}}
+            {{if .RecommendedGB}}<div x-show="{{if eq .Swap.TotalMB 0}}true{{else}}Number(v) < {{.RecommendedGB}}{{end}}" x-cloak class="mt-3 flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg><p>{{if eq .Swap.TotalMB 0}}No swap is set up. {{end}}Recommended: at least {{.RecommendedGB}} GB of swap for this server's RAM, so it has room to swap instead of killing processes when memory runs out.</p></div>{{end}}
         </div>
     </div>
 
     <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
-    <div class="grid grid-cols-1 gap-x-14 gap-y-8 md:grid-cols-3">
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
         <div>
-            <h2 class="scroll-mt-10 font-semibold text-gray-900 dark:text-gray-50">Drop swap</h2>
-            <p class="mt-1 text-sm leading-6 text-gray-500">Runs <code>swapoff -a; swapon -a</code>.</p>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Drop Swap</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Moves swapped memory back into RAM, then turns swap on again. Needs enough free RAM.</p>
         </div>
-        <div class="md:col-span-2">
-            <button type="button" onclick="swapDrop()" class="relative inline-flex items-center justify-center whitespace-nowrap rounded border px-3 py-2 text-center text-sm font-medium shadow-sm border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">Drop Swap</button>
+        <div class="lg:col-span-2">
+            <button type="button" onclick="swapDrop()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Drop Swap</button>
         </div>
     </div>
 

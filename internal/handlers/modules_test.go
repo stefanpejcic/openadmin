@@ -180,9 +180,9 @@ func TestServeModulesGetRendersHTML(t *testing.T) {
 	for _, want := range []string{
 		"Modules",
 		"DNS",
-		"Docker (Containers)",
+		"Docker (containers)",
 		"Backups",
-		"Save Changes",
+		"Save changes",
 		"</html>",
 	} {
 		if !strings.Contains(got, want) {

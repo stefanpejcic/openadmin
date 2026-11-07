@@ -83,7 +83,7 @@ func (d *DomainTemplates) ServeDomainTemplates(w http.ResponseWriter, r *http.Re
 		"Reasons":          listSuspensionTemplates(),
 		"CSRFToken":        csrf.Token(r),
 		"Flashes":          auth.PopFlashes(w, r, d.Sessions),
-	}, r, "Domain Templates"))
+	}, r, "Domain templates"))
 }
 
 // ServeVhostTemplates handles GET/POST /domains/vhost-templates: webserver, varnish and caddy templates for new domains.

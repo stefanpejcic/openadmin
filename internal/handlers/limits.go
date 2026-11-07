@@ -198,5 +198,5 @@ func (l *Limits) ServeLimits(w http.ResponseWriter, r *http.Request) {
 		"Groups":    adviseLimits(buildLimitsView(groups), groups, limitsHostRun(l.MySQL)),
 		"CSRFToken": csrf.Token(r),
 		"Flashes":   auth.PopFlashes(w, r, l.Sessions),
-	}, r, "Service Limits"))
+	}, r, "Service limits"))
 }

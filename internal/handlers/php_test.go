@@ -130,7 +130,7 @@ func TestServePHPGetRendersAllVersions(t *testing.T) {
 	if !strings.Contains(got, "PHP 5.6 INI") {
 		t.Fatalf("expected version label, got %s", truncate(got))
 	}
-	for _, want := range []string{"PHP Settings", "Available Options", "</html>"} {
+	for _, want := range []string{"PHP Settings", "Available options", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected body to contain %q, got %s", want, truncate(got))
 		}

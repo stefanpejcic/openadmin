@@ -100,7 +100,7 @@ func TestServeMigrateGetShowsForm(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	got := string(body)
-	for _, want := range []string{`name="host"`, "Server Migration", "</html>"} {
+	for _, want := range []string{`name="host"`, "Server migration", "</html>"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("expected page to contain %q (page may have been truncated by a template execution error), got %s", want, truncate(got))
 		}

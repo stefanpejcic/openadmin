@@ -195,7 +195,7 @@ func apiLoadAllowedServiceNames() map[string]bool {
 // apiManageServiceGenericRun runs `service <name> <action>` for anything
 // not in the docker-backed set below. Injectable so tests never shell out.
 var apiManageServiceGenericRun = func(name, action string) (stdout, stderr string, err error) {
-	cmd := exec.Command("service", name, action)
+	cmd := exec.Command("service", resolveUnitAlias(name, systemdUnitExists), action)
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf

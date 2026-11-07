@@ -55,11 +55,13 @@ func currentBootID() string {
 // ServeReboot handles GET/POST /server/reboot.
 func (rb *Reboot) ServeReboot(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(RebootDisableFlagPath); err == nil {
-		http.Error(w, "Server Reboot access is disabled.", http.StatusForbidden)
+		http.Error(w, "Server reboot access is disabled.", http.StatusForbidden)
 		return
 	}
 
 	rebootStarted := false
+	fieldError, pageError := "", ""
+	status := http.StatusOK
 	if r.Method == http.MethodPost {
 		r.ParseForm()
 
@@ -69,20 +71,27 @@ func (rb *Reboot) ServeReboot(w http.ResponseWriter, r *http.Request) {
 			err = rebootGracefulRun()
 		case "hard":
 			err = rebootHardRun()
+		default:
+			fieldError = "Pick graceful or hard reboot."
+			status = http.StatusBadRequest
 		}
 		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
+			pageError = "The reboot didn't start: " + err.Error() + ". Check the server's logs, or reboot it from the terminal."
+			status = http.StatusInternalServerError
 		}
-		rebootStarted = true
+		rebootStarted = fieldError == "" && pageError == ""
 	}
 
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
 	webtemplates.Render(w, "settings_reboot.html", mergeChrome(map[string]interface{}{
 		"RebootStarted": rebootStarted,
+		"FieldError":    fieldError,
+		"Error":         pageError,
 		"BootID":        currentBootID(),
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, rb.Sessions),
-	}, r, "Server Reboot"))
+	}, r, "Server reboot"))
 }
 
 // ServeRebootStatus handles GET /server/reboot/status.

@@ -25,11 +25,11 @@ $(document).ready(function() {
                 if (response.status === 'success') {
                     window.location.href = '/import/' + backupType;
                 } else {
-                    alert(response.message);
+                    showToast(response.message, 'error');
                 }
             },
             error: function(xhr, status, error) {
-                alert('An error occurred: ' + error);
+                showToast('An error occurred: ' + error, 'error');
             }
         });
     });
@@ -93,13 +93,13 @@ document.getElementById("CreateUserButton").addEventListener("click", function()
     // Native checkValidity() won't catch this: the plan radio input isn't
     // rendered at all when there are no plans, so the field is simply absent.
     if (!form.querySelector('input[name="plan_name"]:checked')) {
-        alert("Please select a plan before creating the user. If none are listed, create a plan first.");
+        showToast("Select a plan before creating the user. If none are listed, create a plan first.", 'error');
         return;
     }
 
     var createUserButton = document.getElementById("CreateUserButton");
     createUserButton.disabled = true;
-    createUserButton.innerHTML = '<span class="animate-spin spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>&nbsp; Creating user...';
+    createUserButton.innerHTML = '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="remixicon size-4 shrink-0 animate-spin"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".25" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg> Creating user…';
 
     submitForm(form, false); // Initial form submission without debugging
 
@@ -120,7 +120,7 @@ newLink.innerHTML = `
   <a
     href="/login/token/${encodeURIComponent(username)}"
     target="_blank"
-    class="ml-2 relative inline-flex items-center justify-center rounded-md border p-2 text-center text-sm font-medium shadow-sm transition-all duration-100 ease-in-out cursor-pointer outline outline-offset-2 outline-0 focus-visible:outline-2 outline-blue-500 dark:outline-blue-500 dark:border-gray-800 dark:text-gray-50 dark:bg-gray-950 dark:hover:bg-gray-900/60 disabled:text-gray-400 disabled:dark:text-gray-600 sm:w-fit border-black bg-black text-white hover:bg-gray-800 sm:mt-0"
+    class="ml-2 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"
     x-data="{ spinning: false }"
     @click="spinning = true; setTimeout(() => spinning = false, 3000)"
   >
@@ -133,16 +133,17 @@ newLink.innerHTML = `
       viewBox="0 0 213.000000 215.000000"
       preserveAspectRatio="xMidYMid meet"
       :class="{'animate-spin': spinning}"
-      class=""
+      class="shrink-0"
+      aria-hidden="true"
     >
       <g transform="translate(0.000000,215.000000) scale(0.100000,-0.100000)" fill="currentColor" stroke="none">
         <path d="M990 2071 c-39 -13 -141 -66 -248 -129 -53 -32 -176 -103 -272 -158 -206 -117 -276 -177 -306 -264 -17 -50 -19 -88 -19 -460 0 -476 0 -474 94 -568 55 -56 124 -98 604 -369 169 -95 256 -104 384 -37 104 54 532 303 608 353 76 50 126 113 147 184 8 30 12 160 12 447 0 395 -1 406 -22 461 -34 85 -98 138 -317 264 -104 59 -237 136 -295 170 -153 90 -194 107 -275 111 -38 2 -81 0 -95 -5z m205 -561 c66 -38 166 -95 223 -127 l102 -58 0 -262 c0 -262 0 -263 -22 -276 -13 -8 -52 -31 -88 -51 -36 -21 -126 -72 -200 -115 l-135 -78 -3 261 -3 261 -166 95 c-91 52 -190 109 -219 125 -30 17 -52 34 -51 39 3 9 424 256 437 255 3 0 59 -31 125 -69z"></path>
       </g>
     </svg>
-    <span class="ml-2">Impersonate user</span>
+    <span>Impersonate user</span>
   </a>
-  <span class="mx-2">or</span>
-  <a href="/user/new">Create Another</a>
+  <span class="mx-2 text-sm text-gray-500 dark:text-gray-500">or</span>
+  <a href="/user/new" class="text-sm text-blue-500 hover:underline hover:underline-offset-4">Create another</a>
 `;
 
 
@@ -165,7 +166,7 @@ newLink.innerHTML = `
 
 
 
-document.getElementById('title').textContent = `Creating user..`;
+document.getElementById('title').textContent = `Creating user…`;
 document.getElementById('subtitle').textContent = `Creating user: '${username}', please wait for the process to finish.`;
 
 
@@ -199,7 +200,7 @@ document.getElementById('subtitle').textContent = `Creating user: '${username}',
                             if (text.includes("Successfully added user")) {
                                 showToast(`Success, user ${username} was created successfully.`, 'success');
 
-document.getElementById('title').textContent = `User created successfully!`;
+document.getElementById('title').textContent = `User created successfully`;
 document.getElementById('subtitle').textContent = `Username: ${username} Password: ${password}`;
 helpBtn.parentElement.appendChild(newLink);
 
@@ -207,7 +208,7 @@ helpBtn.parentElement.appendChild(newLink);
                                 showToast("Error, please check the log below the form.", 'error');
                                 createUserForm.classList.remove("hidden");
 
-document.getElementById('title').textContent = `Error creating user!`;
+document.getElementById('title').textContent = `Couldn't create user`;
 document.getElementById('subtitle').textContent = `Error creating user: '${username}', please check the log below the form.`;
 
                             }
@@ -221,7 +222,7 @@ document.getElementById('subtitle').textContent = `Error creating user: '${usern
             return new Response(stream).text();
         }).then(text => {
             createUserButton.disabled = false;
-            createUserButton.innerHTML = 'Create User';
+            createUserButton.innerHTML = 'Create user';
 
             const response = JSON.parse(text);
 
@@ -232,14 +233,14 @@ document.getElementById('subtitle').textContent = `Error creating user: '${usern
             if (response.message && response.message.includes("consider purchasing the Enterprise version")) {
                 const updatedMessage = response.message.replace(
                     "consider purchasing the Enterprise version",
-                    '<a href="https://my.openpanel.com/index.php?rp=/store/openpanel/enterprise-license" target="_blank" rel="noopener">consider purchasing the Enterprise version</a>'
+                    '<a href="https://my.openpanel.com/index.php?rp=/store/openpanel/enterprise-license" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-blue-500 hover:underline hover:underline-offset-4">consider purchasing the Enterprise version<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-3.5 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>'
                 );
                 statusMessageDiv.innerHTML = updatedMessage;
                 createUserForm.classList.remove("hidden");
             } else if (response.message && !response.message.includes("Successfully added user")) {
                 const toastMessage = `Error, please check the log below the form.`;
                 showToast(toastMessage, 'error');
-document.getElementById('title').textContent = `Error creating user!`;
+document.getElementById('title').textContent = `Couldn't create user`;
 document.getElementById('subtitle').textContent = `Error creating user: '${username}', please check the log below the form.`;
 
 
@@ -247,7 +248,7 @@ document.getElementById('subtitle').textContent = `Error creating user: '${usern
             } else if (response.message && response.message.includes("Successfully added user")) {
                 showToast(`Success, user ${username} was created successfully.`, 'success');
 
-document.getElementById('title').textContent = `User created successfully!`;
+document.getElementById('title').textContent = `User created successfully`;
 document.getElementById('subtitle').textContent = `Username: ${username} \nPassword: ${password}`;
 helpBtn.parentElement.appendChild(newLink);
 
@@ -256,7 +257,7 @@ helpBtn.parentElement.appendChild(newLink);
             }
         }).catch(error => {
             createUserButton.disabled = false;
-            createUserButton.innerHTML = 'Create User';
+            createUserButton.innerHTML = 'Create user';
             document.getElementById("scrollinglogAreaDiv").classList.remove("active");
             //const toastMessage = `Error occurred, please try again later.`;
             //showToast(toastMessage, 'error');

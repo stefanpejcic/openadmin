@@ -288,7 +288,7 @@ func TestServeWAFStatusOverviewShowsProfilesAndHistory(t *testing.T) {
 	srv, client := newWAFTestServer(t, wf)
 
 	_, body := wafGetBody(t, client, srv.URL+"/security/waf")
-	for _, want := range []string{"Installed version: <code class=\"text-xs\">abc123</code>", "WordPress", "Re-download", "Download", "example.com", "Check for updates", "</html>"} {
+	for _, want := range []string{"Installed version: <code class=\"rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50\">abc123</code>", "WordPress", "Re-download", "Download", "example.com", "Check for updates", "</html>"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected overview to contain %q, got %s", want, truncate(body))
 		}
@@ -379,7 +379,7 @@ func TestServeWAFDomainsAndLogsSort(t *testing.T) {
 
 	_, page := wafGetBody(t, client, srv.URL+"/security/waf/domains?sort=domain&direction=desc")
 	// both test domains have no level line, so standard: 2 of 3 dots filled each
-	if n := strings.Count(page, "size-1.5 rounded-full bg-indigo-600"); n != 4 {
+	if n := strings.Count(page, "h-3.5 w-1 rounded-sm bg-blue-500"); n != 4 {
 		t.Fatalf("expected 4 filled level dots, got %d", n)
 	}
 	if strings.Index(page, ">shop.example.org<") > strings.Index(page, ">example.com<") {

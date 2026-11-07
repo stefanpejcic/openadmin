@@ -176,7 +176,8 @@ func loadLocaleRows() ([]localeRow, string, error) {
 		baseName := localeBase(item.Name)
 		localPath := filepath.Join(TranslationsDir, baseName)
 		info, statErr := os.Stat(localPath)
-		existsLocally := statErr == nil && info.IsDir()
+		// English ships with OpenPanel and has no translations folder, it's always there
+		existsLocally := (statErr == nil && info.IsDir()) || baseName == "en"
 
 		provider := "Community"
 		if baseName == "en" {
@@ -184,7 +185,7 @@ func loadLocaleRows() ([]localeRow, string, error) {
 		}
 		path := ""
 		updateAvailable := false
-		if existsLocally {
+		if existsLocally && baseName != "en" {
 			path = localPath
 			updateAvailable = item.Sha != "" && gitBlobSha(localePoPath(item.Name)) != item.Sha
 		}
@@ -262,7 +263,7 @@ func setDefaultLocale(locale string) localeActionResult {
 	}
 	baseLocale := localeBase(locale)
 	info, statErr := os.Stat(filepath.Join(TranslationsDir, baseLocale))
-	if statErr != nil || !info.IsDir() {
+	if baseLocale != "en" && (statErr != nil || !info.IsDir()) {
 		return localeFail(http.StatusBadRequest, fmt.Sprintf("Locale '%s' is not installed.", locale))
 	}
 
