@@ -415,12 +415,10 @@ func (u *Users) ServeManageContainer(w http.ResponseWriter, r *http.Request) {
 
 	default: // start, stop
 		actionType := "deactivate"
-		pull := false
 		if action == "start" {
 			actionType = "activate"
-			pull = r.PostFormValue("pull") == "true"
 		}
-		result := startOrStopContainer(context, containerName, actionType, pull)
+		result := startOrStopContainer(context, containerName, actionType, false)
 		category := "error"
 		if result.Success {
 			category = "success"
