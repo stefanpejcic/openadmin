@@ -1072,7 +1072,16 @@ func (m *Manager) createFormPicker(page []byte, path, activeID string, u *admind
 // newUserForm is where an account gets created, picking a server opens the form of that server since plans and options are per server
 const newUserForm = `<form id="userForm"`
 
+// accountFields is the Account section's field grid, the picker goes first in it so it sits under the Account heading
+const accountFields = `id="user-account-fields"`
+
 func (m *Manager) serverPicker(page []byte, activeID string, u *admindb.User) []byte {
+	if at := bytes.Index(page, []byte(accountFields)); at >= 0 {
+		if end := bytes.IndexByte(page[at:], '>'); end >= 0 {
+			return insertPicker(page, at+end+1, "col-span-full", m, "/user/new", activeID, u)
+		}
+	}
+	// older nodes don't have the grid id yet
 	at := bytes.Index(page, []byte(newUserForm))
 	if at < 0 {
 		return page
@@ -1085,6 +1094,10 @@ func (m *Manager) serverPicker(page []byte, activeID string, u *admindb.User) []
 }
 
 func insertServerPicker(page []byte, at int, m *Manager, path, activeID string, u *admindb.User) []byte {
+	return insertPicker(page, at, "mb-4", m, path, activeID, u)
+}
+
+func insertPicker(page []byte, at int, wrapClass string, m *Manager, path, activeID string, u *admindb.User) []byte {
 	option := func(id, name string, online bool) string {
 		attrs := ""
 		if id == activeID {
@@ -1096,7 +1109,7 @@ func insertServerPicker(page []byte, at int, m *Manager, path, activeID string, 
 		return `<option value="` + html.EscapeString(m.openLink(u.ID, id, path)) + `"` + attrs + `>` + html.EscapeString(name) + `</option>`
 	}
 	var b strings.Builder
-	b.WriteString(`<div class="mb-4"><label class="flex items-center h-5 text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="cluster_server">Server</label><div class="relative w-full mt-2">`)
+	b.WriteString(`<div class="` + wrapClass + `"><label class="flex items-center h-5 text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="cluster_server">Server</label><div class="relative w-full mt-2">`)
 	b.WriteString(`<select id="cluster_server" onchange="window.location.href=this.value" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950">`)
 	b.WriteString(option(LocalNode, m.displayName(), true))
 	for _, n := range m.LiveNodes() {
