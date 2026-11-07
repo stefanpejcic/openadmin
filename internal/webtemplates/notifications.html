@@ -48,9 +48,9 @@ document.addEventListener('click', function (e) {
 <section aria-label="Notifications">
 <form id="notifications-filter" method="GET" action="/notifications">{{if ne .PerPage 100}}<input type="hidden" name="per_page" value="{{.PerPage}}">{{end}}</form>
 
-            <div class="flex px-4 sm:px-6 lg:px-8 py-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
-            <div class="mt-2 gap-2 sm:mt-0 sm:flex">
-                <div class="relative w-full sm:w-64">
+            <div class="flex flex-col gap-2 px-4 py-3 sm:px-6 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-6 lg:px-8">
+            <div class="flex flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+                <div class="relative w-full md:w-64">
                     <input
                         id="tour-notifications-search"
                         form="notifications-filter" name="q" value="{{.Query}}"
@@ -68,26 +68,30 @@ document.addEventListener('click', function (e) {
                     </div>
                 </div>
 
-                <div id="tour-notifications-filters" class="mt-2 flex flex-wrap gap-2 sm:mt-0">
-                    <select form="notifications-filter" name="status" onchange="this.form.submit()" aria-label="Filter by status" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark]">
+                <div id="tour-notifications-filters" class="grid {{if .Categories}}grid-cols-3{{else}}grid-cols-2{{end}} gap-2 md:flex">
+                    <select form="notifications-filter" name="status" onchange="this.form.submit()" aria-label="Filter by status" class="block w-full min-w-0 truncate whitespace-nowrap md:w-auto rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark]">
                         <option value="all"{{if eq $.Status "all"}} selected{{end}}>All ({{.Counts.All}})</option>
                         <option value="unread"{{if eq $.Status "unread"}} selected{{end}}>Unread ({{.Counts.Unread}})</option>
                         <option value="resolved"{{if eq $.Status "resolved"}} selected{{end}}>Resolved ({{.Counts.Resolved}})</option>
                     </select>
-                    <select form="notifications-filter" name="severity" onchange="this.form.submit()" aria-label="Filter by severity" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark]">
+                    <select form="notifications-filter" name="severity" onchange="this.form.submit()" aria-label="Filter by severity" class="block w-full min-w-0 truncate whitespace-nowrap md:w-auto rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark]">
                         <option value="all"{{if eq $.Severity "all"}} selected{{end}}>All severities</option>
                         <option value="critical"{{if eq $.Severity "critical"}} selected{{end}}>Critical ({{.Counts.Critical}})</option>
                         <option value="warning"{{if eq $.Severity "warning"}} selected{{end}}>Warning ({{.Counts.Warning}})</option>
                         <option value="info"{{if eq $.Severity "info"}} selected{{end}}>Info ({{.Counts.Info}})</option>
                     </select>
                     {{if .Categories}}
-                    <select form="notifications-filter" name="category" onchange="this.form.submit()" aria-label="Filter by category" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark]">
+                    <select form="notifications-filter" name="category" onchange="this.form.submit()" aria-label="Filter by category" class="block w-full min-w-0 truncate whitespace-nowrap md:w-auto rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark]">
                         <option value="all">All categories</option>
                         {{range .Categories}}<option value="{{.}}"{{if eq $.Category .}} selected{{end}}>{{if eq . "dns"}}DNS{{else}}{{titleWords .}}{{end}}</option>{{end}}
                     </select>
                     {{end}}
                 </div>
 
+
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 lg:justify-end">
                 {{if .NotificationsPaused}}
                 <form method="POST" action="/notifications/resume" class="flex items-center">
                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -96,7 +100,7 @@ document.addEventListener('click', function (e) {
                 {{else}}
                 <form method="POST" action="/notifications/pause" x-data="{ open: false }" class="flex items-center">
                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                    <button type="button" x-show="!open" @click="open = true; $nextTick(() => $refs.pauseFor.focus())" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M18.5859 20H4.00016C3.72401 20 3.50016 19.7762 3.50016 19.5C3.50016 19.3918 3.53525 19.2866 3.60016 19.2L4.00016 18.6667V10C4.00016 8.67022 4.32462 7.41619 4.8987 6.31279L1.39355 2.80765L2.80777 1.39343L22.6068 21.1924L21.1925 22.6066L18.5859 20ZM6.40776 7.82185C6.14458 8.49707 6.00016 9.23169 6.00016 10V18H16.5859L6.40776 7.82185ZM20.0002 15.7858L18.0002 13.7858V10C18.0002 6.68633 15.3139 4.00003 12.0002 4.00003C10.9117 4.00003 9.89096 4.28986 9.01087 4.79655L7.55919 3.34486C8.8297 2.49537 10.3571 2.00003 12.0002 2.00003C16.4184 2.00003 20.0002 5.58176 20.0002 10V15.7858ZM9.50016 21H14.5002C14.5002 22.3807 13.3809 23.5 12.0002 23.5C10.6194 23.5 9.50016 22.3807 9.50016 21Z"/></svg><span>Pause notifications</span></button>
+                    <button type="button" x-show="!open" @click="open = true; $nextTick(() => $refs.pauseFor.focus())" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M18.5859 20H4.00016C3.72401 20 3.50016 19.7762 3.50016 19.5C3.50016 19.3918 3.53525 19.2866 3.60016 19.2L4.00016 18.6667V10C4.00016 8.67022 4.32462 7.41619 4.8987 6.31279L1.39355 2.80765L2.80777 1.39343L22.6068 21.1924L21.1925 22.6066L18.5859 20ZM6.40776 7.82185C6.14458 8.49707 6.00016 9.23169 6.00016 10V18H16.5859L6.40776 7.82185ZM20.0002 15.7858L18.0002 13.7858V10C18.0002 6.68633 15.3139 4.00003 12.0002 4.00003C10.9117 4.00003 9.89096 4.28986 9.01087 4.79655L7.55919 3.34486C8.8297 2.49537 10.3571 2.00003 12.0002 2.00003C16.4184 2.00003 20.0002 5.58176 20.0002 10V15.7858ZM9.50016 21H14.5002C14.5002 22.3807 13.3809 23.5 12.0002 23.5C10.6194 23.5 9.50016 22.3807 9.50016 21Z"/></svg><span>Pause<span class="max-sm:hidden"> notifications</span></span></button>
                     <div x-show="open" x-cloak class="flex items-center gap-2">
                         <select name="duration" x-ref="pauseFor" aria-label="Pause for" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] truncate">
                             <option value="10m">10 minutes</option>
@@ -109,10 +113,7 @@ document.addEventListener('click', function (e) {
                     </div>
                 </form>
                 {{end}}
-
-            </div>
-
-            <div id="tour-bulk-actions" class="flex gap-1">
+            <div id="tour-bulk-actions" class="flex gap-2">
                 <form method="POST" action="/notifications/mark_as_read/9999">
                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
                     <input type="hidden" name="command" value="mark_all_as_read">
@@ -134,6 +135,7 @@ document.addEventListener('click', function (e) {
                 </form>
             </div>
             </div>
+            </div>
 
 
 
@@ -141,32 +143,33 @@ document.addEventListener('click', function (e) {
 		<div id="tour-notifications-table" class="relative overflow-y-auto">
 			<div class="border-t border-gray-200 dark:border-gray-800">
 				{{template "bulk_open" (dict "Table" "#notifications_table" "Endpoint" "/notifications/bulk")}}
-				<table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="notifications_table">
-					<thead class="">
-						<tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8">
+				<table class="max-xl:block w-full caption-bottom border-b border-gray-200 dark:border-gray-800" id="notifications_table">
+					<thead class="max-xl:block">
+						<tr class="max-xl:grid max-xl:grid-cols-[auto_minmax(0,1fr)_auto] max-xl:*:first:row-span-2 *:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8">
 {{template "bulk_head_checkbox" .}}
-							<th scope="col" class="border-b border-gray-200 dark:border-gray-800 px-4 py-3.5 text-left text-sm font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Time</th>
-							<th scope="col" class="min-w-80 border-b border-gray-200 dark:border-gray-800 px-4 py-3.5 text-left text-sm font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Notification</th>
-							<th scope="col" id="tour-notification-details" class="border-b border-gray-200 dark:border-gray-800 px-4 py-3.5 text-left text-sm font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Details</th>
+							<th scope="col" class="max-xl:hidden border-b border-gray-200 dark:border-gray-800 px-4 py-3.5 text-left text-sm font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Time</th>
+							<th scope="col" class="xl:min-w-80 border-b border-gray-200 dark:border-gray-800 px-4 py-3.5 text-left text-sm font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Notification</th>
+							<th scope="col" id="tour-notification-details" class="max-xl:hidden border-b border-gray-200 dark:border-gray-800 px-4 py-3.5 text-left text-sm font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50">Details</th>
 							<th scope="col" id="tour-notification-actions" class="w-10 border-b border-gray-200 dark:border-gray-800 px-4 py-3.5 text-left text-sm font-semibold whitespace-nowrap text-gray-900 dark:text-gray-50"><span class="sr-only">Actions</span></th>
 						</tr>
 					</thead>
-					<tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+					<tbody class="max-xl:block divide-y divide-gray-200 dark:divide-gray-800">
 {{if .Notifications}}
 
         {{range .Notifications}}
-                <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60 has-[.bulk-select-box:checked]:bg-gray-50 dark:has-[.bulk-select-box:checked]:bg-gray-900">
+                <tr class="max-xl:grid max-xl:grid-cols-[auto_minmax(0,1fr)_auto] max-xl:*:first:row-span-2 *:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60 has-[.bulk-select-box:checked]:bg-gray-50 dark:has-[.bulk-select-box:checked]:bg-gray-900">
 {{$skip := "mark_as_read"}}{{if .Unread}}{{$skip = ""}}{{end}}
 {{$bar := ""}}{{if .Unread}}{{$bar = "bg-blue-500"}}{{if eq .Severity "critical"}}{{$bar = "bg-red-500"}}{{else if eq .Severity "warning"}}{{$bar = "bg-yellow-500"}}{{end}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" (printf "%v" .Index) "Label" .Title "Skip" $skip "Bar" $bar "Top" true)}}
 
-								<td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 align-top">
+								<td class="max-xl:hidden whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 align-top">
                                     {{.Time}}
                                     {{if gt .Count 1}}<p class="text-xs text-gray-500 dark:text-gray-500">{{.Count}}× · last {{.LastSeen}}</p>{{end}}
                                 </td>
 
 								<td class="p-4 text-sm text-gray-600 dark:text-gray-400 align-top">
                                     <p class="font-semibold text-gray-900 dark:text-gray-50">{{.Title}}</p>
+                                    <p class="mt-0.5 text-xs text-gray-500 xl:hidden dark:text-gray-500">{{.Time}}{{if gt .Count 1}} · {{.Count}}× · last {{.LastSeen}}{{end}}</p>
                                     <div class="mt-1 flex flex-wrap items-center gap-1.5">
                                         {{if eq .Severity "critical"}}
                                         <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Critical</span>
@@ -182,7 +185,7 @@ document.addEventListener('click', function (e) {
                                     </div>
                                 </td>
 
-<td class="max-w-[40%] break-words p-4 text-sm text-gray-600 dark:text-gray-400 align-top">
+<td class="max-xl:col-span-2 max-xl:col-start-2 max-xl:row-start-2 max-xl:pt-0 max-xl:pl-4 xl:max-w-[40%] break-words p-4 text-sm text-gray-600 dark:text-gray-400 align-top">
 
 {{if eq .Kind "ram"}}
     <div class="max-w-md">
@@ -330,8 +333,8 @@ document.addEventListener('click', function (e) {
 {{end}}
 {{else}}
 
-<tr>
-    <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">
+<tr class="max-xl:block">
+    <td colspan="5" class="max-xl:block px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">
         {{if .Counts.All}}No notifications match these filters. <a href="/notifications" class="text-blue-500 hover:underline hover:underline-offset-4">Show all</a>{{else}}No notifications yet.{{end}}
     </td>
 </tr>
