@@ -199,8 +199,7 @@ func newNotificationRow(n Notification, index int) notificationRow {
 			row.LinkText = "View crashlog"
 			row.LinkHref = "/services/crashlogs/log/?log_name=" + filepath.Base(d.Crashlog)
 		case d.LogFile != "":
-			row.LinkText = "View update log"
-			row.LinkHref = "/settings/updates/log/?log_name=" + filepath.Base(d.LogFile)
+			row.LinkText, row.LinkHref = notificationLogLink(d.LogFile)
 		}
 	}
 	if row.LinkHref == "" && n.Title == "New OpenPanel update is available" {
@@ -212,6 +211,19 @@ func newNotificationRow(n Notification, index int) notificationRow {
 		row.SnoozedUntil = until.Format("Jan 2, 15:04")
 	}
 	return row
+}
+
+// notificationLogLink sends update logs to the update log viewer and anything else (backups etc.) to the Log Viewer
+func notificationLogLink(logFile string) (text, href string) {
+	if filepath.Dir(logFile) == UpdateLogsDir {
+		return "View update log", "/settings/updates/log/?log_name=" + url.QueryEscape(filepath.Base(logFile))
+	}
+	for name, path := range loadLogPaths() {
+		if path == logFile {
+			return "View log", "/services/logs?log_name=" + url.QueryEscape(name)
+		}
+	}
+	return "View log", "/services/logs"
 }
 
 // readNotifications returns the parsed entries newest first, the same order the 1-indexed line numbers count in
