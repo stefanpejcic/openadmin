@@ -10,33 +10,32 @@
         {{template "chrome_flashes" .}}
 {{with .Summary}}
 <!-- every account's day added up, page header like the other pages and the two lists as widgets -->
-<div class="op-page-header border-b border-gray-200 px-4 py-6 sm:px-6 lg:px-8 lg:pt-8 dark:border-gray-800">
+<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <header class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div class="grow">
             <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Daily summary</h1>
-            <p class="text-sm/6 text-gray-500 dark:text-gray-500">{{.DayLabel}}{{if gt .Servers 1}} &middot; {{.Servers}} servers{{end}} &middot; {{.Accounts}} {{if eq .Accounts 1}}account{{else}}accounts{{end}}{{if .AttentionTotal}} &middot; <span class="font-medium text-yellow-700 dark:text-yellow-500">{{.AttentionTotal}} {{if eq .AttentionTotal 1}}needs{{else}}need{{end}} attention</span>{{end}}</p>
-            <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{.Headline}}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-500">{{.DayLabel}}{{if gt .Servers 1}} &middot; {{.Servers}} servers{{end}} &middot; {{.Accounts}} {{if eq .Accounts 1}}account{{else}}accounts{{end}}{{if .AttentionTotal}} &middot; <span class="font-medium text-yellow-700 dark:text-yellow-500">{{.AttentionTotal}} {{if eq .AttentionTotal 1}}needs{{else}}need{{end}} attention</span>{{end}}</p>
         </div>
     <dl class="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-5 lg:flex lg:flex-wrap lg:gap-x-12">
         <div>
             <dt class="text-sm text-gray-500 dark:text-gray-500">Requests</dt>
-            <dd class="mt-1 flex items-center gap-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Requests}}</p>{{if .Delta}}<span class="text-sm font-medium {{if .DeltaUp}}text-emerald-600 dark:text-emerald-400{{else}}text-red-600 dark:text-red-500{{end}}">{{.Delta}}</span>{{end}}</dd>
+            <dd class="flex items-center gap-2"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Requests}}</p>{{if .Delta}}<span class="text-sm font-medium {{if .DeltaUp}}text-emerald-600 dark:text-emerald-400{{else}}text-red-600 dark:text-red-500{{end}}">{{.Delta}}</span>{{end}}</dd>
         </div>
         <div>
             <dt class="text-sm text-gray-500 dark:text-gray-500">Visitors</dt>
-            <dd class="mt-1"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Visitors}}</p></dd>
+            <dd><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Visitors}}</p></dd>
         </div>
         <div>
             <dt class="text-sm text-gray-500 dark:text-gray-500">Data sent</dt>
-            <dd class="mt-1"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Sent}}</p></dd>
+            <dd><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Sent}}</p></dd>
         </div>
         <div>
             <dt class="text-sm text-gray-500 dark:text-gray-500">Server errors</dt>
-            <dd class="mt-1"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Errors}}</p></dd>
+            <dd><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Errors}}</p></dd>
         </div>
         <div>
             <dt class="text-sm text-gray-500 dark:text-gray-500">WAF blocks</dt>
-            <dd class="mt-1"><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Blocked}}</p></dd>
+            <dd><p class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Blocked}}</p></dd>
         </div>
     </dl>
     </header>
@@ -45,9 +44,20 @@
 <!-- sections like the settings pages: title and note on the left, content on the right -->
 <div class="px-4 py-6 sm:px-6 lg:px-8">
 <div class="max-w-7xl">
+    {{/* five or more findings is a red box, fewer a yellow one, nothing urgent stays a plain line */}}
+    {{if .AttentionTotal}}
+    <div role="{{if ge .AttentionTotal 5}}alert{{else}}status{{end}}" class="mb-6 flex gap-3 rounded-md p-4 text-sm {{if ge .AttentionTotal 5}}bg-red-50 text-red-900 dark:bg-red-950/70 dark:text-red-500{{else}}bg-yellow-50 text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500{{end}}"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
+        <div class="min-w-0">
+            <p class="font-medium">{{.AttentionTotal}} {{if eq .AttentionTotal 1}}thing needs{{else}}things need{{end}} attention</p>
+            <p class="mt-1">{{.Overview}} Each one is listed under <a href="#needs-attention" class="font-medium underline underline-offset-4">Needs attention</a> with a link to the account.</p>
+        </div>
+    </div>
+    {{else}}
+    <p class="mb-6 text-sm text-gray-700 dark:text-gray-300">{{.Headline}}</p>
+    {{end}}
     <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
         <div>
-            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Needs attention</h2>
+            <h2 id="needs-attention" class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Needs attention</h2>
             <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Issues found on accounts that day, each links to the account.</p>
         </div>
         <div class="lg:col-span-2">
@@ -101,7 +111,7 @@
 </div>
 </div>
 {{else}}
-<div class="op-page-header border-b border-gray-200 px-4 py-6 sm:px-6 lg:px-8 lg:pt-8 dark:border-gray-800">
+<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Daily summary</h1>
     <p class="text-sm text-gray-500 dark:text-gray-500">No daily summary yet. Summaries are saved each day at 06:15 for the day before, for accounts that have the summary feature.</p>
 </div>

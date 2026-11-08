@@ -74,6 +74,7 @@
           if (hash === '#services') this.activeTab = 'services';
           else if (hash === '#activity') this.activeTab = 'activity';
           else if (hash === '#logins') this.activeTab = 'logins';
+          else if (hash === '#usage') this.activeTab = 'usage';
           else if (hash === '#suspend') this.activeTab = 'suspend';
           else if (hash === '#unsuspend') this.activeTab = 'unsuspend';
           else if (hash === '#export') this.activeTab = 'export';
@@ -160,6 +161,9 @@
                 </li>
                 <li class="flex" role="presentation">
                     <button type="button" role="tab" :aria-selected="(activeTab === 'storage').toString()" @click="activeTab = 'storage'; loadDiskUsage()" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Storage</button>
+                </li>
+                <li class="flex" role="presentation">
+                    <button type="button" role="tab" :aria-selected="(activeTab === 'usage').toString()" @click="activeTab = 'usage'" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Resource usage</button>
                 </li>
                 <li class="flex" role="presentation">
                     <button type="button" role="tab" :aria-selected="(activeTab === 'activity').toString()" @click="$store.activityStore.fetchLogs(); activeTab = 'activity'" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Activity</button>
@@ -503,6 +507,13 @@
                   <span class="block px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-500">Statistics</span>
                   <ul class="mt-1 space-y-0.5">
                      <li>
+                        <a href="#usage" @click.prevent="activeTab = 'usage'; window.location.hash = 'usage'" :aria-current="activeTab === 'usage' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3V19H21V21H3V3H5ZM20.2929 6.29289L21.7071 7.70711L16 13.4142L13 10.415L8.70711 14.7071L7.29289 13.2929L13 7.58579L16 10.585L20.2929 6.29289Z"/></svg>
+                           Resource usage
+                        </a>
+                     </li>
+
+                     <li>
                         <a href="#activity" @click.prevent="$store.activityStore.fetchLogs(); activeTab = 'activity'; window.location.hash = 'activity'" :aria-current="activeTab === 'activity' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M19 22H5C3.34315 22 2 20.6569 2 19V3C2 2.44772 2.44772 2 3 2H17C17.5523 2 18 2.44772 18 3V15H22V19C22 20.6569 20.6569 22 19 22ZM18 17V19C18 19.5523 18.4477 20 19 20C19.5523 20 20 19.5523 20 19V17H18ZM16 20V4H4V19C4 19.5523 4.44772 20 5 20H16ZM6 7H14V9H6V7ZM6 11H14V13H6V11ZM6 15H11V17H6V15Z"/></svg>
                            Activity Log
@@ -650,105 +661,22 @@
 </div>
                         </div>
                      </div>
-                     <div x-data="{ open: false }">
+                     <div>
                       <div class="mt-4 flex items-center justify-between border-t border-gray-200 px-6 py-4 dark:border-gray-800">
                         <div>
                           <h4 class="text-sm font-medium text-gray-900 dark:text-gray-50">Last updated</h4>
                           <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-500">{{if .Stats}}{{formatDateTime (index .Stats "timestamp")}}{{end}}</p>
                         </div>
-                        <div>
-                          <button id="get_docker_history_usage" type="button" @click="open = !open" :aria-expanded="open.toString()" aria-controls="docker_stats_history" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">
-                            <span x-text="open ? 'Hide past usage' : 'View past usage'"></span>
-                          </button>
-                        </div>
+                        <a href="#usage" @click.prevent="activeTab = 'usage'; window.location.hash = 'usage'" class="text-sm text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">View history &rarr;</a>
                       </div>
 
-<div id="docker_stats_history" x-show="open" x-cloak class="overflow-x-auto">
-  <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
-    <table id="usage" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
-      <thead>
-        <tr class="bg-gray-50 dark:bg-gray-900 sm:[&amp;_td:last-child]:pr-6 sm:[&amp;_th:last-child]:pr-6 sm:[&amp;_td:first-child]:pl-6 sm:[&amp;_th:first-child]:pl-6">
-          <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
-          <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU %</th>
-          <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU usage</th>
-          <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory %</th>
-          <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory usage</th>
-          <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Tasks</th>
-          <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Bandwidth</th>
-          <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Warning</th>
-        </tr>
-      </thead>
-      <tbody id="usageTableBody" class="divide-y divide-gray-200 dark:divide-gray-800"></tbody>
-    </table>
-  </div>
-</div>
 
-<script>
-  const username = '{{lastSegment .Username `_`}}';
-  const fetchButton = document.getElementById("get_docker_history_usage");
-  const tbody = document.getElementById("usageTableBody");
-
-  let alreadyFetched = false;
-
-  fetchButton.addEventListener("click", () => {
-    if (alreadyFetched) return;
-    alreadyFetched = true;
-
-    fetch(`/get_resource_usage_history/${username}`)
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch resource usage history');
-        return response.text();
-      })
-      .then(text => {
-        const lines = text.trim().split('\n').reverse();
-
-        lines.forEach(line => {
-          let data;
-          try {
-            data = JSON.parse(line);
-          } catch(e) {
-            return;
-          }
-
-          const timestamp = data.timestamp;
-          const cpuPercent = data.cpu?.usage?.pct ?? 0;
-          const cpuUsage = data.cpu?.usage?.human ?? '-';
-          const memPercent = data.memory?.usage_pct ?? 0;
-          const memUsage = `${data.memory?.used?.human ?? '-'} / ${data.memory?.total?.human ?? '-'}`;
-          const tasks = `${data.tasks?.current ?? '-'} / ${data.tasks?.limit ?? '-'}`;
-          const bandwidth = data.bandwidth?.total_sent?.human ?? '-';
-          const warning = data.warning ?? '-';
-
-          const tr = document.createElement('tr');
-          tr.className = "sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60";
-
-          tr.innerHTML = `
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400 time_readable">${timestamp}</td>
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${cpuPercent}</td>
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${cpuUsage}</td>
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${memPercent}</td>
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${memUsage}</td>
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${tasks}</td>
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${bandwidth}</td>
-            <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400">${warning}</td>
-          `;
-          tbody.appendChild(tr);
-        });
-        updateAllTimestamps();
-      })
-      .catch(error => {
-        console.error(error);
-        tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">Couldn't load usage data: ${error.message}</td></tr>`;
-      });
-
-  });
-</script>
                   </div>
                </div>
 
                <div class="border-t border-gray-200 p-4 dark:border-gray-800">
                   <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Username</span><span class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{firstSegment .Username "_"}}
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Username</span><span class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{lastSegment .Username "_"}}
                         <a href="#edit" @click="activeTab='edit'; window.location.hash='edit'" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit username"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></a>
                         </span></div>
                      <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Email address</span><span class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{.User.Email}}
@@ -944,7 +872,7 @@
                         <div class="relative">
                                 <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600" type="button">Show columns<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4 shrink-0"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.05021 8.22168L11.9999 13.1714Z"/></svg></button>
                                 <!-- Dropdown menu -->
-                                <div id="dropdownToggle" class="max-h-[min(22rem,55vh)] overflow-y-auto overscroll-contain hidden w-64 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
+                                <div id="dropdownToggle" class="overflow-y-auto overscroll-contain hidden w-64 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
                                     <ul aria-labelledby="dropdownToggleButton">
                                     {{range serviceColumns}}
                                     <li>
@@ -982,6 +910,15 @@
                         </div>
                         </div>
                         {{end}}
+                        <div id="services-limit-warning" class="hidden px-4 py-3 whitespace-normal sm:px-6">
+                        <div role="status" class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
+                        <div class="min-w-0">
+                           <p class="font-medium" id="services-limit-warning-title"></p>
+                           <p class="mt-1"><span id="services-limit-warning-text"></span> Raise the limit in the table below, or check what the service is doing before it slows down or gets killed.</p>
+                        </div>
+                        </div>
+                        </div>
                         {{if .Services}}
                         {{template "bulk_open" (dict "Table" "#user_services_table" "Endpoint" (printf "/containers/%s/bulk" (lastSegment .Username "_")))}}
                         <table id="user_services_table" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
@@ -1000,7 +937,7 @@
                            </thead>
                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                               {{range .Services}}
-                              <tr x-show="searchQuery === '' || '{{.ContainerName | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Name | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Image | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                              <tr data-svc="{{.Name}}" data-cpu-limit="{{.CPULimit}}" data-pids-limit="{{.PIDsLimit}}" x-show="searchQuery === '' || '{{.ContainerName | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Name | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Image | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
 {{template "bulk_row_checkbox" (dict "Key" .Name "Label" .Name)}}
                                  <td x-show="columns.name">
                                     <div class="flex flex-col gap-1">
@@ -1280,6 +1217,31 @@
             method: 'GET',
             success: function(response) {
                 if (!response.container_stats || response.container_stats.length === 0) return;
+
+                // one warning for every service at 90% of a limit, cpu counts against its cores and pids against the process limit
+                var near = [];
+                response.container_stats.forEach(function (c) {
+                    var row = document.querySelector('tr[data-svc="' + CSS.escape(c.Name) + '"]');
+                    if (!row) return;
+                    var hits = [];
+                    var cores = parseFloat(row.dataset.cpuLimit);
+                    var cpu = parseFloat(c.CPU) || 0;
+                    if (cores > 0 && cpu / cores >= 90) hits.push('CPU ' + Math.round(cpu / cores) + '%');
+                    var mem = parseFloat(c.MemPerc) || 0;
+                    if (mem >= 90) hits.push('memory ' + Math.round(mem) + '%');
+                    var pidsLimit = parseInt(row.dataset.pidsLimit, 10);
+                    var pids = parseInt(c.PIDs !== undefined ? c.PIDs : c.PIDS, 10) || 0;
+                    if (pidsLimit > 0 && pids / pidsLimit >= 0.9) hits.push('processes ' + pids + ' of ' + pidsLimit);
+                    if (hits.length) near.push(c.Name + ': ' + hits.join(', ') + '.');
+                });
+                var warnBox = document.getElementById('services-limit-warning');
+                if (warnBox) {
+                    warnBox.classList.toggle('hidden', !near.length);
+                    document.getElementById('services-limit-warning-title').textContent = near.length === 1
+                        ? 'A service is close to its limit'
+                        : near.length + ' services are close to their limits';
+                    document.getElementById('services-limit-warning-text').textContent = near.join(' ');
+                }
 
                 function formatBytes(bytes) {
                     if (!bytes) return '0 B';
@@ -1877,6 +1839,75 @@
                </div>
             </div>
             <!-- END ACTIVITY -->
+
+<div x-show="activeTab === 'usage'" x-cloak x-data="userUsageHistory('{{lastSegment .Username "_"}}')" x-effect="if (activeTab === 'usage') load()">
+    {{if .UsageStale}}<div class="px-4 pt-4 sm:px-6">{{template "usage_stale_note" (dict "Note" .UsageStale "Cron" "opencli docker-collect_stats")}}</div>{{end}}
+    <div class="flex flex-col justify-between gap-2 px-4 py-4 sm:flex-row sm:items-center sm:px-6">
+        <div class="relative w-full sm:w-64 [&>input]:py-1.5">
+            <input aria-label="Search usage…" x-model="searchQuery" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm pl-8" placeholder="Search usage…" type="search">
+            <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <a href="/get_resource_usage_history/{{lastSegment .Username "_"}}" target="_blank" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">View raw<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-3.5 shrink-0"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <div class="w-full overflow-auto border-t border-gray-200 dark:border-gray-800">
+            <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6"><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU %</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU usage</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory %</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory usage</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Tasks</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Bandwidth</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Warning</th></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <template x-if="!loaded || error || rows.length === 0">
+                        <tr><td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500" x-text="!loaded ? 'Loading…' : (error || 'No usage recorded yet.')"></td></tr>
+                    </template>
+                    <template x-for="(row, i) in filtered" :key="i">
+                        <tr class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60"><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.date"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.cpuPct"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.cpu"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.memPct"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.mem"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.tasks"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.bw"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.warning"></td></tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+// hourly snapshots from docker-collect_stats, newest first
+function userUsageHistory(username) {
+    return {
+        rows: [], loaded: false, loading: false, error: '', searchQuery: '',
+        get filtered() {
+            const q = this.searchQuery.toLowerCase();
+            return q ? this.rows.filter(r => Object.values(r).join(' ').toLowerCase().includes(q)) : this.rows;
+        },
+        load() {
+            if (this.loaded || this.loading) return;
+            this.loading = true;
+            fetch('/get_resource_usage_history/' + encodeURIComponent(username))
+                .then(res => res.ok ? res.text() : (res.status === 404 ? '' : Promise.reject(new Error('HTTP ' + res.status))))
+                .then(text => {
+                    const pad = n => String(n).padStart(2, '0');
+                    this.rows = text.trim().split('\n').reverse().map(line => {
+                        let d; try { d = JSON.parse(line); } catch (e) { return null; }
+                        const t = new Date(d.timestamp);
+                        return {
+                            date: isNaN(t) ? (d.timestamp || '-') : t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()) + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes()),
+                            cpuPct: d.cpu?.usage?.pct ?? 0,
+                            cpu: d.cpu?.usage?.human ?? '-',
+                            memPct: d.memory?.usage_pct ?? 0,
+                            mem: (d.memory?.used?.human ?? '-') + ' / ' + (d.memory?.total?.human ?? '-'),
+                            tasks: (d.tasks?.current ?? '-') + ' / ' + (d.tasks?.limit ?? '-'),
+                            bw: d.bandwidth?.total_sent?.human ?? '-',
+                            warning: d.warning || '-',
+                        };
+                    }).filter(Boolean);
+                })
+                .catch(e => { this.error = "Couldn't load usage data: " + e.message; })
+                .finally(() => { this.loaded = true; this.loading = false; });
+        },
+    };
+}
+</script>
 
 <div x-show="activeTab === 'logins'" x-cloak x-data="{ searchQuery: '' }">
     <div class="flex flex-col justify-between gap-2 px-4 py-4 sm:flex-row sm:items-center sm:px-6">

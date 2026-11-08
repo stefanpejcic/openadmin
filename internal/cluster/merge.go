@@ -425,10 +425,12 @@ type remotePage struct {
 	body     []byte
 }
 
-// same arrows as the other sortable columns, the one in effect is dimmed
+// same header as webtemplates/_sort.html, one link with an arrow for the order in effect and a double arrow when the column isn't sorted
 const (
-	sortUpIcon   = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 %s"><path d="M11.9999 10.8284L7.0502 15.7782L5.63599 14.364L11.9999 8L18.3639 14.364L16.9497 15.7782L11.9999 10.8284Z"></path></svg>`
-	sortDownIcon = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="size-3.5 text-gray-900 dark:text-gray-50 %s"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg>`
+	sortLinkClass = `group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2`
+	sortAscIcon   = `<svg class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><span class="sr-only">, sorted ascending</span>`
+	sortDescIcon  = `<svg class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><span class="sr-only">, sorted descending</span>`
+	sortNoneIcon  = `<svg class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg>`
 )
 
 // mergeOptions is how the merged list gets ordered, serverDir is "asc" or "desc" when sorting by the Server column
@@ -555,15 +557,14 @@ func filterAnchor(page []byte) int {
 }
 
 func (o mergeOptions) serverHeader() string {
-	dim := func(dir string) string {
-		if o.serverDir == dir {
-			return "opacity-30"
-		}
-		return ""
+	link, icon := o.ascLink, sortNoneIcon
+	switch o.serverDir {
+	case "asc":
+		link, icon = o.descLink, sortAscIcon
+	case "desc":
+		link, icon = o.ascLink, sortDescIcon
 	}
-	return `<div class="-mx-2 inline-flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-gray-50 hover:dark:bg-gray-900"><span>Server</span><div class="-space-y-2">` +
-		`<a href="` + html.EscapeString(o.descLink) + `">` + fmt.Sprintf(sortUpIcon, dim("desc")) + `</a>` +
-		`<a href="` + html.EscapeString(o.ascLink) + `">` + fmt.Sprintf(sortDownIcon, dim("asc")) + `</a></div></div>`
+	return `<a href="` + html.EscapeString(link) + `" class="` + sortLinkClass + `">Server` + icon + `</a>`
 }
 
 // mergeTables adds the Server column and the rows of the other servers, nil means there was nothing to merge and the page stays as it was
@@ -1016,7 +1017,7 @@ func (m *Manager) transferPicker(page []byte, account, activeID string) []byte {
 	}
 	at += end + 1
 	var b strings.Builder
-	fmt.Fprintf(&b, `<div id="cluster-transfer" class="mb-4" data-account="%s" data-from="%s"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="cluster-transfer-to">Destination</label><div class="relative w-full mt-2"><select id="cluster-transfer-to" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"><option value="">Another server over SSH</option>`, html.EscapeString(account), html.EscapeString(activeID))
+	fmt.Fprintf(&b, `<div id="cluster-transfer" class="mb-4 max-w-4xl" data-account="%s" data-from="%s"><label class="text-sm leading-none text-gray-900 dark:text-gray-50 font-medium" for="cluster-transfer-to">Destination</label><div class="relative w-full mt-2"><select id="cluster-transfer-to" class="relative block w-full appearance-none rounded-md border px-2.5 py-2 shadow-xs outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950"><option value="">Another server over SSH</option>`, html.EscapeString(account), html.EscapeString(activeID))
 	add := func(id, name string, online bool) {
 		if id == activeID {
 			return

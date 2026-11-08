@@ -272,7 +272,7 @@
                         <div class="mt-4 grid grid-cols-1 gap-4">
 
 
-    <label class="block" x-data="{ v: $el.querySelector('select').value }">
+    <label class="block" x-data="phpEol($el.querySelector('select').value)" x-init="$watch('v', () => check()); check()">
 
 <select name="DEFAULT_PHP_VERSION" aria-labelledby="default-php" @change="v = $event.target.value" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full">
     {{range .PHPVersionOptions}}
@@ -283,6 +283,12 @@
 </select>
     {{if .LatestPHPVersion}}<span x-show="v !== '{{.LatestPHPVersion}}'" x-cloak class="mt-2 block text-xs text-yellow-700 dark:text-yellow-500">PHP {{.LatestPHPVersion}} is the latest stable version. Recommended: use it as the default for new users.</span>{{end}}
 
+    <div x-show="level" x-cloak :role="level === 'error' ? 'alert' : 'status'" :class="level === 'error' ? 'bg-red-50 text-red-900 dark:bg-red-950/70 dark:text-red-500' : 'bg-yellow-50 text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500'" class="mt-3 flex gap-3 rounded-md p-4 text-sm"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
+        <div class="min-w-0">
+            <p class="font-medium" x-text="title"></p>
+            <p class="mt-1" x-text="text"></p>
+        </div>
+    </div>
     </label>
                         </div>
                     </div>
@@ -483,6 +489,42 @@
 <div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
 
+<script>
+// endoflife.date says when a php release stops getting fixes, cached a day per release in the browser
+function phpEol(initial) {
+    return {
+        v: initial, level: '', title: '', text: '',
+        check() {
+            this.level = '';
+            const m = String(this.v || '').match(/(\d+\.\d+)/);
+            if (!m) return;
+            const cycle = m[1], key = 'eol:php:' + cycle;
+            let cached = null;
+            try { cached = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
+            const got = cached && Date.now() - cached.at < 86400000
+                ? Promise.resolve(cached.data)
+                : fetch('https://endoflife.date/api/php/' + cycle + '.json').then(r => r.ok ? r.json() : null).then(d => {
+                    if (d) { try { localStorage.setItem(key, JSON.stringify({ at: Date.now(), data: d })); } catch (e) {} }
+                    return d;
+                });
+            got.then(d => {
+                if (!d || typeof d.eol !== 'string' || cycle !== (String(this.v).match(/(\d+\.\d+)/) || [])[1]) return;
+                const now = new Date(), eol = new Date(d.eol + 'T00:00:00'), days = Math.round((eol - now) / 86400000);
+                const activeOver = typeof d.support === 'string' && new Date(d.support + 'T00:00:00') < now;
+                if (days < 0) {
+                    this.level = 'error';
+                    this.title = 'PHP ' + cycle + ' no longer gets security fixes';
+                    this.text = 'Support ended on ' + d.eol + '. New domains would start on an unsupported version, pick a newer one as the default.';
+                } else if (days < 183 || activeOver) {
+                    this.level = 'warning';
+                    this.title = days < 183 ? 'PHP ' + cycle + ' stops getting security fixes in ' + days + ' days' : 'PHP ' + cycle + ' only gets security fixes now';
+                    this.text = 'Security support ends on ' + d.eol + '. A newer version is a better default for new domains.';
+                }
+            }).catch(() => {});
+        },
+    };
+}
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   fetch('https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/docker/compose/1.0/.env')

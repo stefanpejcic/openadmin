@@ -30,8 +30,60 @@ const TONES = ["text-yellow-600", "dark:text-yellow-500", "text-red-600", "dark:
 function toneByPercent(el, pct) {
     if (!el) return;
     el.classList.remove(...TONES);
-    if (pct >= 90) el.classList.add("text-red-600", "dark:text-red-500");
+    if (pct >= 100) el.classList.add("text-red-600", "dark:text-red-500");
     else if (pct >= 70) el.classList.add("text-yellow-600", "dark:text-yellow-500");
+}
+
+// an exclamation next to a header number, yellow from 90% and red from 100%, the reason goes first in its tooltip
+const ALERT_ICON = '<path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/>';
+function flagUsage(key, level, message) {
+    const link = document.querySelector('[data-tooltip-target="tooltip-sse_' + key + '"]');
+    const tip = document.getElementById('tooltip-sse_' + key);
+    if (!link || !tip) return;
+    let icon = document.getElementById('sse_' + key + '_alert');
+    if (!icon) {
+        icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        icon.id = 'sse_' + key + '_alert';
+        icon.setAttribute('viewBox', '0 0 24 24');
+        icon.setAttribute('width', '14');
+        icon.setAttribute('height', '14');
+        icon.setAttribute('fill', 'currentColor');
+        icon.innerHTML = ALERT_ICON;
+        link.appendChild(icon);
+    }
+    icon.setAttribute('class', 'remixicon shrink-0 ' + (level === 'error' ? 'text-red-500' : 'text-yellow-500') + (level ? '' : ' hidden'));
+    icon.setAttribute('aria-label', message || '');
+    const old = tip.querySelector('[data-usage-alert]');
+    if (old) old.remove();
+    if (level) {
+        const p = document.createElement('p');
+        p.dataset.usageAlert = '';
+        p.className = 'mb-1.5 max-w-60 whitespace-normal border-b border-gray-200 pb-1.5 font-medium dark:border-gray-800 ' + (level === 'error' ? 'text-red-600 dark:text-red-500' : 'text-yellow-700 dark:text-yellow-500');
+        p.textContent = message;
+        tip.prepend(p);
+    }
+}
+function usageLevel(pct) { return pct >= 100 ? 'error' : pct >= 90 ? 'warning' : ''; }
+
+// load is compared to the cpu cores, as many as the cores means busy and twice as many means things are queueing
+let usageCores = {};
+// the load the header shows, checked again when new core counts arrive
+let shownLoad = null;
+function flagLoad(data) {
+    const rows = data.servers ? data.servers : [{ name: '', load1min: data.load1min }];
+    let worst = null;
+    for (const s of rows) {
+        const cores = usageCores[s.name] || usageCores[''] || 0;
+        if (!cores) continue;
+        const ratio = s.load1min / cores;
+        if (!worst || ratio > worst.ratio) worst = { ratio, cores, load: s.load1min, name: s.name };
+    }
+    if (!worst || worst.ratio < 1) return flagUsage('load', '', '');
+    const on = worst.name ? ' on ' + worst.name : '';
+    const level = worst.ratio >= 2 ? 'error' : 'warning';
+    flagUsage('load', level, level === 'error'
+        ? `Load ${worst.load.toFixed(2)}${on} is over twice the ${worst.cores} CPU cores`
+        : `Load ${worst.load.toFixed(2)}${on} is above the ${worst.cores} CPU cores`);
 }
 
 function updateSSEUI(data) {
@@ -44,6 +96,11 @@ function updateSSEUI(data) {
             document.getElementById("sse_cpu").textContent = top.toFixed(1) + "%";
             toneByPercent(document.getElementById("sse_cpu"), top);
             cpuTooltip.innerHTML = tipTitle("CPU usage") + servers.map(s => tipRow(s.name, `${s.avg.toFixed(1)}% (${s.cores} ${s.cores === 1 ? 'core' : 'cores'})`)).join("") + tipArrow;
+            usageCores = {};
+            servers.forEach(s => { usageCores[s.name] = s.cores; });
+            const busy = servers[0];
+            flagUsage('cpu', busy ? usageLevel(busy.avg) : '', busy ? `CPU on ${busy.name} is at ${busy.avg.toFixed(0)}%` : '');
+            if (shownLoad) flagLoad(shownLoad);
         } else {
             const cpuValues = Object.values(data.cpu);
             const avg = cpuValues.reduce((a,b)=>a+b,0)/cpuValues.length;
@@ -54,6 +111,9 @@ function updateSSEUI(data) {
                       .sort(([, a], [, b]) => b - a)
                       .map(([core, val]) => tipRow(core.replace(/_/g, ' '), `${val.toFixed(1)}%`))
                       .join("") + tipArrow;
+            usageCores = { '': cpuValues.length };
+            flagUsage('cpu', usageLevel(avg), `CPU is at ${avg.toFixed(0)}%`);
+            if (shownLoad) flagLoad(shownLoad);
         }
     }
 
@@ -68,6 +128,8 @@ function updateSSEUI(data) {
         } else {
             memTooltip.innerHTML = tipRow("RAM", `${mem.ram.used} / ${mem.ram.total} (${mem.ram.percent})`) + tipRow("Swap", `${mem.swap.used} / ${mem.swap.total} (${mem.swap.percent})`) + tipArrow;
         }
+        const ramPct = parseFloat(mem.ram.percent);
+        flagUsage('memory', usageLevel(ramPct), `RAM is ${ramPct.toFixed(0)}% used`);
     }
 
     if (data.load !== undefined) {
@@ -79,6 +141,8 @@ function updateSSEUI(data) {
         } else {
             loadTooltip.innerHTML = tipRow("Load 1 min", data.load.load1min.toFixed(2)) + tipRow("Load 5 min", data.load.load5min.toFixed(2)) + tipRow("Load 15 min", data.load.load15min.toFixed(2)) + tipArrow;
         }
+        shownLoad = data.load;
+        flagLoad(shownLoad);
     }
 
     if (data.disk !== undefined) {
@@ -98,6 +162,7 @@ function updateSSEUI(data) {
             const filteredDisks = data.disk.filter(d => !d.mountpoint.startsWith("/mnt")).sort((a, b) => b.percent - a.percent);
             diskTooltip.innerHTML = filteredDisks.map(d => tipRow(`${d.device} on ${d.mountpoint}`, `${formatBytes(d.used)} / ${formatBytes(d.total)} (${d.percent}%)`)).join("") + tipArrow;
         }
+        if (rootDisk) flagUsage('disk', usageLevel(rootDisk.percent), `Disk ${rootDisk.mountpoint === '/' && rootDisk.device !== 'Fullest server' ? '/' : 'on the fullest server'} is ${rootDisk.percent.toFixed(0)}% full`);
     }
 
 }
@@ -156,40 +221,71 @@ document.addEventListener('DOMContentLoaded', () => {
 // keyboard shortcuts
 document.addEventListener('alpine:init', () => {
   Alpine.data('openadminShortcuts', () => ({
-    shortcuts: null,
+    shortcuts: {},
+    names: {},
     showHelp: false,
+    mac: /Mac|iPhone|iPad/.test(navigator.platform),
 
     async init() {
-      if (this.shortcuts) return;
+      // Ctrl+K and the menu item work even without a shortcuts.json
+      window.addEventListener('keydown', this.handleKeydown.bind(this));
+      window.addEventListener('op-shortcuts', () => this.open());
       try {
         const res = await fetch('/shortcuts.json', { cache: 'no-store' });
         if (!res.ok) return;
-
         const data = await res.json();
-        if (!data || typeof data !== 'object') return;
+        if (data && typeof data === 'object') this.shortcuts = data;
+      } catch {}
+    },
 
-        this.shortcuts = data;
-        window.addEventListener('keydown', this.handleKeydown.bind(this));
-      } catch {
-        return;
+    // page names come from the search index, resellers can't read it so they keep the url
+    async open() {
+      this.showHelp = true;
+      if (Object.keys(this.names).length) return;
+      try {
+        const res = await fetch('/search/pages');
+        if (!res.ok) return;
+        const names = {};
+        for (const p of await res.json()) if (p && p.link) names[p.link.replace(/\/$/, '')] = p.name;
+        this.names = names;
+      } catch {}
+    },
+
+    get hasShortcuts() { return Object.keys(this.shortcuts).length > 0; },
+
+    get groups() {
+      const go = [], other = [];
+      for (const [combo, url] of Object.entries(this.shortcuts)) {
+        if (url === '/logout') { other.push({ combo, label: 'Log out' }); continue; }
+        go.push({ combo, label: this.names[String(url).replace(/\/$/, '')] || url });
       }
+      other.unshift({ combo: 'ctrl+k', label: 'Show keyboard shortcuts' });
+      other.push({ combo: 'escape', label: 'Close this dialog' });
+      return go.length ? [{ title: 'Go to', rows: go }, { title: 'Other', rows: other }] : [{ title: 'Other', rows: other }];
+    },
+
+    keys(combo) {
+      const map = this.mac
+        ? { ctrl: '⌘', shift: '⇧', alt: '⌥', escape: 'Esc' }
+        : { ctrl: 'Ctrl', shift: 'Shift', alt: 'Alt', escape: 'Esc' };
+      return combo.split('+').map(k => map[k] || (k.length === 1 ? k.toUpperCase() : k.charAt(0).toUpperCase() + k.slice(1)));
     },
 
     handleKeydown(event) {
       if (
-        ['INPUT', 'TEXTAREA'].includes(event.target.tagName) ||
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName) ||
         event.target.isContentEditable
       ) return;
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         event.stopPropagation();
-        this.showHelp = true;
+        this.open();
         return;
       }
 
       const combo = this.normalize(event);
-      const target = this.shortcuts?.[combo];
+      const target = this.shortcuts[combo];
 
       if (!target) return;
 
@@ -345,11 +441,20 @@ document.addEventListener('submit', function (e) {
         menu.style.position = 'fixed';
         menu.style.zIndex = '50';
         menu.style.margin = '0';
-        const w = menu.offsetWidth, h = menu.offsetHeight;
+        // full height when it fits, otherwise capped to the bigger side of the button and scrolled
+        menu.style.maxHeight = '';
+        const below = innerHeight - r.bottom - 12, above = r.top - 12;
+        let h = menu.offsetHeight;
+        if (h > below && h > above) {
+            h = Math.max(below, above);
+            menu.style.maxHeight = h + 'px';
+            menu.style.overflowY = 'auto';
+        }
+        const w = menu.offsetWidth;
         let left = r.left;
         if (left + w > innerWidth - 8) left = Math.max(8, r.right - w);
         let top = r.bottom + 4;
-        if (top + h > innerHeight - 8 && r.top - h - 4 > 8) top = r.top - h - 4;
+        if (h > below && above > below) top = r.top - h - 4;
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
     }

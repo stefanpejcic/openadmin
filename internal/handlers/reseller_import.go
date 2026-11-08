@@ -125,7 +125,7 @@ func saveImportUpload(r *http.Request, username string) (string, error) {
 		name := filepath.Base(part.FileName())
 		if !importBackupNameRe.MatchString(name) {
 			part.Close()
-			return "", errors.New("The backup has to be an OpenPanel .tar.gz file, with only letters, numbers, dots, dashes and underscores in its name.")
+			return "", errors.New("The backup has to be a .tar.gz file, with only letters, numbers, dots, dashes and underscores in its name.")
 		}
 		dir := importUploadDirFor(username)
 		if err := os.MkdirAll(dir, 0700); err != nil {

@@ -141,12 +141,17 @@ function verifyLicense() {
                     `<div class="flex items-center justify-between gap-4 py-2.5"><dt class="text-gray-600 dark:text-gray-400">${escapeHtml(key)}</dt>` +
                     `<dd class="min-w-0 break-words text-right font-medium text-gray-900 dark:text-gray-50">${escapeHtml(licenseValue(key, infoObject[key]))}</dd></div>`
                 ).join('') + `</dl>`;
+            // free accounts don't get ticket support, they go to github discussions like the community edition
+            const supportLink = document.getElementById('license-support-link');
+            if (supportLink && /free/i.test(infoObject['Billing Cycle'] || '')) {
+                supportLink.href = 'https://github.com/stefanpejcic/OpenPanel/discussions';
+                supportLink.firstChild.textContent = 'Ask on GitHub Discussions';
+            }
             const dueWarning = licenseDueWarning(infoObject['Next Due Date'], new Date());
-            if (dueWarning) {
-                const p = document.createElement('p');
-                p.className = 'border-t border-gray-200 py-3 text-xs text-yellow-700 dark:border-gray-800 dark:text-yellow-500';
-                p.textContent = dueWarning;
-                infoContainer.appendChild(p);
+            const dueBox = document.getElementById('license-due-warning');
+            if (dueBox) {
+                dueBox.classList.toggle('hidden', !dueWarning);
+                document.getElementById('license-due-warning-title').textContent = dueWarning;
             }
         } catch (e) {
             infoContainer.innerHTML = `<p class="py-3 text-red-600 dark:text-red-500">${escapeHtml(response.info)}</p>`;
@@ -174,7 +179,7 @@ function licenseValue(key, value) {
     return v.replace(/^(\d{4}-\d{2}-\d{2}) 00:00:00$/, '$1') || '—';
 }
 
-// warns from 3 days before the next due date, the license gets suspended on that date
+// warns from 7 days before the next due date, the license gets suspended on that date
 function licenseDueWarning(dueDate, now) {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dueDate || '');
     // free and lifetime licenses have no due date, the api sends 0000-00-00 for those
@@ -182,9 +187,8 @@ function licenseDueWarning(dueDate, now) {
     const due = new Date(+m[1], +m[2] - 1, +m[3]);
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const days = Math.round((due - today) / 86400000);
-    if (days > 3) return '';
-    const what = 'Renew the license, or remove the license key to downgrade to the Community edition.';
-    if (days < 0) return `The license was due on ${m[0]} and gets suspended. ${what}`;
-    if (days === 0) return `The license is due today (${m[0]}) and gets suspended once that date passes. ${what}`;
-    return `The license is due in ${days} day${days === 1 ? '' : 's'} (${m[0]}) and gets suspended on that date. ${what}`;
+    if (days > 7) return '';
+    if (days < 0) return `The license was due on ${m[0]} and gets suspended`;
+    if (days === 0) return `The license is due today (${m[0]}) and gets suspended once that date passes`;
+    return `The license expires in ${days} day${days === 1 ? '' : 's'} (${m[0]}) and gets suspended on that date`;
 }

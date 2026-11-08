@@ -657,3 +657,19 @@ func TestServeUpdatesWarnsWhenAutoUpdatesAreOff(t *testing.T) {
 		}
 	}
 }
+
+func TestUpdateVersionNotice(t *testing.T) {
+	for _, c := range []struct{ installed, latest, level string }{
+		{"2.0.21", "2.0.21", "error"},
+		{"2.0.21", "2.0.30", "error"},
+		{"2.0.22", "2.0.23", ""},
+		{"2.0.22", "2.1.0", "warning"},
+		{"2.0.22", "3.0.0", "error"},
+		{"2.1.0", "2.1.0", ""},
+		{"2.0.22", "0.0.0", ""},
+	} {
+		if got := updateVersionNotice(c.installed, c.latest).Level; got != c.level {
+			t.Errorf("%s -> %s: got %q, want %q", c.installed, c.latest, got, c.level)
+		}
+	}
+}

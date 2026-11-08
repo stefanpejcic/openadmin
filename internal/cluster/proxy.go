@@ -480,8 +480,11 @@ func (m *Manager) renderDown(w http.ResponseWriter, n Node, cause error) {
 	if cause != nil && !errors.Is(cause, context.Canceled) {
 		reason = cause.Error()
 	}
-	fmt.Fprintf(w, `<!doctype html><html><head>%s<meta charset="utf-8"><title>%s unavailable</title></head>
-<body style="font-family:system-ui,sans-serif;padding:4rem 2rem;text-align:center"><h1 style="font-size:1.4rem">%s is not reachable</h1>
-<p style="color:#6b7280">%s</p><p style="color:#6b7280">Other servers are not affected, use the menu above to switch to another one.</p></body></html>`,
+	// same theme pick as the app, a saved color-theme first and the system setting otherwise
+	fmt.Fprintf(w, `<!doctype html><html><head><script>if(localStorage.getItem('color-theme')==='dark'||(!('color-theme' in localStorage)&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')</script>
+%s<meta charset="utf-8"><title>%s unavailable</title>
+<style>html{color-scheme:light}html.dark{color-scheme:dark}body{margin:0;font-family:system-ui,sans-serif;padding:4rem 2rem;text-align:center;background:#fff;color:#111827}html.dark body{background:#030712;color:#f9fafb}.muted{color:#6b7280}</style></head>
+<body><h1 style="font-size:1.4rem">%s is not reachable</h1>
+<p class="muted">%s</p><p class="muted">Other servers are not affected, use the menu above to switch to another one.</p></body></html>`,
 		switcherTag(n.ID), html.EscapeString(n.Name), html.EscapeString(n.Name), html.EscapeString(reason))
 }

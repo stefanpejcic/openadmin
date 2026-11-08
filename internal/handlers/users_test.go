@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 
@@ -1100,5 +1101,36 @@ func TestUsersListPackageAndOwnerFilters(t *testing.T) {
 
 	if page := render("Community"); strings.Contains(page, `id="ownerFilter"`) || !strings.Contains(page, `id="planFilter"`) {
 		t.Fatal("owner filter should be Enterprise only, package filter always")
+	}
+}
+
+func TestUserUsageStale(t *testing.T) {
+	now := time.Date(2026, 11, 8, 12, 0, 0, 0, time.UTC)
+	if n := userUsageStale(map[string]interface{}{"timestamp": "2026-11-08T11:00:02Z"}, false, now); n != nil {
+		t.Fatalf("fresh stats flagged: %+v", n)
+	}
+	if n := userUsageStale(map[string]interface{}{"timestamp": "2026-11-06T11:00:00Z"}, false, now); n == nil || n.Ago != "2d 1h ago" {
+		t.Fatalf("old stats not flagged right: %+v", n)
+	}
+	if n := userUsageStale(nil, false, now); n == nil || !n.Never {
+		t.Fatalf("no stats should say never collected: %+v", n)
+	}
+	if n := userUsageStale(map[string]interface{}{"timestamp": "2026-11-06T11:00:00Z"}, true, now); n != nil {
+		t.Fatal("suspended accounts shouldn't get the note")
+	}
+}
+
+func TestBuildUsersUsageAlerts(t *testing.T) {
+	a := buildUsersUsageAlerts(map[string]usageWidgetData{
+		"rasa":                  {HasDiskData: true, DiskPercent: 104, InodesPercent: 92, MemPercent: 40},
+		"emma":                  {HasDiskData: true, DiskPercent: 91, CPUPercent: 95},
+		"bob":                   {HasDiskData: false, DiskPercent: 120, MemPercent: 50},
+		"SUSPENDED_20260101_ok": {HasDiskData: true, DiskPercent: 150},
+	})
+	if len(a.Over) != 1 || a.Over[0].User != "rasa" || a.Over[0].What != "disk 104%, inodes 92%" {
+		t.Fatalf("over: %+v", a.Over)
+	}
+	if len(a.Near) != 1 || a.Near[0].User != "emma" || a.Near[0].What != "disk 91%, CPU 95%" {
+		t.Fatalf("near: %+v", a.Near)
 	}
 }

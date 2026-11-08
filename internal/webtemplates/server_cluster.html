@@ -136,6 +136,14 @@
 {{end}}
 
 {{if eq .Role "master"}}
+{{with .Problems}}{{if .Lines}}
+<div role="{{if .Down}}alert{{else}}status{{end}}" class="mb-6 flex gap-3 rounded-md p-4 text-sm {{if .Down}}bg-red-50 text-red-900 dark:bg-red-950/70 dark:text-red-500{{else}}bg-yellow-50 text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500{{end}}"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
+    <div class="min-w-0">
+        <p class="font-medium">{{if eq (len .Lines) 1}}A server has a problem{{else}}{{len .Lines}} servers have problems{{end}}</p>
+        <p class="mt-1">{{range $i, $l := .Lines}}{{if $i}} {{end}}{{$l}}{{end}} Details are in the Servers table below.</p>
+    </div>
+</div>
+{{end}}{{end}}
 <dl class="-mx-4 mb-6 grid grid-cols-2 gap-px border-y border-gray-200 bg-gray-200 sm:-mx-6 sm:grid-cols-4 lg:-mx-8 dark:border-gray-800 dark:bg-gray-800">
     <div class="bg-white px-4 py-4 sm:px-6 lg:px-8 dark:bg-gray-950"><dt class="text-xs text-gray-500 dark:text-gray-500">Servers</dt><dd class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Totals.Servers}}{{if or .Totals.Offline .Totals.Paused}} <span class="text-sm font-normal text-gray-500 dark:text-gray-500">·{{if .Totals.Offline}} {{.Totals.Offline}} offline{{end}}{{if and .Totals.Offline .Totals.Paused}},{{end}}{{if .Totals.Paused}} {{.Totals.Paused}} paused{{end}}</span>{{end}}</dd></div>
     <div class="bg-white px-4 py-4 sm:px-6 lg:px-8 dark:bg-gray-950"><dt class="text-xs text-gray-500 dark:text-gray-500">Users</dt><dd class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-50">{{.Totals.Users}}</dd></div>

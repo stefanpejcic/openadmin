@@ -69,9 +69,11 @@ type summarySite struct {
 
 // serverSummary is every account's daily summary for one day added up
 type serverSummary struct {
-	Date      string
-	DayLabel  string
-	Headline  string
+	Date     string
+	DayLabel string
+	Headline string
+	// the traffic sentence on its own, the page shows it under the attention box
+	Overview  string
 	Accounts  int
 	Requests  string
 	Visitors  string
@@ -307,6 +309,7 @@ func summarizeDay(day string, found []userSummary) *serverSummary {
 	} else {
 		out.Headline = fmt.Sprintf("Websites on %s handled %s requests from %s.", accounts, commaNum(requests), countWord(visitors, "visitor", "visitors"))
 	}
+	out.Overview = out.Headline
 	switch {
 	case total > 0:
 		out.Headline += " " + countWord(total, "thing needs", "things need") + " attention."

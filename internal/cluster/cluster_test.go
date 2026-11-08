@@ -247,8 +247,10 @@ func TestMergeSortsByServerColumn(t *testing.T) {
 		if strings.Index(out, first) > strings.Index(out, other) {
 			t.Errorf("%s: %s should come first", dir, first)
 		}
-		if !strings.Contains(out, "/x?sort=server&amp;direction=asc") || !strings.Contains(out, "<span>Server</span>") {
-			t.Errorf("sort links missing from the Server header: %s", out)
+		// the header flips the order in effect, like the other sortable columns
+		next := map[string]string{"asc": "desc", "desc": "asc"}[dir]
+		if !strings.Contains(out, "/x?sort=server&amp;direction="+next+`" class="group`) || !strings.Contains(out, "sorted "+map[string]string{"asc": "ascending", "desc": "descending"}[dir]) {
+			t.Errorf("%s: Server header should link to %s and show the arrow: %s", dir, next, out)
 		}
 	}
 }
@@ -284,7 +286,7 @@ func TestMergeAddsSecondColumnSortsAndNeutralizesRemoteRows(t *testing.T) {
 	remote := fmt.Sprintf(testPage, row("2026-10-30 10:00:00", "amy")+`<tr><td colspan="3">details of amy</td></tr>`)
 	out := string(mergeTables([]byte(local), "stefan", []remotePage{{id: "n1", name: "petar", body: []byte(remote)}}, testOpts, open))
 
-	if !strings.Contains(out, `<span>Server</span>`) {
+	if !strings.Contains(out, `">Server<svg`) {
 		t.Fatalf("Server header isn't second: %s", out)
 	}
 	if strings.Index(out, "amy") > strings.Index(out, "bob") {
@@ -321,7 +323,7 @@ func TestServerColumnGoesAfterTheFirstNamedColumn(t *testing.T) {
 	if !strings.Contains(out, `<td>bob</td><td data-cluster-server class="x whitespace-nowrap">stefan</td>`) {
 		t.Fatalf("local Server cell isn't after the name or is still hidden: %s", out)
 	}
-	if !strings.Contains(out, `<span>Username</span></th><th data-cluster-server class="x whitespace-nowrap"><div`) {
+	if !strings.Contains(out, `<span>Username</span></th><th data-cluster-server class="x whitespace-nowrap"><a`) {
 		t.Fatalf("header cell isn't after the name: %s", out)
 	}
 	if !strings.Contains(out, `<td>amy</td><td data-cluster-server class="x whitespace-nowrap"><a href="/open/n?n=">petar</a></td>`) {
@@ -921,7 +923,7 @@ func TestFTPListHasNoServerControls(t *testing.T) {
 	opts.noFilter, opts.forceColumn = true, true
 	page := `<html><main id="no_margin_for_iframe"><div><input x-model="searchQuery"></div><table id="t"><thead><tr><th><input type="checkbox"></th><th>Account</th></tr></thead><tbody><tr><td colspan="2">none</td></tr></tbody></table></main></html>`
 	out := string(mergeTables([]byte(page), "stefan", nil, opts, open))
-	if !strings.Contains(out, "<span>Server</span>") || strings.Contains(out, "cluster-dd") || strings.Contains(out, "Filter by server") {
+	if !strings.Contains(out, `">Server<svg`) || strings.Contains(out, "cluster-dd") || strings.Contains(out, "Filter by server") {
 		t.Fatalf("got %s", out)
 	}
 }

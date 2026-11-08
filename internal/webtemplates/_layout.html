@@ -24,7 +24,7 @@
 
     <!-- SIDEBAR CLOSE / OPEN -->
     <style>[x-cloak] { display: none !important;}</style>
-    {{/* page titles keep one height so the header's bottom border lines up with the sidebar line under Notifications */}}<style>#no_margin_for_iframe .op-page-header.border-b h1.mb-1{margin-bottom:0}#no_margin_for_iframe .op-page-header h1.flex{height:1.75rem;align-items:center}@media (min-width:640px){#no_margin_for_iframe div.op-page-header.pt-4:not(.border-b){padding-top:25px}}</style>
+    {{/* page titles keep one height so the header's bottom border lines up with the sidebar line under Notifications */}}<style>#no_margin_for_iframe .op-page-header.border-b h1.mb-1{margin-bottom:0}#no_margin_for_iframe .op-page-header h1.flex{height:1.75rem;align-items:center}@media (min-width:640px){#no_margin_for_iframe div.op-page-header.pt-4:not(.border-b){padding-top:23px}}</style>
     <style>
       .op-help{max-height:65vh;line-height:1.6;color:var(--color-gray-700)}
       .dark .op-help{color:var(--color-gray-300)}
@@ -773,6 +773,13 @@
             </div>
 
             <div role="group">
+                <div role="menuitem" tabindex="-1" @click="isOpen = false; window.dispatchEvent(new CustomEvent('op-shortcuts'))" class="relative flex cursor-pointer select-none items-center justify-between gap-3 rounded-md py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900">
+                    <span>Keyboard shortcuts</span>
+                    <span class="flex items-center gap-1" aria-hidden="true"><kbd class="inline-flex h-5 min-w-5 items-center justify-center rounded border border-gray-200 bg-gray-50 px-1 font-mono text-[11px] font-medium text-gray-600 shadow-xs dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400" x-text="/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'">Ctrl</kbd><kbd class="inline-flex h-5 min-w-5 items-center justify-center rounded border border-gray-200 bg-gray-50 px-1 font-mono text-[11px] font-medium text-gray-600 shadow-xs dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">K</kbd></span>
+                </div>
+            </div>
+
+            <div role="group">
                 <div role="menuitem" id="tour-start-button" class="group/DropdownMenuItem relative flex cursor-pointer select-none items-center rounded-md py-1.5 pl-2 pr-1 outline-none transition-colors sm:text-sm text-gray-900 dark:text-gray-50 focus-visible:bg-gray-100 focus-visible:dark:bg-gray-900 hover:bg-gray-100 hover:dark:bg-gray-900" tabindex="-1" data-orientation="vertical" @click="isOpen = false; OPTour.start(true)">
                     Take the tour
                 </div>
@@ -928,7 +935,7 @@
     <div class="mx-auto max-w-4xl rounded-md border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-raised">
         <div class="mb-4 flex items-center justify-between gap-4 border-b border-gray-200 pb-3 dark:border-gray-800">
             <span class="inline-flex items-center gap-x-1.5 text-sm font-medium text-gray-500 dark:text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="remixicon size-4 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13 21V23H11V21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H9C10.1947 3 11.2671 3.52375 12 4.35418C12.7329 3.52375 13.8053 3 15 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H13ZM20 19V5H15C13.8954 5 13 5.89543 13 7V19H20ZM11 19V7C11 5.89543 10.1046 5 9 5H4V19H11Z"/></svg>Documentation</span>
-            <a href="https://openpanel.com/docs/{{.HelpDoc}}/" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 text-sm font-medium text-blue-500 hover:underline hover:underline-offset-4">Open on openpanel.com<svg class="remixicon size-3.5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>
+            <a href="https://openpanel.com/docs/{{.HelpDoc}}/" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-sm font-medium text-blue-500 hover:underline hover:underline-offset-4">Open on openpanel.com<svg class="remixicon size-3.5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>
         </div>
         <div x-ref="helpBody" class="op-help overflow-y-auto text-sm text-gray-700 dark:text-gray-300">Loading documentation...</div>
     </div>
@@ -1156,21 +1163,30 @@
       @click.outside="showHelp = false"
       x-trap.noscroll="showHelp" class="w-full max-w-lg rounded-md border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-900 dark:bg-raised"
     >
-      <h2 id="shortcuts-title" class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-50">
-        Keyboard shortcuts
-      </h2>
+      <h2 id="shortcuts-title" class="mb-4 text-base font-semibold text-gray-900 dark:text-gray-50">Keyboard shortcuts</h2>
 
-      <ul class="space-y-2">
-        <template x-for="(url, combo) in shortcuts" :key="combo">
-          <li class="flex items-center justify-between gap-6 text-sm">
-            <kbd class="inline-flex h-5 min-w-5 items-center justify-center rounded border border-gray-200 bg-gray-50 px-1 font-mono text-[11px] font-medium text-gray-600 shadow-xs dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400" x-text="combo"></kbd>
-            <span class="truncate text-gray-500" x-text="url"></span>
-          </li>
-        </template>
-      </ul>
+      <div class="space-y-4">
+      <template x-for="group in groups" :key="group.title">
+        <div>
+          <p class="mb-2 text-xs font-medium text-gray-500 dark:text-gray-500" x-text="group.title"></p>
+          <ul class="space-y-2">
+            <template x-for="row in group.rows" :key="row.combo">
+              <li class="flex items-center justify-between gap-6 text-sm">
+                <span class="truncate text-gray-900 dark:text-gray-50" x-text="row.label"></span>
+                <span class="flex shrink-0 items-center gap-1">
+                  <template x-for="k in keys(row.combo)" :key="k"><kbd class="inline-flex h-5 min-w-5 items-center justify-center rounded border border-gray-200 bg-gray-50 px-1 font-mono text-[11px] font-medium text-gray-600 shadow-xs dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400" x-text="k"></kbd></template>
+                </span>
+              </li>
+            </template>
+          </ul>
+        </div>
+      </template>
+      </div>
+      <p x-show="!hasShortcuts" class="mt-4 text-sm text-gray-500 dark:text-gray-500">No page shortcuts are set.</p>
 
-      <p class="mt-4 text-xs text-gray-500">
-        Press Esc to close
+      <p class="mt-4 border-t border-gray-200 pt-4 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-500">
+        {{if not .IsReseller}}<a href="https://openpanel.com/docs/articles/dev-experience/openadmin-keyboard-shortcuts/#edit-shortcuts" target="_blank" rel="noopener" class="text-blue-500 hover:underline hover:underline-offset-4">Set your own shortcuts</a>
+        <span class="px-1.5 text-gray-300 dark:text-gray-700" aria-hidden="true">·</span>{{end}}Press Esc to close
       </p>
     </div>
   </div>
@@ -1202,7 +1218,7 @@
     <svg class="remixicon size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"/></svg>
     <div>
         <p class="font-medium">Is MySQL running?</p>
-        <p class="mt-1">OpenAdmin can't connect to the database, so this list can't load. Check the <a href="/services" class="underline underline-offset-4">service status</a> or read the <a href="https://openpanel.com/docs/articles/databases/error-establishing-a-database-connection" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 underline underline-offset-4">troubleshooting guide<svg class="remixicon size-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>.</p>
+        <p class="mt-1">OpenAdmin can't connect to the database, so this list can't load. Check the <a href="/services" class="underline underline-offset-4">service status</a> or read the <a href="https://openpanel.com/docs/articles/databases/error-establishing-a-database-connection" target="_blank" rel="noopener" class="inline-flex items-center gap-1 underline underline-offset-4">troubleshooting guide<svg class="remixicon size-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>.</p>
     </div>
 </div>
 {{end}}

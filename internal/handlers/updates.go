@@ -201,6 +201,47 @@ func compareVersionTags(a, b string) int {
 	return 0
 }
 
+// minSafeVersion is the oldest release with the security fixes, anything below it is flagged as an error
+const minSafeVersion = "2.0.22"
+
+// versionNotice is the box on /settings/updates, Level "error" or "warning", empty when nothing needs saying
+type versionNotice struct {
+	Level, Title, Text, Changelog string
+}
+
+func updateVersionNotice(installed, latest string) versionNotice {
+	if installed == "" || installed == "0.0.0" {
+		return versionNotice{}
+	}
+	if compareVersionTags(installed, minSafeVersion) < 0 {
+		return versionNotice{Level: "error", Changelog: minSafeVersion,
+			Title: "OpenPanel " + installed + " is older than " + minSafeVersion + ", the minimum supported version",
+			Text:  minSafeVersion + " brings a lot of security improvements, update as soon as you can."}
+	}
+	if latest == "" || latest == "0.0.0" || compareVersionTags(latest, installed) <= 0 {
+		return versionNotice{}
+	}
+	part := func(v string, i int) int {
+		p := strings.Split(v, ".")
+		if i >= len(p) {
+			return 0
+		}
+		n, _ := strconv.Atoi(p[i])
+		return n
+	}
+	switch {
+	case part(latest, 0) != part(installed, 0):
+		return versionNotice{Level: "error", Changelog: latest,
+			Title: "OpenPanel " + installed + " is a major version behind " + latest,
+			Text:  "Older major versions stop getting fixes, plan the update."}
+	case part(latest, 1) != part(installed, 1):
+		return versionNotice{Level: "warning", Changelog: latest,
+			Title: "OpenPanel " + installed + " is behind " + latest,
+			Text:  "A newer minor version is out with fixes and new features."}
+	}
+	return versionNotice{}
+}
+
 // ClusterLatestVersion lets the servers table offer an update when one exists
 func ClusterLatestVersion() string { return getLatestVersion() }
 
@@ -484,6 +525,7 @@ func (u *Updates) ServeUpdates(w http.ResponseWriter, r *http.Request) {
 		// so this uses the same numeric per-component comparison as
 		// getLatestVersion.
 		"ShowUpdateNow": compareVersionTags(latestVersion, panelVersion) > 0,
+		"VersionNotice": updateVersionNotice(panelVersion, latestVersion),
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, u.Sessions),
 	}, r, "Update settings"))

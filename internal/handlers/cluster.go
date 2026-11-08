@@ -64,6 +64,7 @@ func (c *Cluster) ServePage(w http.ResponseWriter, r *http.Request) {
 		health := c.Manager.Health()
 		data["Health"] = health
 		data["Totals"] = clusterTotals(health)
+		data["Problems"] = clusterProblems(health)
 		data["Nodes"] = st.Nodes
 		data["Jobs"] = reverseJobs(st.Jobs)
 		data["Unsynced"] = c.Manager.UnsyncedCount()
@@ -92,6 +93,41 @@ func (c *Cluster) ServePage(w http.ResponseWriter, r *http.Request) {
 
 // clusterTotals sums the health rows for the strip above the servers table
 type clusterTotalsRow struct{ Servers, Offline, Paused, Users, Behind int }
+
+// clusterProblemsNote is the box above the servers, Down means a server is offline or a service on it isn't running
+type clusterProblemsNote struct {
+	Lines []string
+	Down  bool
+}
+
+// clusterProblems uses the same rules as the dashboard widget, paused servers are left out on purpose
+func clusterProblems(health []cluster.NodeHealth) clusterProblemsNote {
+	var n clusterProblemsNote
+	for _, h := range health {
+		var what string
+		switch {
+		case h.Paused:
+			continue
+		case !h.Online:
+			what = "offline"
+			if h.Error != "" {
+				what += " (" + h.Error + ")"
+			}
+			n.Down = true
+		case len(h.Down) > 0:
+			what = strings.Join(h.Down, ", ") + " down"
+			n.Down = true
+		case h.DiskPct >= 90:
+			what = fmt.Sprintf("disk %d%% full", h.DiskPct)
+		case h.MemPct >= 90:
+			what = fmt.Sprintf("memory %d%% used", h.MemPct)
+		default:
+			continue
+		}
+		n.Lines = append(n.Lines, h.Name+": "+what+".")
+	}
+	return n
+}
 
 func clusterTotals(health []cluster.NodeHealth) clusterTotalsRow {
 	t := clusterTotalsRow{Servers: len(health)}

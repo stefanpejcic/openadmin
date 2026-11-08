@@ -538,6 +538,7 @@ type usersListPageData struct {
 	Plans         []paneldb.RowMap
 	MySQLIsDown   bool
 	Widgets       map[string]usageWidgetData
+	UsageAlerts   usersUsageAlerts
 	Notes         map[string]string
 	PlanNames     []string
 	OwnerNames    []string
@@ -546,6 +547,69 @@ type usersListPageData struct {
 	SortDirection string
 	CSRFToken     string
 	Flashes       []auth.Flash
+}
+
+// usersUsageAlerts groups accounts at 100% of a limit (Over, shown as an error) apart from ones at 90% (Near, a warning)
+type usersUsageAlerts struct {
+	Over, Near         []userUsageAlert
+	MoreOver, MoreNear int
+}
+
+type userUsageAlert struct {
+	User string
+	What string
+}
+
+// usersUsageAlertsShown keeps each box short on servers with many accounts
+const usersUsageAlertsShown = 10
+
+func buildUsersUsageAlerts(widgets map[string]usageWidgetData) usersUsageAlerts {
+	names := make([]string, 0, len(widgets))
+	for name := range widgets {
+		if !strings.Contains(name, "SUSPENDED_") {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	var a usersUsageAlerts
+	for _, name := range names {
+		w := widgets[name]
+		metrics := []struct {
+			label string
+			pct   int
+			on    bool
+		}{
+			{"disk", w.DiskPercent, w.HasDiskData},
+			{"inodes", w.InodesPercent, w.HasDiskData},
+			{"memory", w.MemPercent, true},
+			{"CPU", w.CPUPercent, true},
+		}
+		var parts []string
+		over := false
+		for _, m := range metrics {
+			if !m.on || m.pct < 90 {
+				continue
+			}
+			over = over || m.pct >= 100
+			parts = append(parts, fmt.Sprintf("%s %d%%", m.label, m.pct))
+		}
+		if len(parts) == 0 {
+			continue
+		}
+		alert := userUsageAlert{User: name, What: strings.Join(parts, ", ")}
+		if over {
+			if len(a.Over) < usersUsageAlertsShown {
+				a.Over = append(a.Over, alert)
+			} else {
+				a.MoreOver++
+			}
+		} else if len(a.Near) < usersUsageAlertsShown {
+			a.Near = append(a.Near, alert)
+		} else {
+			a.MoreNear++
+		}
+	}
+	return a
 }
 
 // usersSortKeys maps the ?sort= names used by the table headers to row keys
@@ -648,6 +712,7 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 		Plans:         plans,
 		MySQLIsDown:   mysqlIsDown,
 		Widgets:       widgets,
+		UsageAlerts:   buildUsersUsageAlerts(widgets),
 		Notes:         notesMapFor(users),
 		SortCol:       sortCol,
 		SortDirection: direction,
@@ -658,6 +723,8 @@ func (u *Users) ServeList(w http.ResponseWriter, r *http.Request) {
 
 type userDetailPageData struct {
 	webtemplates.Chrome
+	// set when docker-collect_stats stopped writing this user's usage, nil while it's recent or the account is suspended
+	UsageStale        *usageStaleNote
 	Username          string
 	User              *paneldb.UserData
 	Disk              diskUsage
@@ -864,6 +931,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Disk:              disk,
 		Notes:             readUserNotes(userData.Context),
 		Stats:             parsedStats,
+		UsageStale:        userUsageStale(parsedStats, strings.Contains(username, "SUSPENDED_"), time.Now()),
 		StatsWidget:       buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats).withOverLimit(),
 		ServerIP:          serverIP,
 		ServerName:        serverName(),
@@ -1366,6 +1434,25 @@ func logUserAction(username, ip, action string) {
 	defer f.Close()
 	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	_, _ = f.WriteString(timestamp + "  " + ip + " " + action + "\n")
+}
+
+// userUsageStale checks the newest line of resource_usage.txt, docker-collect_stats writes one every hour
+func userUsageStale(stats map[string]interface{}, suspended bool, now time.Time) *usageStaleNote {
+	if suspended {
+		return nil
+	}
+	raw, _ := stats["timestamp"].(string)
+	if raw == "" {
+		return &usageStaleNote{Never: true}
+	}
+	ts, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return nil
+	}
+	if now.Sub(ts) < usageStaleAfter {
+		return nil
+	}
+	return &usageStaleNote{Last: ts.In(time.Local).Format("Jan 2, 15:04"), Ago: humanizeAgo(ts, now)}
 }
 
 // ServeResourceUsageHistory handles GET

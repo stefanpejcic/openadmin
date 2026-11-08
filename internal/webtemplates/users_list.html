@@ -34,6 +34,26 @@
         </header>
     </div>
 
+    {{with .UsageAlerts}}{{if or .Over .Near}}
+    <div class="space-y-3 px-4 pt-4 sm:px-6 lg:px-8">
+        {{if .Over}}
+        <div role="alert" class="flex gap-3 rounded-md bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/70 dark:text-red-500"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
+            <div class="min-w-0">
+                <p class="font-medium">{{if eq (len .Over) 1}}An account is over its limit{{else}}{{len .Over}}{{if .MoreOver}}+{{end}} accounts are over their limits{{end}}</p>
+                <p class="mt-1">{{range $i, $a := .Over}}{{if $i}}, {{end}}<a href="/users/{{$a.User}}" class="font-medium underline underline-offset-4">{{$a.User}}</a> ({{$a.What}}){{end}}{{if .MoreOver}} and {{.MoreOver}} more{{end}}. Websites, email or databases on these accounts can fail until the limit is raised or usage goes down.</p>
+            </div>
+        </div>
+        {{end}}
+        {{if .Near}}
+        <div role="status" class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
+            <div class="min-w-0">
+                <p class="font-medium">{{if eq (len .Near) 1}}An account is close to its limit{{else}}{{len .Near}}{{if .MoreNear}}+{{end}} accounts are close to their limits{{end}}</p>
+                <p class="mt-1">{{range $i, $a := .Near}}{{if $i}}, {{end}}<a href="/users/{{$a.User}}" class="font-medium underline underline-offset-4">{{$a.User}}</a> ({{$a.What}}){{end}}{{if .MoreNear}} and {{.MoreNear}} more{{end}}. Raise the plan limits or free up space before they reach 100%.</p>
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{end}}{{end}}
     <div class="">
         <div class="space-y-3">
             <div class="flex px-4 pt-3 sm:px-6 lg:px-8 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
@@ -125,7 +145,7 @@
             <button id="dropdownToggleButton" data-dropdown-toggle="dropdownToggle" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600 ml-auto" type="button">Show columns<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4 shrink-0"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.05021 8.22168L11.9999 13.1714Z"/></svg></button>
 
             <!-- Dropdown menu -->
-            <div id="dropdownToggle" class="max-h-[min(22rem,55vh)] overflow-y-auto overscroll-contain hidden w-72 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
+            <div id="dropdownToggle" class="overflow-y-auto overscroll-contain hidden w-72 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
                 <ul aria-labelledby="dropdownToggleButton">
                     {{template "plan_column_toggle" (dict "Col" "username" "Label" "Username")}}
                     {{template "plan_column_toggle" (dict "Col" "email" "Label" "Email address")}}

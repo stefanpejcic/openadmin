@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 
@@ -538,5 +539,25 @@ func TestIsExitCodeTreatsDnfUpdatesAvailableAsSuccess(t *testing.T) {
 	}
 	if isExitCode(nil, 100) {
 		t.Fatal("nil error treated as exit 100")
+	}
+}
+
+func TestResourceUsageStale(t *testing.T) {
+	orig := ResourceUsageSnapshotFile
+	t.Cleanup(func() { ResourceUsageSnapshotFile = orig })
+	ResourceUsageSnapshotFile = filepath.Join(t.TempDir(), "snap.jsonl")
+	now := time.Date(2026, 11, 8, 12, 0, 0, 0, time.Local)
+
+	if n := resourceUsageStale(now); n == nil || !n.Never {
+		t.Fatalf("missing file should say never collected, got %+v", n)
+	}
+	os.WriteFile(ResourceUsageSnapshotFile, []byte(`{"ts":"2026-11-08 11:55:00"}`+"\n"), 0o644)
+	if n := resourceUsageStale(now); n != nil {
+		t.Fatalf("fresh snapshot flagged: %+v", n)
+	}
+	os.WriteFile(ResourceUsageSnapshotFile, []byte(`{"ts":"2026-11-06 09:00:00"}`+"\nnot json\n"), 0o644)
+	n := resourceUsageStale(now)
+	if n == nil || n.Never || n.Ago != "2d 3h ago" {
+		t.Fatalf("old snapshot not flagged right: %+v", n)
 	}
 }

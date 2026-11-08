@@ -71,6 +71,10 @@ type dashboardPageData struct {
 	Summary *serverSummary
 	// the admin's saved widget order, sizes, collapsed widgets and header buttons, "null" when never changed
 	Layout template.JS
+	// set when sentinel stopped writing usage snapshots, the usage widget would otherwise show old data as the last hour
+	UsageStale *usageStaleNote
+	// an outdated OS can point to moving the server, not on a cluster master or with more than 10 accounts
+	OSMoveHint bool
 }
 
 // onboardingPageData is the shape webtemplates/onboarding.html renders
@@ -161,6 +165,8 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		d.serveAdminDashboardError(w, r, wantJSON)
 		return
 	}
+	isMaster := ClusterManager != nil && ClusterManager.IsMaster()
+	osMoveHint := !isMaster && counts.UserCount <= 10
 	data := dashboardAdminData{
 		ForceDomain:       forceDomain,
 		UserCount:         counts.UserCount,
@@ -189,6 +195,8 @@ func (d *Dashboard) serveAdminDashboard(w http.ResponseWriter, r *http.Request, 
 		dashboardAdminData: data,
 		Flashes:            auth.PopFlashes(w, r, d.Sessions),
 		Layout:             d.layout(r),
+		UsageStale:         resourceUsageStale(time.Now()),
+		OSMoveHint:         osMoveHint,
 	})
 }
 
@@ -1210,6 +1218,55 @@ func resourceUsagePeriodLabel(minutes int) string {
 		return label
 	}
 	return fmt.Sprintf("%d minutes", minutes)
+}
+
+// usageStaleAfter is how old the newest snapshot gets before the dashboard says collection stopped, sentinel writes one every 5 minutes
+const usageStaleAfter = 24 * time.Hour
+
+type usageStaleNote struct {
+	Never bool
+	Last  string
+	Ago   string
+}
+
+// resourceUsageStale is nil while snapshots are recent
+func resourceUsageStale(now time.Time) *usageStaleNote {
+	last, ok := lastResourceUsageSnapshot()
+	if !ok {
+		return &usageStaleNote{Never: true}
+	}
+	if now.Sub(last) < usageStaleAfter {
+		return nil
+	}
+	return &usageStaleNote{Last: last.Format("Jan 2, 15:04"), Ago: humanizeAgo(last, now)}
+}
+
+// lastResourceUsageSnapshot reads only the tail of the file since it grows by a line every 5 minutes
+func lastResourceUsageSnapshot() (time.Time, bool) {
+	f, err := os.Open(ResourceUsageSnapshotFile)
+	if err != nil {
+		return time.Time{}, false
+	}
+	defer f.Close()
+	const tail = 64 << 10
+	if st, err := f.Stat(); err == nil && st.Size() > tail {
+		_, _ = f.Seek(st.Size()-tail, io.SeekStart)
+	}
+	raw, _ := io.ReadAll(f)
+	lines := strings.Split(string(raw), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		var row struct {
+			TS string `json:"ts"`
+		}
+		if json.Unmarshal([]byte(strings.TrimSpace(lines[i])), &row) != nil || row.TS == "" {
+			continue
+		}
+		// sentinel writes the server's local time
+		if ts, err := time.ParseInLocation("2006-01-02 15:04:05", row.TS, time.Local); err == nil {
+			return ts, true
+		}
+	}
+	return time.Time{}, false
 }
 
 // loadResourceUsageSnapshots reads the sentinel JSONL file, finds the
