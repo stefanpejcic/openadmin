@@ -33,8 +33,9 @@
         menu.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';
         menu.style.top = y + 'px';
         btn.setAttribute('aria-expanded', 'true');
+        // focusing must not scroll, a scroll would close the menu right away
         const first = items()[0];
-        if (first) first.focus();
+        if (first) first.focus({ preventScroll: true });
     }
 
     menu.addEventListener('click', e => {
@@ -66,6 +67,9 @@
         b.setAttribute('aria-haspopup', 'menu');
         b.setAttribute('aria-expanded', 'false');
     });
-    addEventListener('scroll', hide, true);
+    // only a scroll that moves the button closes the menu, a toast or another panel scrolling doesn't
+    addEventListener('scroll', e => {
+        if (current && (e.target === document || (e.target.contains && e.target.contains(current)))) hide();
+    }, true);
     addEventListener('resize', hide);
 })();
