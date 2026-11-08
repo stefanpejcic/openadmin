@@ -325,6 +325,8 @@
                       }
 
                       this.activities.push({
+                          ts: new Date(activity.timestamp).getTime() || 0,
+                          actionText: String(activity.action || '').toLowerCase(),
                           date: date,
                           action: action,
                           ip: ip,
@@ -373,6 +375,7 @@
                       const country = login.country || 'Unknown';
 
                       this.logins.push({
+                          ts: new Date(login.login_time).getTime() || 0,
                           date: date,
                           ip: ip,
                           country: country
@@ -1791,7 +1794,7 @@
                <!-- END PERMISSIONS -->
 
             <!-- ACTIVITY -->
-            <div x-show="activeTab === 'activity'" x-cloak x-data="{ searchQuery: '' }">
+            <div x-show="activeTab === 'activity'" x-cloak x-data="{ searchQuery: '', ...opSortState('ts', 'desc') }">
                <div class="flex flex-col justify-between gap-2 px-4 py-4 sm:flex-row sm:items-center sm:px-6">
                   <div class="relative w-full sm:w-64 [&>input]:py-1.5">
                      <input aria-label="Search activities…" x-model="searchQuery" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm pl-8" placeholder="Search activities…" type="search"/>
@@ -1809,9 +1812,9 @@
                      <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                         <thead>
                            <tr class="whitespace-nowrap border-b text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6">
-                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
-                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"><span class="sr-only">Actions</span></th>
-                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP address</th>
+                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "ts" "Label" "Date")}}</th>
+                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "actionText" "Label" "Action")}}</th>
+                              <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "ip" "Label" "IP address")}}</th>
                            </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -1821,12 +1824,12 @@
                            <template x-if="$store.activityStore.activities.length > 0 && $store.activityStore.activities[0].noActivity">
                               <tr><td colspan="3" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">No activity recorded yet.</td></tr>
                            </template>
-                           <template x-for="(activity, index) in $store.activityStore.activities.filter(activity => {
+                           <template x-for="(activity, index) in opSortRows($store.activityStore.activities.filter(activity => {
                               if (activity.noActivity) return false;
                               return activity.date.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               activity.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
                               activity.ip.toLowerCase().includes(searchQuery.toLowerCase());
-                              })" :key="activity.timestamp + '-' + index">
+                              }), sortKey, sortDir)" :key="activity.timestamp + '-' + index">
                               <tr class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
                                  <td class="relative group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" x-text="activity.date"></td>
                                  <td class="flex items-center relative group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left truncate max-w-[500px]" x-html="activity.action"></td>
@@ -1858,14 +1861,14 @@
         <div class="w-full overflow-auto border-t border-gray-200 dark:border-gray-800">
             <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                 <thead>
-                    <tr class="bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6"><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU %</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU usage</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory %</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory usage</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Tasks</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Bandwidth</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Warning</th></tr>
+                    <tr class="bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6"><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "ts" "Label" "Date")}}</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "cpuPct" "Label" "CPU %")}}</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "cpuPct" "Label" "CPU usage")}}</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "memPct" "Label" "Memory %")}}</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "memBytes" "Label" "Memory usage")}}</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "tasksNum" "Label" "Tasks")}}</th><th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "warning" "Label" "Warning")}}</th></tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                     <template x-if="!loaded || error || rows.length === 0">
-                        <tr><td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500" x-text="!loaded ? 'Loading…' : (error || 'No usage recorded yet.')"></td></tr>
+                        <tr><td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500" x-text="!loaded ? 'Loading…' : (error || 'No usage recorded yet.')"></td></tr>
                     </template>
                     <template x-for="(row, i) in filtered" :key="i">
-                        <tr class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60"><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.date"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.cpuPct"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.cpu"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.memPct"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.mem"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.tasks"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.bw"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.warning"></td></tr>
+                        <tr class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60"><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.date"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.cpuPct"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.cpu"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.memPct"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.mem"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.tasks"></td><td class="p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400" x-text="row.warning"></td></tr>
                     </template>
                 </tbody>
             </table>
@@ -1873,13 +1876,34 @@
     </div>
 </div>
 <script>
+// client side column sorting for the log tables, the date column sorts by the real timestamp and starts newest first
+function opSortState(key, dir) {
+    return {
+        sortKey: key, sortDir: dir,
+        sortBy(k) {
+            if (this.sortKey === k) { this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc'; return; }
+            this.sortKey = k;
+            this.sortDir = k === 'ts' ? 'desc' : 'asc';
+        },
+    };
+}
+function opSortRows(rows, key, dir) {
+    const f = dir === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+        const x = a[key], y = b[key];
+        if (typeof x === 'number' && typeof y === 'number') return (x - y) * f;
+        return String(x ?? '').localeCompare(String(y ?? ''), undefined, { numeric: true }) * f;
+    });
+}
 // hourly snapshots from docker-collect_stats, newest first
 function userUsageHistory(username) {
     return {
         rows: [], loaded: false, loading: false, error: '', searchQuery: '',
+        ...opSortState('ts', 'desc'),
         get filtered() {
             const q = this.searchQuery.toLowerCase();
-            return q ? this.rows.filter(r => Object.values(r).join(' ').toLowerCase().includes(q)) : this.rows;
+            const rows = q ? this.rows.filter(r => [r.date, r.cpu, r.mem, r.tasks, r.warning].join(' ').toLowerCase().includes(q)) : this.rows;
+            return opSortRows(rows, this.sortKey, this.sortDir);
         },
         load() {
             if (this.loaded || this.loading) return;
@@ -1887,18 +1911,18 @@ function userUsageHistory(username) {
             fetch('/get_resource_usage_history/' + encodeURIComponent(username))
                 .then(res => res.ok ? res.text() : (res.status === 404 ? '' : Promise.reject(new Error('HTTP ' + res.status))))
                 .then(text => {
-                    const pad = n => String(n).padStart(2, '0');
                     this.rows = text.trim().split('\n').reverse().map(line => {
                         let d; try { d = JSON.parse(line); } catch (e) { return null; }
-                        const t = new Date(d.timestamp);
                         return {
-                            date: isNaN(t) ? (d.timestamp || '-') : t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()) + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes()),
+                            ts: new Date(d.timestamp).getTime() || 0,
+                            memBytes: d.memory?.used?.bytes ?? 0,
+                            tasksNum: d.tasks?.current ?? 0,
+                            date: Alpine.store('activityStore').formatDateString(d.timestamp),
                             cpuPct: d.cpu?.usage?.pct ?? 0,
                             cpu: d.cpu?.usage?.human ?? '-',
                             memPct: d.memory?.usage_pct ?? 0,
                             mem: (d.memory?.used?.human ?? '-') + ' / ' + (d.memory?.total?.human ?? '-'),
                             tasks: (d.tasks?.current ?? '-') + ' / ' + (d.tasks?.limit ?? '-'),
-                            bw: d.bandwidth?.total_sent?.human ?? '-',
                             warning: d.warning || '-',
                         };
                     }).filter(Boolean);
@@ -1910,7 +1934,7 @@ function userUsageHistory(username) {
 }
 </script>
 
-<div x-show="activeTab === 'logins'" x-cloak x-data="{ searchQuery: '' }">
+<div x-show="activeTab === 'logins'" x-cloak x-data="{ searchQuery: '', ...opSortState('ts', 'desc') }">
     <div class="flex flex-col justify-between gap-2 px-4 py-4 sm:flex-row sm:items-center sm:px-6">
         <div class="relative w-full sm:w-64 [&>input]:py-1.5">
             <input aria-label="Search logins…" x-model="searchQuery" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm pl-8" placeholder="Search logins…" type="search"/>
@@ -1928,9 +1952,9 @@ function userUsageHistory(username) {
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                 <thead>
                     <tr class="whitespace-nowrap border-b text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6">
-                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Date</th>
-                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Country</th>
-                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">IP address</th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "ts" "Label" "Date")}}</th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "country" "Label" "Country")}}</th>
+                        <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-end text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "ip" "Label" "IP address")}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -1940,13 +1964,13 @@ function userUsageHistory(username) {
                     <template x-if="$store.loginsStore.logins.length > 0 && $store.loginsStore.logins[0].noLogins">
                         <tr><td colspan="3" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">No logins recorded yet.</td></tr>
                     </template>
-                    <template x-for="(login, index) in $store.loginsStore.logins.filter(l => {
+                    <template x-for="(login, index) in opSortRows($store.loginsStore.logins.filter(l => {
                         if(l.noLogins) return false;
                         const term = searchQuery.toLowerCase();
                         return l.date.toLowerCase().includes(term) ||
                                l.country.toLowerCase().includes(term) ||
                                l.ip.toLowerCase().includes(term);
-                    })" :key="index">
+                    }), sortKey, sortDir)" :key="index">
                         <tr class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
                             <td class="relative group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" x-text="login.date"></td>
                             <td class="relative group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left flex gap-1 items-center">
