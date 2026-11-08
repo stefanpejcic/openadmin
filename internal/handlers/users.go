@@ -1476,6 +1476,9 @@ func (u *Users) ServeResourceUsageHistory(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if strings.EqualFold(r.URL.Query().Get("download"), "true") {
+		w.Header().Set("Content-Disposition", `attachment; filename="`+username+`_resource_usage_`+time.Now().Format("2006-01-02_15-04-05")+`.jsonl"`)
+	}
 	w.Write(raw)
 }
 
