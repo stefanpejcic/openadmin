@@ -92,12 +92,32 @@ var (
 	imunifyUsersMu    sync.Mutex
 	imunifyUsersCache map[string]imunifyUser
 	imunifyUsersUntil time.Time
+	imunifyUsersDirty bool
 )
+
+// invalidateImunifyUsers makes the next /websites load fetch fresh counts, used after GUI actions like ignore or cleanup
+func invalidateImunifyUsers() {
+	imunifyUsersMu.Lock()
+	imunifyUsersDirty = true
+	imunifyUsersMu.Unlock()
+}
 
 // cachedImunifyUsers is the per-user scan state for /websites, the agent takes over a second per call so it's kept for 2 minutes and refreshed in the background
 func cachedImunifyUsers() map[string]imunifyUser {
 	imunifyUsersMu.Lock()
 	defer imunifyUsersMu.Unlock()
+	if imunifyUsersDirty {
+		// fetch inline so the table doesn't show the counts from before the change
+		imunifyUsersDirty = false
+		imunifyUsersUntil = time.Now().Add(2 * time.Minute)
+		if users, err := fetchImunifyUsers(); err == nil {
+			imunifyUsersCache = users
+		}
+		if imunifyUsersCache == nil {
+			imunifyUsersCache = map[string]imunifyUser{}
+		}
+		return imunifyUsersCache
+	}
 	if time.Now().Before(imunifyUsersUntil) {
 		return imunifyUsersCache
 	}
@@ -122,6 +142,7 @@ func cachedImunifyUsers() map[string]imunifyUser {
 func setImunifyUsersCache(users map[string]imunifyUser) {
 	imunifyUsersMu.Lock()
 	imunifyUsersCache, imunifyUsersUntil = users, time.Now().Add(2*time.Minute)
+	imunifyUsersDirty = false
 	imunifyUsersMu.Unlock()
 }
 

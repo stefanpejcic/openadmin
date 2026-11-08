@@ -335,6 +335,10 @@ func (im *Imunify) ServeImunifyPHP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
+	// the GUI does ignore/cleanup/restore over POST, so /websites counts may be stale now
+	if r.Method == http.MethodPost {
+		invalidateImunifyUsers()
+	}
 	// Copies every upstream header through verbatim, including
 	// Content-Encoding/Transfer-Encoding, even though `body` here is
 	// already the fully-read (and possibly auto-decompressed) response
