@@ -316,11 +316,39 @@ func (a *APIUsers) handleGet(w http.ResponseWriter, r *http.Request, username st
 		return
 	}
 
-	// The account list relies on a page-scoped notion of "current user"
-	// that a bearer-token request never populates, so the underlying query
-	// never runs for this API and the list always comes back empty here,
-	// regardless of the caller's role.
-	writeJSON(w, map[string]interface{}{"users": []interface{}{}})
+	// admins get every account, a reseller only the ones it owns (actingReseller reads the API token's role)
+	rows, err := paneldb.GetAllUsers(a.MySQL, actingReseller(r))
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to load users")
+		return
+	}
+	users := make([]map[string]interface{}, 0, len(rows))
+	for _, row := range rows {
+		users = append(users, apiUserListEntry(row))
+	}
+	writeJSON(w, map[string]interface{}{"users": users})
+}
+
+// apiUserListEntry picks the fields GET /api/users returns from a GetAllUsers row, users.* also holds
+// the password hash and otp_secret, so this is an allowlist rather than the row minus a few keys
+func apiUserListEntry(row paneldb.RowMap) map[string]interface{} {
+	username, _ := row["username"].(string)
+	return map[string]interface{}{
+		"id":              row["id"],
+		"username":        username,
+		"email":           row["email"],
+		"owner":           row["owner"],
+		"plan":            row["name"], // plans.name, the users.plan column is a leftover
+		"plan_id":         row["plan_id"],
+		"context":         row["server"],
+		"registered_date": row["registered_date"],
+		"twofa_enabled":   row["twofa_enabled"],
+		"suspended":       strings.HasPrefix(username, "SUSPENDED_"),
+		"disk_limit":      row["disk_limit"],
+		"inodes_limit":    row["inodes_limit"],
+		"cpu":             row["cpu"],
+		"ram":             row["ram"],
+	}
 }
 
 func (a *APIUsers) handleCreate(w http.ResponseWriter, r *http.Request) {

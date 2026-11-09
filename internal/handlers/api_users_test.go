@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -69,21 +71,101 @@ func stubAPICheckOutputRun(t *testing.T, output string, err error) {
 	t.Cleanup(func() { apiCheckOutputRun = orig })
 }
 
-func TestServeUsersListAlwaysEmpty(t *testing.T) {
-	srv, client, _ := newAPIUsersTestServer(t)
-	resp, err := client.Get(srv.URL + "/api/users")
+// users.* plus the plan columns GetAllUsers selects, password and otp_secret included so the tests can check they never leak
+var apiUserListColumns = []string{"id", "username", "password", "email", "owner", "user_domains", "twofa_enabled", "otp_secret",
+	"plan", "registered_date", "server", "plan_id", "name", "disk_limit", "inodes_limit", "cpu", "ram"}
+
+func getUserList(t *testing.T, url string) (int, map[string]interface{}, string) {
+	t.Helper()
+	resp, err := http.Get(url)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
+	raw := new(strings.Builder)
 	var body map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&body)
-	users, ok := body["users"].([]interface{})
-	if !ok || len(users) != 0 {
-		t.Fatalf("expected an empty users array, got %v", body)
+	json.NewDecoder(io.TeeReader(resp.Body, raw)).Decode(&body)
+	return resp.StatusCode, body, raw.String()
+}
+
+func TestServeUsersListAdminSeesEveryAccount(t *testing.T) {
+	srv, _, mock := newAPIUsersTestServer(t)
+	mock.ExpectQuery(`SELECT users\.\*, plans\.name.*FROM users\s+INNER JOIN plans ON users\.plan_id = plans\.id\s*$`).
+		WillReturnRows(sqlmock.NewRows(apiUserListColumns).
+			AddRow(1, "alice", "$2b$12$hash", "a@example.com", nil, "", 0, "SECRETOTP", "", "2026-01-01", "alice", 2, "Developer plus", "50 GB", 1000000, "4", "6g").
+			AddRow(2, "SUSPENDED_20260101000000_bob", "$2b$12$hash2", "b@example.com", "res1", "", 1, "", "", "2026-01-02", "bob", 1, "Standard plan", "5 GB", 1000000, "2", "2g"))
+
+	status, body, raw := getUserList(t, srv.URL+"/api/users")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", status, raw)
+	}
+	users, _ := body["users"].([]interface{})
+	if len(users) != 2 {
+		t.Fatalf("expected 2 users, got %v", body)
+	}
+	alice := users[0].(map[string]interface{})
+	if alice["username"] != "alice" || alice["plan"] != "Developer plus" || alice["context"] != "alice" || alice["suspended"] != false {
+		t.Fatalf("unexpected first user: %v", alice)
+	}
+	if bob := users[1].(map[string]interface{}); bob["suspended"] != true || bob["owner"] != "res1" {
+		t.Fatalf("unexpected second user: %v", bob)
+	}
+	for _, leak := range []string{"password", "otp_secret", "$2b$12$", "SECRETOTP"} {
+		if strings.Contains(raw, leak) {
+			t.Fatalf("response leaks %q: %s", leak, raw)
+		}
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestServeUsersListResellerSeesOnlyOwnAccounts(t *testing.T) {
+	mysqlDB, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { mysqlDB.Close() })
+	u := &APIUsers{MySQL: mysqlDB}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/users", func(w http.ResponseWriter, r *http.Request) {
+		u.ServeUsers(w, withAPIUser(r, &admindb.User{Username: "res1", Role: "reseller"}))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	mock.ExpectQuery(`WHERE users\.owner = \?`).WithArgs("res1").
+		WillReturnRows(sqlmock.NewRows(apiUserListColumns).
+			AddRow(2, "bob", "x", "b@example.com", "res1", "", 0, "", "", "2026-01-02", "bob", 1, "Standard plan", "5 GB", 1000000, "2", "2g"))
+
+	status, body, raw := getUserList(t, srv.URL+"/api/users")
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", status, raw)
+	}
+	users, _ := body["users"].([]interface{})
+	if len(users) != 1 || users[0].(map[string]interface{})["username"] != "bob" {
+		t.Fatalf("expected only bob, got %v", body)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestServeUsersListEmptyIsAnArray(t *testing.T) {
+	srv, _, mock := newAPIUsersTestServer(t)
+	mock.ExpectQuery("SELECT").WillReturnRows(sqlmock.NewRows(apiUserListColumns))
+	_, body, raw := getUserList(t, srv.URL+"/api/users")
+	if users, ok := body["users"].([]interface{}); !ok || len(users) != 0 {
+		t.Fatalf("expected an empty users array, got %s", raw)
+	}
+}
+
+func TestServeUsersListDBError(t *testing.T) {
+	srv, _, mock := newAPIUsersTestServer(t)
+	mock.ExpectQuery("SELECT").WillReturnError(sql.ErrConnDone)
+	status, _, raw := getUserList(t, srv.URL+"/api/users")
+	if status != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d: %s", status, raw)
 	}
 }
 
