@@ -362,7 +362,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	apiDNS := &handlers.APIDNS{PublicIP: d.PublicIP, MySQL: d.MySQL}
 	apiServices := &handlers.APIServices{}
 	apiSystem := &handlers.APISystem{MySQL: d.MySQL}
-	apiNotifications := &handlers.APINotifications{}
+	apiNotifications := &handlers.APINotifications{MySQL: d.MySQL}
 	apiDomainFiles := &handlers.APIDomainFiles{MySQL: d.MySQL}
 	apiDomainStats := &handlers.APIDomainStats{}
 	apiEmails := &handlers.APIEmails{PublicIP: d.PublicIP, MySQL: d.MySQL}
@@ -557,7 +557,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/notifications/pause", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.ServePauseStatus)))
 	mux.HandleFunc("POST /api/notifications/pause", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.HandlePause)))
 	mux.HandleFunc("POST /api/notifications/resume", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.HandleResume)))
-	mux.HandleFunc("GET /api/usage/disk", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiNotifications.ServeDiskUsage)))
+	// resellers get only their own users, the handler filters
+	mux.HandleFunc("GET /api/usage/disk", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiNotifications.ServeDiskUsage)))
 
 	mux.HandleFunc("GET /api/server/crons", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdminOrReseller(apiServerCrons.ServeCrons)))
 	mux.HandleFunc("POST /api/server/crons", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiServerCrons.ServeCrons)))

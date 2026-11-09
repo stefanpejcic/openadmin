@@ -7,6 +7,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -18,7 +19,9 @@ import (
 
 // APINotifications bundles the /api/notifications* and /api/usage/disk
 // handlers.
-type APINotifications struct{}
+type APINotifications struct {
+	MySQL *sql.DB
+}
 
 // apiNotification is a stored entry plus the line_number to pass to the read/delete endpoints
 type apiNotification struct {
@@ -238,6 +241,7 @@ func quotaFieldOrZero(m map[string]interface{}, key string) interface{} {
 // ServeDiskUsage handles GET /api/usage/disk: per-user disk/inode usage
 // from QuotaReportPath (shared with users.go's readDiskUsageAll), generating
 // the report on demand via `opencli user-quota` if it doesn't exist yet.
+// Resellers only get their own users.
 func (n *APINotifications) ServeDiskUsage(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(QuotaReportPath); err != nil {
 		if genErr := apiQuotaGenerateRun(); genErr != nil {
@@ -263,10 +267,11 @@ func (n *APINotifications) ServeDiskUsage(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	scope := scopeFor(r, n.MySQL)
 	results := map[string]interface{}{}
 	for _, u := range parsed.Users {
 		username, _ := u["username"].(string)
-		if username == "" {
+		if username == "" || !scope.AllowsUser(username) {
 			continue
 		}
 		results[username] = map[string]interface{}{

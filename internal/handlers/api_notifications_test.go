@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 )
 
 func newAPINotificationsMux(n *APINotifications) *http.ServeMux {
@@ -355,5 +357,44 @@ func TestAPIServeDiskUsageGenerationFailureIs500(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestAPIServeDiskUsageResellerOnlyGetsOwnUsers(t *testing.T) {
+	withScratchAPIQuotaReport(t, `{"users":[{"username":"alice","disk_used":100},{"username":"SUSPENDED_1700000000_alice2","disk_used":7},{"username":"bob","disk_used":200}]}`)
+	db, mock, _ := sqlmock.New()
+	defer db.Close()
+	mock.ExpectQuery(`SELECT username FROM users WHERE owner = \?`).WithArgs("res1").
+		WillReturnRows(sqlmock.NewRows([]string{"username"}).AddRow("alice").AddRow("alice2"))
+	mock.ExpectQuery(`SELECT d.domain_url, u.username FROM domains d`).WithArgs("res1").
+		WillReturnRows(sqlmock.NewRows([]string{"domain_url", "username"}))
+
+	n := &APINotifications{MySQL: db}
+	w := httptest.NewRecorder()
+	n.ServeDiskUsage(w, resellerRequest(http.MethodGet, "/api/usage/disk", ""))
+
+	var body map[string]map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&body)
+	if _, ok := body["alice"]; !ok {
+		t.Fatalf("expected alice, got %+v", body)
+	}
+	if _, ok := body["SUSPENDED_1700000000_alice2"]; !ok {
+		t.Fatalf("expected the reseller's suspended user, got %+v", body)
+	}
+	if _, ok := body["bob"]; ok {
+		t.Fatalf("reseller must not see bob, got %+v", body)
+	}
+}
+
+func TestAPIServeDiskUsageResellerWithoutDBGetsNothing(t *testing.T) {
+	withScratchAPIQuotaReport(t, `{"users":[{"username":"alice","disk_used":100}]}`)
+
+	w := httptest.NewRecorder()
+	(&APINotifications{}).ServeDiskUsage(w, resellerRequest(http.MethodGet, "/api/usage/disk", ""))
+
+	var body map[string]interface{}
+	json.NewDecoder(w.Body).Decode(&body)
+	if len(body) != 0 {
+		t.Fatalf("expected an empty result, got %+v", body)
 	}
 }
