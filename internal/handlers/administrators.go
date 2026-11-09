@@ -343,7 +343,12 @@ func runOpenCLI(fallbackError string, args ...string) (bool, string) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		// most opencli commands print their error to stdout, e.g. plan-create's "Plan name ... already exists",
+		// so fall back to it, otherwise the flash is empty and the page shows nothing at all
 		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = strings.TrimSpace(stdout.String())
+		}
 		if msg == "" {
 			msg = fallbackError
 		}

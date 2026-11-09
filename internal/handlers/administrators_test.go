@@ -321,3 +321,24 @@ func TestServeEditFormPermissions(t *testing.T) {
 		t.Fatalf("expected invalid-action flash, got %s", body)
 	}
 }
+
+// opencli prints most errors to stdout, an empty stderr must not turn them into an empty flash
+func TestRunOpenCLIFailureMessage(t *testing.T) {
+	cases := []struct {
+		name, script, fallback, want string
+	}{
+		{"stderr wins", "echo out; echo err >&2; exit 1", "fb", "err"},
+		{"stdout when stderr is empty", "echo \"Error: Plan name 'x' already exists.\"; exit 1", "fb", "Error: Plan name 'x' already exists."},
+		{"fallback when both are empty", "exit 1", "fb", "fb"},
+		{"first line only", "printf 'line1\\nline2\\n'; exit 1", "fb", "line1"},
+	}
+	for _, c := range cases {
+		ok, msg := runOpenCLI(c.fallback, "sh", "-c", c.script)
+		if ok || msg != c.want {
+			t.Errorf("%s: got (%v, %q), want (false, %q)", c.name, ok, msg, c.want)
+		}
+	}
+	if ok, msg := runOpenCLI("fb", "sh", "-c", "echo done"); !ok || msg != "done" {
+		t.Errorf("success: got (%v, %q), want (true, \"done\")", ok, msg)
+	}
+}

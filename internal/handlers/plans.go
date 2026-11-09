@@ -291,7 +291,7 @@ func (p *Plans) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "reseller="+currentUser.Username)
 	}
 
-	success, output := runOpenCLI("", args...)
+	success, output := runOpenCLI("Error creating plan.", args...)
 	if success {
 		if p.hasEnterpriseAccess() {
 			if planID, err := paneldb.GetPlanIDByName(p.MySQL, r.FormValue("name")); err == nil {
