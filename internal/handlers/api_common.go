@@ -79,7 +79,8 @@ func (a *APIAuth) actingAPIUser(r *http.Request) *admindb.User {
 		return nil
 	}
 	user, err := a.DB.UserByUsername(username)
-	if err != nil {
+	// a token issued before a suspension stops working right away
+	if err != nil || !user.IsActive {
 		return nil
 	}
 	return user
@@ -152,6 +153,10 @@ func (a *APIAuth) RequireAPIToken(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		user, _ := a.DB.UserByUsername(username)
+		if user != nil && !user.IsActive {
+			writeJSONError(w, http.StatusForbidden, "User is not active")
+			return
+		}
 		next(w, withAPIUser(withAPIUsername(r, username), user))
 	}
 }

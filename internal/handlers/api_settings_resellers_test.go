@@ -278,3 +278,57 @@ func TestAPISettingsResellersPostUpdateBrandingIsAValidAction(t *testing.T) {
 		t.Fatalf("expected update_branding to be recognized as a valid action, got %v", body)
 	}
 }
+
+func TestAPISettingsResellersDeleteWithUsersPassesFlag(t *testing.T) {
+	for _, tc := range []struct{ body, want string }{
+		{`{"action":"delete","username":"reseller1"}`, "admin delete reseller1"},
+		{`{"action":"delete","username":"reseller1","with_users":true}`, "admin delete reseller1 --with-users"},
+	} {
+		h, createUser := newAPISettingsResellersHandler(t)
+		adminToken := createUser("admin1", "admin")
+		logFile := withFakeOpenCLI(t)
+
+		req := httptest.NewRequest(http.MethodPost, "/api/settings/resellers", strings.NewReader(tc.body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+adminToken)
+		rec := httptest.NewRecorder()
+		h.ServeSettingsResellers(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+		args, _ := os.ReadFile(logFile)
+		if got := strings.TrimSpace(string(args)); got != tc.want {
+			t.Fatalf("expected %q, got %q", tc.want, got)
+		}
+	}
+}
+
+func TestAPISettingsResellerGetOne(t *testing.T) {
+	h, createUser := newAPISettingsResellersHandler(t)
+	createUser("reseller1", "reseller")
+	createUser("admin2", "admin")
+
+	get := func(name string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, "/api/settings/resellers/"+name, nil)
+		req.SetPathValue("username", name)
+		rec := httptest.NewRecorder()
+		h.ServeReseller(rec, req)
+		return rec
+	}
+
+	rec := get("reseller1")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var row map[string]interface{}
+	json.Unmarshal(rec.Body.Bytes(), &row)
+	if row["username"] != "reseller1" || row["role"] != "reseller" {
+		t.Fatalf("unexpected row %v", row)
+	}
+	for _, name := range []string{"admin2", "ghost"} {
+		if rec := get(name); rec.Code != http.StatusNotFound {
+			t.Fatalf("%s: expected 404, got %d", name, rec.Code)
+		}
+	}
+}

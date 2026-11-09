@@ -37,6 +37,7 @@ type apiResellerActionBody struct {
 	MaxDiskBlocks string `json:"max_disk_blocks"`
 	LogoURL       string `json:"logo_url"`
 	Plan          string `json:"plan"`
+	WithUsers     bool   `json:"with_users"`
 }
 
 // ServeSettingsResellers handles GET/POST /api/settings/resellers. Wrap
@@ -71,27 +72,41 @@ func (a *APISettingsResellers) ServeSettingsResellers(w http.ResponseWriter, r *
 		if !strings.EqualFold(u.Role, "reseller") {
 			continue
 		}
-		info := lastLogin[u.Username]
-		credCount, _ := a.DB.CredentialCountByUserID(u.ID)
-		rd := readResellerData(u.Username)
-		rows = append(rows, resellerRow{
-			Username:          u.Username,
-			IsActive:          u.IsActive,
-			Role:              u.Role,
-			LastIP:            orNA(info.ip),
-			LastLogin:         orNA(info.login),
-			TOTPEnabled:       u.TOTPEnabled,
-			PasskeysEnabled:   credCount > 0,
-			MaxAccounts:       rd.MaxAccounts,
-			CurrentAccounts:   rd.CurrentAccounts,
-			CurrentDiskBlocks: rd.CurrentDiskBlocks,
-			MaxDiskBlocks:     rd.MaxDiskBlocks,
-			AllowedPlans:      rd.AllowedPlans,
-			LogoURL:           rd.LogoURL,
-			ResellerPlan:      rd.ResellerPlan,
-		})
+		rows = append(rows, a.row(u, lastLogin))
 	}
 	writeJSON(w, rows)
+}
+
+func (a *APISettingsResellers) row(u admindb.User, lastLogin map[string]loginInfo) resellerRow {
+	info := lastLogin[u.Username]
+	credCount, _ := a.DB.CredentialCountByUserID(u.ID)
+	rd := readResellerData(u.Username)
+	return resellerRow{
+		Username:          u.Username,
+		IsActive:          u.IsActive,
+		Role:              u.Role,
+		LastIP:            orNA(info.ip),
+		LastLogin:         orNA(info.login),
+		TOTPEnabled:       u.TOTPEnabled,
+		PasskeysEnabled:   credCount > 0,
+		MaxAccounts:       rd.MaxAccounts,
+		CurrentAccounts:   rd.CurrentAccounts,
+		CurrentDiskBlocks: rd.CurrentDiskBlocks,
+		MaxDiskBlocks:     rd.MaxDiskBlocks,
+		AllowedPlans:      rd.AllowedPlans,
+		LogoURL:           rd.LogoURL,
+		ResellerPlan:      rd.ResellerPlan,
+	}
+}
+
+// ServeReseller handles GET /api/settings/resellers/{username}, admin only
+func (a *APISettingsResellers) ServeReseller(w http.ResponseWriter, r *http.Request) {
+	u, err := a.DB.UserByUsername(r.PathValue("username"))
+	if err != nil || !strings.EqualFold(u.Role, "reseller") {
+		writeJSONError(w, http.StatusNotFound, "Reseller not found.")
+		return
+	}
+	writeJSON(w, a.row(*u, parseLoginLog()))
 }
 
 func (a *APISettingsResellers) handlePost(w http.ResponseWriter, r *http.Request, actingUser *admindb.User) {
@@ -216,8 +231,13 @@ func (a *APISettingsResellers) handlePost(w http.ResponseWriter, r *http.Request
 		message = opencliResultMessage(ok, out)
 
 	case "delete":
+		args := []string{"opencli", "admin", "delete", username}
+		// without it the reseller's accounts move to admin
+		if body.WithUsers {
+			args = append(args, "--with-users")
+		}
 		var out string
-		ok, out = runOpenCLI(adminCommandError, "opencli", "admin", "delete", username)
+		ok, out = runOpenCLI(adminCommandError, args...)
 		message = opencliResultMessage(ok, out)
 	}
 

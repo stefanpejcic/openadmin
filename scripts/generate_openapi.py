@@ -43,7 +43,7 @@ AUTH_DESCRIPTIONS = {
     "RequireAPIToken": (True, "Any authenticated user."),
     "RequireAPIAdmin": (True, "Administrator or user role (the reseller role is blocked)."),
     "RequireAPIOwnerOrAdmin": (True, "Administrator/user role, or a reseller who owns the target account."),
-    "RequireAPIAdminOrReseller": (True, "Administrator/user role, or a reseller limited to the plans assigned to them."),
+    "RequireAPIAdminOrReseller": (True, "Administrator/user role, or a reseller limited to their own accounts and assigned plans."),
     "RequireAPISuperAdmin": (True, "The Super Admin (role must be exactly \"admin\") only."),
 }
 

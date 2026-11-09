@@ -41,6 +41,7 @@
     menu.addEventListener('click', e => {
         const b = e.target.closest('[data-post]');
         if (!b || !current) return;
+        if (b.dataset.confirm && !confirm(b.dataset.confirm.replace('{user}', current.dataset.user))) return hide(true);
         form.elements.action.value = b.dataset.post;
         form.elements.username.value = current.dataset.user;
         form.submit();

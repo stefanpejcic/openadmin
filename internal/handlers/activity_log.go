@@ -157,6 +157,8 @@ func accountActions(r *http.Request, kind string) string {
 		return actJoin("Created", kind, user)
 	case "delete":
 		return actJoin("Deleted", kind, user)
+	case "delete_with_users":
+		return actJoin("Deleted", kind, user, "and their accounts")
 	case "suspend":
 		return actJoin("Suspended", kind, user)
 	case "unsuspend":
@@ -173,6 +175,8 @@ func accountActions(r *http.Request, kind string) string {
 		return actJoin("Updated limits for", kind, user)
 	case "update_branding":
 		return actJoin("Updated branding for", kind, user)
+	case "change_plan":
+		return actJoin("Moved", kind, user, "to package", quoted(actForm(r, "reseller_plan")))
 	}
 	return actJoin("Updated", kind, user)
 }

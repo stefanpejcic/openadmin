@@ -110,3 +110,74 @@ func TestSSOLoginUnknownTokenReturns401(t *testing.T) {
 		t.Fatalf("expected 401, got %d", resp.StatusCode)
 	}
 }
+
+func TestResellerLoginIssuesWorkingLinkWithoutPassword(t *testing.T) {
+	a, srv, client := newAPILoginTestServer(t)
+	hash, _ := auth.GeneratePasswordHash("whatever1")
+	a.DB.CreateUser("res1", hash, "reseller")
+	a.DB.CreateUser("res2", hash, "reseller")
+	a.DB.SetActive("res2", false)
+
+	login := func(name string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/api/settings/resellers/"+name+"/login", nil)
+		req.SetPathValue("username", name)
+		rec := httptest.NewRecorder()
+		a.ServeResellerLogin(rec, req)
+		return rec
+	}
+
+	rec := login("res1")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		LoginPath string `json:"login_path"`
+	}
+	json.Unmarshal(rec.Body.Bytes(), &body)
+	resp, err := client.Get(srv.URL + body.LoginPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Location") != "/dashboard" {
+		t.Fatalf("expected a redirect to /dashboard, got %d %q", resp.StatusCode, resp.Header.Get("Location"))
+	}
+
+	if rec := login("alice"); rec.Code != http.StatusNotFound {
+		t.Fatalf("admins must not get a link this way, got %d", rec.Code)
+	}
+	if rec := login("res2"); rec.Code != http.StatusForbidden {
+		t.Fatalf("suspended reseller should get 403, got %d", rec.Code)
+	}
+}
+
+func TestAPITokenLoginAndTokensRefusedForSuspendedUser(t *testing.T) {
+	db := newAPITestDB(t)
+	hash, _ := auth.GeneratePasswordHash("pw123456")
+	db.CreateUser("res1", hash, "reseller")
+	a := &APIAuth{DB: db, SecretKey: "test-secret"}
+	token, _ := createAPIToken("res1", "test-secret")
+	db.SetActive("res1", false)
+
+	rec := httptest.NewRecorder()
+	(&APIWelcome{DB: db, SecretKey: "test-secret", Limiter: auth.NewPerIPLimiter(1000, 1000)}).ServeWelcome(rec, httptest.NewRequest(http.MethodPost, "/api/", strings.NewReader(`{"username":"res1","password":"pw123456"}`)))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("login: expected 403, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	ran := false
+	next := func(http.ResponseWriter, *http.Request) { ran = true }
+	for name, h := range map[string]http.HandlerFunc{
+		"token":    a.RequireAPIToken(next),
+		"reseller": a.RequireAPIAdminOrReseller(next),
+		"owner":    a.RequireAPIOwnerOrAdmin("username", next),
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/api/whoami", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		h(rec, req)
+		if ran || rec.Code < 400 {
+			t.Fatalf("%s: a suspended user's old token must be refused, got %d", name, rec.Code)
+		}
+	}
+}

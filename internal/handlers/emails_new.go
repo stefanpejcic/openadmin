@@ -23,7 +23,7 @@ type emailDomainOption struct {
 // same rule the user panel uses for the part before the @
 var emailLocalPartRe = regexp.MustCompile(`^[A-Za-z0-9._%+-]{1,64}$`)
 
-// docker-mailserver colors its errors even without a terminal
+// docker-mailserver and opencli color their errors even without a terminal
 var emailAnsiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 var emailQuotaUnits = map[string]bool{"k": true, "M": true, "G": true, "T": true}

@@ -32,7 +32,7 @@ type Resellers struct {
 var resellerValidActions = map[string]bool{
 	"create": true, "reset_password": true, "rename_user": true, "update": true,
 	"suspend": true, "unsuspend": true, "delete": true, "disable_2fa": true, "disable_passkeys": true,
-	"update_branding": true, "change_plan": true,
+	"update_branding": true, "change_plan": true, "delete_with_users": true,
 }
 
 // resellersEnabled reports whether reseller functionality is turned on
@@ -302,6 +302,8 @@ func (rs *Resellers) runAction(action, username, password string, r *http.Reques
 		return runOpenCLI(adminCommandError, "opencli", "admin", "unsuspend", username)
 	case "delete":
 		return runOpenCLI(adminCommandError, "opencli", "admin", "delete", username)
+	case "delete_with_users":
+		return runOpenCLI(adminCommandError, "opencli", "admin", "delete", username, "--with-users")
 
 	default:
 		return false, "Unknown action."

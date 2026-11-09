@@ -352,9 +352,9 @@ func runOpenCLI(fallbackError string, args ...string) (bool, string) {
 		if msg == "" {
 			msg = fallbackError
 		}
-		return false, firstLine(msg)
+		return false, firstLine(emailAnsiRe.ReplaceAllString(msg, ""))
 	}
-	return true, firstLine(strings.TrimSpace(stdout.String()))
+	return true, firstLine(emailAnsiRe.ReplaceAllString(strings.TrimSpace(stdout.String()), ""))
 }
 
 func firstLine(s string) string {

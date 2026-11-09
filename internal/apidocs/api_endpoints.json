@@ -1601,7 +1601,7 @@
                 "method": "POST",
                 "path": "/api/settings/resellers",
                 "auth": "RequireAPIToken",
-                "description": "Runs one reseller-account action (create/reset_password/rename_user/update/change_plan/update_branding/suspend/unsuspend/delete/disable_2fa/disable_passkeys); create and change_plan accept a reseller plan name in plan; a caller with the reseller role can only ever reset their own password through this endpoint regardless of the submitted action/username.",
+                "description": "Runs one reseller-account action (create/reset_password/rename_user/update/change_plan/update_branding/suspend/unsuspend/delete/disable_2fa/disable_passkeys); create and change_plan accept a reseller plan name in plan; delete moves the reseller's accounts to admin, or deletes them too when with_users is true; suspend also suspends the reseller's active accounts and unsuspend wakes only those; a caller with the reseller role can only ever reset their own password through this endpoint regardless of the submitted action/username.",
                 "body": {
                     "action": "update",
                     "username": "reseller1",
@@ -1612,6 +1612,43 @@
                 "response": {
                     "success": true,
                     "message": "OK"
+                }
+            },
+            {
+                "method": "GET",
+                "path": "/api/settings/resellers/{username}",
+                "auth": "RequireAPIAdmin",
+                "description": "Returns one reseller account with its package, limits and usage (same fields as the list), 404 if the user doesn't exist or isn't a reseller.",
+                "response": {
+                    "username": "reseller1",
+                    "is_active": true,
+                    "role": "reseller",
+                    "last_ip": "203.0.113.9",
+                    "last_login": "2026-08-09 14:02:11",
+                    "totp_enabled": false,
+                    "passkeys_enabled": false,
+                    "max_accounts": 50,
+                    "current_accounts": 12,
+                    "current_disk_blocks": 204800,
+                    "max_disk_blocks": 1048576,
+                    "allowed_plans": [
+                        1,
+                        2,
+                        3
+                    ],
+                    "logo_url": "",
+                    "reseller_plan": "reseller_basic"
+                }
+            },
+            {
+                "method": "POST",
+                "path": "/api/settings/resellers/{username}/login",
+                "auth": "RequireAPIAdmin",
+                "description": "Issues a one-time OpenAdmin login link for a reseller without their password, for billing integrations; open login_path on the panel within expires_in seconds. 404 if not a reseller, 403 if suspended.",
+                "response": {
+                    "token": "3f9c...",
+                    "login_path": "/login/sso/3f9c...",
+                    "expires_in": 120
                 }
             }
         ]

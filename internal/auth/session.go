@@ -60,7 +60,8 @@ func WithUserLoader(mgr *Manager, db *admindb.DB) func(http.Handler) http.Handle
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if sess, err := mgr.Get(r); err == nil {
 				if uid, ok := sessionInt64(sess.Values["user_id"]); ok {
-					if u, err := db.UserByID(uid); err == nil {
+					// a suspended account's open sessions stop working too
+					if u, err := db.UserByID(uid); err == nil && u.IsActive {
 						r = r.WithContext(context.WithValue(r.Context(), userContextKey, u))
 					}
 				}

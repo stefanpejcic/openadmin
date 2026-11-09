@@ -613,6 +613,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /api/settings/resellers/enabled", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsResellers.ServeSettingsResellersEnabled)))
 	mux.HandleFunc("POST /api/settings/resellers/enabled", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsResellers.ServeSettingsResellersEnabled)))
 	mux.HandleFunc("POST /api/settings/resellers", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIToken(apiSettingsResellers.ServeSettingsResellers)))
+	mux.HandleFunc("GET /api/settings/resellers/{username}", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsResellers.ServeReseller)))
+	mux.HandleFunc("POST /api/settings/resellers/{username}/login", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiLogin.ServeResellerLogin)))
 	mux.HandleFunc("GET /api/settings/general", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsGeneral.ServeSettingsGeneral)))
 	mux.HandleFunc("POST /api/settings/general", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsGeneral.ServeSettingsGeneral)))
 	mux.HandleFunc("GET /api/settings/defaults", handlers.RequireAPIFeatureEnabled(apiAuth.RequireAPIAdmin(apiSettingsDefaults.ServeSettingsDefaults)))

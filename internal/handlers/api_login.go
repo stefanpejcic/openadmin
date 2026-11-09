@@ -77,6 +77,24 @@ func (a *APILogin) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.writeSSOToken(w, user.Username)
+}
+
+// ServeResellerLogin handles POST /api/settings/resellers/{username}/login, admin only, so billing can log a reseller in without knowing their current password
+func (a *APILogin) ServeResellerLogin(w http.ResponseWriter, r *http.Request) {
+	user, err := a.DB.UserByUsername(r.PathValue("username"))
+	if err != nil || user.Role != "reseller" {
+		writeJSONError(w, http.StatusNotFound, "Reseller not found.")
+		return
+	}
+	if !user.IsActive {
+		writeJSONError(w, http.StatusForbidden, "User is not active")
+		return
+	}
+	a.writeSSOToken(w, user.Username)
+}
+
+func (a *APILogin) writeSSOToken(w http.ResponseWriter, username string) {
 	token, err := newSSOToken()
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Could not issue token")
@@ -87,7 +105,7 @@ func (a *APILogin) HandleAPILogin(w http.ResponseWriter, r *http.Request) {
 	if a.tokens == nil {
 		a.tokens = make(map[string]ssoTokenEntry)
 	}
-	a.tokens[token] = ssoTokenEntry{username: user.Username, expires: time.Now().Add(ssoTokenTTL)}
+	a.tokens[token] = ssoTokenEntry{username: username, expires: time.Now().Add(ssoTokenTTL)}
 	a.mu.Unlock()
 
 	writeJSON(w, map[string]interface{}{

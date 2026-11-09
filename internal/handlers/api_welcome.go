@@ -44,6 +44,10 @@ func (a *APIWelcome) ServeWelcome(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
+	if !user.IsActive {
+		writeJSONError(w, http.StatusForbidden, "User is not active")
+		return
+	}
 
 	token, err := createAPIToken(user.Username, a.SecretKey)
 	if err != nil {

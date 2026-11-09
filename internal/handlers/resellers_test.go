@@ -535,3 +535,20 @@ func TestServeResellersPostAsResellerUpdateBrandingForcesSelfUsername(t *testing
 		t.Fatalf("expected username to have been forced to self, got %s", truncate(string(body)))
 	}
 }
+
+func TestServeResellersDeleteWithUsersPassesFlag(t *testing.T) {
+	withScratchResellersConfigDir(t)
+	argsLog := withFakeResellerOpenCLI(t)
+	rs := &Resellers{}
+	srv, client, _ := newResellersTestServer(t, rs, "admin")
+
+	resp, err := client.PostForm(srv.URL+"/resellers", url.Values{"action": {"delete_with_users"}, "username": {"res1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	args, _ := os.ReadFile(argsLog)
+	if got := strings.TrimSpace(string(args)); got != "admin delete res1 --with-users" {
+		t.Fatalf("expected opencli admin delete with --with-users, got %q", got)
+	}
+}
