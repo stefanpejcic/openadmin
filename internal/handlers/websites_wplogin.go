@@ -144,6 +144,25 @@ var wpLoginOpenDB = func(userContext, dbName string) (*sql.DB, error) {
 	return sql.Open("mysql", fmt.Sprintf("%s:%s@unix(%s)/%s?timeout=10s", user, password, socket, dbName))
 }
 
+// findWPConfig looks where wp-load.php does, one level up only if that folder isn't its own WordPress install (OpenPanel#1298)
+func findWPConfig(htmlData, realPath string) string {
+	config := filepath.Join(realPath, "wp-config.php")
+	if _, err := os.Stat(config); err == nil {
+		return config
+	}
+	parent := filepath.Dir(realPath)
+	if parent != htmlData && !strings.HasPrefix(parent, htmlData+string(filepath.Separator)) {
+		return config
+	}
+	if _, err := os.Stat(filepath.Join(parent, "wp-settings.php")); !os.IsNotExist(err) {
+		return config
+	}
+	if _, err := os.Stat(filepath.Join(parent, "wp-config.php")); err != nil {
+		return config
+	}
+	return filepath.Join(parent, "wp-config.php")
+}
+
 // wpLoginLink creates the one-time login link for a site's first administrator
 func wpLoginLink(userContext, siteName, docroot string) (string, error) {
 	rel := strings.TrimPrefix(filepath.Clean(docroot), "/var/www/html")
@@ -153,7 +172,7 @@ func wpLoginLink(userContext, siteName, docroot string) (string, error) {
 	htmlData := filepath.Join(UserHomeDir, userContext, "docker-data", "volumes", userContext+"_html_data", "_data")
 	realPath := filepath.Join(htmlData, rel)
 
-	config, err := os.ReadFile(filepath.Join(realPath, "wp-config.php"))
+	config, err := os.ReadFile(findWPConfig(htmlData, realPath))
 	if err != nil {
 		return "", fmt.Errorf("wp-config.php not found in %s", docroot)
 	}
