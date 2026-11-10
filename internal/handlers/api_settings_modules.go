@@ -56,6 +56,7 @@ func (a *APISettingsModules) handlePost(w http.ResponseWriter, r *http.Request) 
 	phpmyadminEnabled := strings.Contains(enabledModulesValue, "phpmyadmin")
 	updateServiceInDockerCompose("phpmyadmin", phpmyadminEnabled)
 	updateServiceInDockerCompose("clamav", strings.Contains(enabledModulesValue, "malware_scan"))
+	syncImunifyPanelGUI(enabledModulesValue)
 	setNotificationServiceMonitored("phpmyadmin", phpmyadminEnabled)
 
 	// A raw substring check against the whole comma-joined value, same as

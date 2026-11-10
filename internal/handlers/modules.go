@@ -179,6 +179,7 @@ func (m *Modules) ServeModules(w http.ResponseWriter, r *http.Request) {
 		} else {
 			updateServiceInDockerCompose("clamav", false)
 		}
+		syncImunifyPanelGUI(enabledModulesValue)
 
 		// added in 1.7.61 to generate rndc.key when dns module is enabled --
 		// this is a raw substring check against the whole comma-joined
