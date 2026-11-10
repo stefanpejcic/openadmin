@@ -199,7 +199,11 @@ func buildUsageWidget(suspended bool, stat map[string]interface{}, disk diskUsag
 		if statFloat(stat, "memory", "total", "bytes") != 0 {
 			memPct = statFloat(stat, "memory", "usage_pct")
 		}
+		// usage pct is per core (200% on 2 cores), so scale it to the container's total
 		cpuPct = statFloat(stat, "cpu", "usage", "pct")
+		if t := statFloat(stat, "cpu", "total", "pct"); t != 0 {
+			cpuPct = cpuPct / t * 100
+		}
 	}
 
 	w := usageWidgetData{
@@ -210,7 +214,7 @@ func buildUsageWidget(suspended bool, stat map[string]interface{}, disk diskUsag
 		CPUPercent: int(math.Round(cpuPct)),
 		CPUOffset:  arcOffset(cpuPct),
 		CPUColor:   usageColorClass(cpuPct),
-		CPUTooltip: fmt.Sprintf("CPU usage: %v%%", cpuPct),
+		CPUTooltip: fmt.Sprintf("CPU usage: %v%%", round2(cpuPct)),
 	}
 
 	if hasDisk {
@@ -387,7 +391,7 @@ func buildDetailStatsWidget(suspended bool, disk diskUsage, stats map[string]int
 
 		CPURatioRounded: strconv.FormatFloat(round2(ratioCPU), 'f', -1, 64),
 		CPUOffset:       detailRingOffset(ratioCPU),
-		CPUColor:        usageColorClass(percentCPU),
+		CPUColor:        usageColorClass(ratioCPU),
 		CPUHumanUsage:   humanCPUUsage,
 		CPUHumanTotal:   humanCPUTotal,
 
