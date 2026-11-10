@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -102,6 +104,7 @@ func validOpenpanelForm() url.Values {
 	v.Set("filemanager_image_extensions", ".jpg .png")
 	v.Set("filemanager_archives_extensions", ".zip .tar")
 	v.Set("logout_url", "/logout")
+	v.Set("activity_lines_retention", "1500")
 	return v
 }
 
@@ -567,5 +570,30 @@ func TestValidateDNSRecordTypes(t *testing.T) {
 	}
 	if got := openpanelSectionForKey("dns_record_types"); got != "USERS" {
 		t.Errorf("section = %q", got)
+	}
+}
+
+// every field the form posts must be saved by the handler and vice versa, a missing name= silently drops the setting
+func TestOpenpanelSettingsFormFieldsMatchHandler(t *testing.T) {
+	raw, err := os.ReadFile("../webtemplates/settings_openpanel.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var posted []string
+	for _, m := range regexp.MustCompile(`\bname="([^"]+)"`).FindAllStringSubmatch(string(raw), -1) {
+		if m[1] != "csrf_token" {
+			posted = append(posted, m[1])
+		}
+	}
+	handled := slices.Concat(openpanelIntFields, openpanelStringFields, openpanelFileFields, []string{"weakpass"})
+	for _, k := range posted {
+		if !slices.Contains(handled, k) {
+			t.Errorf("form posts %q but the handler never saves it", k)
+		}
+	}
+	for _, k := range handled {
+		if !slices.Contains(posted, k) {
+			t.Errorf("handler saves %q but the form has no input named it", k)
+		}
 	}
 }

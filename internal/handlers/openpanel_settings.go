@@ -56,7 +56,7 @@ var openpanelIntFields = []string{
 	"filemanager_upload_size", "filemanager_compress_max_time", "filemanager_download_max_time",
 	"filemanager_extract_max_time",
 	"max_login_records", "login_ratelimit", "login_blocklimit",
-	"session_duration", "session_lifetime", "activity_items_per_page",
+	"session_duration", "session_lifetime", "activity_items_per_page", "activity_lines_retention",
 	"domains_per_page", "terminal_timeout", "resource_usage_retention",
 	"resource_usage_items_per_page",
 }
