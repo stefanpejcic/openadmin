@@ -154,6 +154,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"ai_model":                        {kind: openpanelSingleLine},
 	"ai_base_url":                     {kind: openpanelSingleLine},
 	"ai_api_key":                      {kind: openpanelSingleLine},
+	"logout_url":                      {kind: openpanelSingleLine},
 }
 
 var openpanelSpaceSeparatedListRe = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
