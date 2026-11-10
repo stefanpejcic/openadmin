@@ -553,6 +553,7 @@ type usersListPageData struct {
 type usersUsageAlerts struct {
 	Over, Near         []userUsageAlert
 	MoreOver, MoreNear int
+	NearHint           string
 }
 
 type userUsageAlert struct {
@@ -572,6 +573,7 @@ func buildUsersUsageAlerts(widgets map[string]usageWidgetData) usersUsageAlerts 
 	}
 	sort.Strings(names)
 	var a usersUsageAlerts
+	nearDisk, nearRes := false, false
 	for _, name := range names {
 		w := widgets[name]
 		metrics := []struct {
@@ -585,12 +587,17 @@ func buildUsersUsageAlerts(widgets map[string]usageWidgetData) usersUsageAlerts 
 			{"CPU", w.CPUPercent, true},
 		}
 		var parts []string
-		over := false
+		over, disk, res := false, false, false
 		for _, m := range metrics {
 			if !m.on || m.pct < 90 {
 				continue
 			}
 			over = over || m.pct >= 100
+			if m.label == "disk" || m.label == "inodes" {
+				disk = true
+			} else {
+				res = true
+			}
 			parts = append(parts, fmt.Sprintf("%s %d%%", m.label, m.pct))
 		}
 		if len(parts) == 0 {
@@ -603,11 +610,23 @@ func buildUsersUsageAlerts(widgets map[string]usageWidgetData) usersUsageAlerts 
 			} else {
 				a.MoreOver++
 			}
-		} else if len(a.Near) < usersUsageAlertsShown {
-			a.Near = append(a.Near, alert)
 		} else {
-			a.MoreNear++
+			nearDisk, nearRes = nearDisk || disk, nearRes || res
+			if len(a.Near) < usersUsageAlertsShown {
+				a.Near = append(a.Near, alert)
+			} else {
+				a.MoreNear++
+			}
 		}
+	}
+	// free space only helps disk/inodes, memory and CPU need a look at what's running
+	switch {
+	case nearDisk && nearRes:
+		a.NearHint = "Raise the plan limits, free up disk space and inodes, or check which processes are using memory and CPU before they reach 100%."
+	case nearDisk:
+		a.NearHint = "Raise the plan limits or free up disk space and inodes before they reach 100%."
+	case nearRes:
+		a.NearHint = "Raise the plan limits or check which processes are using memory and CPU before they reach 100%."
 	}
 	return a
 }

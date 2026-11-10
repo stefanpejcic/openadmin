@@ -1133,4 +1133,13 @@ func TestBuildUsersUsageAlerts(t *testing.T) {
 	if len(a.Near) != 1 || a.Near[0].User != "emma" || a.Near[0].What != "disk 91%, CPU 95%" {
 		t.Fatalf("near: %+v", a.Near)
 	}
+	if !strings.Contains(a.NearHint, "disk space") || !strings.Contains(a.NearHint, "processes") {
+		t.Fatalf("mixed hint: %q", a.NearHint)
+	}
+	if h := buildUsersUsageAlerts(map[string]usageWidgetData{"t": {HasDiskData: true, MemPercent: 91}}).NearHint; strings.Contains(h, "disk") || !strings.Contains(h, "memory and CPU") {
+		t.Fatalf("memory hint: %q", h)
+	}
+	if h := buildUsersUsageAlerts(map[string]usageWidgetData{"t": {HasDiskData: true, InodesPercent: 93}}).NearHint; !strings.Contains(h, "inodes") || strings.Contains(h, "CPU") {
+		t.Fatalf("disk hint: %q", h)
+	}
 }
