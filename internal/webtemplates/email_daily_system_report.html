@@ -1,88 +1,101 @@
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f9fafb;padding:32px 16px;border-radius:6px;">
-  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;margin:0 auto;max-width:700px;padding:32px;">
-    <h1 style="color:#111827;font-size:20px;font-weight:600;margin:0 0 4px;">{{.Title}}</h1>
-    {{with .Summary}}
-    <p style="color:#6b7280;font-size:15px;margin:0 0 20px;">{{.DayLabel}}{{if gt .Servers 1}} &middot; {{.Servers}} servers{{end}} &middot; {{.Accounts}} accounts</p>
+{{/* styled like the OpenAdmin dashboard: plain white sections split by thin lines, a title and grey line on the left with a "… →" link on the right */}}
+<div style="background:#ffffff;padding:24px 12px;font-family:Geist,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#111827;">
+  <div style="margin:0 auto;max-width:640px;">
 
-    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:6px;margin:0 -6px 16px;">
+    <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">{{.Hostname}}</p>
+    <h1 style="margin:0;font-size:18px;font-weight:600;color:#111827;">{{.Title}}</h1>
+    <p style="margin:2px 0 0;font-size:14px;line-height:24px;color:#6b7280;">{{with .Summary}}{{.DayLabel}}{{if gt .Servers 1}} &middot; {{.Servers}} servers{{end}} &middot; {{.Accounts}} accounts{{else}}Server overview for your OpenPanel instance.{{end}}</p>
+
+    {{with .Summary}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
       <tr>
-        <td style="background:#f9fafb;border-radius:6px;padding:10px 12px;"><div style="color:#6b7280;font-size:12px;">Requests</div><div style="color:#111827;font-size:18px;font-weight:600;">{{.Requests}}{{if .Delta}} <span style="font-size:12px;font-weight:500;color:{{if .DeltaUp}}#059669{{else}}#dc2626{{end}};">{{.Delta}}</span>{{end}}</div></td>
-        <td style="background:#f9fafb;border-radius:6px;padding:10px 12px;"><div style="color:#6b7280;font-size:12px;">Visitors</div><div style="color:#111827;font-size:18px;font-weight:600;">{{.Visitors}}</div></td>
-        <td style="background:#f9fafb;border-radius:6px;padding:10px 12px;"><div style="color:#6b7280;font-size:12px;">Data sent</div><div style="color:#111827;font-size:18px;font-weight:600;">{{.Sent}}</div></td>
-        <td style="background:#f9fafb;border-radius:6px;padding:10px 12px;"><div style="color:#6b7280;font-size:12px;">Server errors</div><div style="color:#111827;font-size:18px;font-weight:600;">{{.Errors}}</div></td>
+        <td style="padding:0 16px 0 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Requests</div><div style="font-size:18px;font-weight:600;color:#111827;">{{.Requests}}{{if .Delta}} <span style="font-size:14px;font-weight:500;color:{{if .DeltaUp}}#059669{{else}}#dc2626{{end}};">{{.Delta}}</span>{{end}}</div></td>
+        <td style="padding:0 16px 0 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Visitors</div><div style="font-size:18px;font-weight:600;color:#111827;">{{.Visitors}}</div></td>
+        <td style="padding:0 16px 0 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Data sent</div><div style="font-size:18px;font-weight:600;color:#111827;">{{.Sent}}</div></td>
+        <td style="padding:0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Server errors</div><div style="font-size:18px;font-weight:600;color:#111827;">{{.Errors}}</div></td>
       </tr>
     </table>
 
-    <h2 style="color:#111827;font-size:15px;font-weight:600;margin:20px 0 8px;">Needs attention{{if .AttentionTotal}} <span style="color:#b45309;">({{.AttentionTotal}})</span>{{end}}</h2>
-    {{with .MainProblem}}<p style="background:#fef3c7;color:#92400e;border-radius:6px;padding:10px 12px;font-size:14px;margin:0 0 8px;">{{.}}</p>{{end}}
-    {{if .Attention}}
-    <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
-      {{range $i, $a := .Attention}}{{if lt $i 5}}
-      <tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6;"><strong style="color:#2563eb;">{{stripSuspendedPrefix $a.Username}}</strong>{{if $a.Server}} <span style="color:#6b7280;font-size:12px;">{{$a.Server}}</span>{{end}} <span style="color:#111827;">{{if $a.Domain}}<span style="color:#6b7280;">{{$a.Domain}}:</span> {{end}}{{$a.Title}}</span>{{if $a.Detail}}<div style="color:#6b7280;font-size:13px;word-break:break-all;">{{$a.Detail}}</div>{{end}}</td></tr>
+    {{template "email_daily_section" (dict "Title" "Needs attention" "Sub" (or (and .AttentionTotal (printf "%d issues found on accounts that day." .AttentionTotal)) "Nothing needs attention.") "Link" (printf "%sdashboard/summary?date=%s" $.AdminURL .Date) "LinkText" "Daily summary")}}
+    {{with .MainProblem}}<p style="margin:0 0 8px;padding:12px 16px;border-radius:6px;background:#fefce8;font-size:14px;line-height:20px;color:#713f12;">{{.}}</p>{{end}}
+    {{if .AttentionGroups}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:20px;">
+      {{range $i, $g := .AttentionGroups}}{{if lt $i 5}}
+      <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;">
+        <span style="font-weight:500;color:#3b82f6;">{{stripSuspendedPrefix $g.Username}}</span>{{if $g.Server}} <span style="font-size:12px;color:#6b7280;">{{$g.Server}}</span>{{end}}<span style="float:right;font-size:12px;color:#6b7280;">{{$g.Count}} {{if eq $g.Count 1}}issue{{else}}issues{{end}}</span>
+        {{range $g.General}}<div style="color:#111827;">{{.Title}}</div>{{end}}
+        {{range $g.Domains}}<div style="margin:4px 0 0 2px;padding-left:10px;border-left:2px solid #e5e7eb;"><span style="color:#9ca3af;">&#8627;</span> <span style="font-weight:500;">{{.Name}}</span>{{range .Items}}<div style="color:#6b7280;">{{.Title}}</div>{{end}}</div>{{end}}
+      </td></tr>
       {{end}}{{end}}
     </table>
-    {{if .MoreAttn}}<p style="font-size:13px;margin:6px 0 0;"><a href="{{$.AdminURL}}dashboard/summary?date={{.Date}}" style="color:#2563eb;">and {{.MoreAttn}} more on the daily summary</a></p>{{end}}
-    {{else}}
-    <p style="color:#6b7280;font-size:14px;margin:0;">Nothing needs attention.</p>
+    {{if gt (len .AttentionGroups) 5}}<p style="margin:8px 0 0;font-size:14px;color:#6b7280;">and {{sub (len .AttentionGroups) 5}} more accounts on the daily summary.</p>{{end}}
     {{end}}
 
     {{if .Sites}}
-    <h2 style="color:#111827;font-size:15px;font-weight:600;margin:20px 0 8px;">Busiest websites</h2>
-    <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+    {{template "email_daily_section" (dict "Title" "Busiest websites" "Sub" "Websites with the most requests that day." "Link" "" "LinkText" "")}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:20px;">
       {{range $i, $s := .Sites}}{{if lt $i 3}}
-      <tr><td style="padding:4px 0;color:#111827;">{{$s.Name}} <span style="color:#6b7280;font-size:12px;">{{$s.Username}}{{if $s.Server}} &middot; {{$s.Server}}{{end}}</span></td><td style="padding:4px 0;color:#6b7280;text-align:right;">{{$s.Requests}}</td></tr>
+      <tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6;color:#111827;">{{$s.Name}} <span style="color:#6b7280;">{{$s.Username}}</span></td><td style="padding:6px 0;border-bottom:1px solid #f3f4f6;text-align:right;color:#6b7280;">{{$s.Requests}}</td></tr>
       {{end}}{{end}}
     </table>
     {{end}}
-    {{else}}
-    <p style="color:#6b7280;font-size:15px;margin:0 0 20px;">Below is the latest server overview and usage report for your OpenPanel instance.</p>
     {{end}}
 
     {{if .Days}}
-    <h2 style="color:#111827;font-size:15px;font-weight:600;margin:24px 0 8px;">Server health</h2>
-    {{range .Days}}
-    <div style="margin:0 0 12px;">
-      {{if $.Multi}}<div style="color:#111827;font-size:14px;font-weight:600;margin:0 0 4px;">{{.Name}}</div>{{end}}
-      {{with .Day.Health}}
-      <table width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
-        <tr>
-          <td style="padding:2px 12px 2px 0;color:#6b7280;">Peak load <strong style="color:{{if ge .LoadPct 90}}#dc2626{{else if ge .LoadPct 70}}#b45309{{else}}#111827{{end}};">{{.PeakLoad}}</strong> <span style="font-size:12px;">at {{.PeakLoadAt}}, {{.Cores}} cores</span></td>
-          <td style="padding:2px 12px 2px 0;color:#6b7280;">CPU <strong style="color:{{if ge .PeakCPU 90}}#dc2626{{else if ge .PeakCPU 70}}#b45309{{else}}#111827{{end}};">{{.PeakCPU}}%</strong></td>
-          <td style="padding:2px 12px 2px 0;color:#6b7280;">Memory <strong style="color:{{if ge .PeakRAM 90}}#dc2626{{else if ge .PeakRAM 70}}#b45309{{else}}#111827{{end}};">{{.PeakRAM}}%</strong></td>
-          <td style="padding:2px 0;color:#6b7280;">Disk <strong style="color:{{if ge .Disk 90}}#dc2626{{else if ge .Disk 70}}#b45309{{else}}#111827{{end}};">{{.Disk}}%</strong></td>
-        </tr>
-      </table>
-      {{if .FailedRuns}}<div style="color:#b45309;font-size:12px;">{{.FailedRuns}} of {{.Runs}} checks failed</div>{{end}}
-      {{end}}
-      {{range $i, $p := .Day.Problems}}{{if lt $i 3}}<div style="font-size:13px;color:#111827;padding:2px 0;"><span style="color:{{if eq $p.Severity "critical"}}#dc2626{{else}}#d97706{{end}};">&#9679;</span> {{$p.Title}}{{if gt $p.Count 1}} <span style="color:#6b7280;">({{$p.Count}}&times;)</span>{{end}}</div>{{end}}{{end}}
-    </div>
-    {{end}}
+    {{template "email_daily_section" (dict "Title" "Server health" "Sub" (printf "Peaks from the 5 minute checks%s." (or (and .Multi ", per server") "")) "Link" (printf "%snotifications" .AdminURL) "LinkText" "Notifications")}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:20px;">
+      <tr style="color:#6b7280;font-size:13px;">{{if .Multi}}<td style="padding:4px 12px 4px 0;">Server</td>{{end}}<td style="padding:4px 12px 4px 0;">Load</td><td style="padding:4px 12px 4px 0;">CPU</td><td style="padding:4px 12px 4px 0;">Memory</td><td style="padding:4px 0;">Disk</td></tr>
+      {{range .Days}}{{$name := .Name}}{{with .Day.Health}}
+      <tr>
+        {{if $.Multi}}<td style="padding:8px 12px 8px 0;border-top:1px solid #f3f4f6;font-weight:500;">{{$name}}</td>{{end}}
+        <td style="padding:8px 12px 8px 0;border-top:1px solid #f3f4f6;"><span style="font-weight:600;color:{{if ge .LoadPct 90}}#dc2626{{else if ge .LoadPct 70}}#ca8a04{{else}}#111827{{end}};">{{.PeakLoad}}</span> <span style="font-size:12px;color:#6b7280;">{{.PeakLoadAt}}</span></td>
+        <td style="padding:8px 12px 8px 0;border-top:1px solid #f3f4f6;"><span style="font-weight:600;color:{{if ge .PeakCPU 90}}#dc2626{{else if ge .PeakCPU 70}}#ca8a04{{else}}#111827{{end}};">{{.PeakCPU}}%</span></td>
+        <td style="padding:8px 12px 8px 0;border-top:1px solid #f3f4f6;"><span style="font-weight:600;color:{{if ge .PeakRAM 90}}#dc2626{{else if ge .PeakRAM 70}}#ca8a04{{else}}#111827{{end}};">{{.PeakRAM}}%</span></td>
+        <td style="padding:8px 0;border-top:1px solid #f3f4f6;"><span style="font-weight:600;color:{{if ge .Disk 90}}#dc2626{{else if ge .Disk 70}}#ca8a04{{else}}#111827{{end}};">{{.Disk}}%</span>{{if .FailedRuns}} <span style="font-size:12px;color:#ca8a04;">{{.FailedRuns}} failed checks</span>{{end}}</td>
+      </tr>
+      {{end}}{{end}}
+    </table>
+    {{range .Days}}{{$name := .Name}}{{range $i, $p := .Day.Problems}}{{if lt $i 3}}
+    <p style="margin:6px 0 0;font-size:14px;color:#111827;"><span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:{{if eq $p.Severity "critical"}}#ef4444{{else}}#eab308{{end}};"></span> {{$p.Title}}{{if gt $p.Count 1}} <span style="color:#6b7280;">{{$p.Count}}&times;</span>{{end}}{{if $.Multi}} <span style="font-size:12px;color:#6b7280;">{{$name}}</span>{{end}}</p>
+    {{end}}{{end}}{{end}}
 
     {{$mail := false}}{{range .Days}}{{if .Day.Mail}}{{$mail = true}}{{end}}{{end}}
     {{if $mail}}
-    <h2 style="color:#111827;font-size:15px;font-weight:600;margin:20px 0 8px;">Mail</h2>
-    <table width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;">
-      <tr style="color:#6b7280;">{{if $.Multi}}<td style="padding:4px 8px 4px 0;">Server</td>{{end}}<td style="padding:4px 8px;text-align:right;">Received</td><td style="padding:4px 8px;text-align:right;">Delivered</td><td style="padding:4px 8px;text-align:right;">Bounced</td><td style="padding:4px 0 4px 8px;text-align:right;">Rejected</td></tr>
+    {{template "email_daily_section" (dict "Title" "Mail" "Sub" "From each mail server's summary report." "Link" (printf "%semails/reports" .AdminURL) "LinkText" "Reports")}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:20px;">
+      <tr style="color:#6b7280;font-size:13px;">{{if $.Multi}}<td style="padding:4px 12px 4px 0;">Server</td>{{end}}<td style="padding:4px 12px;text-align:right;">Received</td><td style="padding:4px 12px;text-align:right;">Delivered</td><td style="padding:4px 12px;text-align:right;">Bounced</td><td style="padding:4px 0 4px 12px;text-align:right;">Rejected</td></tr>
       {{range .Days}}{{$name := .Name}}{{with .Day.Mail}}
-      <tr style="color:#111827;">{{if $.Multi}}<td style="padding:4px 8px 4px 0;border-top:1px solid #f3f4f6;">{{$name}}</td>{{end}}<td style="padding:4px 8px;text-align:right;border-top:1px solid #f3f4f6;">{{.Received}}</td><td style="padding:4px 8px;text-align:right;border-top:1px solid #f3f4f6;">{{.Delivered}}</td><td style="padding:4px 8px;text-align:right;border-top:1px solid #f3f4f6;{{if ge .BouncePct 20}}color:#b45309;font-weight:600;{{end}}">{{.Bounced}} ({{.BouncePct}}%)</td><td style="padding:4px 0 4px 8px;text-align:right;border-top:1px solid #f3f4f6;">{{.Rejected}}</td></tr>
+      <tr>{{if $.Multi}}<td style="padding:8px 12px 8px 0;border-top:1px solid #f3f4f6;font-weight:500;">{{$name}}</td>{{end}}<td style="padding:8px 12px;border-top:1px solid #f3f4f6;text-align:right;">{{.Received}}</td><td style="padding:8px 12px;border-top:1px solid #f3f4f6;text-align:right;">{{.Delivered}}</td><td style="padding:8px 12px;border-top:1px solid #f3f4f6;text-align:right;{{if ge .BouncePct 20}}color:#ca8a04;font-weight:600;{{end}}">{{.Bounced}} <span style="font-size:12px;font-weight:400;color:#6b7280;">{{.BouncePct}}%</span></td><td style="padding:8px 0 8px 12px;border-top:1px solid #f3f4f6;text-align:right;">{{.Rejected}}</td></tr>
       {{end}}{{end}}
     </table>
     {{end}}
     {{end}}
 
-    <h2 style="color:#111827;font-size:15px;font-weight:600;margin:24px 0 8px;">Right now on {{.Hostname}}</h2>
-    <table width="100%" cellpadding="6" cellspacing="0" style="font-size:14px;color:#111827;">
-      <tr><td style="color:#6b7280;">Users</td><td>{{.TotalUsers}}</td><td style="color:#6b7280;">CPU usage</td><td>{{.TotalCPUUsage}}</td></tr>
-      <tr><td style="color:#6b7280;">Domains</td><td>{{.TotalDomains}}</td><td style="color:#6b7280;">Memory usage</td><td>{{.TotalRAMUsage}}</td></tr>
-      <tr><td style="color:#6b7280;">Websites</td><td>{{.TotalWebsites}}</td><td style="color:#6b7280;">Disk usage</td><td>{{.CurrentDiskUsage}}</td></tr>
-      <tr><td style="color:#6b7280;">Cron jobs today</td><td>{{.CronsExecutedToday}}</td><td style="color:#6b7280;">API requests today</td><td>{{.APIRequestsReceivedToday}}</td></tr>
+    {{template "email_daily_section" (dict "Title" (printf "Right now on %s" .Hostname) "Sub" "Current usage when this email was sent." "Link" .AdminURL "LinkText" "Dashboard")}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="padding:0 16px 12px 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Users</div><div style="font-size:18px;font-weight:600;">{{.TotalUsers}}</div></td>
+        <td style="padding:0 16px 12px 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Domains</div><div style="font-size:18px;font-weight:600;">{{.TotalDomains}}</div></td>
+        <td style="padding:0 16px 12px 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Websites</div><div style="font-size:18px;font-weight:600;">{{.TotalWebsites}}</div></td>
+        <td style="padding:0 0 12px;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Cron jobs today</div><div style="font-size:18px;font-weight:600;">{{.CronsExecutedToday}}</div></td>
+      </tr>
+      <tr>
+        <td style="padding:0 16px 0 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">CPU</div><div style="font-size:18px;font-weight:600;">{{.TotalCPUUsage}}</div></td>
+        <td style="padding:0 16px 0 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Memory</div><div style="font-size:18px;font-weight:600;">{{.TotalRAMUsage}}</div></td>
+        <td style="padding:0 16px 0 0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">Disk</div><div style="font-size:18px;font-weight:600;">{{.CurrentDiskUsage}}</div></td>
+        <td style="padding:0;vertical-align:top;"><div style="font-size:14px;color:#6b7280;">API requests today</div><div style="font-size:18px;font-weight:600;">{{.APIRequestsReceivedToday}}</div></td>
+      </tr>
     </table>
 
-    <p style="font-size:14px;margin:24px 0 8px;">
-      <a href="{{.AdminURL}}dashboard/summary{{with .Summary}}?date={{.Date}}{{end}}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;padding:8px 14px;font-weight:500;">Open the daily summary</a>
-      &nbsp;<a href="{{.AdminURL}}notifications" style="color:#2563eb;">Notifications</a>
-      &nbsp;&middot;&nbsp;<a href="{{.AdminURL}}emails/reports" style="color:#2563eb;">Mail reports</a>
-    </p>
-    <p style="color:#9ca3af;font-size:12px;margin:16px 0 0;">Sent by {{.Hostname}}. <a href="{{.AdminURL}}settings/notifications" style="color:#9ca3af;">Notification settings</a></p>
+    <p style="margin:28px 0 0;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;">Sent by {{.Hostname}} &middot; <a href="{{.AdminURL}}settings/notifications" style="color:#9ca3af;">Notification settings</a></p>
   </div>
 </div>
+
+{{define "email_daily_section"}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 8px;border-top:1px solid #e5e7eb;">
+      <tr>
+        <td style="padding:16px 0 0;vertical-align:top;"><div style="font-size:14px;font-weight:600;color:#111827;">{{.Title}}</div><div style="font-size:14px;line-height:24px;color:#6b7280;">{{.Sub}}</div></td>
+        {{if .Link}}<td style="padding:16px 0 0;vertical-align:top;text-align:right;white-space:nowrap;"><a href="{{.Link}}" style="font-size:14px;color:#3b82f6;text-decoration:none;">{{.LinkText}} &rarr;</a></td>{{end}}
+      </tr>
+    </table>
+{{end}}

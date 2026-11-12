@@ -142,6 +142,8 @@ func TestDailyReportEmailRendersSummary(t *testing.T) {
 	s := &serverSummary{Date: "2026-11-11", DayLabel: "Wednesday, 11 November", Accounts: 73, Servers: 2, Requests: "603,330", Visitors: "56,266", Sent: "14.0 GB", Errors: "1,412",
 		Attention:      []summaryFinding{{Username: "koraciznanja", Server: "s1", Title: "ImunifyAV found 20 malicious files"}, {Username: "a", Title: "t2"}, {Username: "b", Title: "t3"}, {Username: "c", Title: "t4"}, {Username: "d", Title: "t5"}, {Username: "e", Title: "sixth"}},
 		AttentionTotal: 6, MoreAttn: 1, Sites: []summarySite{{Name: "elit.rs", Username: "zlatko888", Requests: "255,542"}}}
+	s.AttentionGroups = groupAttention(s.Attention)
+	s.MainProblem = "The main problem is X."
 	days := []summaryServerDay{{Name: "s1.maxhost.rs", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "8.64", LoadPct: 48, Cores: 18, PeakCPU: 78, Disk: 66, Runs: 258, FailedRuns: 1}, Mail: &summaryMail{Received: 143, Bounced: 58, BouncePct: 18}}},
 		{Name: "s2.maxhost.rs", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "14.91", LoadPct: 82, Cores: 18}}}}
 	out, err := webtemplates.RenderToString("email_daily_system_report.html", map[string]interface{}{
@@ -150,7 +152,7 @@ func TestDailyReportEmailRendersSummary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Wednesday, 11 November", "603,330", "koraciznanja", "ImunifyAV found 20 malicious files", "and 1 more on the daily summary", "elit.rs", "s2.maxhost.rs", "14.91", "58 (18%)", "dashboard/summary?date=2026-11-11", "emails/reports", ">46<"} {
+	for _, want := range []string{"Wednesday, 11 November", "603,330", "koraciznanja", "ImunifyAV found 20 malicious files", "and 1 more accounts on the daily summary", "The main problem is X.", "elit.rs", "s2.maxhost.rs", "14.91", "18%</span>", "dashboard/summary?date=2026-11-11", "emails/reports", ">46<"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("daily report email is missing %q", want)
 		}
