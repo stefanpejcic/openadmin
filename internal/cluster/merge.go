@@ -33,7 +33,8 @@ const (
 
 var (
 	// per server config lists would only repeat the same rows, the rest have no list worth merging
-	noMergePrefixes = []string{"/server/cluster", "/dashboard", "/search", "/json/", "/api/", "/static/"}
+	// mail reports are generated documents with their own chart tables, a Server column in those breaks the charts
+	noMergePrefixes = []string{"/server/cluster", "/dashboard", "/search", "/json/", "/api/", "/static/", "/emails/data/", "/emails/reports/view"}
 	// these are the server's own config or a live console, repeating them per server in one table says nothing
 	noTablePrefixes = []string{"/settings/", "/features/", "/terminal", "/domains/file-templates", "/domains/vhost-templates", "/domains/zone-templates", "/server/crons"}
 	// pages about one server, a table on them can still merge but everything else gets a server picker
@@ -1375,6 +1376,11 @@ func (m *Manager) pagePicker(page []byte, r *http.Request, activeID, activeName 
 		spacing = "ml-4"
 		float = ` style="float:right;margin-left:auto"`
 		menu = strings.Replace(menu, filterMenuClass, "right-0 "+filterMenuClass, 1)
+	} else if help := helpAnchor(page); help >= 0 {
+		// pages that are just an iframe (ImunifyAV, mail reports) have no header, a row above the iframe pushes it around, so it sits in the tab row before Documentation
+		at = help
+		spacing = "mr-2 shrink-0"
+		menu = strings.Replace(menu, filterMenuClass, "right-0 "+filterMenuClass, 1)
 	} else {
 		spacing = "px-6 pt-3 justify-end"
 		menu = strings.Replace(menu, filterMenuClass, "right-0 "+filterMenuClass, 1)
@@ -1567,6 +1573,15 @@ func rightAnchor(page []byte) int {
 }
 
 // titleAnchor is right in front of the page title, the only spot where a float shares its line
+// helpAnchor is where the tab row's Documentation button starts, -1 when the page has none
+func helpAnchor(page []byte) int {
+	at := bytes.Index(page, []byte(`id="page-help-button"`))
+	if at < 0 {
+		return -1
+	}
+	return bytes.LastIndex(page[:at], []byte("<button"))
+}
+
 func titleAnchor(page []byte) int {
 	start := bytes.Index(page, []byte(mainMarker))
 	if start < 0 {

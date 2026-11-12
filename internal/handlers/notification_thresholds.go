@@ -61,6 +61,14 @@ func thresholdAdvice(v *notifThresholdView, h thresholdHost) {
 			v.WarnAbove = int(math.Floor(100 - reserve*100/h.DiskGB))
 			v.WarnHighText = fmt.Sprintf("Above %d%%, less than %.0f GB is left when the alert fires.", v.WarnAbove, reserve)
 		}
+	case "mail_bounce":
+		v.Hint = "Share of yesterday's outgoing mail that bounced, checked once a day with at least 10 bounces. Recommended: 10-30%."
+		v.WarnBelow = 5
+		v.WarnLowText = "Below 5%, normal bounces from mistyped addresses will alert."
+	case "mail_defer":
+		v.Hint = "Share of yesterday's outgoing mail that receiving servers deferred, checked once a day with at least 10 deferred. Recommended: 10-30%."
+		v.WarnBelow = 5
+		v.WarnLowText = "Below 5%, the occasional greylisting will alert."
 	case "swap":
 		if h.SwapGB == 0 {
 			v.Hint = "This server has no swap, so this check is skipped."

@@ -183,7 +183,7 @@
 {{$type := lower .Type}}
 {{$id := .ID}}
                     <tr x-show="(typeFilter === '' || typeFilter === {{toJSON $type}}) && (searchQuery === '' || {{toJSON (lower (printf "%s %s %s %s %s" .SiteName $owner .Domain .AdminEmail .Type))}}.includes(searchQuery.toLowerCase()))" class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
-{{template "bulk_row_checkbox" (dict "Key" (printf "%d" .ID) "Label" .SiteName "Skip" .BulkSkip)}}
+{{template "bulk_row_checkbox" (dict "Key" (printf "%d" .ID) "Label" .SiteName "Skip" .BulkSkip "Bar" (and $suspended "bg-red-500"))}}
                         <td class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
                             <div class="flex items-center gap-3">
                                 {{/* light bg in both themes so dark favicons don't vanish in dark mode */}}
@@ -198,7 +198,7 @@
                         </td>
                         <td data-col="type" class="p-4 text-sm whitespace-nowrap py-2 text-gray-700 dark:text-gray-300 text-center"><span class="inline-flex" title="{{siteTypeLabel .Type}}" aria-label="{{siteTypeLabel .Type}}">{{siteTypeUse .Type}}</span></td>
                         <td data-col="owner" class="p-4 text-sm whitespace-nowrap py-2 font-medium text-gray-900 dark:text-gray-50 text-left">
-                            {{if $owner}}<a href="/users/{{$owner}}" class="font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50">{{lastSegment $owner "_"}}</a> {{if $suspended}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Suspended</span>{{end}}{{else}}<span class="font-normal text-gray-400 dark:text-gray-600">No owner</span>{{end}}
+                            {{if $owner}}{{template "user_link" (dict "Href" (printf "/users/%s" $owner) "Name" $owner "Class" "font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50")}} {{if $suspended}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Suspended</span>{{end}}{{else}}<span class="font-normal text-gray-400 dark:text-gray-600">No owner</span>{{end}}
                         </td>
                         <td data-col="version" class="p-4 text-sm whitespace-nowrap py-2 text-gray-600 dark:text-gray-400 text-left tabular-nums">
                             <div>{{if .Version}}{{.Version}}{{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}</div>

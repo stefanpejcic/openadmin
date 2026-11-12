@@ -1069,3 +1069,62 @@ func TestChangesEmailAccounts(t *testing.T) {
 		}
 	}
 }
+
+func TestQueueReasonSummary(t *testing.T) {
+	for in, want := range map[string]string{
+		"host gmail-smtp-in.l.google.com[142.250.1.27] said: 421-4.7.28 Gmail has detected an unusual rate of mail (in reply to end of DATA command)": "421-4.7.28 Gmail has detected an unusual rate of mail (gmail-smtp-in.l.google.com)",
+		"connect to mx.example.com[203.0.113.9]:25: Connection timed out":                                                                             "Connection timed out (mx.example.com)",
+		"delivery temporarily suspended: lost connection with x[1.2.3.4]":                                                                             "delivery temporarily suspended: lost connection with x[1.2.3.4]",
+		"": "",
+	} {
+		if got := queueReasonSummary(in); got != want {
+			t.Fatalf("%q:\n got %q\nwant %q", in, got, want)
+		}
+	}
+}
+
+func TestServeEmailsQueueSortsAndShowsDetails(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
+	origQueue, origHeaders := getEmailQueue, queueMessageHeaders
+	t.Cleanup(func() { getEmailQueue, queueMessageHeaders = origQueue, origHeaders })
+	getEmailQueue = func() []map[string]interface{} {
+		return []map[string]interface{}{
+			{"queue_id": "AAA111", "queue_name": "deferred", "sender": "z@a.com", "message_size": float64(2048), "arrival_time": float64(100),
+				"recipients": []interface{}{map[string]interface{}{"address": "x@gmail.com", "delay_reason": "connect to mx.gmail.com[1.2.3.4]:25: Connection timed out"}}},
+			{"queue_id": "BBB222", "queue_name": "active", "sender": "a@a.com", "message_size": float64(512000), "arrival_time": float64(200),
+				"recipients": []interface{}{map[string]interface{}{"address": "y@b.com"}}},
+		}
+	}
+	queueMessageHeaders = func(id string) string { return "Subject: hello " + id }
+	get := func(q string) string {
+		resp, err := client.Get(srv.URL + "/emails/queue" + q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+
+	body := get("?sort=size&direction=desc")
+	if a, b := strings.Index(body, ">BBB222<"), strings.Index(body, ">AAA111<"); a < 0 || b < 0 || a > b {
+		t.Fatalf("size desc should list BBB222 first: %d %d", a, b)
+	}
+	for _, want := range []string{"Connection timed out (mx.gmail.com)", `href="/emails/queue?view=AAA111"`, "sort=reason", "1 active", "1 deferred", "</html>"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing %q in %s", want, truncate(body))
+		}
+	}
+	body = get("?view=AAA111")
+	for _, want := range []string{`aria-label="Queued message AAA111"`, "Subject: hello AAA111", "connect to mx.gmail.com[1.2.3.4]:25: Connection timed out", "Retry now"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("details missing %q in %s", want, truncate(body))
+		}
+	}
+	if body = get("?view=GONE999"); !strings.Contains(body, "no longer in the queue") {
+		t.Fatalf("a message that left the queue should say so")
+	}
+}

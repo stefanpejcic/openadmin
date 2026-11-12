@@ -903,7 +903,8 @@ var emailConnectionInfo = func(address, publicIP string) emailConnInfo {
 	return emailConnInfo{Address: address, Host: publicIP, IMAPPort: 143, POP3Port: 110, SMTPPort: 587, Security: "No encryption"}
 }
 
-func getEmailQueue() []map[string]interface{} {
+// getEmailQueue is postqueue -j, a var so tests can hand it a queue
+var getEmailQueue = func() []map[string]interface{} {
 	cmd, err := podman.Command("default", "exec", emailsMailserverContainerName, "postqueue", "-j")
 	if err != nil {
 		return nil
@@ -935,19 +936,37 @@ func (e *Emails) ServeEmailsQueue(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]interface{}{"queue": queue, "mailserver_status": mailserverStatus})
 		return
 	}
-	queueIDs := make([]string, 0, len(queue))
-	for _, msg := range queue {
-		if id, ok := msg["queue_id"].(string); ok {
-			queueIDs = append(queueIDs, id)
-		}
+	rows := queueRowsFrom(queue)
+	sortCol, sortDirection := readSort(r, queueSortKeys)
+	sortQueueRows(rows, sortCol, sortDirection)
+	queueIDs := make([]string, 0, len(rows))
+	for _, row := range rows {
+		queueIDs = append(queueIDs, row.ID)
 	}
-	renderGzip(w, r, "emails_queue.html", mergeChrome(map[string]interface{}{
+	data := map[string]interface{}{
 		"MailserverStatus": mailserverStatus,
 		"Installing":       emailsInstallRunning(),
-		"Queue":            queue,
+		"Queue":            rows,
 		"QueueIDs":         queueIDs,
+		"Counts":           queueCounts(rows),
+		"SortCol":          sortCol,
+		"SortDirection":    sortDirection,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
-	}, r, "Email queue"))
+	}
+	// ?view=<queue id> opens the details of one message above the table, only for ids this admin can see
+	if id := r.URL.Query().Get("view"); id != "" {
+		for _, row := range rows {
+			if row.ID == id {
+				data["Detail"] = row
+				data["DetailHeaders"] = queueMessageHeaders(id)
+				break
+			}
+		}
+		if data["Detail"] == nil {
+			data["DetailGone"] = id
+		}
+	}
+	renderGzip(w, r, "emails_queue.html", mergeChrome(data, r, "Email queue"))
 }
 
 // ServeEmailsQueueAction handles POST /emails/queue/action.

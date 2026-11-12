@@ -529,7 +529,7 @@ function userSearch() {
 {{$status := index . "status"}}
                         <tr data-domain="{{$domainURL}}" data-owner="{{lastSegment $username "_"}}" data-ssl="{{index . "ssl"}}" data-ssl-problem="{{index . "ssl_problem"}}" x-show="domainRowMatches($el, searchQuery) && sslRowMatches($el, sslFilter)" class="user-row [&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
 {{$skip := "unsuspend"}}{{if eq $status "suspended"}}{{$skip = "suspend"}}{{end}}
-{{template "bulk_row_checkbox" (dict "Key" $domainURL "Label" $domainURL "Skip" $skip)}}
+{{template "bulk_row_checkbox" (dict "Key" $domainURL "Label" $domainURL "Skip" $skip "Bar" (and (isSuspended $username) "bg-red-500"))}}
 
                         <td x-show="columns.id" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{index . "domain_id"}}</td>
 
@@ -731,7 +731,7 @@ function userSearch() {
                 </form>
             </td>
 
-            <td x-show="columns.owner" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left"><a href="/users/{{$username}}" class="font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50">{{lastSegment $username "_"}}</a>{{if contains $username "SUSPENDED_"}} <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Suspended</span>{{end}}</td>
+            <td x-show="columns.owner" class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 first:w-10 text-left">{{template "user_link" (dict "Href" (printf "/users/%s" $username) "Name" $username "Class" "font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50")}}{{if contains $username "SUSPENDED_"}} <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Suspended</span>{{end}}</td>
 
             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 first:w-10 dark:text-gray-400 text-right">
 

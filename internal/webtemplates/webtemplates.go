@@ -265,6 +265,10 @@ var funcMap = template.FuncMap{
 	// "SUSPENDED_<timestamp>_" prefix when it's actually present, so it's
 	// safe to use on any username -- including ones containing "_" that
 	// aren't suspended.
+	// isSuspended is whether a username carries the SUSPENDED_<timestamp>_ prefix
+	"isSuspended": func(username string) bool {
+		return strings.HasPrefix(username, "SUSPENDED_")
+	},
 	"stripSuspendedPrefix": func(username string) string {
 		if idx := strings.LastIndex(username, "_"); strings.Contains(username, "SUSPENDED_") && idx != -1 {
 			return username[idx+1:]

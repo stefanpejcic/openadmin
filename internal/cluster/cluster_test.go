@@ -1219,3 +1219,40 @@ func TestNewServersGetTheNextFreeColor(t *testing.T) {
 		t.Fatalf("color classes")
 	}
 }
+
+func TestQueueDetailsStayOutOfTheMergedTable(t *testing.T) {
+	table := `<table id="email_queue"><thead><tr><th><input type="checkbox"></th><th>Queue ID</th><th>From</th></tr></thead><tbody>%s</tbody></table>`
+	row := func(id string) string { return `<tr><td><input type="checkbox"></td><td>` + id + `</td><td>a@b.c</td></tr>` }
+	local := `<html><main id="no_margin_for_iframe"><section><ul aria-label="Recipients"><li>x@gmail.com</li></ul></section>` + fmt.Sprintf(table, row("LOCAL1")) + `</main></html>`
+	remote := `<html><main id="no_margin_for_iframe"><div>no longer in the queue</div>` + fmt.Sprintf(table, row("REMOTE1")) + `</main></html>`
+	opts := testOpts
+	opts.forceColumn = true
+	out := string(mergeTables([]byte(local), "stefan", []remotePage{{id: "n", name: "petar", body: []byte(remote)}}, opts, open))
+	if strings.Count(out, "<li>") != 1 || !strings.Contains(out, `<ul aria-label="Recipients"><li>x@gmail.com</li></ul>`) {
+		t.Fatalf("details list was touched: %s", out)
+	}
+	if !strings.Contains(out, "LOCAL1") || !strings.Contains(out, "REMOTE1") || strings.Count(out, "<table") != 1 {
+		t.Fatalf("queue rows of both servers should be in the one table: %s", out)
+	}
+}
+
+func TestMailReportsAreNotMerged(t *testing.T) {
+	for _, p := range []string{"/emails/data/2026-Nov-12.html", "/emails/reports/view"} {
+		if mergeable(httptest.NewRequest("GET", p, nil)) {
+			t.Fatalf("%s must not be merged, the chart tables would get a Server column", p)
+		}
+	}
+	if !mergeable(httptest.NewRequest("GET", "/emails/queue", nil)) {
+		t.Fatalf("/emails/queue should still merge")
+	}
+}
+
+func TestIframePagePickerGoesBeforeDocumentation(t *testing.T) {
+	page := []byte(`<html><nav><ul><li>tabs</li></ul><button type="button" id="page-help-button">Documentation</button></nav><main id="no_margin_for_iframe" class="p-0"><iframe src="/imav/"></iframe></main></html>`)
+	m := &Manager{loaded: true, state: State{Role: RoleMaster, SeedHex: "aa"}}
+	out := string(m.pagePicker(page, httptest.NewRequest("GET", "/security/imunify/", nil), LocalNode, "stefan", &admindb.User{ID: 1}))
+	picker, help, iframe := strings.Index(out, "cluster-page-picker"), strings.Index(out, `id="page-help-button"`), strings.Index(out, "<iframe")
+	if picker < 0 || picker > help || picker > iframe {
+		t.Fatalf("server picker should be in the tab row right before Documentation: %s", out)
+	}
+}

@@ -69,6 +69,8 @@ type dashboardPageData struct {
 	Flashes []auth.Flash
 	// nil when the summary module is off or no account has a saved summary yet
 	Summary *serverSummary
+	// this server's resource peaks, alerts and mail on the summary's day, admins only
+	SummaryDay *summaryDay
 	// the admin's saved widget order, sizes, collapsed widgets and header buttons, "null" when never changed
 	Layout template.JS
 	// set when sentinel stopped writing usage snapshots, the usage widget would otherwise show old data as the last hour
@@ -216,11 +218,15 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 	if u := auth.CurrentUser(r); u != nil && s != nil && d.AdminDB != nil {
 		_ = d.AdminDB.SetPref(u.ID, summarySeenPref, s.Date)
 	}
-	webtemplates.Render(w, "dashboard_summary.html", dashboardPageData{
+	data := dashboardPageData{
 		Chrome:  buildChrome(r, "Daily summary"),
 		Flashes: auth.PopFlashes(w, r, d.Sessions),
 		Summary: s,
-	})
+	}
+	if u := auth.CurrentUser(r); s != nil && u != nil && u.Role != "reseller" {
+		data.SummaryDay = loadSummaryDay(s.Date)
+	}
+	webtemplates.Render(w, "dashboard_summary.html", data)
 }
 
 const summarySeenPref = "summary_seen"

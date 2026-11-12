@@ -108,6 +108,61 @@
             {{end}}
         </div>
     </div>
+
+    {{with $.SummaryDay}}
+    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Server health</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Peaks from the 5 minute checks and the alerts raised that day{{if $.ServerHostname}} on {{$.ServerHostname}}{{end}}.</p>
+        </div>
+        <div class="lg:col-span-2 space-y-4">
+            {{with .Health}}
+            <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Peak load</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.PeakLoad}}</dd><dd class="text-xs text-gray-500 dark:text-gray-500">at {{.PeakLoadAt}}</dd></div>
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Peak CPU</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.PeakCPU}}%</dd><dd class="text-xs text-gray-500 dark:text-gray-500">at {{.PeakCPUAt}}</dd></div>
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Peak memory</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.PeakRAM}}%</dd><dd class="text-xs text-gray-500 dark:text-gray-500">at {{.PeakRAMAt}}</dd></div>
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Disk</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Disk}}%</dd><dd class="text-xs text-gray-500 dark:text-gray-500">{{if .FailedRuns}}<span class="text-yellow-700 dark:text-yellow-500">{{.FailedRuns}} of {{.Runs}} checks failed</span>{{else}}all {{.Runs}} checks passed{{end}}</dd></div>
+            </dl>
+            {{end}}
+            {{if .Problems}}
+            <ul role="list" class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+                {{range .Problems}}
+                <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                    <span class="flex min-w-0 items-center gap-2"><span class="size-2 shrink-0 rounded-full {{if eq .Severity "critical"}}bg-red-500{{else}}bg-yellow-500{{end}}" aria-hidden="true"></span><span class="truncate text-gray-900 dark:text-gray-50">{{.Title}}</span>{{if .Resolved}}<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">resolved</span>{{end}}</span>
+                    <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500">{{if gt .Count 1}}{{.Count}}× {{end}}{{if .First}}from {{.First}}{{end}}</span>
+                </li>
+                {{end}}
+            </ul>
+            <p class="text-sm"><a href="/notifications" class="text-blue-500 hover:underline hover:underline-offset-4">{{if .MoreProblems}}{{.MoreProblems}} more, see{{else}}See{{end}} all notifications</a></p>
+            {{else}}
+            <p class="text-sm text-gray-500 dark:text-gray-500">No warnings or critical alerts that day.</p>
+            {{end}}
+        </div>
+    </div>
+
+    {{with .Mail}}
+    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Mail</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">From the mail server's summary report for that day.</p>
+        </div>
+        <div class="lg:col-span-2 space-y-3">
+            <dl class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Received</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Received}}</dd></div>
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Delivered</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Delivered}}</dd></div>
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Deferrals</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Deferred}}</dd><dd class="text-xs text-gray-500 dark:text-gray-500">retries, not messages</dd></div>
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Bounced</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50 {{if ge .BouncePct 20}}text-yellow-700 dark:text-yellow-500{{end}}">{{.Bounced}}</dd><dd class="text-xs text-gray-500 dark:text-gray-500">{{.BouncePct}}% of outgoing</dd></div>
+                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Rejected</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Rejected}}</dd></div>
+            </dl>
+            <p class="text-sm"><a href="/emails/reports" class="text-blue-500 hover:underline hover:underline-offset-4">Open the summary report</a> <span class="text-gray-500 dark:text-gray-500">·</span> <a href="{{.Link}}" target="_blank" class="text-blue-500 hover:underline hover:underline-offset-4">this day's report</a></p>
+        </div>
+    </div>
+    {{end}}
+    {{end}}
 </div>
 </div>
 {{else}}

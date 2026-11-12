@@ -35,9 +35,9 @@ var (
 )
 
 var (
-	notifNumericKeys = []string{"load", "cpu", "ram", "du", "swap"}
+	notifNumericKeys = []string{"load", "cpu", "ram", "du", "swap", "mail_bounce", "mail_defer"}
 	httpNumericKeys  = []string{"max_total_conn", "max_conn_per_ip"}
-	defaultToggles   = []string{"update", "attack", "ratelimit", "limit", "login", "ssh", "reboot", "dns"}
+	defaultToggles   = []string{"update", "attack", "ratelimit", "limit", "login", "ssh", "reboot", "dns", "mail"}
 	actionToggles    = []string{
 		"admin_status", "admin_api", "admin_create", "reseller_create",
 		"admin_password", "admin_rename", "admin_suspend", "admin_unsuspend",
@@ -117,6 +117,8 @@ var notifThresholdOrder = []struct{ Key, Label string }{
 	{"ram", "Memory"},
 	{"du", "Disk Usage"},
 	{"swap", "SWAP"},
+	{"mail_bounce", "Mail bounced"},
+	{"mail_defer", "Mail deferred"},
 }
 
 var notifServerActionOrder = []struct{ Key, Label, Tooltip string }{
@@ -128,6 +130,7 @@ var notifServerActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"login", "OpenAdmin login from new IP", `Triggered when the OpenAdmin panel is accessed from an unrecognized IP address. IP can be whitelisted in "Login Whitelist" below.`},
 	{"ssh", "SSH login from new IP", `Triggered when root SSH access is detected from an unknown IP address. IP can be whitelisted in "Login Whitelist" below.`},
 	{"update", "New update available", "Triggered when a new version of OpenPanel is available for update."},
+	{"mail", "Mail delivery problems", "Checked once a day from yesterday's mail log, the same numbers as Emails > Summary reports: fires when bounced or deferred mail goes over the Mail bounced / Mail deferred thresholds, or when the mail server isn't running."},
 }
 
 var notifUserActionOrder = []struct{ Key, Label, Tooltip string }{
