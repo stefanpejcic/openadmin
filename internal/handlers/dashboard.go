@@ -276,6 +276,7 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 			withMalware.AttentionTotal = len(withMalware.Attention)
 			withMalware.MoreAttn = max(0, withMalware.AttentionTotal-8)
 			withMalware.AttentionGroups = groupAttention(withMalware.Attention)
+			withMalware.MainProblem = mainAttentionProblem(withMalware.AttentionGroups)
 			data.Summary = &withMalware
 		}
 	}

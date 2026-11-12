@@ -209,3 +209,23 @@ func TestAttentionWorstAccountsFirst(t *testing.T) {
 		t.Fatalf("order: %s (scores %v)", got, g)
 	}
 }
+
+func TestMainAttentionProblem(t *testing.T) {
+	plugin := "They're in All-in-One WP Migration Unlimited Extension. An update usually fixes them."
+	var list []summaryFinding
+	for _, u := range []string{"a", "b", "c", "d"} {
+		list = append(list, summaryFinding{Username: u, Title: "2 known security holes", Detail: plugin, Domain: u + ".com"})
+	}
+	list = append(list, summaryFinding{Username: "a", Title: "1 known security hole", Detail: plugin, Domain: "a2.com"}, summaryFinding{Username: "e", Title: "Disk almost full"})
+	got := mainAttentionProblem(groupAttention(list))
+	if got != "The main problem is All-in-One WP Migration Unlimited Extension: it has known security holes on 4 of 5 accounts (80%), updating it clears most of the list." {
+		t.Fatalf("got %q", got)
+	}
+	if got := mainAttentionProblem(groupAttention([]summaryFinding{{Username: "a", Title: "x"}, {Username: "b", Title: "y"}, {Username: "c", Title: "z"}})); got != "" {
+		t.Fatalf("nothing shared should say nothing, got %q", got)
+	}
+	cron := []summaryFinding{{Username: "a", Title: "Task failed (3 times)"}, {Username: "b", Title: "Task failed (96 times)"}, {Username: "c", Title: "Task failed (1 times)"}, {Username: "d", Title: "other"}}
+	if got := mainAttentionProblem(groupAttention(cron)); !strings.Contains(got, `"Task failed (# times)" on 3 of 4 accounts (75%)`) {
+		t.Fatalf("same title with different numbers counts as one: %q", got)
+	}
+}

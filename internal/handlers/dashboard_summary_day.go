@@ -379,6 +379,7 @@ func dailyReportSummary(db *sql.DB, hostname string) (*serverSummary, []summaryS
 		withMalware.AttentionTotal = len(withMalware.Attention)
 		withMalware.MoreAttn = max(0, withMalware.AttentionTotal-5)
 		withMalware.AttentionGroups = groupAttention(withMalware.Attention)
+		withMalware.MainProblem = mainAttentionProblem(withMalware.AttentionGroups)
 		s = &withMalware
 	} else if s != nil {
 		cp := *s

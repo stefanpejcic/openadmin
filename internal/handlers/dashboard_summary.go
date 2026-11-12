@@ -105,6 +105,64 @@ func findingScore(f summaryFinding) int {
 	return 20
 }
 
+var (
+	attentionPluginRe = regexp.MustCompile(`^They're in (.+?)\. `)
+	attentionDigitsRe = regexp.MustCompile(`\d+`)
+)
+
+// mainAttentionProblem names what at least 40% of the accounts (3 or more) in Needs attention have in common
+func mainAttentionProblem(groups []attentionGroup) string {
+	if len(groups) < 3 {
+		return ""
+	}
+	type hit struct {
+		label  string
+		plugin bool
+		n      int
+	}
+	hits := map[string]*hit{}
+	var order []string
+	for _, g := range groups {
+		seen := map[string]bool{}
+		items := append([]summaryFinding{}, g.General...)
+		for _, d := range g.Domains {
+			items = append(items, d.Items...)
+		}
+		for _, f := range items {
+			key, label, plugin := "", "", false
+			if m := attentionPluginRe.FindStringSubmatch(f.Detail + " "); m != nil {
+				key, label, plugin = "plugin:"+m[1], m[1], true
+			} else {
+				label = attentionDigitsRe.ReplaceAllString(f.Title, "#")
+				key = "title:" + label
+			}
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			if hits[key] == nil {
+				hits[key] = &hit{label: label, plugin: plugin}
+				order = append(order, key)
+			}
+			hits[key].n++
+		}
+	}
+	var best *hit
+	for _, k := range order {
+		if best == nil || hits[k].n > best.n {
+			best = hits[k]
+		}
+	}
+	share := best.n * 100 / len(groups)
+	if best.n < 3 || share < 40 {
+		return ""
+	}
+	if best.plugin {
+		return fmt.Sprintf("The main problem is %s: it has known security holes on %d of %d accounts (%d%%), updating it clears most of the list.", best.label, best.n, len(groups), share)
+	}
+	return fmt.Sprintf("The main problem is \"%s\" on %d of %d accounts (%d%%).", best.label, best.n, len(groups), share)
+}
+
 // groupAttention puts each account's findings together, worst accounts first, websites in the order their findings came
 func groupAttention(list []summaryFinding) []attentionGroup {
 	var out []attentionGroup
@@ -209,7 +267,9 @@ type serverSummary struct {
 	MoreAttn     int
 	// Attention per account and website, what the page lists
 	AttentionGroups []attentionGroup
-	Sites           []summarySite
+	// one problem most accounts share, e.g. the same plugin everywhere, "" when nothing stands out
+	MainProblem string
+	Sites       []summarySite
 	// findings before the list is cut to 8, the collapsed widget shows this count
 	AttentionTotal int
 }
@@ -426,6 +486,7 @@ func summarizeDay(day string, found []userSummary) *serverSummary {
 	out.AttentionTotal = len(out.Attention)
 	out.MoreAttn = max(0, len(out.Attention)-8)
 	out.AttentionGroups = groupAttention(out.Attention)
+	out.MainProblem = mainAttentionProblem(out.AttentionGroups)
 
 	accounts := countWord(len(found), "account", "accounts")
 	if requests == 0 {
