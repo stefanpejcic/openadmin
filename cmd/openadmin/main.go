@@ -229,6 +229,10 @@ func main() {
 		os.Exit(1)
 	}
 	handler = server.AccessLogMiddleware(accessLog, handler)
+	// disable_2087_port setups serve admin through caddy on 443 on purpose
+	if !disabled {
+		handler = server.RequireAdminPort(hostname.Port, handler)
+	}
 
 	if err := server.Run(server.Options{
 		Port:     hostname.Port,
