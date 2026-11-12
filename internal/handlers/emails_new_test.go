@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 
@@ -140,5 +142,37 @@ func TestCheckDeliverability(t *testing.T) {
 	bad := checkDeliverability(context.Background(), "bad.com", "1.2.3.4", "")
 	if bad.OK || bad.DKIM.Status != "missing" || bad.SPF.Status != "wrong_ip" || bad.DMARC.Status != "missing" {
 		t.Errorf("bad.com: %+v", bad)
+	}
+}
+
+func TestDeliverabilityJSONMarksDomainsWithAZone(t *testing.T) {
+	origDir := BindZonesDir
+	BindZonesDir = t.TempDir()
+	deliverabilityCacheMu.Lock()
+	origCache := deliverabilityCache
+	deliverabilityCache = deliverabilityResult{at: time.Now(), rows: []deliverabilityRow{{Domain: "zoned.com"}, {Domain: "external.com"}}}
+	deliverabilityCacheMu.Unlock()
+	t.Cleanup(func() {
+		BindZonesDir = origDir
+		deliverabilityCacheMu.Lock()
+		deliverabilityCache = origCache
+		deliverabilityCacheMu.Unlock()
+	})
+	os.WriteFile(filepath.Join(BindZonesDir, "zoned.com.zone"), []byte("$TTL 1\n"), 0644)
+
+	rec := httptest.NewRecorder()
+	(&Emails{}).ServeDeliverability(rec, httptest.NewRequest("GET", "/emails/deliverability?output=json", nil))
+	var out struct {
+		Domains []deliverabilityRow `json:"domains"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("bad json: %v %s", err, rec.Body.String())
+	}
+	got := map[string]bool{}
+	for _, d := range out.Domains {
+		got[d.Domain] = d.HasZone
+	}
+	if !got["zoned.com"] || got["external.com"] || len(got) != 2 {
+		t.Fatalf("has_zone wrong: %+v", got)
 	}
 }

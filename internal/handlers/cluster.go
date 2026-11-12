@@ -63,6 +63,14 @@ func (c *Cluster) ServePage(w http.ResponseWriter, r *http.Request) {
 	case cluster.RoleMaster:
 		health := c.Manager.Health()
 		data["Health"] = health
+		colors := c.Manager.Colors()
+		classes := map[string]string{}
+		for id, col := range colors {
+			classes[id] = cluster.ColorClass(col)
+		}
+		data["Colors"] = colors
+		data["ColorClasses"] = classes
+		data["Palette"] = clusterPalette()
 		data["Totals"] = clusterTotals(health)
 		data["Problems"] = clusterProblems(health)
 		data["Nodes"] = st.Nodes
@@ -358,6 +366,15 @@ func (c *Cluster) HandlePause(w http.ResponseWriter, r *http.Request) {
 	c.flashBack(w, r, "Server resumed. Sync it to pick up settings changed while it was paused.", "success")
 }
 
+// HandleColor handles POST /server/cluster/color, the dot that marks a server's rows in merged lists
+func (c *Cluster) HandleColor(w http.ResponseWriter, r *http.Request) {
+	if err := c.Manager.SetColor(r.PostFormValue("id"), r.PostFormValue("color")); err != nil {
+		c.flashBack(w, r, err.Error(), "error")
+		return
+	}
+	c.flashBack(w, r, "Server color saved.", "success")
+}
+
 // HandlePromote handles POST /server/cluster/promote
 func (c *Cluster) HandlePromote(w http.ResponseWriter, r *http.Request) {
 	id := r.PostFormValue("id")
@@ -413,4 +430,14 @@ func (c *Cluster) HandleMoveFinish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.flashBack(w, r, msg, "success")
+}
+
+type clusterColorOption struct{ Name, Class string }
+
+func clusterPalette() []clusterColorOption {
+	out := make([]clusterColorOption, 0, len(cluster.Palette))
+	for _, c := range cluster.Palette {
+		out = append(out, clusterColorOption{c, cluster.ColorClass(c)})
+	}
+	return out
 }

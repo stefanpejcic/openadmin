@@ -871,7 +871,36 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 	if !fromFile {
 		data["BulkActions"] = EmailAccountsBulkActions()
 	}
+	// ?info=<address> shows the same connect-a-mail-app block as the user panel
+	if info := r.URL.Query().Get("info"); info != "" {
+		for _, a := range accounts {
+			if strings.EqualFold(a.Email, info) {
+				data["ConnInfo"] = emailConnectionInfo(a.Email, e.PublicIP)
+				break
+			}
+		}
+	}
 	renderGzip(w, r, "emails_accounts.html", mergeChrome(data, r, "Accounts"))
+}
+
+// emailConnInfo is what a mail app needs to reach this server's mailserver
+type emailConnInfo struct {
+	Address  string
+	Host     string
+	IMAPPort int
+	POP3Port int
+	SMTPPort int
+	Security string
+	SSL      bool
+}
+
+// emailConnectionInfo follows mailserver.env, TLS only exists once opencli domain gave it a hostname with a cert
+var emailConnectionInfo = func(address, publicIP string) emailConnInfo {
+	env, _ := parseMailserverEnvFile(EmailsMailserverEnvFile)
+	if host := env["OVERRIDE_HOSTNAME"]; host != "" && env["SSL_TYPE"] != "" {
+		return emailConnInfo{Address: address, Host: host, IMAPPort: 993, POP3Port: 995, SMTPPort: 465, Security: "SSL/TLS", SSL: true}
+	}
+	return emailConnInfo{Address: address, Host: publicIP, IMAPPort: 143, POP3Port: 110, SMTPPort: 587, Security: "No encryption"}
 }
 
 func getEmailQueue() []map[string]interface{} {

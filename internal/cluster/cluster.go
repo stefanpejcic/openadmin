@@ -57,6 +57,8 @@ type Node struct {
 	AddedAt time.Time `json:"added_at"`
 	// a paused server stays in the cluster but the master leaves it out of everything until it's resumed
 	Paused bool `json:"paused,omitempty"`
+	// palette name of the dot next to this server in merged lists
+	Color string `json:"color,omitempty"`
 }
 
 type State struct {
@@ -65,6 +67,7 @@ type State struct {
 	// master side
 	SeedHex    string            `json:"seed,omitempty"`
 	SelfURL    string            `json:"self_url,omitempty"`
+	SelfColor  string            `json:"self_color,omitempty"`
 	Nodes      []Node            `json:"nodes,omitempty"`
 	LastSynced map[string]string `json:"last_synced,omitempty"`
 	Jobs       []*Job            `json:"jobs,omitempty"`
@@ -632,9 +635,15 @@ func (m *Manager) addNode(rawURL, name, code, mode string) (Node, error) {
 		for _, n := range s.Nodes {
 			if n.URL != node.URL {
 				kept = append(kept, n)
+			} else if node.Color == "" {
+				node.Color = n.Color
 			}
 		}
-		s.Nodes = append(kept, node)
+		s.Nodes = kept
+		if node.Color == "" {
+			node.Color = nextColor(s)
+		}
+		s.Nodes = append(s.Nodes, node)
 		if s.LastSynced == nil && baseline != nil {
 			s.LastSynced = baseline.Values
 		}

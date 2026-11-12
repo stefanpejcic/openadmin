@@ -643,6 +643,48 @@ func TestServeEmailsAccountsRendersHTMLRunning(t *testing.T) {
 	}
 }
 
+func TestServeEmailsAccountsShowsConnectionInfo(t *testing.T) {
+	e := &Emails{PublicIP: "203.0.113.5"}
+	srv, client := newEmailsTestServer(t, e)
+	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
+	emailsListAccountsRun = func() []emailQuota { return []emailQuota{{Email: "a@b.com", Quota: "512M [10%]"}} }
+	os.WriteFile(EmailsAccountsFile, []byte("a@b.com|{SHA512-CRYPT}x\n"), 0644)
+	cachedEmailAccounts()
+	get := func(q string) string {
+		resp, err := client.Get(srv.URL + "/emails/accounts" + q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+
+	origEnv := EmailsMailserverEnvFile
+	EmailsMailserverEnvFile = filepath.Join(t.TempDir(), "mailserver.env")
+	t.Cleanup(func() { EmailsMailserverEnvFile = origEnv })
+	os.WriteFile(EmailsMailserverEnvFile, []byte("OVERRIDE_HOSTNAME=s2.example.com\nSSL_TYPE=manual\n"), 0644)
+	body := get("?info=a@b.com")
+	for _, want := range []string{"Connect a mail app", "s2.example.com", ">993<", ">465<", "SSL/TLS", `/emails/webmail/a@b.com`, "Connection info", "</html>"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected body to contain %q, got %s", want, truncate(body))
+		}
+	}
+
+	os.WriteFile(EmailsMailserverEnvFile, []byte("OVERRIDE_HOSTNAME=\nSSL_TYPE=\n"), 0644)
+	body = get("?info=a@b.com")
+	for _, want := range []string{"203.0.113.5", ">143<", ">587<", "No encryption"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected body to contain %q without ssl, got %s", want, truncate(body))
+		}
+	}
+
+	if body := get("?info=nobody@b.com"); strings.Contains(body, `id="emailConnInfo"`) {
+		t.Fatalf("an address that isn't on this server shouldn't get the block")
+	}
+}
+
 func TestEmailAccountsQuickWithoutUsageYet(t *testing.T) {
 	e := &Emails{}
 	newEmailsTestServer(t, e)

@@ -45,7 +45,7 @@
             {{if or .Stopped .Failed}}
             <div class="mt-4 space-y-1 text-sm text-gray-600 dark:text-gray-400">
                 {{if .Stopped}}<p><span class="font-medium text-gray-900 dark:text-gray-50">Not running, start the service to list databases:</span> {{range $i, $u := .Stopped}}{{if $i}}, {{end}}<a href="/users/{{$u.Username}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{$u.Username}}</a>{{end}}</p>{{end}}
-                {{range .Failed}}<p><span class="font-medium text-red-600 dark:text-red-500">Couldn't list databases for <a href="/users/{{.Username}}" class="underline underline-offset-4">{{.Username}}</a>:</span> {{.Reason}}</p>{{end}}
+                {{range .Failed}}<p><span class="font-medium text-red-600 dark:text-red-500">Couldn't list databases for <a href="/users/{{.Username}}" class="underline underline-offset-4">{{stripSuspendedPrefix .Username}}</a>:</span> {{.Reason}}</p>{{end}}
             </div>
             {{end}}
         </header>
@@ -82,7 +82,7 @@
                         {{range .Databases}}
                         <tr x-show="searchQuery === '' || '{{jsStr .Name}} {{jsStr .Owner}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
                             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50 text-left select-text">{{.Name}}</td>
-                            <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left"><a href="/users/{{.Owner}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{.Owner}}</a></td>
+                            <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left"><a href="/users/{{.Owner}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{stripSuspendedPrefix .Owner}}</a></td>
                             {{if eq $.Engine "mysql"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left">
                                 <span class="flex items-center gap-x-1.5">{{.TypeIcon}}{{.TypeLabel}}</span>
                             </td>{{end}}
@@ -91,11 +91,11 @@
                             <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left tabular-nums">{{.SizeLabel}}</td>
                             {{if eq $.Engine "mysql"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-right">
                                 <div class="inline-flex items-center gap-2">
-                                {{if $.PHPMyAdmin}}<a href="/login/token/{{.Owner}}?next={{printf "/phpmyadmin/?db=%s" .Name}}" target="_blank" title="Open {{.Name}} in phpMyAdmin as {{.Owner}}" class="inline-flex cursor-pointer items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-pma"/></svg>phpMyAdmin</a>{{end}}
+                                {{if $.PHPMyAdmin}}<a href="/login/token/{{.Owner}}?next={{printf "/phpmyadmin/?db=%s" .Name}}" target="_blank" title="Open {{.Name}} in phpMyAdmin as {{stripSuspendedPrefix .Owner}}" class="inline-flex cursor-pointer items-center gap-1 rounded text-sm text-blue-500 hover:underline hover:underline-offset-4 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-3.5 shrink-0" fill="currentColor" aria-hidden="true"><use href="#db-pma"/></svg>phpMyAdmin</a>{{end}}
                                 <div class="relative" x-data="{ open: false, up: false }" @click.outside="open = false" @keydown.escape="open = false">
                                     <button type="button" aria-label="More actions for {{.Name}}" aria-haspopup="menu" :aria-expanded="open.toString()" @click="open = !open; up = false; open && $nextTick(() => { const r = $el.getBoundingClientRect(), h = $refs.menu.offsetHeight; up = r.bottom + 4 + h > window.innerHeight && r.top - 4 - h > 0 })" class="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg class="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 10C3.9 10 3 10.9 3 12C3 13.1 3.9 14 5 14C6.1 14 7 13.1 7 12C7 10.9 6.1 10 5 10ZM19 10C17.9 10 17 10.9 17 12C17 13.1 17.9 14 19 14C20.1 14 21 13.1 21 12C21 10.9 20.1 10 19 10ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10Z"/></svg></button>
                                     <div x-show="open" x-ref="menu" x-cloak role="menu" :class="up ? 'bottom-full mb-1' : 'top-full mt-1'" class="absolute right-0 z-50 w-48 rounded-md border border-gray-200 bg-white p-1 text-left text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
-                                        {{if not $.IsReseller}}<a role="menuitem" href="/terminal/{{.Owner}}/{{.Type}}?cmd={{.TerminalCommand}}" target="_blank" title="Open {{.Name}} in the {{.TypeLabel}} client of {{.Owner}}" @click="open = false" class="flex w-full cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 text-gray-900 dark:text-gray-50"><svg class="size-4 shrink-0 text-gray-500 dark:text-gray-400" fill="currentColor" aria-hidden="true"><use href="#db-terminal"/></svg>Terminal</a>{{end}}
+                                        {{if not $.IsReseller}}<a role="menuitem" href="/terminal/{{.Owner}}/{{.Type}}?cmd={{.TerminalCommand}}" target="_blank" title="Open {{.Name}} in the {{.TypeLabel}} client of {{stripSuspendedPrefix .Owner}}" @click="open = false" class="flex w-full cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 text-gray-900 dark:text-gray-50"><svg class="size-4 shrink-0 text-gray-500 dark:text-gray-400" fill="currentColor" aria-hidden="true"><use href="#db-terminal"/></svg>Terminal</a>{{end}}
                                         <form method="POST" action="/databases/export" @submit="open = false">
                                             <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                                             <input type="hidden" name="owner" value="{{.Owner}}">
@@ -124,7 +124,7 @@
         <div class="relative w-full max-w-lg overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-900 dark:bg-raised">
             <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-900">
                 <h3 id="databases-dialog-1-title" class="text-base font-semibold text-gray-900 dark:text-gray-50">Import into <span x-text="imp.database"></span></h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">User <span x-text="imp.owner"></span>. The .sql or .sql.gz file runs against the existing database, tables in the dump replace ones with the same name.</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">User <span x-text="String(imp.owner || '').replace(/^SUSPENDED_\d+_/, '')"></span>. The .sql or .sql.gz file runs against the existing database, tables in the dump replace ones with the same name.</p>
             </div>
             <div class="space-y-4 px-6 py-4">
                 <div>

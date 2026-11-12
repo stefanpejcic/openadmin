@@ -480,3 +480,22 @@ func TestLatestWordPressRetriesInTheBackground(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 }
+
+func TestSortWebsitesByGitKeepsSitesWithoutRepoLast(t *testing.T) {
+	sites := []websiteRow{{SiteName: "none"}, {SiteName: "b", Git: []gitRepo{{Name: "beta"}}}, {SiteName: "a", Git: []gitRepo{{Name: "Alpha"}}}}
+	names := func() string {
+		var out []string
+		for _, s := range sites {
+			out = append(out, s.SiteName)
+		}
+		return strings.Join(out, ",")
+	}
+	sortWebsites(sites, "git", false)
+	if got := names(); got != "a,b,none" {
+		t.Fatalf("asc: %s", got)
+	}
+	sortWebsites(sites, "git", true)
+	if got := names(); got != "b,a,none" {
+		t.Fatalf("desc: %s", got)
+	}
+}

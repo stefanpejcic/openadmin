@@ -39,7 +39,7 @@
     <div class="px-4 pt-3 sm:px-6 lg:px-8">
         <select aria-label="Filter by user" onchange="window.location = this.value ? '/security/waf/logs/' + encodeURIComponent(this.value) : '/security/waf/logs'" class="rounded-md border px-2.5 py-1.5 shadow-xs outline-none sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 bg-white dark:bg-gray-950 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 outline-hidden">
             <option value="">All users</option>
-            {{range .Users}}<option value="{{.}}" {{if eq . $.Target}}selected{{end}}>{{.}}</option>{{end}}
+            {{range .Users}}<option value="{{.}}" {{if eq . $.Target}}selected{{end}}>{{stripSuspendedPrefix .}}</option>{{end}}
         </select>
     </div>
     {{end}}
@@ -78,7 +78,7 @@
                 {{range .Report.Domains}}
                 <tr class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
                     <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"><a href="/security/waf/logs/{{.Domain}}" class="font-medium text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-50">{{.Domain}}</a></td>
-                    {{if eq $.Kind "server"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{if .Owner}}<a href="/security/waf/logs/{{.Owner}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{.Owner}}</a>{{else}}<span class="text-gray-400 dark:text-gray-600">–</span>{{end}}</td>{{end}}
+                    {{if eq $.Kind "server"}}<td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{if .Owner}}<a href="/security/waf/logs/{{.Owner}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{stripSuspendedPrefix .Owner}}</a>{{else}}<span class="text-gray-400 dark:text-gray-600">–</span>{{end}}</td>{{end}}
                     <td class="relative px-4 py-2.5 text-sm whitespace-nowrap tabular-nums font-semibold text-red-600 dark:text-red-500">{{.Blocked}}</td>
                     <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.WouldBlock}}</td>
                     <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.Flagged}}</td>

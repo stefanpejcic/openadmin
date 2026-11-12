@@ -1084,6 +1084,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /server/cluster/rollback", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleRollback)))
 	mux.HandleFunc("POST /server/cluster/leave", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleLeave)))
 	mux.HandleFunc("POST /server/cluster/pause", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandlePause)))
+	mux.HandleFunc("POST /server/cluster/color", clusterAdmin(clusterPage.SuperAdmin(clusterPage.HandleColor)))
 	mux.HandleFunc("POST /server/cluster/promote", clusterAdmin(clusterPage.SuperAdmin(clusterPage.RequireLicense(clusterPage.HandlePromote))))
 	mux.HandleFunc("POST /server/cluster/update", clusterAdmin(clusterPage.SuperAdmin(clusterPage.RequireLicense(clusterPage.HandleUpdate))))
 	mux.HandleFunc("POST /server/cluster/move", clusterAdmin(clusterPage.SuperAdmin(clusterPage.RequireLicense(clusterPage.HandleMove))))

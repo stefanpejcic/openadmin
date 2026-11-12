@@ -395,6 +395,26 @@ func sortWebsites(sites []websiteRow, col string, desc bool) {
 		})
 		return
 	}
+	if col == "git" {
+		// by repository name, sites without one stay at the bottom either way
+		repo := func(s websiteRow) string {
+			if len(s.Git) == 0 {
+				return ""
+			}
+			return strings.ToLower(s.Git[0].Name)
+		}
+		sort.SliceStable(sites, func(i, j int) bool {
+			a, b := repo(sites[i]), repo(sites[j])
+			if a == "" || b == "" {
+				return a != "" && b == ""
+			}
+			if desc {
+				return a > b
+			}
+			return a < b
+		})
+		return
+	}
 	if col == "speed" {
 		sort.SliceStable(sites, func(i, j int) bool {
 			if desc {

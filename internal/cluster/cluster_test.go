@@ -320,13 +320,13 @@ func TestServerColumnGoesAfterTheFirstNamedColumn(t *testing.T) {
 		return `<tr><td><input type="checkbox"></td><td>1</td><td>` + n + `</td><td class="hidden sm:table-cell x">e</td></tr>`
 	}
 	out := string(mergeTables([]byte(fmt.Sprintf(page, row("bob"))), "stefan", []remotePage{{id: "n", name: "petar", body: []byte(fmt.Sprintf(page, row("amy")))}}, testOpts, open))
-	if !strings.Contains(out, `<td>bob</td><td data-cluster-server class="x whitespace-nowrap">stefan</td>`) {
+	if !strings.Contains(out, `<td>bob</td><td data-cluster-server class="`+serverRowClass+` whitespace-nowrap">`+serverDot("")+`stefan</td>`) {
 		t.Fatalf("local Server cell isn't after the name or is still hidden: %s", out)
 	}
 	if !strings.Contains(out, `<span>Username</span></th><th data-cluster-server class="x whitespace-nowrap"><a`) {
 		t.Fatalf("header cell isn't after the name: %s", out)
 	}
-	if !strings.Contains(out, `<td>amy</td><td data-cluster-server class="x whitespace-nowrap"><a href="/open/n?n=">petar</a></td>`) {
+	if !strings.Contains(out, `<td>amy</td><td data-cluster-server class="`+serverRowClass+` whitespace-nowrap"><a href="/open/n?n=">`+serverDot("")+`petar</a></td>`) {
 		t.Fatalf("remote Server cell isn't after the name: %s", out)
 	}
 }
@@ -552,7 +552,7 @@ func TestRowsWithoutTheHiddenHeaderCellStayAligned(t *testing.T) {
 		return `<tr><td><input type="checkbox"></td><td>` + pid + `</td><td>root</td></tr>`
 	}
 	out := string(mergeTables([]byte(fmt.Sprintf(page, row("1"))), "stefan", []remotePage{{id: "n", name: "petar", body: []byte(fmt.Sprintf(page, row("2")))}}, testOpts, open))
-	if !strings.Contains(out, `<td>1</td><td data-cluster-server class=" whitespace-nowrap">stefan</td><td>root</td>`) {
+	if !strings.Contains(out, `<td>1</td><td data-cluster-server class="`+serverRowClass+` whitespace-nowrap">`+serverDot("")+`stefan</td><td>root</td>`) {
 		t.Fatalf("Server cell isn't between Pid and Owner: %s", out)
 	}
 	if !strings.Contains(out, `>petar</a></td><td>root</td>`) {
@@ -584,7 +584,7 @@ func TestMergeEmailsAddsServerDataAndRemoteDomains(t *testing.T) {
 	}
 	opts := mergeOptions{activeID: "local", servers: []serverEntry{{ID: "local", Name: "stefan"}, {ID: "n", Name: "petar"}}, filterURL: func(id string) string { return "/x?server=" + id }}
 	out := string(m.mergeEmails(page("L", `["a@x.com","1MB",1]`, "x.com"), "local", "stefan", []remotePage{{id: "n", name: "petar", body: page("R", `["b@y.com","2MB",2]`, "y.com")}}, opts, &admindb.User{ID: 1}))
-	for _, want := range []string{`["a@x.com","1MB",1,"","stefan",""]`, `"b@y.com","2MB",2,"n","petar","/_cluster/open?`, `<option value="y.com" data-action="/_cluster/n/n/emails/new" data-token="R">y.com (petar)</option>`, "cluster-dd"} {
+	for _, want := range []string{`["a@x.com","1MB",1,"","stefan","","","bg-blue-500"]`, `"b@y.com","2MB",2,"n","petar","/_cluster/open?`, `next=%2Femails%2Faccounts%3Finfo%3Db%2540y.com`, `<option value="y.com" data-action="/_cluster/n/n/emails/new" data-token="R">y.com (petar)</option>`, "cluster-dd"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %s: %s", want, out)
 		}
@@ -1196,5 +1196,26 @@ func TestTrustNameFallsBackToIP(t *testing.T) {
 	}
 	if got := trustName(Node{URL: "https://1.2.3.4:2087", TLSName: "panel.example.net"}); got != "panel.example.net" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestNewServersGetTheNextFreeColor(t *testing.T) {
+	s := &State{Nodes: []Node{{ID: "a", Color: "violet"}, {ID: "b"}}}
+	// master is blue, b has none saved so it takes the first free one, amber
+	if got := colorOf(s, "b"); got != "amber" {
+		t.Fatalf("b: %s", got)
+	}
+	if got := nextColor(s); got != "cyan" {
+		t.Fatalf("next: %s", got)
+	}
+	s.Nodes = nil
+	for i := 0; i < len(Palette); i++ {
+		s.Nodes = append(s.Nodes, Node{ID: fmt.Sprint(i), Color: Palette[i]})
+	}
+	if got := nextColor(s); got != Palette[(len(s.Nodes)+1)%len(Palette)] {
+		t.Fatalf("all taken should go round, got %s", got)
+	}
+	if ColorClass("nope") != "bg-blue-500" || ColorClass("slate") != "bg-slate-500" {
+		t.Fatalf("color classes")
 	}
 }

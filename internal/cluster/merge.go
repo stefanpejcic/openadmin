@@ -224,7 +224,13 @@ func visibleClass(class string) string {
 	return strings.Join(kept, " ")
 }
 
+// serverRowClass is how the Server cell looks in every table, the same as on /domains, whatever its neighbour looks like
+const serverRowClass = "relative px-4 py-2.5 text-sm font-medium text-gray-900 dark:text-gray-50 text-left"
+
 func serverCell(tag, class, inner string) string {
+	if tag == "td" {
+		class = serverRowClass
+	}
 	return "<" + tag + ` data-cluster-server class="` + html.EscapeString(visibleClass(class)) + ` whitespace-nowrap">` + inner + "</" + tag + ">"
 }
 
@@ -445,6 +451,8 @@ type mergeOptions struct {
 	servers  []serverEntry
 	// sort the page's own column across servers, sortKey is what its header links call it
 	sortKey string
+	// palette color per server id, the dot in the Server column
+	colors  map[string]string
 	sortDir string
 	// show the column and filter even while no server has a row
 	forceColumn  bool
@@ -495,6 +503,11 @@ func dropdown(label string, items []dropItem) string {
 	}
 	b.WriteString(`</ul></details>`)
 	return b.String()
+}
+
+// serverLabel is the server name with its color dot
+func (o mergeOptions) serverLabel(id, name string) string {
+	return serverDot(o.colors[id]) + html.EscapeString(name)
 }
 
 // filterControl is what goes next to the search box, notifications keeps its row of selects
@@ -625,7 +638,7 @@ func mergeTables(page []byte, activeName string, remotes []remotePage, opts merg
 			}
 			remoteAny = true
 			link := open(rp.id, "")
-			name := `<a href="` + html.EscapeString(link) + `">` + html.EscapeString(rp.name) + `</a>`
+			name := `<a href="` + html.EscapeString(link) + `">` + opts.serverLabel(rp.id, rp.name) + `</a>`
 			for _, r := range other.rows {
 				add(remoteRow(rp.body[r.start:r.end], r.start, r, rowColumn(other, r), name, func(href string) string { return open(rp.id, href) }, rp.id, opts.actionable), r, rp.name)
 			}
@@ -650,11 +663,11 @@ func mergeTables(page []byte, activeName string, remotes []remotePage, opts merg
 				cls := r.cells[min(col, len(r.cells)-1)].class
 				if col < len(r.cells) {
 					b.Write(page[r.start:r.cells[col].start])
-					b.WriteString(serverCell("td", cls, html.EscapeString(activeName)))
+					b.WriteString(serverCell("td", cls, opts.serverLabel(opts.activeID, activeName)))
 					b.Write(page[r.cells[col].start:r.end])
 				} else {
 					b.Write(page[r.start:r.cells[len(r.cells)-1].end])
-					b.WriteString(serverCell("td", cls, html.EscapeString(activeName)))
+					b.WriteString(serverCell("td", cls, opts.serverLabel(opts.activeID, activeName)))
 					b.Write(page[r.cells[len(r.cells)-1].end:r.end])
 				}
 				add(b.Bytes(), r, activeName)
@@ -1231,6 +1244,7 @@ func (m *Manager) mergePageBody(page []byte, r *http.Request, activeID, activeNa
 		sortTime: r.URL.Query().Get("sort") == "", serverDir: dir, ascLink: sortLink(r, "asc"), descLink: sortLink(r, "desc"),
 		only: only, activeID: activeID, servers: servers, actionable: actionablePages[r.URL.Path],
 		sortKey: strings.TrimPrefix(r.URL.Query().Get("sort"), "-"), sortDir: sortDirection(r.URL.Query()), forceColumn: forceColumnPages[r.URL.Path],
+		colors: m.Colors(),
 	}
 	if r.URL.Path == "/emails/accounts" {
 		if merged := m.mergeEmails(page, activeID, activeName, kept, opts, u); merged != nil {
@@ -1626,14 +1640,15 @@ func (m *Manager) mergeEmails(page []byte, activeID, activeName string, remotes 
 			if len(row) < 3 {
 				continue
 			}
-			base, link := "", ""
+			base, link, info := "", "", ""
 			if id != activeID {
 				base = id
 				if email, ok := row[0].(string); ok {
 					link = m.openLink(u.ID, id, "/emails/webmail/"+email)
+					info = m.openLink(u.ID, id, "/emails/accounts?info="+url.QueryEscape(email))
 				}
 			}
-			all = append(all, []any{row[0], row[1], row[2], base, name, link})
+			all = append(all, []any{row[0], row[1], row[2], base, name, link, info, ColorClass(opts.colors[id])})
 		}
 	}
 	if opts.only == "" || opts.only == activeID {

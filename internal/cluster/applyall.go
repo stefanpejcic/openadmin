@@ -388,42 +388,61 @@ func (m *Manager) runWithApplyAll(w http.ResponseWriter, r *http.Request, active
 			return
 		}
 	}
+	// the notification list reloads right after these, so the other servers have to be done by then or their rows come back
+	if alwaysApplyPaths[r.URL.Path] {
+		rec := &pageRecorder{header: http.Header{}}
+		run(rec, r)
+		if rec.status == 0 {
+			rec.status = http.StatusOK
+		}
+		if responseOK(rec.status, rec.header.Get("Location")) {
+			m.replayAll(r, rr, activeID, u, next)
+		}
+		for k, v := range rec.header {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(rec.status)
+		w.Write(rec.body.Bytes())
+		return
+	}
 	sw := &statusWriter{ResponseWriter: w}
 	run(sw, r)
 	if !responseOK(sw.status, sw.location) {
 		return
 	}
-	// every server in the cluster except the one that already has the change
+	go m.replayAll(r, rr, activeID, u, next)
+}
+
+// replayAll repeats a post on every server in the cluster except the one that already has the change
+func (m *Manager) replayAll(r *http.Request, rr replayRequest, activeID string, u *admindb.User, next http.Handler) {
 	nodes := m.LiveNodes()
 	applyBegin(u.ID, len(nodes))
-	go func() {
-		var wg sync.WaitGroup
-		report := func(name string, err error) {
-			res := ApplyResult{Server: name, OK: err == nil}
-			if err != nil {
-				res.Error = err.Error()
-			}
-			applyDone(u.ID, res)
+	var wg sync.WaitGroup
+	report := func(name string, err error) {
+		res := ApplyResult{Server: name, OK: err == nil}
+		if err != nil {
+			res.Error = err.Error()
 		}
-		if activeID != LocalNode {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				report(m.displayName(), m.replayLocal(r, rr, next))
-			}()
+		applyDone(u.ID, res)
+	}
+	if activeID != LocalNode {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			report(m.displayName(), m.replayLocal(r, rr, next))
+		}()
+	}
+	for _, n := range nodes {
+		if n.ID == activeID {
+			continue
 		}
-		for _, n := range nodes {
-			if n.ID == activeID {
-				continue
-			}
-			wg.Add(1)
-			go func(n Node) {
-				defer wg.Done()
-				report(n.Name, m.replayOn(n, u, rr))
-			}(n)
-		}
-		wg.Wait()
-	}()
+		wg.Add(1)
+		go func(n Node) {
+			defer wg.Done()
+			report(n.Name, m.replayOn(n, u, rr))
+		}(n)
+	}
+	wg.Wait()
 }
 
 const bulkItemPrefix = "cluster:"

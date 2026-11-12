@@ -223,6 +223,8 @@ func (h *DomainsRateLimit) ServeRateLimit(w http.ResponseWriter, r *http.Request
 		}
 	}
 	sort.Strings(users)
+	sortCol, sortDirection := readSort(r, rateLimitSortKeys)
+	sortRateLimitRows(st.Domains, sortCol, sortDirection)
 
 	if r.URL.Query().Get("output") == "json" {
 		if err != nil {
@@ -234,12 +236,14 @@ func (h *DomainsRateLimit) ServeRateLimit(w http.ResponseWriter, r *http.Request
 	}
 
 	data := mergeChrome(map[string]interface{}{
-		"Status":      st,
-		"StatusError": err != nil,
-		"Users":       users,
-		"CSRFToken":   csrf.Token(r),
-		"Flashes":     auth.PopFlashes(w, r, h.Sessions),
-		"BulkActions": RateLimitBulkActions(),
+		"Status":        st,
+		"StatusError":   err != nil,
+		"Users":         users,
+		"CSRFToken":     csrf.Token(r),
+		"Flashes":       auth.PopFlashes(w, r, h.Sessions),
+		"BulkActions":   RateLimitBulkActions(),
+		"SortCol":       sortCol,
+		"SortDirection": sortDirection,
 	}, r, "Rate limiting")
 	webtemplates.Render(w, "domains_ratelimit.html", data)
 }
@@ -348,4 +352,20 @@ func rateLimitBulkBatch(action, value string, items []string) ([]BulkResult, boo
 
 func rateLimitBulkRoute(action, value, domain string) (*BulkCall, BulkResult) {
 	return BulkSkip("Unknown bulk action.")
+}
+
+var rateLimitSortKeys = map[string]bool{"domain": true, "owner": true, "mode": true, "per_ip": true, "per_site": true}
+
+// sortRateLimitRows keeps opencli's order when no column is picked, owners compare without the suspended prefix
+func sortRateLimitRows(rows []rateLimitRow, col, direction string) {
+	less := map[string]func(a, b rateLimitRow) bool{
+		"domain":   func(a, b rateLimitRow) bool { return a.Domain < b.Domain },
+		"owner":    func(a, b rateLimitRow) bool { return stripSuspendedPrefix(a.Owner) < stripSuspendedPrefix(b.Owner) },
+		"mode":     func(a, b rateLimitRow) bool { return a.Mode < b.Mode },
+		"per_ip":   func(a, b rateLimitRow) bool { return a.PerIP < b.PerIP },
+		"per_site": func(a, b rateLimitRow) bool { return a.PerSite < b.PerSite },
+	}[col]
+	if less != nil {
+		sortBy(rows, direction, less)
+	}
 }

@@ -238,3 +238,26 @@ func TestServeRateLimitPostDefault(t *testing.T) {
 		}
 	}
 }
+
+func TestSortRateLimitRows(t *testing.T) {
+	rows := []rateLimitRow{{Domain: "b.com", Owner: "SUSPENDED_20261106165759_zed", PerIP: 5}, {Domain: "a.com", Owner: "amy", PerIP: 50}, {Domain: "c.com", Owner: "bob"}}
+	order := func() string {
+		var out []string
+		for _, r := range rows {
+			out = append(out, r.Domain)
+		}
+		return strings.Join(out, ",")
+	}
+	sortRateLimitRows(rows, "owner", "asc")
+	if got := order(); got != "a.com,c.com,b.com" {
+		t.Fatalf("owner asc should ignore the suspended prefix: %s", got)
+	}
+	sortRateLimitRows(rows, "per_ip", "desc")
+	if got := order(); got != "a.com,b.com,c.com" {
+		t.Fatalf("per_ip desc: %s", got)
+	}
+	sortRateLimitRows(rows, "nope", "asc")
+	if got := order(); got != "a.com,b.com,c.com" {
+		t.Fatalf("unknown column must keep the order: %s", got)
+	}
+}

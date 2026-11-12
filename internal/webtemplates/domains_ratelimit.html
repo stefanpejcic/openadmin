@@ -71,7 +71,7 @@
             {{if .Users}}
             <select x-model="user" aria-label="Filter by user" class="w-full shrink-0 whitespace-nowrap sm:w-auto block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2.5 py-1.5 text-sm dark:[color-scheme:dark]">
                 <option value="">All users</option>
-                {{range .Users}}<option value="{{.}}">{{.}}</option>{{end}}
+                {{range .Users}}<option value="{{.}}">{{stripSuspendedPrefix .}}</option>{{end}}
             </select>
             {{end}}
         </div>
@@ -89,24 +89,24 @@
             <thead>
                 <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 border-y border-gray-200 dark:border-gray-800">
                     {{template "bulk_head_checkbox" .}}
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">Domain</th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">User</th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">Setting</th>
-                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Limit per visitor IP, requests per minute">Per IP</th>
-                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Limit for the whole domain, requests per minute">Per domain</th>
-                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Requests in the last 24h">Requests</th>
-                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Busiest minute from a single IP, compare it to the per IP limit">Peak/min per IP</th>
-                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Busiest minute for the whole domain, compare it to the per domain limit">Peak/min domain</th>
-                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Requests answered with 429 in the last 24h">Blocked (429)</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Domain" "Key" "domain" "Base" "/domains/ratelimit" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "User" "Key" "owner" "Base" "/domains/ratelimit" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Setting" "Key" "mode" "Base" "/domains/ratelimit" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Limit per visitor IP, requests per minute">{{template "sort_header" (dict "Label" "Per IP" "Key" "per_ip" "Base" "/domains/ratelimit" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Limit for the whole domain, requests per minute">{{template "sort_header" (dict "Label" "Per domain" "Key" "per_site" "Base" "/domains/ratelimit" "SortCol" .SortCol "SortDirection" .SortDirection)}}</th>
+                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Requests in the last 24h">{{template "client_sort_header" (dict "Label" "Requests" "Key" "requests")}}</th>
+                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Busiest minute from a single IP, compare it to the per IP limit">{{template "client_sort_header" (dict "Label" "Peak/min per IP" "Key" "peak_ip_minute")}}</th>
+                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Busiest minute for the whole domain, compare it to the per domain limit">{{template "client_sort_header" (dict "Label" "Peak/min domain" "Key" "peak_minute")}}</th>
+                    <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs" title="Requests answered with 429 in the last 24h">{{template "client_sort_header" (dict "Label" "Blocked (429)" "Key" "blocked")}}</th>
                     <th scope="col" class="border-b px-4 text-right font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            <tbody x-ref="rows" class="divide-y divide-gray-200 dark:divide-gray-800">
                 {{range .Status.Domains}}
-                <tr x-show="(q === '' || '{{.Domain}} {{.Owner}}'.includes(q.toLowerCase())) && (user === '' || user === '{{.Owner}}')" class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                <tr data-domain="{{.Domain}}" x-show="(q === '' || '{{.Domain}} {{.Owner}} {{stripSuspendedPrefix .Owner}}'.includes(q.toLowerCase())) && (user === '' || user === '{{.Owner}}')" class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
                     {{template "bulk_row_checkbox" (dict "Key" .Domain "Label" .Domain)}}
                     <td class="relative px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50">{{.Domain}}</td>
-                    <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{if .Owner}}{{.Owner}}{{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}</td>
+                    <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{if .Owner}}{{stripSuspendedPrefix .Owner}}{{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}</td>
                     <td class="relative px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
                         {{if eq .Mode "default"}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Default</span>
                         {{else if eq .Mode "custom"}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20">Custom</span>
@@ -216,6 +216,18 @@ function rateLimitPage() {
                 .finally(() => { this.loading = false; });
         },
         stat(domain) { return this.stats[domain] || {}; },
+        // the usage columns come in after the page, so those sort in the browser by moving the rows
+        sortKey: '',
+        sortDir: 'asc',
+        sortBy(key) {
+            this.sortDir = this.sortKey === key && this.sortDir === 'desc' ? 'asc' : 'desc';  // busiest first
+            this.sortKey = key;
+            const tb = this.$refs.rows;
+            const val = tr => Number(this.stat(tr.dataset.domain)[key] ?? -1);
+            [...tb.querySelectorAll('tr[data-domain]')]
+                .sort((a, b) => this.sortDir === 'asc' ? val(a) - val(b) : val(b) - val(a))
+                .forEach(tr => tb.appendChild(tr));
+        },
         num(domain, key) {
             const v = this.stat(domain)[key];
             if (v === undefined) return this.loading ? '…' : '—';

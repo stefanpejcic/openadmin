@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -54,6 +55,8 @@ type deliverabilityRow struct {
 	DKIM     deliverabilityRecord `json:"dkim"`
 	SPF      deliverabilityRecord `json:"spf"`
 	DMARC    deliverabilityRecord `json:"dmarc"`
+	// the domain has a local zone, without one there's no DNS editor to send the admin to
+	HasZone bool `json:"has_zone"`
 }
 
 // expectedDKIM joins the quoted chunks of the TXT record the mailserver generated for domain
@@ -208,9 +211,12 @@ type deliverabilityPageData struct {
 func (e *Emails) ServeDeliverability(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("output") == "json" {
 		scope := scopeFor(r, e.MySQL)
-		rows := filterRows(scope, e.allDeliverability(r.URL.Query().Get("refresh") != ""), func(d deliverabilityRow) bool { return scope.AllowsDomain(d.Domain) })
-		if rows == nil {
-			rows = []deliverabilityRow{}
+		cached := filterRows(scope, e.allDeliverability(r.URL.Query().Get("refresh") != ""), func(d deliverabilityRow) bool { return scope.AllowsDomain(d.Domain) })
+		// a copy, the cached rows are shared and a zone can be added or removed while they're cached
+		rows := make([]deliverabilityRow, len(cached))
+		for i, d := range cached {
+			d.HasZone = fileExists(filepath.Join(BindZonesDir, d.Domain+".zone"))
+			rows[i] = d
 		}
 		writeJSON(w, map[string]interface{}{"domains": rows})
 		return
