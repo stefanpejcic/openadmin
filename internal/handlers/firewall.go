@@ -7,6 +7,7 @@ import (
 	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,23 +81,21 @@ var firewallCSFRun = func(tmpFile string) (string, error) {
 func (f *Firewall) ServeCSFIframe(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	var pairs []string
+	src := r.PostForm
 	if r.Method == http.MethodGet {
-		for k, v := range r.URL.Query() {
-			if k == "csrf_token" || len(v) == 0 {
-				continue
-			}
-			pairs = append(pairs, k+"="+v[0])
-		}
-	} else {
-		for k, v := range r.PostForm {
-			if k == "csrf_token" || len(v) == 0 {
-				continue
-			}
-			pairs = append(pairs, k+"="+v[0])
-		}
+		src = r.URL.Query()
 	}
-	qs := strings.Join(pairs, "&")
+	vals := url.Values{}
+	for k, v := range src {
+		if k == "csrf_token" || len(v) == 0 {
+			continue
+		}
+		vals.Set(k, v[0])
+	}
+	// csf.pl reads only the first line of the temp file, splits it on & and =
+	// and URL-decodes each value, so the values must be encoded: raw editor
+	// text with newlines was cut to its first line on save.
+	qs := vals.Encode()
 
 	var output string
 	tmp, err := os.CreateTemp("", "csf-ui-")

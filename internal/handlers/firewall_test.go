@@ -147,6 +147,40 @@ func TestServeCSFIframePostUsesFormValues(t *testing.T) {
 	}
 }
 
+func TestServeCSFIframePostEncodesMultilineFormdata(t *testing.T) {
+	var gotTmpFileContent string
+	origRun := firewallCSFRun
+	firewallCSFRun = func(tmpFile string) (string, error) {
+		raw, _ := readFileOrEmpty(tmpFile)
+		gotTmpFileContent = raw
+		return "ok", nil
+	}
+	t.Cleanup(func() { firewallCSFRun = origRun })
+
+	f := &Firewall{}
+	srv, client := newFirewallTestServer(t, f)
+
+	formdata := "# CSF BLOCKLISTS OPENPANEL\r\n# X|3600|0|https://example.com/?a=1&b=2\r\n"
+	resp, err := client.PostForm(srv.URL+"/configservercsf/iframe/", url.Values{"action": {"saveblocklists"}, "formdata": {formdata}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	// csf.pl reads only the first line and splits on & and =, so all of it
+	// has to arrive on one line with the value's own & and = encoded.
+	if strings.ContainsAny(gotTmpFileContent, "\r\n") {
+		t.Fatalf("expected a single line in the temp file, got %q", gotTmpFileContent)
+	}
+	got, err := url.ParseQuery(gotTmpFileContent)
+	if err != nil {
+		t.Fatalf("temp file isn't a valid query string: %v (%q)", err, gotTmpFileContent)
+	}
+	if got.Get("formdata") != formdata || got.Get("action") != "saveblocklists" || len(got) != 2 {
+		t.Fatalf("expected formdata to round-trip, got %q", gotTmpFileContent)
+	}
+}
+
 func TestServeCSFIframeRunFailureFallsBackToGenericMessage(t *testing.T) {
 	origRun := firewallCSFRun
 	firewallCSFRun = func(tmpFile string) (string, error) { return "", &ftpStubError{"exec: csf.pl: not found"} }
