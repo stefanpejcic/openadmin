@@ -105,6 +105,8 @@ type Manager struct {
 	Notifications     func() []NotificationBrief
 	LatestSource      func() string
 	Summaries         func() any
+	SummariesDay      func(day string) any
+	SummaryHealth     func(day string) any
 	DashCounts        func() any
 
 	mu     sync.Mutex

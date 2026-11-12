@@ -69,8 +69,10 @@ type dashboardPageData struct {
 	Flashes []auth.Flash
 	// nil when the summary module is off or no account has a saved summary yet
 	Summary *serverSummary
-	// this server's resource peaks, alerts and mail on the summary's day, admins only
-	SummaryDay *summaryDay
+	// resource peaks, alerts and mail on the summary's day, one per server on a cluster master, admins only
+	SummaryDays []summaryServerDay
+	// day picker: the shown day, previous/next and the days that have a summary
+	Nav *summaryNav
 	// the admin's saved widget order, sizes, collapsed widgets and header buttons, "null" when never changed
 	Layout template.JS
 	// set when sentinel stopped writing usage snapshots, the usage widget would otherwise show old data as the last hour
@@ -213,18 +215,69 @@ func (d *Dashboard) pageSummary(r *http.Request) *serverSummary {
 
 // ServeSummary handles GET /dashboard/summary, the daily summary on a tab of its own
 func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
-	s := d.pageSummary(r)
-	// opening it clears the tab's mark until a newer day's summary comes in
-	if u := auth.CurrentUser(r); u != nil && s != nil && d.AdminDB != nil {
-		_ = d.AdminDB.SetPref(u.ID, summarySeenPref, s.Date)
+	picked := r.URL.Query().Get("date")
+	if !summaryDayRe.MatchString(picked) {
+		picked = ""
+	}
+	u := auth.CurrentUser(r)
+	var s *serverSummary
+	if picked == "" {
+		s = d.pageSummary(r)
+		// opening it clears the tab's mark until a newer day's summary comes in
+		if u != nil && s != nil && d.AdminDB != nil {
+			_ = d.AdminDB.SetPref(u.ID, summarySeenPref, s.Date)
+		}
+	} else {
+		s = d.pageSummaryDay(r, picked)
 	}
 	data := dashboardPageData{
 		Chrome:  buildChrome(r, "Daily summary"),
 		Flashes: auth.PopFlashes(w, r, d.Sessions),
 		Summary: s,
 	}
-	if u := auth.CurrentUser(r); s != nil && u != nil && u.Role != "reseller" {
-		data.SummaryDay = loadSummaryDay(s.Date)
+	if summaryEnabled() {
+		owner := ""
+		if u != nil && u.Role == "reseller" {
+			owner = u.Username
+		}
+		shown := ""
+		if s != nil {
+			shown = s.Date
+		}
+		if users, err := paneldb.ListUsernames(d.MySQL, owner); err == nil {
+			data.Nav = buildSummaryNav(summaryDates(users), shown, picked)
+		}
+		// the day picker sits at the right of the tab bar, before Documentation
+		if data.Nav != nil {
+			if picker, err := webtemplates.RenderToString("summary_day_picker", data.Nav); err == nil {
+				data.TabExtra = template.HTML(picker)
+			}
+		}
+	}
+	day := picked
+	if s != nil {
+		day = s.Date
+	}
+	if u != nil && u.Role != "reseller" && day != "" {
+		data.SummaryDays = summaryServerDays(d.MySQL, u.ID, day, data.ServerHostname)
+		// malware found that day goes on top of Needs attention, on a copy since the summary is cached
+		var malware []summaryFinding
+		for _, sd := range data.SummaryDays {
+			for _, f := range sd.Day.Malware {
+				if len(data.SummaryDays) > 1 && f.Server == "" {
+					f.Server = sd.Name
+				}
+				malware = append(malware, f)
+			}
+		}
+		if len(malware) > 0 && s != nil {
+			withMalware := *s
+			withMalware.Attention = append(malware, s.Attention...)
+			withMalware.AttentionTotal = len(withMalware.Attention)
+			withMalware.MoreAttn = max(0, withMalware.AttentionTotal-8)
+			withMalware.AttentionGroups = groupAttention(withMalware.Attention)
+			data.Summary = &withMalware
+		}
 	}
 	webtemplates.Render(w, "dashboard_summary.html", data)
 }
@@ -332,6 +385,21 @@ func ClusterDashCounts(db *sql.DB) func() any {
 			RunningContainers: containerCountCache.get(localContainerCount), MailCount: emailCount(),
 		}
 	}
+}
+
+// pageSummaryDay is pageSummary for a day the admin picked
+func (d *Dashboard) pageSummaryDay(r *http.Request, day string) *serverSummary {
+	if !summaryEnabled() {
+		return nil
+	}
+	u := auth.CurrentUser(r)
+	if u != nil && u.Role == "reseller" {
+		return cachedServerSummaryDay(d.MySQL, u.Username, day)
+	}
+	if u != nil && ClusterManager != nil && ClusterManager.IsMaster() {
+		return cachedClusterSummaryDay(d.MySQL, u.ID, day)
+	}
+	return cachedServerSummaryDay(d.MySQL, "", day)
 }
 
 // adminSummary adds up all members on a master

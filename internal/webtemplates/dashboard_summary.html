@@ -62,16 +62,32 @@
         </div>
         <div class="lg:col-span-2">
             {{if .Attention}}
+            <div x-data="{ all: false }">
             <ul role="list" class="divide-y divide-gray-200 dark:divide-gray-800">
-                {{range .Attention}}
-                <li class="py-2.5 text-sm">
-                    <a href="{{if .Link}}{{.Link}}{{else}}/users/{{.Username}}{{end}}" class="font-medium text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">{{stripSuspendedPrefix .Username}}</a>{{if .Server}} <span class="text-xs text-gray-500 dark:text-gray-500">{{.Server}}</span>{{end}}
-                    <span class="text-gray-900 dark:text-gray-50">{{.Title}}</span>
-                    {{if .Detail}}<p class="text-gray-500 dark:text-gray-500">{{.Detail}}</p>{{end}}
+                {{range $i, $g := .AttentionGroups}}
+                <li class="py-3 text-sm"{{if ge $i 8}} x-show="all" x-cloak{{end}}>
+                    <div class="flex items-baseline justify-between gap-3">
+                        <span><a href="{{if $g.Link}}{{$g.Link}}{{else}}/users/{{$g.Username}}{{end}}" class="font-medium text-blue-500 hover:underline hover:underline-offset-4 dark:text-blue-500">{{stripSuspendedPrefix $g.Username}}</a>{{if $g.Server}} <span class="text-xs text-gray-500 dark:text-gray-500">{{$g.Server}}</span>{{end}}</span>
+                        <span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">{{$g.Count}} {{if eq $g.Count 1}}issue{{else}}issues{{end}}</span>
+                    </div>
+                    {{range $g.General}}
+                    <div class="mt-1.5"><span class="text-gray-900 dark:text-gray-50">{{.Title}}</span>{{if .Detail}}<p class="text-gray-500 dark:text-gray-500 break-all">{{.Detail}}</p>{{end}}</div>
+                    {{end}}
+                    {{range $g.Domains}}
+                    <div class="mt-2 ml-1 border-l-2 border-gray-200 pl-3 dark:border-gray-800">
+                        <p class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50"><span class="text-gray-400 dark:text-gray-600" aria-hidden="true">&#8627;</span>{{.Name}}</p>
+                        <ul role="list" class="mt-0.5 space-y-1">
+                            {{range .Items}}
+                            <li><span class="text-gray-900 dark:text-gray-50">{{.Title}}</span>{{if .Detail}}<span class="block text-gray-500 dark:text-gray-500 break-all">{{.Detail}}</span>{{end}}</li>
+                            {{end}}
+                        </ul>
+                    </div>
+                    {{end}}
                 </li>
                 {{end}}
             </ul>
-            {{if .MoreAttn}}<p class="mt-2 text-sm text-gray-500 dark:text-gray-500">and {{.MoreAttn}} more</p>{{end}}
+            {{if gt (len .AttentionGroups) 8}}<button type="button" @click="all = !all" :aria-expanded="all" class="mt-2 text-sm text-blue-500 hover:underline hover:underline-offset-4"><span x-show="!all">Show all {{len .AttentionGroups}} accounts ({{sub (len .AttentionGroups) 8}} more)</span><span x-show="all" x-cloak>Show fewer</span></button>{{end}}
+            </div>
             {{else}}
             <p class="text-sm text-gray-500 dark:text-gray-500">Nothing needs attention.</p>
             {{end}}
@@ -109,68 +125,21 @@
         </div>
     </div>
 
-    {{with $.SummaryDay}}
-    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-
-    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
-        <div>
-            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Server health</h2>
-            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Peaks from the 5 minute checks and the alerts raised that day{{if $.ServerHostname}} on {{$.ServerHostname}}{{end}}.</p>
-        </div>
-        <div class="lg:col-span-2 space-y-4">
-            {{with .Health}}
-            <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Peak load</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.PeakLoad}}</dd><dd class="text-xs text-gray-500 dark:text-gray-500">at {{.PeakLoadAt}}</dd></div>
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Peak CPU</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.PeakCPU}}%</dd><dd class="text-xs text-gray-500 dark:text-gray-500">at {{.PeakCPUAt}}</dd></div>
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Peak memory</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.PeakRAM}}%</dd><dd class="text-xs text-gray-500 dark:text-gray-500">at {{.PeakRAMAt}}</dd></div>
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Disk</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Disk}}%</dd><dd class="text-xs text-gray-500 dark:text-gray-500">{{if .FailedRuns}}<span class="text-yellow-700 dark:text-yellow-500">{{.FailedRuns}} of {{.Runs}} checks failed</span>{{else}}all {{.Runs}} checks passed{{end}}</dd></div>
-            </dl>
-            {{end}}
-            {{if .Problems}}
-            <ul role="list" class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
-                {{range .Problems}}
-                <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                    <span class="flex min-w-0 items-center gap-2"><span class="size-2 shrink-0 rounded-full {{if eq .Severity "critical"}}bg-red-500{{else}}bg-yellow-500{{end}}" aria-hidden="true"></span><span class="truncate text-gray-900 dark:text-gray-50">{{.Title}}</span>{{if .Resolved}}<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">resolved</span>{{end}}</span>
-                    <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500">{{if gt .Count 1}}{{.Count}}× {{end}}{{if .First}}from {{.First}}{{end}}</span>
-                </li>
-                {{end}}
-            </ul>
-            <p class="text-sm"><a href="/notifications" class="text-blue-500 hover:underline hover:underline-offset-4">{{if .MoreProblems}}{{.MoreProblems}} more, see{{else}}See{{end}} all notifications</a></p>
-            {{else}}
-            <p class="text-sm text-gray-500 dark:text-gray-500">No warnings or critical alerts that day.</p>
-            {{end}}
-        </div>
-    </div>
-
-    {{with .Mail}}
-    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-
-    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
-        <div>
-            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Mail</h2>
-            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">From the mail server's summary report for that day.</p>
-        </div>
-        <div class="lg:col-span-2 space-y-3">
-            <dl class="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Received</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Received}}</dd></div>
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Delivered</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Delivered}}</dd></div>
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Deferrals</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Deferred}}</dd><dd class="text-xs text-gray-500 dark:text-gray-500">retries, not messages</dd></div>
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Bounced</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50 {{if ge .BouncePct 20}}text-yellow-700 dark:text-yellow-500{{end}}">{{.Bounced}}</dd><dd class="text-xs text-gray-500 dark:text-gray-500">{{.BouncePct}}% of outgoing</dd></div>
-                <div class="rounded-md border border-gray-200 p-3 dark:border-gray-800"><dt class="text-xs text-gray-500 dark:text-gray-500">Rejected</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Rejected}}</dd></div>
-            </dl>
-            <p class="text-sm"><a href="/emails/reports" class="text-blue-500 hover:underline hover:underline-offset-4">Open the summary report</a> <span class="text-gray-500 dark:text-gray-500">·</span> <a href="{{.Link}}" target="_blank" class="text-blue-500 hover:underline hover:underline-offset-4">this day's report</a></p>
-        </div>
-    </div>
-    {{end}}
-    {{end}}
+    {{with $.SummaryDays}}{{template "summary_day_sections" .}}{{end}}
 </div>
 </div>
+{{else}}{{if and .Nav .Nav.Picked}}
+<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
+    <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Daily summary</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-500">No account has a summary for {{.Nav.Label}}. Pick another day at the top right.</p>
+</div>
+{{with .SummaryDays}}<div class="p-4 sm:p-6 lg:p-8">{{template "summary_day_sections" .}}</div>{{end}}
 {{else}}
 <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Daily summary</h1>
     <p class="text-sm text-gray-500 dark:text-gray-500">No daily summary yet. Summaries are saved each day at 06:15 for the day before, for accounts that have the summary feature.</p>
 </div>
-{{end}}
+{{end}}{{end}}
     </main>
     {{template "chrome_after_main" .}}
     </div>
@@ -178,3 +147,203 @@
 {{template "chrome_scripts_bottom" .}}
 </body>
 </html>
+
+{{define "summary_day_sections"}}{{$multi := gt (len .) 1}}
+    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Server health</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Peaks from the 5 minute checks and the alerts raised that day{{if $multi}}, for every server in the cluster{{else}}{{with index . 0}} on {{.Name}}{{end}}{{end}}.</p>
+        </div>
+        <div class="lg:col-span-2 space-y-6">
+            {{range .}}
+            <div class="space-y-3">
+                {{if $multi}}<h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-50"><span class="inline-block size-2.5 rounded-xs {{.Color}}" aria-hidden="true"></span>{{.Name}}</h3>{{end}}
+                {{with .Day.Health}}
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {{template "summary_ring" (dict "Icon" "load" "Label" "Peak load" "Pct" .LoadPct "Value" .PeakLoad "Sub" (printf "at %s, %d cores" .PeakLoadAt .Cores))}}
+                    {{template "summary_ring" (dict "Icon" "cpu" "Label" "Peak CPU" "Pct" .PeakCPU "Value" (printf "%d%%" .PeakCPU) "Sub" (printf "at %s" .PeakCPUAt))}}
+                    {{template "summary_ring" (dict "Icon" "ram" "Label" "Peak memory" "Pct" .PeakRAM "Value" (printf "%d%%" .PeakRAM) "Sub" (printf "at %s" .PeakRAMAt))}}
+                    {{template "summary_ring" (dict "Icon" "disk" "Label" "Disk" "Pct" .Disk "Value" (printf "%d%%" .Disk) "Sub" (or (and .FailedRuns (printf "%d of %d checks failed" .FailedRuns .Runs)) (printf "all %d checks passed" .Runs)))}}
+                </div>
+                {{end}}
+                {{if .Day.Problems}}
+                <ul role="list" class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+                    {{range .Day.Problems}}
+                    <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                        <span class="flex min-w-0 items-center gap-2"><span class="size-2 shrink-0 rounded-full {{if eq .Severity "critical"}}bg-red-500{{else}}bg-yellow-500{{end}}" aria-hidden="true"></span><span class="truncate text-gray-900 dark:text-gray-50">{{.Title}}</span>{{if .Resolved}}<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">resolved</span>{{end}}</span>
+                        <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500">{{if gt .Count 1}}{{.Count}}× {{end}}{{if .First}}from {{.First}}{{end}}</span>
+                    </li>
+                    {{end}}
+                </ul>
+                {{if .Day.MoreProblems}}<p class="text-xs text-gray-500 dark:text-gray-500">and {{.Day.MoreProblems}} more</p>{{end}}
+                {{else}}
+                <p class="text-sm text-gray-500 dark:text-gray-500">No warnings or critical alerts that day.</p>
+                {{end}}
+            </div>
+            {{end}}
+            <p class="text-sm"><a href="/notifications" class="text-blue-500 hover:underline hover:underline-offset-4">See all notifications</a></p>
+        </div>
+    </div>
+
+    {{$mail := false}}{{range .}}{{if .Day.Mail}}{{$mail = true}}{{end}}{{end}}
+    {{if $mail}}
+    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Mail</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">From each mail server's summary report for that day. Deferrals count delivery retries, not messages.</p>
+        </div>
+        <div class="lg:col-span-2 overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead><tr class="border-b border-gray-200 text-left text-xs text-gray-500 dark:border-gray-800 dark:text-gray-500">
+                    {{if $multi}}<th scope="col" class="py-2 pr-4 font-medium">Server</th>{{end}}
+                    <th scope="col" class="py-2 pr-4 text-right font-medium">Received</th><th scope="col" class="py-2 pr-4 text-right font-medium">Delivered</th><th scope="col" class="py-2 pr-4 text-right font-medium">Deferrals</th><th scope="col" class="py-2 pr-4 text-right font-medium">Bounced</th><th scope="col" class="py-2 pr-4 text-right font-medium">Rejected</th><th scope="col" class="py-2 text-right font-medium"><span class="sr-only">Report</span></th>
+                </tr></thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                {{range .}}{{$sd := .}}{{if .Day.Mail}}{{with .Day.Mail}}
+                <tr class="tabular-nums text-gray-900 dark:text-gray-50">
+                    {{if $multi}}<td class="py-2 pr-4 whitespace-nowrap font-medium"><span class="mr-1.5 inline-block size-2.5 rounded-xs align-middle {{$sd.Color}}" aria-hidden="true"></span>{{$sd.Name}}</td>{{end}}
+                    <td class="py-2 pr-4 text-right">{{.Received}}</td><td class="py-2 pr-4 text-right">{{.Delivered}}</td><td class="py-2 pr-4 text-right">{{.Deferred}}</td>
+                    <td class="py-2 pr-4 text-right {{if ge .BouncePct 20}}font-semibold text-yellow-700 dark:text-yellow-500{{end}}">{{.Bounced}} <span class="text-xs font-normal text-gray-500">({{.BouncePct}}%)</span></td>
+                    <td class="py-2 pr-4 text-right">{{.Rejected}}</td>
+                    <td class="py-2 text-right whitespace-nowrap"><a href="{{$sd.MailLink}}" target="_blank" class="text-blue-500 hover:underline hover:underline-offset-4">Report</a></td>
+                </tr>
+                {{end}}{{end}}{{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{end}}
+{{end}}
+
+{{/* the user panel dashboard's usage icons (remix icon), dashboard-3 for load which the panel doesn't show */}}
+{{define "usage_icon"}}{{if eq . "load"}}M12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2ZM12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM15.8329 7.33748C16.0697 7.17128 16.3916 7.19926 16.5962 7.40381C16.8002 7.60784 16.8267 7.92955 16.6587 8.16418C14.479 11.2095 13.2796 12.8417 13.0607 13.0607C12.4749 13.6464 11.5251 13.6464 10.9393 13.0607C10.3536 12.4749 10.3536 11.5251 10.9393 10.9393C11.3126 10.5661 12.9438 9.36549 15.8329 7.33748ZM17.5 11C18.0523 11 18.5 11.4477 18.5 12C18.5 12.5523 18.0523 13 17.5 13C16.9477 13 16.5 12.5523 16.5 12C16.5 11.4477 16.9477 11 17.5 11ZM6.5 11C7.05228 11 7.5 11.4477 7.5 12C7.5 12.5523 7.05228 13 6.5 13C5.94772 13 5.5 12.5523 5.5 12C5.5 11.4477 5.94772 11 6.5 11ZM8.81802 7.40381C9.20854 7.79433 9.20854 8.4275 8.81802 8.81802C8.4275 9.20854 7.79433 9.20854 7.40381 8.81802C7.01328 8.4275 7.01328 7.79433 7.40381 7.40381C7.79433 7.01328 8.4275 7.01328 8.81802 7.40381ZM12 5.5C12.5523 5.5 13 5.94772 13 6.5C13 7.05228 12.5523 7.5 12 7.5C11.4477 7.5 11 7.05228 11 6.5C11 5.94772 11.4477 5.5 12 5.5Z{{else if eq . "cpu"}}M6 18H18V6H6V18ZM14 20H10V22H8V20H5C4.44772 20 4 19.5523 4 19V16H2V14H4V10H2V8H4V5C4 4.44772 4.44772 4 5 4H8V2H10V4H14V2H16V4H19C19.5523 4 20 4.44772 20 5V8H22V10H20V14H22V16H20V19C20 19.5523 19.5523 20 19 20H16V22H14V20ZM8 8H16V16H8V8Z{{else if eq . "ram"}}M3 7H21V17H19V15H17V17H15V15H13V17H11V15H9V17H7V15H5V17H3V7ZM2 5C1.44772 5 1 5.44772 1 6V18C1 18.5523 1.44772 19 2 19H22C22.5523 19 23 18.5523 23 18V6C23 5.44772 22.5523 5 22 5H2ZM11 9H5V12H11V9ZM13 9H19V12H13V9Z{{else}}M4.50772 2.87597C4.57028 2.37554 4.99568 2 5.5 2H18.5C19.0043 2 19.4297 2.37554 19.4923 2.87597L20.9923 14.876C20.9974 14.9171 21 14.9585 21 15V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V15C3 14.9585 3.00258 14.9171 3.00772 14.876L4.50772 2.87597ZM6.38278 4L5.13278 14H18.8672L17.6172 4H6.38278ZM19 16H5V20H19V16ZM15 17H17V19H15V17ZM13 17H11V19H13V17Z{{end}}{{end}}
+
+{{/* the usage ring from the user panel's dashboard: blue, yellow from 70%, red from 90% */}}
+{{define "summary_ring"}}<div class="flex min-w-0 items-center gap-3 rounded-md bg-gray-50 p-2.5 dark:bg-gray-900">
+    <span class="relative inline-grid size-12 shrink-0 place-items-center">
+        <svg viewBox="0 0 36 36" class="size-12 -rotate-90" aria-hidden="true">
+            <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" class="stroke-gray-200 dark:stroke-gray-800"></circle>
+            <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" stroke-dasharray="{{.Pct}} 100" class="{{if ge .Pct 90}}stroke-red-500{{else if ge .Pct 70}}stroke-yellow-500{{else}}stroke-blue-500{{end}}"></circle>
+        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="absolute size-5 text-gray-500 dark:text-gray-400" aria-hidden="true"><path d="{{template "usage_icon" .Icon}}"/></svg>
+    </span>
+    <span class="min-w-0 flex-1">
+        <span class="flex items-baseline justify-between gap-3 text-sm"><span class="text-gray-600 dark:text-gray-400">{{.Label}}</span><span class="font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Value}}</span></span>
+        <span class="mt-0.5 block truncate text-xs tabular-nums text-gray-500">{{if eq .Icon "load"}}{{.Pct}}% of the cores, {{end}}{{.Sub}}</span>
+    </span>
+</div>{{end}}
+
+{{/* the summary's day picker at the right of the tab bar, same look as the user panel's activity date filter but one day at a time, only days with a saved summary can be picked */}}
+{{define "summary_day_picker"}}
+<style>
+.dr { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; --dr-border: var(--color-gray-200); --dr-bg: var(--color-white); --dr-bg-hover: var(--color-gray-50); --dr-text: var(--color-gray-900); --dr-muted: var(--color-gray-500); --dr-accent: var(--color-blue-500); --dr-accent-text: var(--color-white); --dr-range: var(--color-blue-50); --dr-range-text: var(--color-blue-900); --dr-shadow: 0 1px 2px rgb(0 0 0 / 0.05); --dr-pop-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.25), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+.dark .dr { --dr-border: var(--color-gray-800); --dr-bg: var(--color-gray-950); --dr-bg-hover: var(--color-gray-900); --dr-text: var(--color-gray-50); --dr-muted: var(--color-gray-400); --dr-range: color-mix(in oklab, var(--color-blue-400) 10%, transparent); --dr-range-text: var(--color-blue-400); --dr-shadow: none; --dr-pop-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.8); }
+.dr button, .dr a { font: inherit; cursor: pointer; }
+.dr button:focus-visible, .dr a:focus-visible { outline: 2px solid var(--dr-accent); outline-offset: 2px; }
+.dr-quick { display: inline-flex; border-radius: 0.375rem; box-shadow: var(--dr-shadow); }
+.dr-quick-btn { display: inline-flex; align-items: center; padding: 0.3rem 0.6rem; border: 1px solid var(--dr-border); background: var(--dr-bg); color: var(--dr-text); font-weight: 500; }
+.dr-quick-btn + .dr-quick-btn { margin-left: -1px; }
+.dr-quick-btn:first-child { border-radius: 0.375rem 0 0 0.375rem; }
+.dr-quick-btn:last-child { border-radius: 0 0.375rem 0.375rem 0; }
+.dr-quick-btn:hover { background: var(--dr-bg-hover); }
+.dr-quick-btn.is-active { background: var(--dr-bg-hover); color: var(--dr-accent); position: relative; z-index: 1; border-color: var(--dr-accent); }
+.dr-quick-btn.is-off { color: var(--dr-muted); opacity: 0.4; pointer-events: none; }
+.dr-anchor { position: relative; display: inline-flex; align-items: center; }
+.dr-trigger { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.75rem; border: 1px solid var(--dr-border); border-radius: 0.375rem; background: var(--dr-bg); color: var(--dr-text); white-space: nowrap; box-shadow: var(--dr-shadow); }
+.dr-trigger:hover { background: var(--dr-bg-hover); }
+.dr-trigger-label { font-weight: 500; color: var(--dr-muted); }
+.dr-trigger-sep { width: 1px; height: 1rem; background: var(--dr-border); }
+.dr-trigger-value { color: var(--dr-accent); font-weight: 500; font-variant-numeric: tabular-nums; }
+.dr-pop { position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 40; width: max-content; max-width: calc(100vw - 2rem); border: 1px solid var(--dr-border); border-radius: 0.375rem; background: var(--dr-bg); color: var(--dr-text); box-shadow: var(--dr-pop-shadow); }
+.dr-cal { position: relative; padding: 0.75rem 1rem 0.5rem; }
+.dr-cal-nav { position: absolute; top: 0.625rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; pointer-events: none; }
+.dr-nav-btn { pointer-events: auto; display: inline-flex; padding: 0.3rem; border: 1px solid var(--dr-border); border-radius: 0.375rem; background: var(--dr-bg); color: var(--dr-text); }
+.dr-nav-btn:hover { background: var(--dr-bg-hover); }
+.dr-month-title { text-align: center; font-weight: 600; line-height: 1.75rem; margin-bottom: 0.5rem; }
+.dr-grid { display: grid; grid-template-columns: repeat(7, 2.25rem); row-gap: 2px; }
+.dr-weekday { height: 2rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--dr-muted); }
+.dr-cell { height: 2.25rem; display: flex; align-items: center; justify-content: center; }
+.dr-day { width: 2.25rem; height: 2.25rem; border: 0; border-radius: 0.375rem; background: transparent; color: var(--dr-text); font-variant-numeric: tabular-nums; }
+.dr-day:hover:not(:disabled) { background: var(--dr-bg-hover); outline: 1px solid var(--dr-border); }
+.dr-day:disabled { color: var(--dr-muted); opacity: 0.4; cursor: not-allowed; }
+.dr-day.is-picked { background: var(--dr-accent); color: var(--dr-accent-text); font-weight: 600; outline: none; }
+.dr-day.is-shown:not(.is-picked) { font-weight: 700; color: var(--dr-accent); }
+.dr-pop-foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.75rem 1rem; border-top: 1px solid var(--dr-border); }
+.dr-pop-summary { color: var(--dr-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dr-pop-actions { display: flex; gap: 0.5rem; }
+.dr-btn { padding: 0.375rem 0.875rem; border: 1px solid var(--dr-border); border-radius: 0.375rem; background: var(--dr-bg); color: var(--dr-text); font-weight: 500; box-shadow: var(--dr-shadow); }
+.dr-btn:hover { background: var(--dr-bg-hover); }
+.dr-btn--primary { background: var(--dr-accent); border-color: var(--dr-accent); color: var(--dr-accent-text); }
+.dr-btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 767px) { .dr-pop { position: fixed; top: auto; bottom: 1rem; left: 1rem; right: 1rem; width: auto; max-width: none; } .dr-cal { display: flex; justify-content: center; } .dr-grid { grid-template-columns: repeat(7, minmax(2.25rem, 1fr)); } }
+</style>
+<div class="dr mr-2" x-data="summaryDayPicker({{toJSON .Date}}, {{toJSON .Dates}})" @keydown.escape.window="open = false" @click.outside="open = false">
+    <div class="dr-quick" role="group" aria-label="Day">
+        <a class="dr-quick-btn{{if not .Prev}} is-off{{end}}" {{if .Prev}}href="/dashboard/summary?date={{.Prev}}" title="Previous day ({{.Prev}})"{{end}} aria-label="Previous day"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.8284 12.0007L15.7782 16.9504L14.364 18.3646L8 12.0007L14.364 5.63672L15.7782 7.05093L10.8284 12.0007Z"/></svg></a>
+        <a class="dr-quick-btn{{if not .Picked}} is-active{{end}}" href="/dashboard/summary" title="The newest day with a summary">Latest</a>
+        <a class="dr-quick-btn{{if not .Next}} is-off{{end}}" {{if .Next}}href="/dashboard/summary?date={{.Next}}" title="Next day ({{.Next}})"{{end}} aria-label="Next day"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg></a>
+    </div>
+    <div class="dr-anchor">
+        <button type="button" class="dr-trigger" @click="toggle()" aria-haspopup="dialog" :aria-expanded="open">
+            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 1V3H15V1H17V3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H7V1H9ZM20 11H4V19H20V11ZM7 5H4V9H20V5H17V7H15V5H9V7H7V5Z"/></svg>
+            <span class="dr-trigger-label">Date</span>
+            <span class="dr-trigger-sep" aria-hidden="true"></span>
+            <span class="dr-trigger-value">{{.Label}}</span>
+        </button>
+        <div class="dr-pop" x-show="open" x-cloak role="dialog" aria-label="Select a day">
+            <div class="dr-cal">
+                <div class="dr-cal-nav">
+                    <button type="button" class="dr-nav-btn" @click="shift(-1)" aria-label="Previous month"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.8284 12.0007L15.7782 16.9504L14.364 18.3646L8 12.0007L14.364 5.63672L15.7782 7.05093L10.8284 12.0007Z"/></svg></button>
+                    <button type="button" class="dr-nav-btn" @click="shift(1)" aria-label="Next month"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg></button>
+                </div>
+                <div class="dr-month-title" x-text="title()"></div>
+                <div class="dr-grid" role="grid">
+                    <template x-for="w in ['Mo','Tu','We','Th','Fr','Sa','Su']" :key="w"><div class="dr-weekday" x-text="w"></div></template>
+                    <template x-for="c in cells()" :key="c.key">
+                        <div class="dr-cell">
+                            <button type="button" class="dr-day" x-show="c.date" :disabled="!has(c.date)" :class="{ 'is-picked': c.date === draft, 'is-shown': c.date === current }" @click="draft = c.date" :title="has(c.date) ? '' : 'No summary for this day'" x-text="c.day"></button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <div class="dr-pop-foot">
+                <span class="dr-pop-summary" x-text="label(draft)"></span>
+                <div class="dr-pop-actions">
+                    <button type="button" class="dr-btn" @click="open = false">Cancel</button>
+                    <button type="button" class="dr-btn dr-btn--primary" :disabled="!draft" @click="apply()">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function summaryDayPicker(current, dates) {
+    const set = new Set(dates || []);
+    const d = new Date(current + 'T00:00:00');
+    return {
+        open: false, current, draft: current,
+        year: d.getFullYear(), month: d.getMonth(),
+        toggle() { this.open = !this.open; if (this.open) { this.draft = this.current; const c = new Date(this.current + 'T00:00:00'); this.year = c.getFullYear(); this.month = c.getMonth(); } },
+        has(date) { return !!date && set.has(date); },
+        shift(n) { const m = new Date(this.year, this.month + n, 1); this.year = m.getFullYear(); this.month = m.getMonth(); },
+        title() { return new Date(this.year, this.month, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); },
+        label(date) { return date ? new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; },
+        apply() { if (this.draft) window.location.href = '/dashboard/summary?date=' + this.draft; },
+        cells() {
+            const first = new Date(this.year, this.month, 1), days = new Date(this.year, this.month + 1, 0).getDate();
+            const pad = (first.getDay() + 6) % 7, out = [];
+            for (let i = 0; i < pad; i++) out.push({ key: 'p' + i });
+            for (let day = 1; day <= days; day++) {
+                const date = this.year + '-' + String(this.month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+                out.push({ key: date, date, day });
+            }
+            return out;
+        },
+    };
+}
+</script>
+{{end}}

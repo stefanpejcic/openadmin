@@ -340,7 +340,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	dnsTemplates := &handlers.DNSTemplates{Sessions: sessions}
 	firewall := &handlers.Firewall{Sessions: sessions}
 	domainTemplates := &handlers.DomainTemplates{Sessions: sessions}
-	mailer := &handlers.Mailer{PublicIP: d.PublicIP, Logger: d.Logger}
+	mailer := &handlers.Mailer{PublicIP: d.PublicIP, Logger: d.Logger, MySQL: d.MySQL}
 	processManager := &handlers.ProcessManager{Sessions: sessions}
 	tasks := &handlers.Tasks{Sessions: sessions}
 	imunify := &handlers.Imunify{Sessions: sessions, MySQL: d.MySQL}
@@ -1061,8 +1061,10 @@ func newHandler(d appDeps) (http.Handler, error) {
 		DashboardLayout: func(userID int64) string { return handlers.DashboardLayoutJSON(d.AdminDB, userID) },
 		PublicIP:        d.PublicIP, Hostname: d.ServerHostname, Version: d.PanelVersion, ValidateSessionIP: d.ValidateSessionIP,
 		Notifications: handlers.ClusterNotifications, LatestSource: handlers.ClusterLatestVersion,
-		Summaries:  handlers.ClusterSummaries(d.MySQL),
-		DashCounts: handlers.ClusterDashCounts(d.MySQL),
+		Summaries:     handlers.ClusterSummaries(d.MySQL),
+		SummariesDay:  handlers.ClusterSummariesDay(d.MySQL),
+		SummaryHealth: handlers.ClusterSummaryHealth(d.MySQL),
+		DashCounts:    handlers.ClusterDashCounts(d.MySQL),
 	}
 	clusterManager.RunBackground()
 	clusterManager.ResumeMoves()

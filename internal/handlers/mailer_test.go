@@ -99,7 +99,8 @@ func TestSaveEmailToFile(t *testing.T) {
 }
 
 func TestServeSendEmailFallsBackToLocalMTAWhenNotConfigured(t *testing.T) {
-	withScratchMailerConfig(t, "mail_security_token=right") // no mail_server/mail_username
+	// what a fresh install has: no server, but the form's ssl default and sometimes a leftover username
+	withScratchMailerConfig(t, "mail_security_token=right", "mail_use_ssl=True", "mail_port=465", "mail_username=left@over.com")
 
 	var gotCfg mailerSMTPConfig
 	origSend := mailerSendRun
@@ -123,8 +124,8 @@ func TestServeSendEmailFallsBackToLocalMTAWhenNotConfigured(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 (sending via the local-MTA fallback, not a 503), got %d: %s", resp.StatusCode, body)
 	}
-	if gotCfg.Server != "localhost" || gotCfg.Port != 25 {
-		t.Fatalf("expected the localhost:25 fallback, got server=%q port=%d", gotCfg.Server, gotCfg.Port)
+	if gotCfg.Server != "localhost" || gotCfg.Port != 25 || gotCfg.UseSSL || gotCfg.UseTLS || gotCfg.Username != "" {
+		t.Fatalf("expected plain unauthenticated localhost:25, got %+v", gotCfg)
 	}
 	hostname := generalHostname()
 	if gotCfg.DefaultSender != "root@"+hostname {
@@ -660,5 +661,55 @@ func TestServeSendEmailPartialSendStillSucceeds(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), "sent successfully") {
 		t.Fatalf("expected success when some recipients got it, got %d: %s", resp.StatusCode, body)
+	}
+}
+
+func TestBuildMIMEMessageHasRequiredHeaders(t *testing.T) {
+	long := strings.Repeat("x", 3000)
+	msg := buildMIMEMessage("root@s1.example.com", "a@b.com", "Dnevni izveštaj", "<p>"+long+"</p>")
+	for _, want := range []string{"\r\nDate: ", "Message-ID: <", "@s1.example.com>", "Subject: =?UTF-8?q?", "Content-Transfer-Encoding: quoted-printable"} {
+		if !strings.Contains("\r\n"+msg, want) {
+			t.Fatalf("missing %q in %q", want, msg[:300])
+		}
+	}
+	for _, line := range strings.Split(msg, "\r\n") {
+		if len(line) > 998 {
+			t.Fatalf("line of %d characters goes over the SMTP limit", len(line))
+		}
+	}
+}
+
+func TestServeSendEmailUsesLocalMailserverWhenNotConfigured(t *testing.T) {
+	withScratchMailerConfig(t, "mail_security_token=right", "mail_use_ssl=True", "mail_port=465")
+	dir := t.TempDir()
+	origCompose, origEnv := EmailsMailComposeFile, EmailsMailserverEnvFile
+	EmailsMailComposeFile, EmailsMailserverEnvFile = filepath.Join(dir, "compose.yml"), filepath.Join(dir, "mailserver.env")
+	t.Cleanup(func() { EmailsMailComposeFile, EmailsMailserverEnvFile = origCompose, origEnv })
+	os.WriteFile(EmailsMailComposeFile, nil, 0o644)
+	os.WriteFile(EmailsMailserverEnvFile, []byte("OVERRIDE_HOSTNAME=s1.example.com\nSSL_TYPE=manual\n"), 0o644)
+
+	var gotCfg mailerSMTPConfig
+	origSend := mailerSendRun
+	mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) error { gotCfg = cfg; return nil }
+	t.Cleanup(func() { mailerSendRun = origSend })
+	srv, client := newMailerTestServer(t, &Mailer{})
+	resp, err := client.PostForm(srv.URL+"/send_email", url.Values{"recipient": {"a@b.com"}, "subject": {"Alert"}, "body": {"x"}, "transient": {"right"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if gotCfg.Server != "localhost" || gotCfg.Port != 25 || !gotCfg.UseTLS || gotCfg.UseSSL || gotCfg.tlsName() != "s1.example.com" || gotCfg.Username != "" {
+		t.Fatalf("expected localhost:25 STARTTLS checked against s1.example.com, got %+v", gotCfg)
+	}
+
+	// a saved localhost setting (what the prefilled form saves) gets the certificate name too
+	withScratchMailerConfig(t, "mail_security_token=right2", "mail_server=localhost", "mail_port=25", "mail_use_tls=True")
+	resp, err = client.PostForm(srv.URL+"/send_email", url.Values{"recipient": {"a@b.com"}, "subject": {"Alert"}, "body": {"x"}, "transient": {"right2"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if gotCfg.tlsName() != "s1.example.com" {
+		t.Fatalf("saved localhost should be checked against the hostname cert, got %q", gotCfg.tlsName())
 	}
 }

@@ -121,5 +121,5 @@ func (m *Manager) ServerLabel(id, name string) string {
 }
 
 func serverDot(color string) string {
-	return `<span class="mr-1.5 inline-block size-2 shrink-0 rounded-sm align-middle ` + ColorClass(color) + `" aria-hidden="true"></span>`
+	return `<span class="mr-1.5 inline-block size-2.5 shrink-0 rounded-xs align-middle ` + ColorClass(color) + `" aria-hidden="true"></span>`
 }

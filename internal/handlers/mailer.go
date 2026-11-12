@@ -7,11 +7,16 @@ package handlers
 
 import (
 	"crypto/hmac"
+	cryptorand "crypto/rand"
 	"crypto/tls"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"mime"
+	"mime/quotedprintable"
+	"net"
 	"net/http"
 	"net/smtp"
 	"os"
@@ -30,6 +35,8 @@ import (
 // Mailer bundles the /send_email handler.
 type Mailer struct {
 	PublicIP string
+	// panel DB, for the counts and the daily summary in the Daily Usage Report
+	MySQL *sql.DB
 
 	// Logger receives diagnostics for failed send attempts (dev-mode app
 	// log; see bootstrap.SetupLogging). Nil is safe -- logging is skipped.
@@ -59,6 +66,32 @@ type mailerSMTPConfig struct {
 	Password      string
 	DefaultSender string
 	Debug         bool
+	// name the certificate is checked against when it isn't Server, localhost on a server whose mailserver has the panel hostname's cert
+	TLSName string
+}
+
+// localMailserverSMTP is how to send through this server's own mailserver without a login: localhost:25 is trusted by
+// it (the public hostname isn't, the connection comes from the public IP), with STARTTLS on the panel hostname's cert when it has one
+func localMailserverSMTP() (mailerSMTPConfig, bool) {
+	if _, err := os.Stat(EmailsMailComposeFile); err != nil {
+		return mailerSMTPConfig{}, false
+	}
+	cfg := mailerSMTPConfig{Server: "localhost", Port: 25}
+	if env, err := parseMailserverEnvFile(EmailsMailserverEnvFile); err == nil && env["OVERRIDE_HOSTNAME"] != "" && env["SSL_TYPE"] != "" {
+		cfg.UseTLS, cfg.TLSName = true, env["OVERRIDE_HOSTNAME"]
+	}
+	return cfg, true
+}
+
+func (c mailerSMTPConfig) tlsName() string {
+	if c.TLSName != "" {
+		return c.TLSName
+	}
+	return c.Server
+}
+
+func isLocalSMTPHost(host string) bool {
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
 // loadMailerSMTPConfig is read fresh (no caching) each time it's called.
@@ -225,33 +258,36 @@ var mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) err
 	if len(rcpts) == 0 {
 		return fmt.Errorf("no recipient address")
 	}
-	addr := fmt.Sprintf("%s:%d", cfg.Server, cfg.Port)
+	addr := net.JoinHostPort(cfg.Server, strconv.Itoa(cfg.Port))
 
 	var auth smtp.Auth
 	if cfg.Username != "" {
 		auth = smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Server)
 	}
 
-	var client *smtp.Client
+	// a wrong port or a server that never answers would otherwise hold the request (and sentinel's curl) forever
+	dialer := &net.Dialer{Timeout: 20 * time.Second}
+	var conn net.Conn
 	var err error
 	if cfg.UseSSL {
-		var conn *tls.Conn
-		conn, err = tls.Dial("tcp", addr, &tls.Config{ServerName: cfg.Server})
-		if err != nil {
-			return err
-		}
-		client, err = smtp.NewClient(conn, cfg.Server)
+		conn, err = tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{ServerName: cfg.tlsName()})
 	} else {
-		client, err = smtp.Dial(addr)
+		conn, err = dialer.Dial("tcp", addr)
 	}
 	if err != nil {
+		return err
+	}
+	_ = conn.SetDeadline(time.Now().Add(60 * time.Second))
+	client, err := smtp.NewClient(conn, cfg.Server)
+	if err != nil {
+		conn.Close()
 		return err
 	}
 	defer client.Close()
 
 	if !cfg.UseSSL && cfg.UseTLS {
 		if ok, _ := client.Extension("STARTTLS"); ok {
-			if err := client.StartTLS(&tls.Config{ServerName: cfg.Server}); err != nil {
+			if err := client.StartTLS(&tls.Config{ServerName: cfg.tlsName()}); err != nil {
 				return err
 			}
 		}
@@ -325,12 +361,24 @@ func isPartialSend(err error) bool {
 
 func buildMIMEMessage(from, to, subject, htmlBody string) string {
 	var b strings.Builder
+	// Date and Message-ID are required, amavis on the local mailserver bounces mail without them as BAD-HEADER
+	domain := "localhost"
+	if at := strings.LastIndex(from, "@"); at >= 0 {
+		domain = strings.Trim(from[at+1:], "> ")
+	}
+	id := make([]byte, 12)
+	_, _ = cryptorand.Read(id)
+	fmt.Fprintf(&b, "Date: %s\r\n", time.Now().Format(time.RFC1123Z))
+	fmt.Fprintf(&b, "Message-ID: <%x@%s>\r\n", id, domain)
 	fmt.Fprintf(&b, "From: %s\r\n", from)
 	fmt.Fprintf(&b, "To: %s\r\n", to)
-	fmt.Fprintf(&b, "Subject: %s\r\n", subject)
+	fmt.Fprintf(&b, "Subject: %s\r\n", mime.QEncoding.Encode("UTF-8", subject))
 	b.WriteString("MIME-Version: 1.0\r\n")
-	b.WriteString("Content-Type: text/html; charset=UTF-8\r\n\r\n")
-	b.WriteString(htmlBody)
+	// quoted-printable keeps the long lines of the html templates under SMTP's 998 character limit
+	b.WriteString("Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n")
+	qp := quotedprintable.NewWriter(&b)
+	_, _ = qp.Write([]byte(htmlBody))
+	_ = qp.Close()
 	return b.String()
 }
 
@@ -437,9 +485,20 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 	cfg := loadMailerSMTPConfig()
 	serverHostname := generalHostname()
 
+	// no relay configured: this server's mailserver when it has one, otherwise plain SMTP to the local MTA,
+	// the ssl/tls/login defaults of the empty form don't apply to either
 	if cfg.Server == "" {
-		cfg.Server = "localhost"
-		cfg.Port = 25
+		local, ok := localMailserverSMTP()
+		if !ok {
+			local = mailerSMTPConfig{Server: "localhost", Port: 25}
+		}
+		local.Debug, local.DefaultSender = cfg.Debug, cfg.DefaultSender
+		cfg = local
+	} else if isLocalSMTPHost(cfg.Server) && cfg.TLSName == "" {
+		// a saved localhost setting still needs the hostname for the certificate
+		if local, ok := localMailserverSMTP(); ok {
+			cfg.TLSName = local.TLSName
+		}
 	}
 	if cfg.Username == "" {
 		cfg.DefaultSender = "root@" + serverHostname
@@ -494,13 +553,17 @@ func (m *Mailer) ServeSendEmail(w http.ResponseWriter, r *http.Request) {
 			"Title": subject, "Message": messageContent, "Items": items, "Hostname": serverHostname, "AdminURL": adminURL,
 		})
 	case strings.Contains(messageContent, "Daily Usage Report"):
-		counts := getCountsFromDBForMailer()
+		counts := getCountsFromDBForMailer(m.MySQL)
 		cpuUsage, _ := mailerCPUUsageRun()
+		summary, days := dailyReportSummary(m.MySQL, serverHostname)
 		emailTemplate, renderErr = webtemplates.RenderToString("email_daily_system_report.html", map[string]interface{}{
 			"Title":                    subject,
 			"Message":                  messageContent,
 			"Hostname":                 serverHostname,
 			"AdminURL":                 adminURL,
+			"Summary":                  summary,
+			"Days":                     days,
+			"Multi":                    len(days) > 1,
 			"TotalUsers":               counts.users,
 			"TotalDomains":             counts.domains,
 			"TotalWebsites":            counts.websites,
@@ -582,9 +645,14 @@ type mailerCounts struct {
 	users, websites, domains int
 }
 
-// getCountsFromDBForMailer is a thin, mailer-local wrapper so tests can
-// stub it without needing a real MySQL connection wired through this
-// struct (the Daily Usage Report is a rarely-exercised path).
-var getCountsFromDBForMailer = func() mailerCounts {
-	return mailerCounts{}
+// getCountsFromDBForMailer is the account, domain and website count for the Daily Usage Report, a var so tests skip MySQL
+var getCountsFromDBForMailer = func(db *sql.DB) mailerCounts {
+	var c mailerCounts
+	if db == nil {
+		return c
+	}
+	_ = db.QueryRow("SELECT COUNT(*) FROM users").Scan(&c.users)
+	_ = db.QueryRow("SELECT COUNT(*) FROM domains").Scan(&c.domains)
+	_ = db.QueryRow("SELECT COUNT(*) FROM sites").Scan(&c.websites)
+	return c
 }

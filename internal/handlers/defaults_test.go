@@ -617,8 +617,12 @@ func TestServeDefaultsRendersRecommendations(t *testing.T) {
 	origSites := defaultsSiteTypesRun
 	defaultsSiteTypesRun = func(_ *sql.DB) map[string]int { return map[string]int{"WordPress": 5} }
 	origPlans := defaultsPlanMinimumsRun
-	defaultsPlanMinimumsRun = func(_ *sql.DB) planMinimums { return planMinimums{CPU: 2, CPUPlan: "Standard", RAMGB: 2, RAMPlan: "Standard"} }
-	t.Cleanup(func() { defaultsPHPWatchRun, defaultsSiteTypesRun, defaultsPlanMinimumsRun = origPHP, origSites, origPlans })
+	defaultsPlanMinimumsRun = func(_ *sql.DB) planMinimums {
+		return planMinimums{CPU: 2, CPUPlan: "Standard", RAMGB: 2, RAMPlan: "Standard"}
+	}
+	t.Cleanup(func() {
+		defaultsPHPWatchRun, defaultsSiteTypesRun, defaultsPlanMinimumsRun = origPHP, origSites, origPlans
+	})
 
 	srv, client := newDefaultsTestServer(t, &Defaults{})
 	resp, err := client.Get(srv.URL + "/settings/defaults")

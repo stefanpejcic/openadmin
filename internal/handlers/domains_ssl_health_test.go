@@ -146,7 +146,7 @@ func TestCheckDomainSSLHealthCustomUsesLiveIndexPathWhenAvailable(t *testing.T) 
 	writeTestCert(t, livePath, time.Now().Add(90*24*time.Hour))
 
 	idx := caddyTLSIndex{
-		ok:               true,
+		ok:              true,
 		customCertPaths: map[string]string{"example.com": livePath},
 	}
 	health := checkDomainSSLHealth("example.com", "custom", idx)

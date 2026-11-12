@@ -52,14 +52,16 @@ var (
 
 type notificationSettingsPageData struct {
 	webtemplates.Chrome
-	MailServer         string
-	MailPort           string
-	MailUseSSL         string
-	MailUseTLS         string
-	MailDebug          string
-	MailUsername       string
-	MailPassword       string
-	MailDefaultSender  string
+	MailServer        string
+	MailPort          string
+	MailUseSSL        string
+	MailUseTLS        string
+	MailDebug         string
+	MailUsername      string
+	MailPassword      string
+	MailDefaultSender string
+	// nothing saved yet, the form shows the local mailserver that's used instead
+	MailLocalDefault   bool
 	EmailAddress       string
 	EmailAddressesJSON string
 	WebhookURLs        []string
@@ -252,6 +254,16 @@ func (n *NotificationSettings) ServeSettings(w http.ResponseWriter, r *http.Requ
 		MaxConnPerIP:      maxConnPerIP,
 		CSRFToken:         csrf.Token(r),
 		Flashes:           auth.PopFlashes(w, r, n.Sessions),
+	}
+	if data.MailServer == "" {
+		if local, ok := localMailserverSMTP(); ok {
+			data.MailServer, data.MailPort = local.Server, strconv.Itoa(local.Port)
+			data.MailUseSSL, data.MailUseTLS = "False", "False"
+			if local.UseTLS {
+				data.MailUseTLS = "True"
+			}
+			data.MailLocalDefault = true
+		}
 	}
 
 	data.WebhookURLsJSON = jsonStringList(data.WebhookURLs)

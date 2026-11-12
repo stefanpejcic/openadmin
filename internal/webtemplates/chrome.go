@@ -40,7 +40,8 @@ type Chrome struct {
 	PageTabs    []NavLink // modern tab bar above the page content
 	AreaLabel   string    // modern breadcrumb's first crumb, the active sidebar area
 	AreaHref    string
-	HelpDoc     string       // docs page behind the tab bar's Documentation button, e.g. "admin/settings/general"
-	HelpPart    string       // optional part of HelpDoc to show, see helpSections
-	BulkActions []BulkAction // buttons for _bulk.html, set by pages that have bulk selection
+	HelpDoc     string        // docs page behind the tab bar's Documentation button, e.g. "admin/settings/general"
+	HelpPart    string        // optional part of HelpDoc to show, see helpSections
+	BulkActions []BulkAction  // buttons for _bulk.html, set by pages that have bulk selection
+	TabExtra    template.HTML // a page's own control at the right of the tab bar, before Documentation, e.g. the summary's day picker
 }

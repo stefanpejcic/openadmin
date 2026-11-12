@@ -27,6 +27,11 @@ func (m *Manager) OpenLink(userID int64, id, next string) string { return m.open
 
 // CallAll asks every other online server the same thing, a slow one is left out rather than holding up the page
 func (m *Manager) CallAll(action string, fn func(id, name string, raw json.RawMessage)) {
+	m.CallAllData(action, nil, fn)
+}
+
+// CallAllData is CallAll with an argument for the action, e.g. the day of a past summary
+func (m *Manager) CallAllData(action string, data any, fn func(id, name string, raw json.RawMessage)) {
 	ctx, cancel := context.WithTimeout(context.Background(), readTimeout)
 	defer cancel()
 	var mu sync.Mutex
@@ -39,7 +44,7 @@ func (m *Manager) CallAll(action string, fn func(id, name string, raw json.RawMe
 		go func(n Node) {
 			defer wg.Done()
 			var raw json.RawMessage
-			if m.rpcContext(ctx, n, action, nil, &raw) != nil {
+			if m.rpcContext(ctx, n, action, data, &raw) != nil {
 				return
 			}
 			mu.Lock()

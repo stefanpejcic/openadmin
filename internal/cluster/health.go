@@ -328,6 +328,24 @@ func (m *Manager) handleAction(action string, raw json.RawMessage) (any, error) 
 			return nil, errors.New("summaries are not available")
 		}
 		return m.Summaries(), nil
+	case "summary_health":
+		var day string
+		if err := json.Unmarshal(raw, &day); err != nil || !summaryDayRe.MatchString(day) {
+			return nil, errors.New("invalid day")
+		}
+		if m.SummaryHealth == nil {
+			return nil, errors.New("summaries are not available")
+		}
+		return m.SummaryHealth(day), nil
+	case "summaries_day":
+		var day string
+		if err := json.Unmarshal(raw, &day); err != nil || !summaryDayRe.MatchString(day) {
+			return nil, errors.New("invalid day")
+		}
+		if m.SummariesDay == nil {
+			return nil, errors.New("summaries are not available")
+		}
+		return m.SummariesDay(day), nil
 	case "search":
 		var q string
 		if err := json.Unmarshal(raw, &q); err != nil {
@@ -709,3 +727,5 @@ func (m *Manager) mailSync(a accountArgs) error {
 	}
 	return rows.Err()
 }
+
+var summaryDayRe = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
