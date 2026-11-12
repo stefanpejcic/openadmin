@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -156,14 +157,13 @@ func (s *APISecurity) ServeFirewall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Map iteration order is unspecified, same as the HTML iframe wrapper's
-	// equivalent query-string builder (ServeCSFIframe in firewall.go) --
-	// csf.pl doesn't care about key ordering.
-	pairs := make([]string, 0, len(data))
+	// Encoded the same way as ServeCSFIframe in firewall.go: csf.pl reads one
+	// line and URL-decodes each value.
+	vals := url.Values{}
 	for k, v := range data {
-		pairs = append(pairs, fmt.Sprintf("%s=%v", k, v))
+		vals.Set(k, fmt.Sprintf("%v", v))
 	}
-	qs := strings.Join(pairs, "&")
+	qs := vals.Encode()
 
 	tmp, err := os.CreateTemp("", "csf-api-")
 	if err != nil {
