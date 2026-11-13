@@ -346,6 +346,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	imunify := &handlers.Imunify{Sessions: sessions, MySQL: d.MySQL}
 	imunifyScan := &handlers.ImunifyScan{MySQL: d.MySQL, Sessions: sessions}
 	waf := &handlers.WAF{Sessions: sessions, MySQL: d.MySQL}
+	botControl := &handlers.BotControl{Sessions: sessions, MySQL: d.MySQL}
 	sshHandlers := &handlers.SSH{Sessions: sessions}
 	podmanHandlers := &handlers.Podman{Sessions: sessions, MySQL: d.MySQL}
 	backupsHandlers := &handlers.Backups{Sessions: sessions, MySQL: d.MySQL}
@@ -990,6 +991,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /security/waf/logs", auth.RequireLogin(sessions, authOpts, waf.ServeWAFLogs))
 	mux.HandleFunc("GET /security/waf/logs/{target}", auth.RequireLogin(sessions, authOpts, waf.ServeWAFLogs))
 	mux.HandleFunc("POST /security/waf/logs/{target}", auth.RequireLogin(sessions, authOpts, waf.ServeWAFLogs))
+	mux.HandleFunc("GET /security/bot-control", auth.RequireAdmin(sessions, authOpts, botControl.ServeBotControl))
+	mux.HandleFunc("POST /security/bot-control", auth.RequireAdmin(sessions, authOpts, botControl.ServeBotControl))
 	mux.HandleFunc("GET /server/ssh", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSH))
 	mux.HandleFunc("POST /server/ssh", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSH))
 	mux.HandleFunc("GET /server/ssh/config", auth.RequireAdmin(sessions, authOpts, sshHandlers.ServeSSHFullConfig))

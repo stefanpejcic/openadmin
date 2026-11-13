@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white h-full antialiased dark:bg-gray-950">
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+    <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
+        <header>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="min-w-0 grow">
+                    <div class="mb-1 flex flex-wrap items-center gap-2">
+                        <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-50">AI &amp; bot control</h1>
+                        {{if .ModuleEnabled}}
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Module enabled</span>
+                        {{else}}
+                        <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Module disabled</span>
+                        {{end}}
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Allow, rate-limit, or block known AI crawlers per site without affecting search engines like Googlebot or Bingbot. <a href="/settings/modules#area-security" class="text-blue-600 hover:underline dark:text-blue-400">Settings &rarr; Modules</a></p>
+                </div>
+                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                    {{if .ModuleEnabled}}
+                    <form method="post" action="/security/bot-control" class="flex flex-wrap items-center gap-2">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}"/>
+                        <input type="hidden" name="action" value="apply_all"/>
+                        <select name="policy" class="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm whitespace-nowrap dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                            <option value="ratelimit">Rate-limit AI bots (10/min)</option>
+                            <option value="block">Block AI bots (403)</option>
+                            <option value="allow">Allow all AI bots</option>
+                        </select>
+                        <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Apply to all domains</button>
+                    </form>
+                    <form method="post" action="/security/bot-control">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}"/>
+                        <input type="hidden" name="action" value="disable_module"/>
+                        <button type="submit" class="inline-flex items-center whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">Disable module</button>
+                    </form>
+                    {{else}}
+                    <form method="post" action="/security/bot-control">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}"/>
+                        <input type="hidden" name="action" value="enable_module"/>
+                        <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Enable module</button>
+                    </form>
+                    {{end}}
+                </div>
+            </div>
+        </header>
+    </div>
+
+    <div class="px-4 py-6 sm:px-6 lg:px-8">
+        <div class="max-w-7xl space-y-6">
+
+            <div class="flex gap-3 rounded-md bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-950/70 dark:text-blue-400">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 mt-0.5"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z"></path></svg>
+                <div class="space-y-1">
+                    <p class="font-medium">How each policy works</p>
+                    <ul class="list-disc pl-5 space-y-0.5 text-xs leading-5">
+                        <li><strong>Allow</strong> &mdash; Lets known AI crawlers and search engines access the site normally.</li>
+                        <li><strong>Rate-limit (10/min)</strong> &mdash; Caps known AI crawlers at 10 requests/minute per crawler per site (returns HTTP <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">429</code> when exceeded); normal visitors and search engines (Googlebot, Bingbot) are unaffected.</li>
+                        <li><strong>Block (403)</strong> &mdash; Immediately blocks known AI crawlers at Caddy with HTTP <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">403</code>; normal visitors and search engines are unaffected.</li>
+                        <li><strong>Apply to all domains / Disable module</strong> &mdash; Bulk-applies the selected policy across all Caddy sites, or turns off the module and hides AI &amp; bot control from OpenPanel users.</li>
+                    </ul>
+                </div>
+            </div>
+
+            {{if not .ModuleEnabled}}
+            <div class="flex flex-col gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 sm:flex-row sm:items-center sm:justify-between dark:bg-yellow-950/70 dark:text-yellow-500">
+                <div>
+                    <h2 class="text-sm font-semibold">AI &amp; bot control module is currently disabled</h2>
+                    <p class="mt-1 text-xs">Enable the module to configure per-site AI crawler policies in Caddy and make AI &amp; bot control available to OpenPanel users. You can also toggle it under <a href="/settings/modules#area-security" class="underline">Settings &rarr; Modules &rarr; Security</a>.</p>
+                </div>
+                <form method="post" action="/security/bot-control" class="shrink-0">
+                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}"/>
+                    <input type="hidden" name="action" value="enable_module"/>
+                    <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Enable AI &amp; bot control</button>
+                </form>
+            </div>
+            {{end}}
+
+            <dl class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">Domains</dt>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums">{{.TotalDomains}}</dd>
+                    <dd class="mt-1 text-xs text-gray-500">{{index .PolicyCounts "block"}} block · {{index .PolicyCounts "ratelimit"}} rate-limit · {{index .PolicyCounts "allow"}} allow</dd>
+                </div>
+                <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">Total requests ({{.Report.Window}})</dt>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums">{{.Report.TotalRequests}}</dd>
+                    <dd class="mt-1 text-xs text-gray-500">Scope: {{.Report.Scope}}</dd>
+                </div>
+                <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">AI crawler hits</dt>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums text-yellow-700 dark:text-yellow-500">{{.Report.AIRequests}}</dd>
+                    <dd class="mt-1 text-xs text-gray-500">GPTBot, ClaudeBot, Bytespider, etc.</dd>
+                </div>
+                <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+                    <dt class="text-sm text-gray-500 dark:text-gray-400">Blocked / throttled</dt>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums text-red-600 dark:text-red-400">{{.Report.BlockedCount}}</dd>
+                    <dd class="mt-1 text-xs text-gray-500">HTTP 403 &amp; 429 responses</dd>
+                </div>
+            </dl>
+
+            <section class="space-y-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 class="text-base font-semibold">Who's hitting me</h2>
+                    <form method="get" action="/security/bot-control" class="flex flex-wrap items-center gap-2">
+                        <select name="domain" onchange="this.form.submit()" class="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                            <option value="">All domains ({{.TotalDomains}})</option>
+                            {{range .Domains}}
+                            <option value="{{.Domain}}" {{if eq $.SelectedDomain .Domain}}selected{{end}}>{{.Domain}}</option>
+                            {{end}}
+                        </select>
+                        <select name="window" onchange="this.form.submit()" class="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                            <option value="1h" {{if eq .Report.Window "1h"}}selected{{end}}>Last 1 hour</option>
+                            <option value="24h" {{if eq .Report.Window "24h"}}selected{{end}}>Last 24 hours</option>
+                            <option value="7d" {{if eq .Report.Window "7d"}}selected{{end}}>Last 7 days</option>
+                        </select>
+                    </form>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div class="rounded-md border border-gray-200 dark:border-gray-800 overflow-hidden">
+                        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold dark:border-gray-800 dark:bg-gray-900">Top bots &amp; user-agents</div>
+                        <table class="w-full divide-y divide-gray-200 text-xs dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-gray-500">
+                                    <th class="px-3 py-2">Agent</th>
+                                    <th class="px-3 py-2">Category</th>
+                                    <th class="px-3 py-2 text-right">Hits</th>
+                                    <th class="px-3 py-2 text-right">Blocked</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                                {{range .Report.TopBots}}
+                                <tr>
+                                    <td class="px-3 py-2 font-medium">{{.Name}} <span class="text-gray-400">({{.Operator}})</span></td>
+                                    <td class="px-3 py-2 text-gray-500">{{.Category}}</td>
+                                    <td class="px-3 py-2 text-right font-mono whitespace-nowrap">{{.Requests}} ({{.SharePct}}%)</td>
+                                    <td class="px-3 py-2 text-right font-mono whitespace-nowrap text-red-600 dark:text-red-400">{{.Blocked}}</td>
+                                </tr>
+                                {{else}}
+                                <tr><td colspan="4" class="px-3 py-4 text-center text-gray-500">No requests logged in this window.</td></tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="rounded-md border border-gray-200 dark:border-gray-800 overflow-hidden">
+                        <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold dark:border-gray-800 dark:bg-gray-900">Top networks &amp; ASNs</div>
+                        <table class="w-full divide-y divide-gray-200 text-xs dark:divide-gray-800">
+                            <thead>
+                                <tr class="text-left text-gray-500">
+                                    <th class="px-3 py-2">Network</th>
+                                    <th class="px-3 py-2">ASN</th>
+                                    <th class="px-3 py-2 text-right">IPs</th>
+                                    <th class="px-3 py-2 text-right">Hits</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                                {{range .Report.TopNetworks}}
+                                <tr>
+                                    <td class="px-3 py-2 font-mono">{{.Network}}</td>
+                                    <td class="px-3 py-2 text-gray-500">{{.ASN}}</td>
+                                    <td class="px-3 py-2 text-right font-mono whitespace-nowrap">{{.UniqueIPs}}</td>
+                                    <td class="px-3 py-2 text-right font-mono whitespace-nowrap">{{.Requests}}</td>
+                                </tr>
+                                {{else}}
+                                <tr><td colspan="4" class="px-3 py-4 text-center text-gray-500">No requests logged in this window.</td></tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="rounded-md border border-gray-200 dark:border-gray-800 overflow-hidden">
+                    <div class="border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold dark:border-gray-800 dark:bg-gray-900">Top hit URLs</div>
+                    <table class="w-full divide-y divide-gray-200 text-xs dark:divide-gray-800">
+                        <thead>
+                            <tr class="text-left text-gray-500">
+                                <th class="px-3 py-2">Target</th>
+                                <th class="px-3 py-2 text-right">Total hits</th>
+                                <th class="px-3 py-2 text-right">Bot hits</th>
+                                <th class="px-3 py-2 text-right">Blocked</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                            {{range .Report.TopURLs}}
+                            <tr>
+                                <td class="px-3 py-2 font-mono">{{.Target}}</td>
+                                <td class="px-3 py-2 text-right font-mono whitespace-nowrap">{{.Requests}}</td>
+                                <td class="px-3 py-2 text-right font-mono whitespace-nowrap text-yellow-700 dark:text-yellow-500">{{.BotRequests}}</td>
+                                <td class="px-3 py-2 text-right font-mono whitespace-nowrap text-red-600 dark:text-red-400">{{.Blocked}}</td>
+                            </tr>
+                            {{else}}
+                            <tr><td colspan="4" class="px-3 py-4 text-center text-gray-500">No requests logged in this window.</td></tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-base font-semibold">Per-site AI crawler policies</h2>
+                <div class="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-800">
+                    <table class="w-full divide-y divide-gray-200 text-sm dark:divide-gray-800">
+                        <thead class="bg-gray-50 dark:bg-gray-900 text-left text-xs text-gray-500">
+                            <tr>
+                                <th class="px-4 py-2.5 font-medium">Domain</th>
+                                <th class="px-4 py-2.5 font-medium">Owner</th>
+                                <th class="px-4 py-2.5 text-right font-medium">Hits ({{.Report.Window}})</th>
+                                <th class="px-4 py-2.5 text-right font-medium">AI hits</th>
+                                <th class="px-4 py-2.5 text-right font-medium">Blocked</th>
+                                <th class="px-4 py-2.5 font-medium">Policy</th>
+                                <th class="px-4 py-2.5 text-right font-medium">Change policy</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                            {{range .Domains}}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                                <td class="px-4 py-2.5 font-medium">
+                                    <a href="/security/bot-control?domain={{.Domain}}&amp;window={{$.Report.Window}}" class="text-blue-600 hover:underline dark:text-blue-400">{{.Domain}}</a>
+                                </td>
+                                <td class="px-4 py-2.5 text-gray-500">{{if .Owner}}{{.Owner}}{{else}}-{{end}}</td>
+                                <td class="px-4 py-2.5 text-right font-mono">{{.Requests}}</td>
+                                <td class="px-4 py-2.5 text-right font-mono text-yellow-700 dark:text-yellow-500">{{.AIRequests}}</td>
+                                <td class="px-4 py-2.5 text-right font-mono text-red-600 dark:text-red-400">{{.BlockedCount}}</td>
+                                <td class="px-4 py-2.5">
+                                    {{if eq (printf "%s" .Policy) "block"}}
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">Block (403)</span>
+                                    {{else if eq (printf "%s" .Policy) "ratelimit"}}
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Rate-limit</span>
+                                    {{else}}
+                                    <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Allow</span>
+                                    {{end}}
+                                </td>
+                                <td class="px-4 py-2.5 text-right">
+                                    <form method="post" action="/security/bot-control" class="inline-flex items-center gap-2">
+                                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
+                                        <input type="hidden" name="domain" value="{{.Domain}}"/>
+                                        <input type="hidden" name="selected_domain" value="{{$.SelectedDomain}}"/>
+                                        <select name="policy" onchange="this.form.submit()" {{if not $.ModuleEnabled}}disabled{{end}} class="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                                            <option value="allow" {{if eq (printf "%s" .Policy) "allow"}}selected{{end}}>Allow</option>
+                                            <option value="ratelimit" {{if eq (printf "%s" .Policy) "ratelimit"}}selected{{end}}>Rate-limit</option>
+                                            <option value="block" {{if eq (printf "%s" .Policy) "block"}}selected{{end}}>Block</option>
+                                        </select>
+                                    </form>
+                                </td>
+                            </tr>
+                            {{else}}
+                            <tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">No domains configured in Caddy.</td></tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>
