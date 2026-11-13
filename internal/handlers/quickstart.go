@@ -132,6 +132,12 @@ func quickStartStringSliceEqual(a, b []string) bool {
 	return true
 }
 
+// opencli license and imunify install add these on their own, so they don't count as the admin picking modules
+var quickStartAutoModules = map[string]bool{
+	"emails": true, "webmail": true, "email_deliverability": true, "email_filters": true, "email_aliases": true,
+	"email_import": true, "email_migrate": true, "email_export": true, "email_default": true, "imunifyav": true,
+}
+
 // quickStartModulesCustomized reports whether the enabled_modules list
 // differs (in either direction) from the factory default set.
 func quickStartModulesCustomized(modulesConfigPath string) bool {
@@ -139,7 +145,12 @@ func quickStartModulesCustomized(modulesConfigPath string) bool {
 	if enabled == nil {
 		return false
 	}
-	current := append([]string{}, enabled...)
+	current := []string{}
+	for _, m := range enabled {
+		if !quickStartAutoModules[m] {
+			current = append(current, m)
+		}
+	}
 	sort.Strings(current)
 	def := append([]string{}, quickStartDefaultModules...)
 	sort.Strings(def)
@@ -235,9 +246,15 @@ func quickStartPlansCustomized(db *sql.DB) bool {
 }
 
 // quickStartSMTPConfigured reports whether an SMTP server has been set for
-// outgoing notification emails.
+// outgoing notification emails, and an address for them to go to.
 func quickStartSMTPConfigured() bool {
-	return config.Load(config.OpenpanelConfigPath).Get("SMTP", "mail_server", "") != ""
+	cfg := config.Load(config.OpenpanelConfigPath)
+	return strings.TrimSpace(cfg.Get("SMTP", "mail_server", "")) != "" && strings.TrimSpace(cfg.Get("DEFAULT", "email", "")) != ""
+}
+
+// quickStartBackupsScheduled reports whether the central opencli docker-backup cron runs on a real schedule
+func quickStartBackupsScheduled() bool {
+	return backupsUserSchedule() != backupScheduleChoices["disabled"]
 }
 
 // quickStartPanelDomainConfigured reports whether a custom domain has been
@@ -290,7 +307,8 @@ func quickStartPodmanImagesReady() bool {
 		if strings.Contains(repo, "redis") {
 			hasRedis = true
 		}
-		if strings.Contains(repo, "nginx") || strings.Contains(repo, "apache") || strings.Contains(repo, "openlitespeed") {
+		// openlitespeed is caught by litespeed
+		if strings.Contains(repo, "nginx") || strings.Contains(repo, "apache") || strings.Contains(repo, "openresty") || strings.Contains(repo, "litespeed") {
 			hasWebserver = true
 		}
 	}
@@ -399,8 +417,8 @@ func onboardingServiceItems(licenseType string, userCount int) []onboardingServi
 }
 
 // onboardingConfigSteps builds onboarding step 2 ("Server configuration").
-// License verification and DNS/nameservers are Enterprise-only.
-func onboardingConfigSteps(licenseType string) []quickStartStep {
+// DNS/nameservers is Enterprise-only, Community gets the license step as an upgrade.
+func onboardingConfigSteps(licenseType string, adminTOTPEnabled bool) []quickStartStep {
 	steps := []quickStartStep{
 		{
 			Label:       "Enable modules",
@@ -418,7 +436,7 @@ func onboardingConfigSteps(licenseType string) []quickStartStep {
 		},
 		{
 			Label:       "Set up SMTP and notifications",
-			Description: "Configure an SMTP server so OpenPanel can send account and admin notification emails.",
+			Description: "Configure an SMTP server and the address admin notifications go to, so OpenPanel can send account and alert emails.",
 			Offer:       []string{"Outgoing SMTP", "Admin alerts", "User notifications"},
 			Href:        "/settings/notifications",
 			Done:        quickStartSMTPConfigured(),
@@ -438,16 +456,36 @@ func onboardingConfigSteps(licenseType string) []quickStartStep {
 			Done:        firewallCommandAvailableRun("csf"),
 		},
 		{
+			Label:       "Enable two-factor authentication",
+			Description: "Protect your admin account with a one-time code from an authenticator app on every login.",
+			Offer:       []string{"TOTP authenticator apps", "Backup codes", "Per-admin setting"},
+			Href:        "/security/2fa",
+			Done:        adminTOTPEnabled,
+		},
+		{
+			Label:       "Schedule backups",
+			Description: "Set a daily, weekly or monthly schedule and a destination, so every account is backed up before you need it.",
+			Offer:       []string{"Scheduled account backups", "Local or remote destinations", "One-click restore"},
+			Href:        "/backups/user",
+			Done:        quickStartBackupsScheduled(),
+		},
+		{
 			Label:       "Download required Podman images",
-			Description: "New accounts need Redis and a webserver image (Nginx, Apache, or OpenLiteSpeed) already downloaded so account creation doesn't stall on a first-time pull.",
-			Offer:       []string{"Redis", "Nginx / Apache / OpenLiteSpeed", "Faster account creation"},
+			Description: "New accounts need Redis and a webserver image (Apache, Nginx, OpenResty or LiteSpeed) already downloaded so account creation doesn't stall on a first-time pull.",
+			Offer:       []string{"Redis", "Apache / Nginx / OpenResty / LiteSpeed", "Faster account creation"},
 			Href:        "/services/podman#images",
 			Done:        quickStartPodmanImagesReady(),
 		},
 	}
 
 	if licenseType != "Enterprise" {
-		return steps
+		return append(steps, quickStartStep{
+			Label:       "Upgrade to Enterprise",
+			Description: "Add an Enterprise license key to unlock email, FTP, DNS, ImunifyAV and the REST API.",
+			Offer:       []string{"Email + Webmail", "FTP and DNS", "REST API"},
+			Href:        "/license",
+			Done:        quickStartLicenseConfigured(),
+		})
 	}
 
 	return append(steps,
@@ -486,8 +524,8 @@ func onboardingUserPlanSteps(licenseType string, data dashboardAdminData, mysqlD
 	return []quickStartStep{
 		{
 			Label:       "Set default PHP version and webserver",
-			Description: "Choose the default PHP version and web server (Apache, Nginx, or OpenResty) new accounts get.",
-			Offer:       []string{"Default PHP version", "Apache / Nginx / OpenResty", "Per-account override"},
+			Description: "Choose the default PHP version and web server (Apache, Nginx, OpenResty, OpenLiteSpeed or LiteSpeed) new accounts get.",
+			Offer:       []string{"Default PHP version", "Apache / Nginx / OpenResty / LiteSpeed", "Per-account override"},
 			Href:        "/settings/defaults",
 			Done:        quickStartPHPWebserverCustomized(),
 		},

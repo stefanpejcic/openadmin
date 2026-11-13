@@ -3,6 +3,7 @@ package handlers
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
@@ -179,14 +180,21 @@ func TestOnboardingServiceItemsCommunityVsEnterprise(t *testing.T) {
 }
 
 func TestOnboardingConfigStepsEnterpriseOnlyItems(t *testing.T) {
-	community := onboardingConfigSteps("Community")
+	community := onboardingConfigSteps("Community", false)
+	upgrade := false
 	for _, s := range community {
 		if s.Label == "Verify your Enterprise license" || s.Label == "Enable DNS and set custom nameservers" {
 			t.Fatalf("expected Community config steps to exclude Enterprise-only step %q", s.Label)
 		}
+		if s.Label == "Upgrade to Enterprise" {
+			upgrade = true
+		}
+	}
+	if !upgrade {
+		t.Fatalf("expected Community config steps to offer the Enterprise upgrade, got %+v", community)
 	}
 
-	enterprise := onboardingConfigSteps("Enterprise")
+	enterprise := onboardingConfigSteps("Enterprise", false)
 	found := map[string]bool{}
 	for _, s := range enterprise {
 		found[s.Label] = true
@@ -201,7 +209,7 @@ func TestOnboardingConfigStepsEnterpriseOnlyItems(t *testing.T) {
 func TestOnboardingConfigStepsIncludesPodmanImagesStepForBothLicenses(t *testing.T) {
 	for _, license := range []string{"Community", "Enterprise"} {
 		found := false
-		for _, s := range onboardingConfigSteps(license) {
+		for _, s := range onboardingConfigSteps(license, false) {
 			if s.Label == "Download required Podman images" {
 				found = true
 				if s.Href != "/services/podman#images" {
@@ -230,6 +238,8 @@ func TestQuickStartPodmanImagesReady(t *testing.T) {
 		{"both", `[{"Names":["docker.io/library/redis:7"]},{"Names":["docker.io/library/nginx:alpine"]}]`, true},
 		{"apache counts as webserver", `[{"Names":["docker.io/library/redis:7"]},{"Names":["docker.io/library/apache:2"]}]`, true},
 		{"openlitespeed counts as webserver", `[{"Names":["docker.io/library/redis:7"]},{"Names":["litespeedtech/openlitespeed:latest"]}]`, true},
+		{"openresty counts as webserver", `[{"Names":["docker.io/library/redis:7"]},{"Names":["docker.io/openresty/openresty:alpine"]}]`, true},
+		{"litespeed counts as webserver", `[{"Names":["docker.io/library/redis:7"]},{"Names":["litespeedtech/litespeed:latest"]}]`, true},
 	}
 	for _, c := range cases {
 		podmanRunRun = func(args ...string) (string, error) { return c.images, nil }
@@ -270,5 +280,42 @@ func TestQuickStartUpdatePreferencesCustomized(t *testing.T) {
 	os.WriteFile(path, []byte("[PANEL]\nautoupdate=off\nautopatch=on\n"), 0644)
 	if !quickStartUpdatePreferencesCustomized() {
 		t.Fatalf("expected a changed autoupdate preference to be flagged as customized")
+	}
+}
+
+func TestOnboardingConfigStepsTwoFAFollowsAdmin(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		found := false
+		for _, s := range onboardingConfigSteps("Community", enabled) {
+			if s.Label == "Enable two-factor authentication" {
+				found = true
+				if s.Href != "/security/2fa" || s.Done != enabled {
+					t.Fatalf("2fa step with totp=%v: got %+v", enabled, s)
+				}
+			}
+		}
+		if !found {
+			t.Fatalf("expected a 2fa step")
+		}
+	}
+}
+
+func TestQuickStartModulesCustomizedIgnoresAutoAddedModules(t *testing.T) {
+	dir := t.TempDir()
+	mods := strings.Join(quickStartDefaultModules, ",")
+	// separate files so the mtime cache can't hand back the first one
+	write := func(name, v string) string {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte("[PANEL]\nenabled_modules=\""+v+"\"\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+
+	if quickStartModulesCustomized(write("auto.config", mods+",emails,webmail,email_filters,email_default,imunifyav")) {
+		t.Fatalf("modules added by the license/imunify install shouldn't count as customized")
+	}
+	if !quickStartModulesCustomized(write("custom.config", mods+",emails,ftp")) {
+		t.Fatalf("an extra module the admin enabled should count as customized")
 	}
 }

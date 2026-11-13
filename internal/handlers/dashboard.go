@@ -463,7 +463,7 @@ func (d *Dashboard) ServeOnboardingPage(w http.ResponseWriter, r *http.Request) 
 		Flashes:            auth.PopFlashes(w, r, d.Sessions),
 		Next:               safeNextPath(r.URL.Query().Get("next")),
 		OnboardingServices: onboardingServiceItems(chromeSite.LicenseType, data.UserCount),
-		ConfigSteps:        onboardingConfigSteps(chromeSite.LicenseType),
+		ConfigSteps:        onboardingConfigSteps(chromeSite.LicenseType, user.TOTPEnabled),
 		UserPlanSteps:      onboardingUserPlanSteps(chromeSite.LicenseType, data, d.MySQL),
 	})
 }
