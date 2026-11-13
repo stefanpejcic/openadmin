@@ -6,6 +6,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/netip"
@@ -36,9 +38,41 @@ var CaddyDomlogsDir = "/var/log/caddy/domlogs"
 // BotASNPrefixesPath is an optional TSV (cidr\tasn\torg) for local IP-to-ASN mapping.
 var BotASNPrefixesPath = "/etc/openpanel/asn_prefixes.tsv"
 
+// botReloadCaddy returns caddy's own error so the admin sees why a config was rejected
 var botReloadCaddy = func(ctx context.Context) error {
-	return exec.CommandContext(ctx, "podman", "exec", "caddy", "caddy", "reload", "--config", "/etc/caddy/Caddyfile").Run()
+	out, err := exec.CommandContext(ctx, "podman", "exec", "caddy", "caddy", "reload", "--config", "/etc/caddy/Caddyfile").CombinedOutput()
+	if err != nil {
+		if msg := botCaddyErrorLine(string(out)); msg != "" {
+			return errors.New(msg)
+		}
+		return err
+	}
+	return nil
 }
+
+// botCaddyErrorLine pulls caddy's reason out of its output, older caddy prints "Error: ...", newer logs it as a JSON error line
+func botCaddyErrorLine(out string) string {
+	msg := ""
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "Error: ") {
+			return strings.TrimPrefix(line, "Error: ")
+		}
+		var entry struct {
+			Level string `json:"level"`
+			Msg   string `json:"msg"`
+		}
+		if json.Unmarshal([]byte(line), &entry) == nil && entry.Level == "error" && entry.Msg != "" {
+			msg = entry.Msg
+		}
+	}
+	if msg != "" {
+		return msg
+	}
+	return strings.TrimSpace(out)
+}
+
+var errBotNoAnchor = errors.New("no place for the bot control rule in the domain's Caddy config")
 
 var botRestartOpenPanel = func(ctx context.Context) error {
 	return exec.CommandContext(ctx, "podman", "restart", "openpanel").Run()
@@ -158,8 +192,6 @@ var knownBots = []botSignature{
 	{ID: "meta-externalagent", Name: "Meta-ExternalAgent", Operator: "Meta", Category: botCatAITraining, Token: "meta-externalagent"},
 	{ID: "meta-externalfetcher", Name: "Meta-ExternalFetcher", Operator: "Meta", Category: botCatAISearch, Token: "meta-externalfetcher"},
 	{ID: "facebookbot", Name: "FacebookBot", Operator: "Meta", Category: botCatAITraining, Token: "facebookbot"},
-	{ID: "google-extended", Name: "Google-Extended", Operator: "Google", Category: botCatAITraining, Token: "google-extended"},
-	{ID: "applebot-extended", Name: "Applebot-Extended", Operator: "Apple", Category: botCatAITraining, Token: "applebot-extended"},
 	{ID: "diffbot", Name: "Diffbot", Operator: "Diffbot", Category: botCatScraper, Token: "diffbot"},
 	{ID: "omgilibot", Name: "Omgilibot", Operator: "Webz.io", Category: botCatScraper, Token: "omgilibot"},
 	{ID: "cohere-ai", Name: "cohere-ai", Operator: "Cohere", Category: botCatAITraining, Token: "cohere-ai"},
@@ -207,21 +239,56 @@ func botDirective(domain string, p botPolicy) string {
 	}
 }
 
-func botRewritePolicy(content, domain string, p botPolicy) string {
+// bcAnyLineRE catches any botcontrol line, so ones left outside a site block can be dropped
+var bcAnyLineRE = regexp.MustCompile(`^[ \t]*(import[ \t]+botcontrol_(block|ratelimit)\b|#[ \t]*botcontrol:)`)
+
+// botDropTopLevelLines removes botcontrol lines outside any site block, at the top level they'd break the whole Caddyfile
+func botDropTopLevelLines(content string) string {
+	lines := strings.Split(content, "\n")
+	out := lines[:0]
+	depth, inRaw := 0, false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if depth == 0 && !inRaw && bcAnyLineRE.MatchString(line) {
+			continue
+		}
+		out = append(out, line)
+		if !inRaw && strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		for _, c := range line {
+			switch {
+			case c == '`':
+				inRaw = !inRaw
+			case inRaw:
+			case c == '{':
+				depth++
+			case c == '}' && depth > 0:
+				depth--
+			}
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
+func botRewritePolicy(content, domain string, p botPolicy) (string, error) {
 	directive := botDirective(domain, p)
+	content = botDropTopLevelLines(content)
 	switch {
 	case bcBlockRE.MatchString(content):
-		return bcBlockRE.ReplaceAllString(content, "    "+directive)
+		return bcBlockRE.ReplaceAllString(content, "    "+directive), nil
 	case bcRateLimitRE.MatchString(content):
-		return bcRateLimitRE.ReplaceAllString(content, "    "+directive)
+		return bcRateLimitRE.ReplaceAllString(content, "    "+directive), nil
 	case bcAllowRE.MatchString(content):
-		return bcAllowRE.ReplaceAllString(content, "    "+directive)
+		return bcAllowRE.ReplaceAllString(content, "    "+directive), nil
 	case bcWAFAnchorRE.MatchString(content):
-		return bcWAFAnchorRE.ReplaceAllString(content, "${1}"+directive+"\n\n${1}${2}")
+		return bcWAFAnchorRE.ReplaceAllString(content, "${1}"+directive+"\n\n${1}${2}"), nil
 	case bcProxyAnchorRE.MatchString(content):
-		return bcProxyAnchorRE.ReplaceAllString(content, "${1}"+directive+"\n\n${1}${2}")
+		return bcProxyAnchorRE.ReplaceAllString(content, "${1}"+directive+"\n\n${1}${2}"), nil
+	case p == botPolicyAllow:
+		return content, nil
 	default:
-		return strings.TrimRight(content, "\n") + "\n# botcontrol: " + string(p) + "\n"
+		return "", errBotNoAnchor
 	}
 }
 
@@ -233,14 +300,47 @@ func botReadDomainPolicy(domain string) botPolicy {
 	return botPolicyFromConfig(string(b))
 }
 
-func botWriteDomainPolicy(domain string, p botPolicy) error {
-	path := filepath.Join(CaddyDomainsConfDir, domain+".conf")
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return err
+// botApplyPolicy writes p to every domain, reloads once and puts all files back if caddy rejects it, so caddy still starts next time
+func botApplyPolicy(ctx context.Context, domains []string, p botPolicy) (changed int, skipped []string, err error) {
+	type saved struct {
+		path string
+		old  []byte
 	}
-	updated := botRewritePolicy(string(b), domain, p)
-	return os.WriteFile(path, []byte(updated), 0o644)
+	var written []saved
+	restore := func() {
+		for _, w := range written {
+			_ = os.WriteFile(w.path, w.old, 0o644)
+		}
+	}
+	for _, d := range domains {
+		path := filepath.Join(CaddyDomainsConfDir, d+".conf")
+		old, rerr := os.ReadFile(path)
+		if rerr != nil {
+			skipped = append(skipped, d)
+			continue
+		}
+		updated, rerr := botRewritePolicy(string(old), d, p)
+		if rerr != nil {
+			skipped = append(skipped, d)
+			continue
+		}
+		if updated == string(old) {
+			continue
+		}
+		if werr := os.WriteFile(path, []byte(updated), 0o644); werr != nil {
+			restore()
+			return 0, skipped, werr
+		}
+		written = append(written, saved{path, old})
+	}
+	if len(written) == 0 {
+		return 0, skipped, nil
+	}
+	if rerr := botReloadCaddy(ctx); rerr != nil {
+		restore()
+		return 0, skipped, fmt.Errorf("caddy rejected the change, nothing was changed: %w", rerr)
+	}
+	return len(written), skipped, nil
 }
 
 func botClassifyUA(ua string) (name, operator string, cat botCategory, isAI bool) {
@@ -650,10 +750,11 @@ func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
 				return
 			}
-			for _, d := range domains {
-				_ = botWriteDomainPolicy(d, botPolicyAllow)
+			if _, _, err := botApplyPolicy(r.Context(), domains, botPolicyAllow); err != nil {
+				auth.AddFlash(w, r, bc.Sessions, "Module disabled, but resetting domains to Allow failed: "+err.Error(), "error")
+				http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
+				return
 			}
-			_ = botReloadCaddy(r.Context())
 			if restarted {
 				auth.AddFlash(w, r, bc.Sessions, "AI & Bot Control module disabled, all domains reset to Allow, and OpenPanel restarted.", "success")
 			} else {
@@ -677,15 +778,13 @@ func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if action == "apply_all" {
-			updated := 0
-			for _, d := range domains {
-				if err := botWriteDomainPolicy(d, policy); err == nil {
-					updated++
-				}
-			}
-			if err := botReloadCaddy(r.Context()); err != nil {
-				auth.AddFlash(w, r, bc.Sessions, "Updated configs, but Caddy reload failed: "+err.Error(), "error")
-			} else {
+			_, skipped, err := botApplyPolicy(r.Context(), domains, policy)
+			switch {
+			case err != nil:
+				auth.AddFlash(w, r, bc.Sessions, "Failed to apply '"+string(policy)+"': "+err.Error(), "error")
+			case len(skipped) > 0:
+				auth.AddFlash(w, r, bc.Sessions, "Applied '"+string(policy)+"' policy, skipped (no Caddy config to change): "+strings.Join(skipped, ", "), "error")
+			default:
 				auth.AddFlash(w, r, bc.Sessions, "Applied '"+string(policy)+"' policy to all domains and reloaded Caddy.", "success")
 			}
 			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
@@ -698,13 +797,12 @@ func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
 			return
 		}
-		if err := botWriteDomainPolicy(dom, policy); err != nil {
-			auth.AddFlash(w, r, bc.Sessions, "Failed to update "+dom+": "+err.Error(), "error")
-			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-			return
+		_, skipped, err := botApplyPolicy(r.Context(), []string{dom}, policy)
+		if err == nil && len(skipped) > 0 {
+			err = errBotNoAnchor
 		}
-		if err := botReloadCaddy(r.Context()); err != nil {
-			auth.AddFlash(w, r, bc.Sessions, "Saved "+dom+", but Caddy reload failed: "+err.Error(), "error")
+		if err != nil {
+			auth.AddFlash(w, r, bc.Sessions, "Failed to update "+dom+": "+err.Error(), "error")
 		} else {
 			auth.AddFlash(w, r, bc.Sessions, "Updated AI & bot policy for "+dom+" to '"+string(policy)+"'.", "success")
 		}

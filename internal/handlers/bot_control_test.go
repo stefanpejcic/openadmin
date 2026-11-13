@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -41,7 +43,7 @@ https://example.com, https://www.example.com {
 		t.Fatalf("initial policy = %q, want allow", got)
 	}
 
-	blk := botRewritePolicy(base, "example.com", botPolicyBlock)
+	blk := botMustRewrite(t, base, botPolicyBlock)
 	if got := botPolicyFromConfig(blk); got != botPolicyBlock {
 		t.Fatalf("after block = %q, want block", got)
 	}
@@ -49,7 +51,7 @@ https://example.com, https://www.example.com {
 		t.Fatalf("expected 2 botcontrol_block directives, got:\n%s", blk)
 	}
 
-	rl := botRewritePolicy(blk, "example.com", botPolicyRateLimit)
+	rl := botMustRewrite(t, blk, botPolicyRateLimit)
 	if got := botPolicyFromConfig(rl); got != botPolicyRateLimit {
 		t.Fatalf("after ratelimit = %q, want ratelimit", got)
 	}
@@ -57,7 +59,7 @@ https://example.com, https://www.example.com {
 		t.Fatalf("expected 2 botcontrol_ratelimit directives, got:\n%s", rl)
 	}
 
-	allow := botRewritePolicy(rl, "example.com", botPolicyAllow)
+	allow := botMustRewrite(t, rl, botPolicyAllow)
 	if got := botPolicyFromConfig(allow); got != botPolicyAllow {
 		t.Fatalf("after allow = %q, want allow", got)
 	}
@@ -223,5 +225,88 @@ func TestServeBotControlPOST(t *testing.T) {
 	bc.ServeBotControl(getRec, getReq)
 	if getRec.Code != http.StatusOK || !strings.Contains(getRec.Body.String(), `"policy":"allow"`) || !strings.Contains(getRec.Body.String(), `"module_enabled":false`) {
 		t.Fatalf("GET disabled json = %d %s", getRec.Code, getRec.Body.String())
+	}
+}
+
+func botMustRewrite(t *testing.T, content string, p botPolicy) string {
+	t.Helper()
+	out, err := botRewritePolicy(content, "example.com", p)
+	if err != nil {
+		t.Fatalf("botRewritePolicy(%s): %v", p, err)
+	}
+	return out
+}
+
+func TestBotRewritePolicyNoAnchor(t *testing.T) {
+	content := "example.com {\n  respond \"hi\"\n}\n"
+	if _, err := botRewritePolicy(content, "example.com", botPolicyBlock); !errors.Is(err, errBotNoAnchor) {
+		t.Fatalf("err = %v, want errBotNoAnchor", err)
+	}
+}
+
+// caddy rejecting the change has to leave every file as it was, or caddy won't start next time
+func TestBotApplyPolicyRollsBack(t *testing.T) {
+	tmp := t.TempDir()
+	origConfs, origReload := CaddyDomainsConfDir, botReloadCaddy
+	t.Cleanup(func() { CaddyDomainsConfDir, botReloadCaddy = origConfs, origReload })
+	CaddyDomainsConfDir = tmp
+
+	conf := "https://%s {\n  route {\n    # botcontrol: allow\n    reverse_proxy http://127.0.0.1:8080\n  }\n}\n"
+	for _, d := range []string{"a.com", "b.com"} {
+		if err := os.WriteFile(filepath.Join(tmp, d+".conf"), []byte(fmt.Sprintf(conf, d)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(tmp, "bare.com.conf"), []byte("bare.com {\n  respond \"hi\"\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	botReloadCaddy = func(context.Context) error { return errors.New("unrecognized directive: rate_limit") }
+	if _, _, err := botApplyPolicy(context.Background(), []string{"a.com", "b.com"}, botPolicyRateLimit); err == nil || !strings.Contains(err.Error(), "rate_limit") {
+		t.Fatalf("err = %v, want caddy's message", err)
+	}
+	for _, d := range []string{"a.com", "b.com"} {
+		if got, _ := os.ReadFile(filepath.Join(tmp, d+".conf")); string(got) != fmt.Sprintf(conf, d) {
+			t.Fatalf("%s not restored:\n%s", d, got)
+		}
+	}
+
+	reloads := 0
+	botReloadCaddy = func(context.Context) error { reloads++; return nil }
+	changed, skipped, err := botApplyPolicy(context.Background(), []string{"a.com", "b.com", "bare.com", "missing.com"}, botPolicyBlock)
+	if err != nil || changed != 2 || reloads != 1 || len(skipped) != 2 {
+		t.Fatalf("changed=%d skipped=%v reloads=%d err=%v", changed, skipped, reloads, err)
+	}
+	if botReadDomainPolicy("a.com") != botPolicyBlock || botReadDomainPolicy("b.com") != botPolicyBlock {
+		t.Fatal("block not saved")
+	}
+}
+
+func TestBotCaddyErrorLine(t *testing.T) {
+	jsonOut := `{"level":"info","ts":1794591082.760779,"msg":"using config from file","file":"/etc/caddy/Caddyfile"}` + "\n" + `{"level":"error","ts":1794591082.7608736,"msg":"adapting config using caddyfile: File to import not found: /etc/openpanel/caddy/botcontrol.conf, at /etc/caddy/Caddyfile:79"}` + "\n"
+	if got := botCaddyErrorLine(jsonOut); got != "adapting config using caddyfile: File to import not found: /etc/openpanel/caddy/botcontrol.conf, at /etc/caddy/Caddyfile:79" {
+		t.Fatalf("json: got %q", got)
+	}
+	if got := botCaddyErrorLine("Error: adapting config using caddyfile: boom\n"); got != "adapting config using caddyfile: boom" {
+		t.Fatalf("plain: got %q", got)
+	}
+}
+
+// a suspended domain's config and an empty one got the marker after the site block, block there broke every reload
+func TestBotRewritePolicyDropsTopLevelLines(t *testing.T) {
+	suspended := "old.example.org {\n  route {\n    file_server\n  }\n}\n    # botcontrol: allow\n"
+	if _, err := botRewritePolicy(suspended, "old.example.org", botPolicyBlock); !errors.Is(err, errBotNoAnchor) {
+		t.Fatalf("suspended: err = %v, want errBotNoAnchor", err)
+	}
+	if out, err := botRewritePolicy(suspended, "old.example.org", botPolicyAllow); err != nil || strings.Contains(out, "botcontrol") {
+		t.Fatalf("allow should drop the stray marker, got %q, %v", out, err)
+	}
+	if _, err := botRewritePolicy("\n    # botcontrol: allow\n", "x.org", botPolicyBlock); !errors.Is(err, errBotNoAnchor) {
+		t.Fatalf("empty: err = %v, want errBotNoAnchor", err)
+	}
+	waf := "https://a.com {\n  route {\n    coraza_waf {\n      directives `\n        SecRuleEngine Off\n      `\n    }\n    reverse_proxy x\n  }\n}\n# botcontrol: block\n"
+	out, err := botRewritePolicy(waf, "a.com", botPolicyBlock)
+	if err != nil || strings.Count(out, "import botcontrol_block") != 1 || strings.Contains(out, "# botcontrol") {
+		t.Fatalf("waf + stray: %q, %v", out, err)
 	}
 }
