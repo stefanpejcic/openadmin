@@ -280,7 +280,7 @@ var mailerSendRun = func(cfg mailerSMTPConfig, to, subject, htmlBody string) err
 	_ = conn.SetDeadline(time.Now().Add(60 * time.Second))
 	client, err := smtp.NewClient(conn, cfg.Server)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return err
 	}
 	defer client.Close()

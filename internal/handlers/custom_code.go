@@ -109,9 +109,9 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if msg, kind := saveWPProfilesForm(r); msg != "" {
-			auth.AddFlash(w, r, c.Sessions, msg, kind)
+			_ = auth.AddFlash(w, r, c.Sessions, msg, kind)
 		} else {
-			auth.AddFlash(w, r, c.Sessions, "Files updated successfully!", "success")
+			_ = auth.AddFlash(w, r, c.Sessions, "Files updated successfully!", "success")
 		}
 	}
 

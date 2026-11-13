@@ -94,14 +94,18 @@ func saveWPProfilesForm(r *http.Request) (string, string) {
 		if cleanSuspensionName(name[0]) == "" {
 			name[0] = p.Name
 		}
-		saveWPProfile(p.Slug, name[0], plugins[0], themes[0])
+		if err := saveWPProfile(p.Slug, name[0], plugins[0], themes[0]); err != nil {
+			return "Failed to save WordPress profile: " + err.Error(), "error"
+		}
 	}
 
 	if del := r.PostFormValue("delete_wp_profile"); del != "" {
 		if !wpProfileExists(del) {
 			return "WordPress profile not found.", "error"
 		}
-		os.Remove(filepath.Join(WPProfilesDir, del+".json"))
+		if err := os.Remove(filepath.Join(WPProfilesDir, del+".json")); err != nil {
+			return "Failed to delete WordPress profile: " + err.Error(), "error"
+		}
 		return "WordPress profile deleted.", "success"
 	}
 
