@@ -1128,3 +1128,22 @@ func TestServeEmailsQueueSortsAndShowsDetails(t *testing.T) {
 		t.Fatalf("a message that left the queue should say so")
 	}
 }
+
+func TestEmailConfigurationFiles(t *testing.T) {
+	conn := emailConnInfo{Address: "info@ex.com", Host: "s1.example.com", IMAPPort: 993, POP3Port: 995, SMTPPort: 465, Security: "SSL/TLS", SSL: true}
+	tb, name, mime, ok := emailConfigurationFile("thunderbird", "info@ex.com", conn)
+	if !ok || name != "info_thunderbird_profile.txt" || mime != "text/plain" || !strings.Contains(tb, "IncomingServer=s1.example.com\nIncomingProtocol=IMAP\nIncomingPort=993\nIncomingSecurity=SSL/TLS") || !strings.Contains(tb, "OutgoingPort=465") {
+		t.Fatalf("thunderbird: %q", tb)
+	}
+	ol, name, _, ok := emailConfigurationFile("outlook", "info@ex.com", conn)
+	if !ok || name != "info_outlook_profile.txt" || !strings.Contains(ol, "Outgoing Server (SMTP): s1.example.com\nPort: 465\nEncryption: SSL/TLS") {
+		t.Fatalf("outlook: %q", ol)
+	}
+	ap, name, mime, ok := emailConfigurationFile("apple", "info@ex.com", conn)
+	if !ok || name != "info_apple_mail.mobileconfig" || mime != "application/x-apple-aspen-config" || !strings.Contains(ap, "<key>IncomingMailServerUseSSL</key>\n                <true />") || !strings.Contains(ap, "<integer>993</integer>") || !strings.Contains(ap, "s1.example.com.ex.com.") {
+		t.Fatalf("apple: %q", ap)
+	}
+	if _, _, _, ok := emailConfigurationFile("evil", "info@ex.com", conn); ok {
+		t.Fatalf("unknown types must be refused")
+	}
+}

@@ -1023,6 +1023,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /emails/reports/view", auth.RequireAdmin(sessions, authOpts, emails.ServeReportsIndex))
 	mux.HandleFunc("GET /emails/data/{filename}", auth.RequireAdmin(sessions, authOpts, emails.ServeShowReport))
 	mux.HandleFunc("GET /emails/webmail/{email}", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsWebmailLink))
+	mux.HandleFunc("GET /emails/configuration/{type}/{email}", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsConfiguration))
 	mux.HandleFunc("GET /emails/domain-limits", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimits))
 	mux.HandleFunc("GET /emails/deliverability", auth.RequireLogin(sessions, authOpts, emails.ServeDeliverability))
 	mux.HandleFunc("POST /emails/domain-limits/save-raw", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimitsSaveRaw))
