@@ -89,7 +89,9 @@ func fetchTagNames(url string) ([]string, error) {
 }
 
 var updatesFallbackVersionRun = func() (string, error) {
-	resp, err := http.Get("https://usage-api.openpanel.org/latest_version")
+	// usage-api.openpanel.org is gone, it 404s
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get("https://api.openpanel.com/v2/statistics/?field=latest_version")
 	if err != nil {
 		return "", err
 	}
