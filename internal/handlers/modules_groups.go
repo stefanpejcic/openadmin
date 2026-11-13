@@ -16,7 +16,7 @@ var moduleAreaRules = []struct {
 	key string
 	re  *regexp.Regexp
 }{
-	{"security", regexp.MustCompile(`^/(waf|security|malware|imunifyav)\b|^/account/(2fa|passkeys|login-history)\b`)},
+	{"security", regexp.MustCompile(`^/(waf|security|malware|imunifyav|server/bot-control)\b|^/account/(2fa|passkeys|login-history)\b`)},
 	{"domains", regexp.MustCompile(`^/domains`)},
 	{"sites", regexp.MustCompile(`^/(wordpress|auto-installer|website-builder|git|sites)\b|/install$`)},
 	{"email", regexp.MustCompile(`^/(emails|webmail)\b`)},
