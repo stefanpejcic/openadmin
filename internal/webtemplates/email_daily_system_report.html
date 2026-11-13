@@ -65,6 +65,21 @@
     <p style="margin:6px 0 0;font-size:14px;color:#111827;"><span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:{{if eq $p.Severity "critical"}}#ef4444{{else}}#eab308{{end}};"></span> {{$p.Title}}{{if $p.IPs}} <span style="color:#6b7280;">({{join $p.IPs ", "}})</span>{{end}}{{if gt $p.Count 1}} <span style="color:#6b7280;">{{$p.Count}}&times;</span>{{end}}{{if $.Multi}} <span style="font-size:12px;color:#6b7280;">{{$name}}</span>{{end}}</p>
     {{end}}{{end}}{{end}}
 
+    {{$backup := false}}{{range .Days}}{{if .Day.Backup}}{{$backup = true}}{{end}}{{end}}
+    {{if $backup}}
+    {{template "email_daily_section" (dict "Title" "Backups" "Sub" "The account backups you configured centrally." "Link" (printf "%sbackups/user#runs" .AdminURL) "LinkText" "Backup log")}}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:20px;">
+      {{range .Days}}{{$name := .Name}}{{with .Day.Backup}}
+      <tr><td style="padding:8px 0;border-top:1px solid #f3f4f6;">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:{{if eq .Tone "ok"}}#10b981{{else if eq .Tone "warn"}}#eab308{{else}}#ef4444{{end}};"></span> <span style="color:#111827;">{{.Status}}</span>{{if $.Multi}} <span style="font-size:12px;color:#6b7280;">{{$name}}</span>{{end}}
+        {{if .Ran}}<div style="color:#6b7280;">Started {{.Started}}{{with .Duration}}, took {{.}}{{end}} &middot; {{.Done}} of {{.Accounts}} accounts{{with .Size}} &middot; {{.}}{{end}}</div>{{with .Contents}}<div style="color:#6b7280;">Backed up {{.}}.</div>{{end}}{{end}}
+        {{range $i, $f := .Failed}}{{if lt $i 5}}<div style="color:#b91c1c;">{{stripSuspendedPrefix $f.Username}}{{if $f.Error}} <span style="color:#6b7280;">{{$f.Error}}</span>{{end}}</div>{{end}}{{end}}
+        {{if gt (len .Failed) 5}}<div style="color:#6b7280;">and {{sub (len .Failed) 5}} more failed accounts</div>{{end}}
+      </td></tr>
+      {{end}}{{end}}
+    </table>
+    {{end}}
+
     {{$mail := false}}{{range .Days}}{{if .Day.Mail}}{{$mail = true}}{{end}}{{end}}
     {{if $mail}}
     {{template "email_daily_section" (dict "Title" "Mail" "Sub" "From each mail server's summary report." "Link" (printf "%semails/reports" .AdminURL) "LinkText" "Reports")}}

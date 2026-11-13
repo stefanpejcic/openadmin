@@ -217,6 +217,62 @@
         </div>
     </div>
 
+    {{$backup := false}}{{range .}}{{if .Day.Backup}}{{$backup = true}}{{end}}{{end}}
+    {{if $backup}}
+    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Backups</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">The account backups you configured centrally, from that day's run.</p>
+        </div>
+        <div class="lg:col-span-2 space-y-6">
+            {{range .}}{{$sd := .}}{{with .Day.Backup}}
+            <div class="space-y-3">
+                {{if $multi}}<h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-gray-50"><span class="inline-block size-2.5 rounded-xs {{$sd.Color}}" aria-hidden="true"></span>{{$sd.Name}}</h3>{{end}}
+                <p class="flex items-start gap-2 text-sm text-gray-900 dark:text-gray-50"><span class="mt-1.5 size-2 shrink-0 rounded-full {{if eq .Tone "ok"}}bg-emerald-500{{else if eq .Tone "warn"}}bg-yellow-500{{else}}bg-red-500{{end}}" aria-hidden="true"></span><span>{{.Status}} <span class="text-gray-500 dark:text-gray-500">{{.Schedule}} schedule.</span></span></p>
+                {{if .Ran}}
+                <dl class="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-4">
+                    <div><dt class="text-sm text-gray-500 dark:text-gray-500">Started</dt><dd class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Started}}</dd></div>
+                    <div><dt class="text-sm text-gray-500 dark:text-gray-500">Took</dt><dd class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{or .Duration "-"}}</dd></div>
+                    <div><dt class="text-sm text-gray-500 dark:text-gray-500">Accounts</dt><dd class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Done}}<span class="text-sm font-normal text-gray-500"> / {{.Accounts}}</span></dd></div>
+                    <div><dt class="text-sm text-gray-500 dark:text-gray-500">Size</dt><dd class="text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{or .Size "-"}}</dd></div>
+                </dl>
+                {{if or .Contents .Excluded .SelfManaged}}<p class="text-sm text-gray-500 dark:text-gray-500">{{with .Contents}}Backed up {{.}}.{{end}}{{if .Excluded}} {{.Excluded}} excluded with backup.off.{{end}}{{if .SelfManaged}} {{.SelfManaged}} run their own backups.{{end}}</p>{{end}}
+                {{if or .Failed .Locked}}
+                <ul role="list" class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+                    {{range .Failed}}
+                    <li class="flex items-start justify-between gap-3 px-3 py-2 text-sm">
+                        <span class="flex min-w-0 items-start gap-2"><span class="mt-1.5 size-2 shrink-0 rounded-full bg-red-500" aria-hidden="true"></span><span class="min-w-0"><span class="block text-gray-900 dark:text-gray-50">{{stripSuspendedPrefix .Username}}</span>{{if .Error}}<span class="block break-words text-xs text-gray-500 dark:text-gray-500">{{.Error}}</span>{{end}}</span></span>
+                        <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500">failed{{if ne .Duration "0s"}} after {{.Duration}}{{end}}</span>
+                    </li>
+                    {{end}}
+                    {{range .Locked}}
+                    <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                        <span class="flex min-w-0 items-center gap-2"><span class="size-2 shrink-0 rounded-full bg-yellow-500" aria-hidden="true"></span><span class="truncate text-gray-900 dark:text-gray-50">{{stripSuspendedPrefix .}}</span></span>
+                        <span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">skipped, already running</span>
+                    </li>
+                    {{end}}
+                </ul>
+                {{end}}
+                {{if .Largest}}
+                <table class="w-full text-sm">
+                    <thead><tr class="border-b border-gray-200 text-left text-xs text-gray-500 dark:border-gray-800 dark:text-gray-500"><th scope="col" class="py-2 pr-4 font-medium">Largest backups</th><th scope="col" class="py-2 pr-4 text-right font-medium">Took</th><th scope="col" class="py-2 text-right font-medium">Size</th></tr></thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    {{range .Largest}}
+                    <tr class="tabular-nums text-gray-900 dark:text-gray-50"><td class="py-2 pr-4">{{stripSuspendedPrefix .Username}}</td><td class="py-2 pr-4 text-right text-gray-500 dark:text-gray-500">{{.Duration}}</td><td class="py-2 text-right">{{or .Size "-"}}</td></tr>
+                    {{end}}
+                    </tbody>
+                </table>
+                {{end}}
+                {{end}}
+                <p class="text-sm"><a href="{{.Link}}" class="text-blue-500 hover:underline hover:underline-offset-4">See the backup log</a></p>
+            </div>
+            {{end}}{{end}}
+        </div>
+    </div>
+    {{end}}
+
     {{$mail := false}}{{range .}}{{if .Day.Mail}}{{$mail = true}}{{end}}{{end}}
     {{if $mail}}
     <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>

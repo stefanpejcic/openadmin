@@ -58,14 +58,16 @@ func TestLoadSummaryDay(t *testing.T) {
 func TestSummaryPageRendersServerHealthAndMail(t *testing.T) {
 	one := &summaryDay{Health: &summaryHealth{PeakLoad: "12.50", PeakLoadAt: "14:05", Runs: 2, Cores: 4, LoadPct: 100, PeakCPU: 75}, Problems: []summaryProblem{{Title: "MySQL is down", Severity: "critical", Count: 1}},
 		Mail: &summaryMail{Received: 110, Bounced: 54, BouncePct: 22, Link: "/emails/data/2026-Nov-12.html"}}
-	two := &summaryDay{Mail: &summaryMail{Received: 7, Link: "/emails/data/2026-Nov-12.html"}}
+	two := &summaryDay{Mail: &summaryMail{Received: 7, Link: "/emails/data/2026-Nov-12.html"},
+		Backup: &summaryBackup{Ran: true, Finished: true, Started: "03:00", Duration: "12m 4s", Accounts: 3, Done: 2, Size: "4.1 GB", Contents: "files, 2 databases", Schedule: "Daily", Link: "/_cluster/open?node=n2&path=backups",
+			Failed: []summaryBackupAccount{{Username: "carol", Error: "s3 unreachable", Duration: "2s"}}, Largest: []summaryBackupAccount{{Username: "alice", Size: "4.0 GB", Duration: "11m 2s"}}, Status: "Failed for 1 of 3 accounts.", Tone: "bad"}}
 	data := dashboardPageData{Summary: &serverSummary{Date: "2026-11-11", DayLabel: "Wednesday", Accounts: 1},
 		SummaryDays: []summaryServerDay{{Name: "s1.example.com", Color: "bg-blue-500", Day: one, MailLink: one.Mail.Link}, {Name: "s2.example.com", Color: "bg-violet-500", Day: two, MailLink: "/_cluster/open?node=n2"}}}
 	out, err := webtemplates.RenderToString("dashboard_summary.html", data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Server health", "12.50", "MySQL is down", ">Mail<", `href="/emails/data/2026-Nov-12.html"`, `href="/_cluster/open?node=n2"`, "s2.example.com", "stroke-red-500", "stroke-yellow-500", "every server in the cluster"} {
+	for _, want := range []string{"Server health", "12.50", "MySQL is down", ">Mail<", `href="/emails/data/2026-Nov-12.html"`, `href="/_cluster/open?node=n2"`, "s2.example.com", "stroke-red-500", "stroke-yellow-500", "every server in the cluster", ">Backups<", "Failed for 1 of 3 accounts.", "s3 unreachable", "12m 4s", "4.0 GB", "files, 2 databases", `href="/_cluster/open?node=n2&amp;path=backups"`} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("summary page is missing %q", want)
 		}
@@ -145,14 +147,14 @@ func TestDailyReportEmailRendersSummary(t *testing.T) {
 	s.AttentionGroups = groupAttention(s.Attention)
 	s.MainProblem = "The main problem is X."
 	days := []summaryServerDay{{Name: "s1.maxhost.rs", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "8.64", LoadPct: 48, Cores: 18, PeakCPU: 78, Disk: 66, Runs: 258, FailedRuns: 1}, Mail: &summaryMail{Received: 143, Bounced: 58, BouncePct: 18}}},
-		{Name: "s2.maxhost.rs", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "14.91", LoadPct: 82, Cores: 18}}}}
+		{Name: "s2.maxhost.rs", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "14.91", LoadPct: 82, Cores: 18}, Backup: &summaryBackup{Ran: true, Finished: true, Started: "03:00", Duration: "31s", Accounts: 4, Done: 4, Size: "1.2 GB", Status: "All 4 accounts backed up.", Tone: "ok"}}}}
 	out, err := webtemplates.RenderToString("email_daily_system_report.html", map[string]interface{}{
 		"Title": "Daily Usage Report", "Hostname": "s1.maxhost.rs", "AdminURL": "https://s1.maxhost.rs:2087/", "Summary": s, "Days": days, "Multi": true, "TotalUsers": 46,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Wednesday, 11 November", "603,330", "koraciznanja", "ImunifyAV found 20 malicious files", "and 1 more accounts on the daily summary", "The main problem is X.", "elit.rs", "s2.maxhost.rs", "14.91", "18%</span>", "dashboard/summary?date=2026-11-11", "emails/reports", ">46<"} {
+	for _, want := range []string{"Wednesday, 11 November", "603,330", "koraciznanja", "ImunifyAV found 20 malicious files", "and 1 more accounts on the daily summary", "The main problem is X.", "elit.rs", "s2.maxhost.rs", "14.91", "18%</span>", "dashboard/summary?date=2026-11-11", "emails/reports", ">46<", "All 4 accounts backed up.", "took 31s", "4 of 4 accounts", "backups/user#runs"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("daily report email is missing %q", want)
 		}
