@@ -26,11 +26,14 @@ func withScratchCustomCodePaths(t *testing.T) {
 	for k := range origPaths {
 		newPaths[k] = filepath.Join(dir, k+".txt")
 	}
+	origProfiles := WPProfilesDir
 	customCodeFilePaths = newPaths
 	CustomCodeRestartFlagPath = filepath.Join(dir, "restart_needed")
+	WPProfilesDir = filepath.Join(dir, "profiles")
 	t.Cleanup(func() {
 		customCodeFilePaths = origPaths
 		CustomCodeRestartFlagPath = origFlag
+		WPProfilesDir = origProfiles
 	})
 }
 
@@ -274,5 +277,47 @@ func TestServeCustomCodeWelcomeEmailIsEnterpriseOnly(t *testing.T) {
 	}
 	if string(saved) != "<p>{{EMAIL}}</p>" {
 		t.Fatalf("expected saved content to match, got %q", saved)
+	}
+}
+
+func TestServeCustomCodeWPProfilesAddEditDelete(t *testing.T) {
+	withScratchCustomCodePaths(t)
+	srv, client := newCustomCodeTestServer(t, &CustomCode{}, "admin")
+
+	resp, err := client.PostForm(srv.URL+"/settings/custom-code", url.Values{
+		"new_wp_profile_name":    {"E-commerce Shop"},
+		"new_wp_profile_plugins": {"woocommerce\n\n woocommerce \nwordfence\n"},
+		"new_wp_profile_themes":  {"storefront"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	ps := listWPProfiles()
+	if len(ps) != 1 || ps[0].Slug != "e-commerce-shop" || ps[0].Name != "E-commerce Shop" || strings.Join(ps[0].Plugins, ",") != "woocommerce,wordfence" || strings.Join(ps[0].Themes, ",") != "storefront" {
+		t.Fatalf("unexpected profiles after add: %+v", ps)
+	}
+
+	resp, err = client.PostForm(srv.URL+"/settings/custom-code", url.Values{
+		"wp_profile_name__e-commerce-shop":    {"Shop"},
+		"wp_profile_plugins__e-commerce-shop": {"woocommerce"},
+		"wp_profile_themes__e-commerce-shop":  {""},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	ps = listWPProfiles()
+	if len(ps) != 1 || ps[0].Name != "Shop" || len(ps[0].Plugins) != 1 || len(ps[0].Themes) != 0 {
+		t.Fatalf("unexpected profiles after edit: %+v", ps)
+	}
+
+	resp, err = client.PostForm(srv.URL+"/settings/custom-code", url.Values{"delete_wp_profile": {"e-commerce-shop"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if ps = listWPProfiles(); len(ps) != 0 {
+		t.Fatalf("expected profile deleted, got %+v", ps)
 	}
 }

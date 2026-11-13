@@ -108,7 +108,11 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		auth.AddFlash(w, r, c.Sessions, "Files updated successfully!", "success")
+		if msg, kind := saveWPProfilesForm(r); msg != "" {
+			auth.AddFlash(w, r, c.Sessions, msg, kind)
+		} else {
+			auth.AddFlash(w, r, c.Sessions, "Files updated successfully!", "success")
+		}
 	}
 
 	fileContents := make(map[string]string, len(customCodeFieldOrder))
@@ -140,6 +144,7 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 		"PreStartup":    fileContents["pre_startup"],
 		"WPThemes":      fileContents["wp_themes"],
 		"WPPlugins":     fileContents["wp_plugins"],
+		"WPProfiles":    listWPProfiles(),
 	}
 	if err := webtemplates.Render(w, "settings_custom_code.html", mergeChrome(data, r, "Custom code")); err != nil {
 		log.Printf("render settings_custom_code.html: %v", err)

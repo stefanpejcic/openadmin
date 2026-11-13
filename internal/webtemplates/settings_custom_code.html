@@ -222,7 +222,7 @@
 
     <div>
         <h2 id="wp-plugins" class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">WordPress plugins set</h2>
-        <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">List of WordPress plugins to automatically install for all new WordPress installations.</p>
+        <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Global default, installed on new WordPress sites when the user keeps the <em>Default</em> set on the install form. One plugin slug or zip URL per line. For other sets users can pick, add <a href="#wp-profiles" class="text-blue-500 hover:underline hover:underline-offset-4">WordPress profiles</a> below.</p>
     <button
       type="button"
       @click="restoreDefault"
@@ -259,7 +259,7 @@
 
     <div>
         <h2 id="wp-themes" class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">WordPress themes set</h2>
-        <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">List of WordPress themes to automatically install for all new WordPress installations.</p>
+        <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Global default, installed on new WordPress sites when the user keeps the <em>Default</em> set on the install form. One theme slug or zip URL per line. For other sets users can pick, add <a href="#wp-profiles" class="text-blue-500 hover:underline hover:underline-offset-4">WordPress profiles</a> below.</p>
     <button
       type="button"
       @click="restoreDefault"
@@ -286,6 +286,58 @@
         </div>
     </div>
 
+</div>
+
+
+<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+
+<div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+
+    <div>
+        <h2 id="wp-profiles" class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">WordPress profiles</h2>
+        <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Named plugin and theme sets, e.g. E-commerce or Blog. Users pick one on the WordPress install form instead of the global default, or install with no extra plugins and themes. There are none until you add one.</p>
+    </div>
+
+    <div class="lg:col-span-2 space-y-3">
+        {{range .WPProfiles}}
+        <details class="group rounded-md border border-gray-200 dark:border-gray-800">
+            <summary class="flex cursor-pointer list-none select-none items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-50 [&::-webkit-details-marker]:hidden outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 -rotate-90 text-gray-400 transition-transform duration-150 group-open:rotate-0 dark:text-gray-600"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg>{{.Name}} <span class="text-xs font-normal text-gray-500 dark:text-gray-500">{{len .Plugins}} plugins, {{len .Themes}} themes</span></summary>
+            <div class="space-y-3 border-t border-gray-200 p-4 dark:border-gray-800">
+                <div class="flex items-end gap-2">
+                    <div class="grow">
+                        <label for="wp_profile_name__{{.Slug}}" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Name</label>
+                        <input type="text" id="wp_profile_name__{{.Slug}}" name="wp_profile_name__{{.Slug}}" value="{{.Name}}" maxlength="100" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2">
+                    </div>
+                    <button type="button" value="{{.Slug}}" onclick="const b = this; opConfirm('Delete this WordPress profile?').then(yes => { if (!yes) return; const i = document.createElement('input'); i.type = 'hidden'; i.name = 'delete_wp_profile'; i.value = b.value; b.form.appendChild(i); b.form.requestSubmit(); })" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400">Delete</button>
+                </div>
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div><label  class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Plugins</label>
+                    <textarea name="wp_profile_plugins__{{.Slug}}" aria-label="Plugins" placeholder="woocommerce" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-2 text-sm min-h-24 font-mono mt-2" rows="8" spellcheck="false" autocapitalize="off" autocomplete="off">{{.PluginsText}}</textarea></div>
+                    <div><label  class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Themes</label>
+                    <textarea name="wp_profile_themes__{{.Slug}}" aria-label="Themes" placeholder="storefront" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-2 text-sm min-h-24 font-mono mt-2" rows="8" spellcheck="false" autocapitalize="off" autocomplete="off">{{.ThemesText}}</textarea></div>
+                </div>
+            </div>
+        </details>
+        {{end}}
+
+        <details class="group rounded-md border border-dashed border-gray-300 dark:border-gray-800" {{if not .WPProfiles}}open{{end}}>
+            <summary class="flex cursor-pointer list-none select-none items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-50 [&::-webkit-details-marker]:hidden outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0 -rotate-90 text-gray-400 transition-transform duration-150 group-open:rotate-0 dark:text-gray-600"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z"></path></svg>Add WordPress profile</summary>
+            <div class="space-y-3 border-t border-gray-200 p-4 dark:border-gray-800">
+                <div>
+                    <label for="new_wp_profile_name" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Name</label>
+                    <input type="text" id="new_wp_profile_name" name="new_wp_profile_name" maxlength="100" placeholder="E-commerce (WooCommerce)" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2">
+                </div>
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div><label for="new_wp_profile_plugins" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Plugins</label>
+                    <textarea id="new_wp_profile_plugins" name="new_wp_profile_plugins"  placeholder="woocommerce&#10;woocommerce-payments" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-2 text-sm min-h-24 font-mono mt-2" rows="8" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></div>
+                    <div><label for="new_wp_profile_themes" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Themes</label>
+                    <textarea id="new_wp_profile_themes" name="new_wp_profile_themes"  placeholder="storefront" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-2 text-sm min-h-24 font-mono mt-2" rows="8" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></div>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-500">One slug or zip URL per line. Saved with the rest of the page when you click Save files.</p>
+            </div>
+        </details>
+    </div>
 </div>
 
 
