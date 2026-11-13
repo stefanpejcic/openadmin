@@ -24,6 +24,11 @@
       loading: false,
       error: null,
       diskLoaded: false,
+      volumes: [],
+      volumesLoading: false,
+      volumesError: null,
+      volumesLoaded: false,
+      volumeOpen: null,
       containerName: '{{lastSegment .Username `_`}}',
 
       loadDiskUsage() {
@@ -49,6 +54,46 @@
               .finally(() => {
                   this.loading = false;
               });
+      },
+
+      loadVolumes(force) {
+          if (this.volumesLoaded && !force) return;
+          this.volumesLoaded = true;
+          this.volumesLoading = true;
+          this.volumesError = null;
+          fetch(`/client/volumes/{{.Username}}`)
+              .then(res => res.json())
+              .then(data => {
+                  if (data && data.error) {
+                      this.volumesError = data.error;
+                      this.volumes = [];
+                  } else {
+                      this.volumes = Array.isArray(data) ? data : [];
+                  }
+              })
+              .catch(err => {
+                  this.volumesError = 'Failed to load volumes';
+                  console.error(err);
+              })
+              .finally(() => { this.volumesLoading = false; });
+      },
+
+      get volumesTotal() {
+          return this.volumes.reduce((sum, v) => sum + (v.size || 0), 0);
+      },
+
+      fmtBytes(b) {
+          if (b >= 1e12) return (b / 1e12).toFixed(2) + ' TB';
+          if (b >= 1e9) return (b / 1e9).toFixed(2) + ' GB';
+          if (b >= 1e6) return (b / 1e6).toFixed(2) + ' MB';
+          if (b >= 1e3) return (b / 1e3).toFixed(2) + ' KB';
+          return (b || 0) + ' B';
+      },
+
+      fmtDate(d) {
+          if (!d) return '';
+          const t = new Date(d);
+          return isNaN(t) ? d : t.toLocaleString();
       },
 
       fetchCustomMessage() {
@@ -79,6 +124,7 @@
           else if (hash === '#unsuspend') this.activeTab = 'unsuspend';
           else if (hash === '#export') this.activeTab = 'export';
           else if (hash === '#storage') this.activeTab = 'storage';
+          else if (hash === '#volumes') this.activeTab = 'volumes';
           else if (hash === '#edit') this.activeTab = 'edit';
           else if (hash === '#permissions') this.activeTab = 'permissions';
           else if (hash === '#delete') this.activeTab = 'delete';
@@ -87,6 +133,7 @@
 
           this.$nextTick(() => {
               if (this.activeTab === 'storage') this.loadDiskUsage();
+              else if (this.activeTab === 'volumes') this.loadVolumes();
               else if (this.activeTab === 'activity') $store?.activityStore?.fetchLogs();
               else if (this.activeTab === 'logins') $store?.loginsStore?.fetchloginLogs();
               else if (this.activeTab === 'edit' || this.activeTab === 'delete') {
@@ -161,6 +208,9 @@
                 </li>
                 <li class="flex" role="presentation">
                     <button type="button" role="tab" :aria-selected="(activeTab === 'storage').toString()" @click="activeTab = 'storage'; loadDiskUsage()" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Storage</button>
+                </li>
+                <li class="flex" role="presentation">
+                    <button type="button" role="tab" :aria-selected="(activeTab === 'volumes').toString()" @click="activeTab = 'volumes'; loadVolumes()" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Volumes</button>
                 </li>
                 <li class="flex" role="presentation">
                     <button type="button" role="tab" :aria-selected="(activeTab === 'usage').toString()" @click="activeTab = 'usage'" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Resource usage</button>
@@ -448,6 +498,12 @@
                         <a href="#storage" @click.prevent="activeTab = 'storage'; loadDiskUsage(); window.location.hash = 'storage'" :aria-current="activeTab === 'storage' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M4 8H20V5H4V8ZM14 19V10H10V19H14ZM16 19H20V10H16V19ZM8 19V10H4V19H8ZM3 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3Z"/></svg>
                            Storage
+                        </a>
+                     </li>
+                     <li>
+                        <a href="#volumes" @click.prevent="activeTab = 'volumes'; loadVolumes(); window.location.hash = 'volumes'" :aria-current="activeTab === 'volumes' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3H19C19.5523 3 20 3.44772 20 4V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4C4 3.44772 4.44772 3 5 3ZM6 5V19H18V5H6ZM7 15H17V17H7V15ZM8 7H16V9H8V7Z"/></svg>
+                           Volumes
                         </a>
                      </li>
                   </ul>
@@ -1400,6 +1456,7 @@
 
     getRowSize(type) {
       const row = diskUsage.find((r) => r.Type === type);
+      if (row && typeof row.RawSize === 'number') return row.RawSize;
       return this.parseSize(row && row.Size);
     },
     get usedVolumes() {
@@ -1454,7 +1511,7 @@
     </li>
     <li class="flex items-center space-x-2">
       <span class="size-3 shrink-0 rounded-sm bg-violet-500" aria-hidden="true"></span>
-      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(usedImages)"></span> Images (system)</span>
+      <span><span class="font-medium text-gray-700 dark:text-gray-300" x-text="format(usedImages)"></span> Images (user-pulled)</span>
     </li>
     <li class="flex items-center space-x-2">
       <span class="size-3 shrink-0 rounded-sm bg-gray-200 dark:bg-gray-800" aria-hidden="true"></span>
@@ -1492,6 +1549,139 @@
 </template>
                </div>
                <!-- END STORAGE -->
+
+               <!-- VOLUMES -->
+               <div x-show="activeTab === 'volumes'" x-cloak>
+                  <div class="flex flex-col gap-2 p-6 sm:flex-row sm:items-center sm:justify-between">
+                     <div>
+                        <h2 class="text-sm text-gray-500 dark:text-gray-500">Volumes</h2>
+                        <p class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50" x-text="volumesLoading ? '…' : volumes.length + (volumes.length === 1 ? ' volume' : ' volumes') + ' · ' + fmtBytes(volumesTotal)"></p>
+                     </div>
+                     <button type="button" @click="loadVolumes(true)" :disabled="volumesLoading" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Refresh</button>
+                  </div>
+
+                  <template x-if="volumesLoading">
+                     <div class="flex h-48 w-full items-center justify-center gap-2 p-6 text-center text-sm text-gray-500 dark:text-gray-500">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="remixicon size-4 shrink-0 animate-spin"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".25" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                        <p>Loading volumes…</p>
+                     </div>
+                  </template>
+
+                  <template x-if="!volumesLoading && volumesError">
+                     <div class="m-6 flex gap-3 rounded-md bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/70 dark:text-red-500" role="alert"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 10.5858L9.17157 7.75736L7.75736 9.17157L10.5858 12L7.75736 14.8284L9.17157 16.2426L12 13.4142L14.8284 16.2426L16.2426 14.8284L13.4142 12L16.2426 9.17157L14.8284 7.75736L12 10.5858Z"/></svg><span x-text="volumesError"></span></div>
+                  </template>
+
+                  <template x-if="!volumesLoading && !volumesError">
+                     <div class="overflow-x-auto">
+                        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                           <thead>
+                              <tr class="sm:[&_td:last-child]:pr-6 sm:[&_th:last-child]:pr-6 sm:[&_td:first-child]:pl-6 sm:[&_th:first-child]:pl-6">
+                                 <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Volume</th>
+                                 <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Purpose</th>
+                                 <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Used by</th>
+                                 <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Created</th>
+                                 <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
+                              </tr>
+                           </thead>
+                           <template x-for="v in volumes" :key="'vol-' + v.name">
+                              <tbody class="border-b border-gray-200 dark:border-gray-800">
+                                 <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/60 sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6" @click="volumeOpen = volumeOpen === v.name ? null : v.name">
+                                    <td class="p-4 text-sm">
+                                       <div class="flex items-start gap-2">
+                                          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon mt-0.5 size-4 shrink-0 text-gray-400 transition-transform" :class="volumeOpen === v.name ? 'rotate-90' : ''"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                                          <div>
+                                             <div class="font-medium text-gray-900 dark:text-gray-50" x-text="v.name"></div>
+                                             <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-500" x-show="v.description" x-text="v.description"></div>
+                                          </div>
+                                       </div>
+                                    </td>
+                                    <td class="whitespace-nowrap p-4 text-sm">
+                                       <span x-show="v.purpose" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset"
+                                          :class="v.purpose === 'database' ? 'bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20' : (v.purpose === 'storage' ? 'bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20' : 'bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20')"
+                                          x-text="v.purpose"></span>
+                                       <span x-show="!v.purpose" class="text-gray-400">—</span>
+                                    </td>
+                                    <td class="p-4 text-sm text-gray-600 dark:text-gray-400">
+                                       <template x-if="v.used_by.length === 0"><span class="text-gray-400">Not mounted</span></template>
+                                       <div class="flex flex-wrap gap-1">
+                                          <template x-for="m in v.used_by" :key="v.name + m.container + m.destination">
+                                             <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-700 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20" :title="m.destination + (m.rw ? '' : ' (read-only)')">
+                                                <span class="size-1.5 shrink-0 rounded-full" :class="m.state === 'running' ? 'bg-emerald-500' : 'bg-gray-400'"></span>
+                                                <span x-text="m.container"></span>
+                                             </span>
+                                          </template>
+                                       </div>
+                                    </td>
+                                    <td class="whitespace-nowrap p-4 text-sm text-gray-600 dark:text-gray-400" x-text="fmtDate(v.created_at)"></td>
+                                    <td class="whitespace-nowrap p-4 text-right text-sm font-medium tabular-nums text-gray-900 dark:text-gray-50" x-text="v.size_known ? fmtBytes(v.size) : '—'"></td>
+                                 </tr>
+                                 <tr x-show="volumeOpen === v.name" x-cloak>
+                                    <td colspan="5" class="bg-gray-50 px-4 py-4 text-sm dark:bg-gray-900/40 sm:pl-6">
+                                       <dl class="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-3">
+                                          <div class="sm:col-span-2">
+                                             <dt class="text-xs text-gray-500 dark:text-gray-500">Mountpoint on host</dt>
+                                             <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50" x-text="v.mountpoint"></dd>
+                                          </div>
+                                          <div>
+                                             <dt class="text-xs text-gray-500 dark:text-gray-500">Driver / scope</dt>
+                                             <dd class="mt-0.5 text-gray-900 dark:text-gray-50" x-text="(v.driver || '—') + ' / ' + (v.scope || '—')"></dd>
+                                          </div>
+                                          <div>
+                                             <dt class="text-xs text-gray-500 dark:text-gray-500">Compose project</dt>
+                                             <dd class="mt-0.5 text-gray-900 dark:text-gray-50" x-text="v.project || '—'"></dd>
+                                          </div>
+                                          <div>
+                                             <dt class="text-xs text-gray-500 dark:text-gray-500">Links</dt>
+                                             <dd class="mt-0.5 tabular-nums text-gray-900 dark:text-gray-50" x-text="v.size_known ? v.links : '—'"></dd>
+                                          </div>
+                                          <div>
+                                             <dt class="text-xs text-gray-500 dark:text-gray-500">Size</dt>
+                                             <dd class="mt-0.5 tabular-nums text-gray-900 dark:text-gray-50" x-text="v.size_known ? fmtBytes(v.size) + ' (' + v.size.toLocaleString() + ' bytes)' : 'unknown'"></dd>
+                                          </div>
+                                          <div class="sm:col-span-3" x-show="v.used_by.length">
+                                             <dt class="text-xs text-gray-500 dark:text-gray-500">Mounted in</dt>
+                                             <dd class="mt-1 space-y-1">
+                                                <template x-for="m in v.used_by" :key="'m-' + v.name + m.container + m.destination">
+                                                   <div class="flex flex-wrap items-center gap-x-2 text-gray-900 dark:text-gray-50">
+                                                      <span class="font-medium" x-text="m.container"></span>
+                                                      <span class="text-xs text-gray-500 dark:text-gray-500" x-text="m.state"></span>
+                                                      <span class="font-mono text-xs text-gray-600 dark:text-gray-400" x-text="'→ ' + m.destination"></span>
+                                                      <span class="text-xs text-gray-500 dark:text-gray-500" x-text="m.rw ? 'read-write' : 'read-only'"></span>
+                                                   </div>
+                                                </template>
+                                             </dd>
+                                          </div>
+                                          <div class="sm:col-span-3" x-show="Object.keys(v.labels || {}).length">
+                                             <dt class="text-xs text-gray-500 dark:text-gray-500">Labels</dt>
+                                             <dd class="mt-1 space-y-1">
+                                                <template x-for="[k, val] in Object.entries(v.labels || {})" :key="'l-' + v.name + k">
+                                                   <div class="break-all font-mono text-xs"><span class="text-gray-500 dark:text-gray-500" x-text="k + '='"></span><span class="text-gray-900 dark:text-gray-50" x-text="val"></span></div>
+                                                </template>
+                                             </dd>
+                                          </div>
+                                          <div class="sm:col-span-3" x-show="Object.keys(v.options || {}).length">
+                                             <dt class="text-xs text-gray-500 dark:text-gray-500">Options</dt>
+                                             <dd class="mt-1 space-y-1">
+                                                <template x-for="[k, val] in Object.entries(v.options || {})" :key="'o-' + v.name + k">
+                                                   <div class="break-all font-mono text-xs"><span class="text-gray-500 dark:text-gray-500" x-text="k + '='"></span><span class="text-gray-900 dark:text-gray-50" x-text="val"></span></div>
+                                                </template>
+                                             </dd>
+                                          </div>
+                                       </dl>
+                                    </td>
+                                 </tr>
+                              </tbody>
+                           </template>
+                           <tbody x-show="volumes.length === 0">
+                              <tr>
+                                 <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">This user has no volumes.</td>
+                              </tr>
+                           </tbody>
+                        </table>
+                     </div>
+                  </template>
+               </div>
+               <!-- END VOLUMES -->
 
                <!-- EDIT -->
                <div x-show="activeTab === 'edit'" class="p-4 sm:p-6" x-cloak>

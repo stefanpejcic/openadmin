@@ -1550,6 +1550,14 @@ func (u *Users) ServeUserDiskInfo(w http.ResponseWriter, r *http.Request) {
 			writeJSONStatus(w, http.StatusInternalServerError, map[string]string{"error": "invalid JSON in podman output"})
 			return
 		}
+		// images row counts the shared store too, swap it for only the user's own images
+		if strings.Contains(line, `"Type":"Images"`) {
+			if row, ok := userOwnImagesRow(context); ok {
+				if b, err := json.Marshal(row); err == nil {
+					line = string(b)
+				}
+			}
+		}
 		data = append(data, json.RawMessage(line))
 	}
 	writeJSON(w, data)

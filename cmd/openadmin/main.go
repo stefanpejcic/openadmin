@@ -754,6 +754,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /json/ips", auth.RequireLogin(sessions, authOpts, users.ServeIPs))
 	mux.HandleFunc("GET /get_resource_usage_history/{username}", auth.RequireLogin(sessions, authOpts, users.ServeResourceUsageHistory))
 	mux.HandleFunc("GET /client/disk/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserDiskInfo))
+	mux.HandleFunc("GET /client/volumes/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserVolumes))
 	// wildcard segment instead of a literal "user-" prefix, see ServeUserLog's comment; one more path segment than /json/{resource} above so they don't collide
 	mux.HandleFunc("GET /json/{userLogType}/{username}", auth.RequireLogin(sessions, authOpts, users.ServeUserLog))
 	mux.HandleFunc("GET /get_custom_message_for_user/{username}", auth.RequireLogin(sessions, authOpts, users.HandleCustomMessage))

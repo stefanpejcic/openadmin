@@ -53,6 +53,7 @@ func newUsersTestServer(t *testing.T, u *Users, role string) (*httptest.Server, 
 	mux.HandleFunc("POST /user/{action}/{username}", u.HandleManage)
 	mux.HandleFunc("GET /get_resource_usage_history/{username}", u.ServeResourceUsageHistory)
 	mux.HandleFunc("GET /client/disk/{username}", u.ServeUserDiskInfo)
+	mux.HandleFunc("GET /client/volumes/{username}", u.ServeUserVolumes)
 	mux.HandleFunc("GET /json/{userLogType}/{username}", u.ServeUserLog)
 	mux.HandleFunc("GET /get_custom_message_for_user/{username}", u.HandleCustomMessage)
 	mux.HandleFunc("POST /get_custom_message_for_user/{username}", u.HandleCustomMessage)
@@ -696,6 +697,7 @@ func TestServeUserDiskInfoReturnsJSONArray(t *testing.T) {
 		return "{\"Type\":\"Images\",\"Total\":1}\n{\"Type\":\"Containers\",\"Total\":2}\n", "", 0, nil
 	}
 	t.Cleanup(func() { userDiskInfoRun = origRun })
+	stubUserPodman(t, func(args []string) string { return "not json" })
 
 	mysqlDB, _, err := sqlmock.New()
 	if err != nil {
