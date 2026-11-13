@@ -41,8 +41,21 @@ type userSummary struct {
 		Link   string `json:"link"`
 	} `json:"attention"`
 	Look []struct {
-		Title string `json:"title"`
+		Title  string `json:"title"`
+		Detail string `json:"detail"`
+		Link   string `json:"link"`
 	} `json:"look"`
+	Databases []struct {
+		Engine         string `json:"engine"`
+		Feature        string `json:"feature"`
+		Databases      int    `json:"databases"`
+		Size           int64  `json:"size"`
+		Queries        int64  `json:"queries"`
+		Connections    int64  `json:"connections"`
+		MaxConnections int64  `json:"max_connections"`
+		Errors         int    `json:"errors"`
+		Refused        int64  `json:"refused"`
+	} `json:"databases"`
 	Websites []struct {
 		Name         string `json:"name"`
 		Requests     int    `json:"requests"`
@@ -233,6 +246,24 @@ func trimDomainTitle(title, domain string) string {
 	return title
 }
 
+// summaryDatabase is one account's database server on the busiest list
+type summaryDatabase struct {
+	Server, Link, Username, Engine string
+	Queries, Size, Errors          string
+	HasErrors                      bool
+	Share                          int
+}
+
+// isDatabaseFinding is a look item from the account's databases, the admin sees those under the account like the urgent ones
+func isDatabaseFinding(link string) bool {
+	for _, p := range []string{"/mysql", "/postgresql", "/mongodb", "/containers/logs?container=mysql", "/containers/logs?container=mariadb", "/containers/logs?container=postgres", "/containers/logs?container=mongodb"} {
+		if strings.HasPrefix(link, p) {
+			return true
+		}
+	}
+	return false
+}
+
 // summarySite is one website on the busiest list
 type summarySite struct {
 	Server   string
@@ -270,6 +301,8 @@ type serverSummary struct {
 	// one problem most accounts share, e.g. the same plugin everywhere, "" when nothing stands out
 	MainProblem string
 	Sites       []summarySite
+	// database servers with the most queries that day, each account's MySQL, PostgreSQL or MongoDB on its own row
+	Databases []summaryDatabase
 	// findings before the list is cut to 8, the collapsed widget shows this count
 	AttentionTotal int
 }
@@ -426,6 +459,12 @@ func summarizeDay(day string, found []userSummary) *serverSummary {
 		link       string
 	}
 	var sites []site
+	type dbRow struct {
+		server, link, user, engine string
+		queries, size              int64
+		errors                     int
+	}
+	var dbs []dbRow
 	lookAccounts := map[string]bool{}
 	for _, s := range found {
 		for _, w := range s.Websites {
@@ -453,9 +492,22 @@ func summarizeDay(day string, found []userSummary) *serverSummary {
 			domain := findingDomain(it.Link, title+" "+detail, siteNames)
 			out.Attention = append(out.Attention, summaryFinding{Server: s.Server, Link: s.Link, Username: s.Username, Title: trimDomainTitle(title, domain), Detail: detail, Domain: domain})
 		}
-		if len(s.Look) > 0 {
-			out.LookCount += len(s.Look)
+		looks := 0
+		for _, it := range s.Look {
+			if isDatabaseFinding(it.Link) {
+				out.Attention = append(out.Attention, summaryFinding{Server: s.Server, Link: s.Link, Username: s.Username, Title: html.UnescapeString(it.Title), Detail: html.UnescapeString(it.Detail)})
+				continue
+			}
+			looks++
+		}
+		if looks > 0 {
+			out.LookCount += looks
 			lookAccounts[s.Username] = true
+		}
+		for _, d := range s.Databases {
+			if d.Queries > 0 || d.Size > 0 || d.Errors > 0 {
+				dbs = append(dbs, dbRow{s.Server, s.Link, s.Username, d.Engine, d.Queries, d.Size, d.Errors})
+			}
 		}
 	}
 	out.LookAccounts = len(lookAccounts)
@@ -480,6 +532,29 @@ func summarizeDay(day string, found []userSummary) *serverSummary {
 	}
 	for _, s := range sites {
 		out.Sites = append(out.Sites, summarySite{Server: s.server, Link: s.link, Name: s.name, Username: s.user, Requests: commaNum(s.requests), Share: max(s.requests*100/sites[0].requests, 1)})
+	}
+
+	sort.Slice(dbs, func(i, j int) bool {
+		if dbs[i].queries != dbs[j].queries {
+			return dbs[i].queries > dbs[j].queries
+		}
+		return dbs[i].size > dbs[j].size
+	})
+	if len(dbs) > 5 {
+		dbs = dbs[:5]
+	}
+	for _, d := range dbs {
+		row := summaryDatabase{Server: d.server, Link: d.link, Username: d.user, Engine: d.engine, Size: humanSize(d.size), HasErrors: d.errors > 0}
+		if d.queries >= 0 {
+			row.Queries = commaNum(int(d.queries))
+		}
+		if d.errors > 0 {
+			row.Errors = countWord(d.errors, "error", "errors")
+		}
+		if dbs[0].queries > 0 {
+			row.Share = max(int(max(d.queries, 0)*100/dbs[0].queries), 1)
+		}
+		out.Databases = append(out.Databases, row)
 	}
 
 	// the page shows the first few and the rest behind "show all", the widget only the count

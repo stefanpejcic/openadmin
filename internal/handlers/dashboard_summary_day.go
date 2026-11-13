@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net"
 	"openadmin/internal/cluster"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -48,7 +50,12 @@ type summaryProblem struct {
 	Title, Severity, First string
 	Count                  int
 	Resolved               bool
+	// the addresses of alerts that only differ by IP, like an admin logging in from new IPs, merged into one row
+	IPs []string
 }
+
+// trailingIPRe splits "Admin stefan accessed from new IP: 1.2.3.4" into the alert and its address
+var trailingIPRe = regexp.MustCompile(`^(.+?):\s*([0-9a-fA-F.:]+)$`)
 
 type summaryMail struct {
 	Received, Delivered, Deferred, Bounced, Rejected int
@@ -224,13 +231,20 @@ func summaryProblemsFor(day string, limit int) ([]summaryProblem, int) {
 		if !strings.HasPrefix(n.Time, day) && !strings.HasPrefix(n.LastSeen, day) {
 			continue
 		}
-		p := byTitle[n.Title]
+		title, ip := n.Title, ""
+		if m := trailingIPRe.FindStringSubmatch(n.Title); m != nil && net.ParseIP(m[2]) != nil {
+			title, ip = m[1], m[2]
+		}
+		p := byTitle[title]
 		if p == nil {
-			p = &summaryProblem{Title: n.Title, Severity: n.Severity, Resolved: true}
-			if strings.HasPrefix(n.Time, day) && len(n.Time) >= 16 {
-				p.First = n.Time[11:16]
-			}
-			byTitle[n.Title] = p
+			p = &summaryProblem{Title: title, Severity: n.Severity, Resolved: true}
+			byTitle[title] = p
+		}
+		if strings.HasPrefix(n.Time, day) && len(n.Time) >= 16 && (p.First == "" || n.Time[11:16] < p.First) {
+			p.First = n.Time[11:16]
+		}
+		if ip != "" && !slices.Contains(p.IPs, ip) {
+			p.IPs = append(p.IPs, ip)
 		}
 		p.Count += max(n.Count, 1)
 		if n.Severity == "critical" {
@@ -242,6 +256,13 @@ func summaryProblemsFor(day string, limit int) ([]summaryProblem, int) {
 	}
 	list := make([]summaryProblem, 0, len(byTitle))
 	for _, p := range byTitle {
+		// one address reads like the original alert, several get listed under it
+		if len(p.IPs) == 1 {
+			p.Title += ": " + p.IPs[0]
+			p.IPs = nil
+		} else if strings.HasSuffix(p.Title, " IP") {
+			p.Title += "s"
+		}
 		list = append(list, *p)
 	}
 	sort.Slice(list, func(i, j int) bool {

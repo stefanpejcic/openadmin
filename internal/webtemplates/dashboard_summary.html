@@ -125,6 +125,36 @@
         </div>
     </div>
 
+    {{if .Databases}}
+    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Busiest databases</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Database servers with the most queries that day.</p>
+        </div>
+        <div class="lg:col-span-2">
+            <ul role="list" id="summary-databases" class="space-y-3">
+                {{range .Databases}}
+                <li class="text-sm">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="flex min-w-0 items-center gap-2 truncate text-gray-900 dark:text-gray-50">{{.Engine}} <a href="{{if .Link}}{{.Link}}{{else}}/users/{{.Username}}{{end}}" class="text-gray-500 hover:text-gray-900 hover:underline dark:hover:text-gray-50">{{stripSuspendedPrefix .Username}}</a>{{if .HasErrors}}<span class="inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20">{{.Errors}}</span>{{end}}</span>
+                        <span class="shrink-0 tabular-nums text-gray-500 dark:text-gray-500">{{if .Queries}}{{.Queries}} · {{end}}{{.Size}}</span>
+                    </div>
+                    {{if .Share}}
+                    <div class="mt-1 flex w-full items-center" role="img" aria-label="{{.Share}}% of queries">
+                        <div class="relative flex h-2 w-full items-center rounded-full bg-blue-200 dark:bg-blue-500/30">
+                            <div class="h-full flex-col rounded-full bg-blue-500 dark:bg-blue-500" style="width: {{.Share}}%;"></div>
+                        </div>
+                    </div>
+                    {{end}}
+                </li>
+                {{end}}
+            </ul>
+        </div>
+    </div>
+    {{end}}
+
     {{with $.SummaryDays}}{{template "summary_day_sections" .}}{{end}}
 </div>
 </div>
@@ -172,7 +202,7 @@
                 <ul role="list" class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-800 dark:border-gray-800">
                     {{range .Day.Problems}}
                     <li class="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                        <span class="flex min-w-0 items-center gap-2"><span class="size-2 shrink-0 rounded-full {{if eq .Severity "critical"}}bg-red-500{{else}}bg-yellow-500{{end}}" aria-hidden="true"></span><span class="truncate text-gray-900 dark:text-gray-50">{{.Title}}</span>{{if .Resolved}}<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">resolved</span>{{end}}</span>
+                        <span class="flex min-w-0 items-center gap-2"><span class="size-2 shrink-0 rounded-full {{if eq .Severity "critical"}}bg-red-500{{else}}bg-yellow-500{{end}}" aria-hidden="true"></span><span class="min-w-0"><span class="block truncate text-gray-900 dark:text-gray-50" title="{{.Title}}">{{.Title}}</span>{{if .IPs}}<span class="block break-all font-mono text-xs text-gray-500 dark:text-gray-500">{{join .IPs ", "}}</span>{{end}}</span>{{if .Resolved}}<span class="shrink-0 text-xs text-gray-500 dark:text-gray-500">resolved</span>{{end}}</span>
                         <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500">{{if gt .Count 1}}{{.Count}}× {{end}}{{if .First}}from {{.First}}{{end}}</span>
                     </li>
                     {{end}}
