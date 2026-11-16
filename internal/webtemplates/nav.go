@@ -203,6 +203,7 @@ var modernAreas = []navArea{
 				tabSpec{admin, "/security/waf", "Web firewall (Coraza)", waf},
 				// resellers don't get the WAF overview, their WAF pages start at their domains
 				tabSpec{reseller, "/security/waf/domains", "Web firewall (Coraza)", waf},
+				tabSpec{admin, "/security/bot-control", "AI & Bot Control", strings.HasPrefix(path, "/security/bot-control")},
 				tabSpec{true, "/security/imunify", "ImunifyAV", strings.HasPrefix(path, "/security/imunify")},
 				tabSpec{admin, "/security/basic_auth", "Basic auth", strings.HasPrefix(path, "/security/basic_auth")},
 				tabSpec{admin, "/security/2fa", "Two-factor authentication", strings.HasPrefix(path, "/security/2fa")},
@@ -324,6 +325,7 @@ var helpDocs = map[string]string{
 	"/security/firewall":             "admin/security/firewall",
 	"/security/waf":                  "admin/security/waf",
 	"/security/waf/domains":          "admin/security/waf",
+	"/security/bot-control":          "admin/security/waf",
 	"/security/imunify":              "admin/security/imunify",
 	"/security/basic_auth":           "admin/security/basic_auth",
 	"/security/2fa":                  "admin/security/2fa",
