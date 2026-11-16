@@ -12,6 +12,7 @@ import (
 	sqlmock "github.com/DATA-DOG/go-sqlmock"
 
 	"openadmin/internal/admindb"
+	"openadmin/internal/auth"
 )
 
 func testScope() *resellerScope {
@@ -274,5 +275,20 @@ func TestServeUserFilesRefusesForeignUser(t *testing.T) {
 	(&Defaults{MySQL: db}).ServeUserFiles(rec, r)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestActingResellerTokenBeatsSessionCookie(t *testing.T) {
+	admin := &admindb.User{Username: "root", Role: "admin"}
+	res := &admindb.User{Username: "res1", Role: "reseller"}
+	r := httptest.NewRequest(http.MethodGet, "/api/security/bot-control", nil)
+	if got := actingReseller(withAPIUser(auth.WithCurrentUser(r, admin), res)); got != "res1" {
+		t.Fatalf("reseller token with an admin cookie acts as %q, want res1", got)
+	}
+	if got := actingReseller(auth.WithCurrentUser(r, res)); got != "res1" {
+		t.Fatalf("reseller session acts as %q", got)
+	}
+	if got := actingReseller(withAPIUser(auth.WithCurrentUser(r, res), admin)); got != "" {
+		t.Fatalf("admin token acts as reseller %q", got)
 	}
 }

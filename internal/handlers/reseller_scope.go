@@ -18,13 +18,12 @@ type resellerScope struct {
 
 // actingReseller returns the reseller behind a GUI session or API token, "" for administrators
 func actingReseller(r *http.Request) string {
-	if u := auth.CurrentUser(r); u != nil {
-		if u.Role == "reseller" {
-			return u.Username
-		}
-		return ""
+	// on api routes the token decides, a session cookie sent along must not widen a reseller token to admin
+	u := APIUserFromContext(r)
+	if u == nil {
+		u = auth.CurrentUser(r)
 	}
-	if u := APIUserFromContext(r); u != nil && u.Role == "reseller" {
+	if u != nil && u.Role == "reseller" {
 		return u.Username
 	}
 	return ""

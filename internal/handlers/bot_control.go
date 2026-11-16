@@ -834,6 +834,9 @@ func (bc *BotControl) botAction(ctx context.Context, r *http.Request, action, po
 			return botFail(http.StatusBadRequest, "Failed to change the rate limit: "+err.Error())
 		}
 		return botDone(fmt.Sprintf("AI crawlers on rate-limited domains now get %d requests per minute per site.", n))
+	case "", "set_policy", "apply_all":
+	default:
+		return botFail(http.StatusBadRequest, "Unknown action.")
 	}
 
 	if !botModuleEnabled() {

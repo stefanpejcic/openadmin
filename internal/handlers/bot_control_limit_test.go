@@ -146,6 +146,9 @@ func TestBotAPIResellerScope(t *testing.T) {
 	if w := post(nil, `{"action":"set_policy","domain":"example.com","policy":"nope"}`); w.Code != http.StatusBadRequest {
 		t.Fatalf("invalid policy got %d", w.Code)
 	}
+	if w := post(nil, `{"action":"bogus","policy":"block"}`); w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), "Unknown action") {
+		t.Fatalf("unknown action got %d %s", w.Code, w.Body)
+	}
 	if w := post(nil, `{"action":"set_rate_limit","rate_limit":"lots"}`); w.Code != http.StatusBadRequest {
 		t.Fatalf("non-numeric limit got %d", w.Code)
 	}
