@@ -1020,6 +1020,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /emails/api/quota-del", auth.RequireLogin(sessions, authOpts, emails.ServeQuotaDel))
 	mux.HandleFunc("POST /emails/api/restrict", auth.RequireLogin(sessions, authOpts, emails.ServeRestrict))
 	mux.HandleFunc("POST /emails/api/delete", auth.RequireLogin(sessions, authOpts, emails.ServeDeleteEmails))
+	mux.HandleFunc("GET /emails/api/filter", auth.RequireLogin(sessions, authOpts, emails.ServeFilter))
+	mux.HandleFunc("POST /emails/api/filter", auth.RequireLogin(sessions, authOpts, emails.ServeFilter))
 	mux.HandleFunc("GET /emails/accounts", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsAccounts))
 	mux.HandleFunc("POST /emails/accounts", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsAccounts))
 	mux.HandleFunc("POST /emails/new", auth.RequireLogin(sessions, authOpts, emails.ServeEmailsNew))

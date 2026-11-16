@@ -718,6 +718,22 @@ func (e *Emails) ServeUpdatePassword(w http.ResponseWriter, r *http.Request) {
 	writeJSONMessage(w, http.StatusInternalServerError, "Failed: "+out)
 }
 
+// emailQuotaRe is what docker-mailserver's setup quota set accepts
+var emailQuotaRe = regexp.MustCompile(`^([0-9]+[BkMGT]|0)$`)
+
+// normalizeEmailQuota fixes the unit's case so 2g or 512K still pass, then checks it against what the mailserver takes
+func normalizeEmailQuota(q string) (string, bool) {
+	q = strings.TrimSpace(q)
+	if n := len(q); n > 1 {
+		u := strings.ToUpper(q[n-1:])
+		if u == "K" {
+			u = "k"
+		}
+		q = q[:n-1] + u
+	}
+	return q, emailQuotaRe.MatchString(q)
+}
+
 func (e *Emails) ServeQuotaSet(w http.ResponseWriter, r *http.Request) {
 	var body emailsAPIRequest
 	json.NewDecoder(r.Body).Decode(&body)
@@ -725,6 +741,11 @@ func (e *Emails) ServeQuotaSet(w http.ResponseWriter, r *http.Request) {
 	quota := strings.TrimSpace(body.Quota)
 	if email == "" || quota == "" {
 		writeJSONMessage(w, http.StatusBadRequest, "Email and quota are required.")
+		return
+	}
+	quota, valid := normalizeEmailQuota(quota)
+	if !valid {
+		writeJSONMessage(w, http.StatusBadRequest, "Invalid quota, use 0 for no limit or a whole number with B, k, M, G or T, like 512M or 2G.")
 		return
 	}
 	if !scopeFor(r, e.MySQL).AllowsEmail(email) {
@@ -852,9 +873,12 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// the usage percent is worked out here once instead of a regex per row in the browser
-	pairs := make([][3]interface{}, 0, len(accounts))
+	// slots 3-7 are filled in by the multi-server merge, then filters and the send/receive restrictions
+	filters := e.emailFilterCounts(accounts)
+	sendBlocked, receiveBlocked := emailRestricted(EmailsSendAccessFile), emailRestricted(EmailsReceiveAccessFile)
+	pairs := make([][]interface{}, 0, len(accounts))
 	for _, a := range accounts {
-		pairs = append(pairs, [3]interface{}{a.Email, a.Quota, emailQuotaPct(a.Quota)})
+		pairs = append(pairs, []interface{}{a.Email, a.Quota, emailQuotaPct(a.Quota), "", "", "", "", "", filters[a.Email], sendBlocked[strings.ToLower(a.Email)], receiveBlocked[strings.ToLower(a.Email)]})
 	}
 	data := map[string]interface{}{
 		"MailserverStatus": mailserverStatus,

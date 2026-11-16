@@ -869,7 +869,7 @@ var (
 	forceColumnPages = map[string]bool{"/emails/queue": true, "/services/ftp": true, "/plans/resellers": true, "/resellers": true, "/websites": true, "/databases": true, "/backups/user": true, "/domains": true, "/users": true}
 	// these keep their own page scripts on rows from other servers, their scripts post through the row's form
 	actionablePages = map[string]bool{"/services": true}
-	forwardGet      = map[string]bool{"/services/action-status": true, "/services/admin/status": true, "/json/system": true, "/emails/accounts": true}
+	forwardGet      = map[string]bool{"/services/action-status": true, "/services/admin/status": true, "/json/system": true, "/emails/accounts": true, "/emails/api/filter": true}
 	forwardDenied   = []string{"/login", "/logout", "/ws/", "/terminal", "/_cluster/", "/api/"}
 	csrfMetaRe      = regexp.MustCompile(`<meta name="csrf-token" content="([^"]+)"`)
 )
@@ -1663,7 +1663,12 @@ func (m *Manager) mergeEmails(page []byte, activeID, activeName string, remotes 
 					info = m.openLink(u.ID, id, "/emails/accounts?info="+url.QueryEscape(email))
 				}
 			}
-			all = append(all, []any{row[0], row[1], row[2], base, name, link, info, ColorClass(opts.colors[id])})
+			merged := []any{row[0], row[1], row[2], base, name, link, info, ColorClass(opts.colors[id])}
+			// filters and restrictions, a server on an older build doesn't send them
+			if len(row) > 8 {
+				merged = append(merged, row[8:]...)
+			}
+			all = append(all, merged)
 		}
 	}
 	if opts.only == "" || opts.only == activeID {

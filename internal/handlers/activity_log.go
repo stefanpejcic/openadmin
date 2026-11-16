@@ -296,6 +296,7 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 	"POST /emails/api/quota-del":          func(r *http.Request) string { return "Removed quota of an email account" },
 	"POST /emails/api/restrict":           func(r *http.Request) string { return "Changed sending/receiving restrictions of an email account" },
 	"POST /emails/api/delete":             func(r *http.Request) string { return "Deleted an email account" },
+	"POST /emails/api/filter":             func(r *http.Request) string { return "Edited filters of an email account" },
 	"POST /emails/accounts":               func(r *http.Request) string { return "Changed email accounts" },
 	"POST /emails/queue":                  func(r *http.Request) string { return "Changed the mail queue" },
 	"POST /emails/queue/action":           func(r *http.Request) string { return actJoin("Mail queue action", actForm(r, "action")) },
