@@ -178,8 +178,25 @@ func (m *Manager) storeHealth(fresh map[string]NodeHealth) map[string]NodeHealth
 	defer m.healthMu.Unlock()
 	old := m.health
 	fails := map[string]int{}
+	if m.updating == nil {
+		m.updating = map[string]time.Time{}
+	}
 	for id, h := range fresh {
+		since, updating := m.updating[id]
+		updating = updating && time.Since(since) < updateGrace
 		if h.Online {
+			switch {
+			case !h.Updating:
+				delete(m.updating, id)
+			case !updating:
+				m.updating[id] = time.Now()
+			}
+			continue
+		}
+		// opencli update restarts the slave's admin, keep the last good row until the update is over
+		if prev, seen := old[id]; updating && seen && prev.Online {
+			prev.Updating = true
+			fresh[id] = prev
 			continue
 		}
 		fails[id] = m.fails[id] + 1

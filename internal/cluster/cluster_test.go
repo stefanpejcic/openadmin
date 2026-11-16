@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -1156,6 +1157,64 @@ func TestStoreHealthWaitsForRepeatedFailures(t *testing.T) {
 	m2.storeHealth(map[string]NodeHealth{"n": {}})
 	if h, _ := m2.nodeHealth("n"); h.Online {
 		t.Fatal("a server never seen online must show offline right away")
+	}
+}
+
+func TestStoreHealthKeepsUpdatingServerOnline(t *testing.T) {
+	m := &Manager{}
+	m.storeHealth(map[string]NodeHealth{"n": {Online: true, Version: "2.0.23", Updating: true}})
+	for i := 0; i < offlineAfter+2; i++ {
+		m.storeHealth(map[string]NodeHealth{"n": {Error: "connection refused"}})
+	}
+	if h, _ := m.nodeHealth("n"); !h.Online || !h.Updating {
+		t.Fatal("a server going through an update must not show offline")
+	}
+	m.storeHealth(map[string]NodeHealth{"n": {Online: true, Version: "2.0.24"}})
+	for i := 0; i < offlineAfter; i++ {
+		m.storeHealth(map[string]NodeHealth{"n": {Error: "connection refused"}})
+	}
+	if h, _ := m.nodeHealth("n"); h.Online {
+		t.Fatal("once the update is done failures count again")
+	}
+
+	m2 := &Manager{}
+	m2.storeHealth(map[string]NodeHealth{"n": {Online: true}})
+	m2.markUpdating("n")
+	for i := 0; i < offlineAfter; i++ {
+		m2.storeHealth(map[string]NodeHealth{"n": {Error: "connection refused"}})
+	}
+	if h, _ := m2.nodeHealth("n"); !h.Online {
+		t.Fatal("an update started from the master must not show offline")
+	}
+	m2.updating["n"] = time.Now().Add(-updateGrace)
+	for i := 0; i < offlineAfter; i++ {
+		m2.storeHealth(map[string]NodeHealth{"n": {Error: "connection refused"}})
+	}
+	if h, _ := m2.nodeHealth("n"); h.Online {
+		t.Fatal("a stuck update must still end up offline")
+	}
+}
+
+func TestLockHeldReadsProcLocks(t *testing.T) {
+	dir := t.TempDir()
+	lock := filepath.Join(dir, "update.lock")
+	os.WriteFile(lock, nil, 0o644)
+	f, err := os.Open(lock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if lockHeld(lock, "/proc/locks") {
+		t.Fatal("nobody holds the lock yet")
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		t.Fatal(err)
+	}
+	if !lockHeld(lock, "/proc/locks") {
+		t.Fatal("held lock not found in /proc/locks")
+	}
+	if lockHeld(filepath.Join(dir, "missing.lock"), "/proc/locks") {
+		t.Fatal("a missing lock file is never held")
 	}
 }
 

@@ -122,6 +122,7 @@ type Manager struct {
 	healthMu sync.RWMutex
 	health   map[string]NodeHealth
 	fails    map[string]int
+	updating map[string]time.Time
 
 	clientMu sync.Mutex
 	clients  map[string]*http.Client

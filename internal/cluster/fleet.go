@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -17,6 +19,7 @@ const (
 	updateUnit      = "openadmin-cluster-update"
 	updateLog       = "/var/log/openpanel/admin/cluster_update.log"
 	latestCacheTTL  = 6 * time.Hour
+	updateGrace     = 35 * time.Minute // opencli update kills itself after 30min
 	searchLimit     = 10
 	notificationCap = 20
 )
@@ -156,13 +159,53 @@ func (m *Manager) StartUpdate(id string) error {
 	if err := m.call(id, "update_start", nil, nil); err != nil {
 		return err
 	}
+	m.markUpdating(id)
 	Notify("Server update started", m.serverName(id)+" is updating OpenPanel.", "info")
 	return nil
 }
 
+// updateLock is held by every opencli update run, also the ones from cron or ssh
+var updateLock = "/var/lock/openpanel_update.lock"
+
 func updateRunning() bool {
 	out, _ := exec.Command("systemctl", "is-active", updateUnit).Output()
-	return strings.TrimSpace(string(out)) == "activating" || strings.TrimSpace(string(out)) == "active"
+	if s := strings.TrimSpace(string(out)); s == "activating" || s == "active" {
+		return true
+	}
+	return lockHeld(updateLock, "/proc/locks")
+}
+
+// lockHeld looks the file up in /proc/locks, taking the lock ourselves could make a starting update bail out
+func lockHeld(path, locks string) bool {
+	var st syscall.Stat_t
+	if syscall.Stat(path, &st) != nil {
+		return false
+	}
+	raw, err := os.ReadFile(locks)
+	if err != nil {
+		return false
+	}
+	major := (st.Dev>>8)&0xfff | (st.Dev>>32)&^0xfff
+	minor := st.Dev&0xff | (st.Dev>>12)&^0xff
+	want := fmt.Sprintf("%02x:%02x:%d", major, minor, st.Ino)
+	for _, line := range strings.Split(string(raw), "\n") {
+		for _, f := range strings.Fields(line) {
+			if f == want {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// markUpdating lets a server drop off for the length of an update without counting as offline
+func (m *Manager) markUpdating(id string) {
+	m.healthMu.Lock()
+	defer m.healthMu.Unlock()
+	if m.updating == nil {
+		m.updating = map[string]time.Time{}
+	}
+	m.updating[id] = time.Now()
 }
 
 func startUpdate() error {
