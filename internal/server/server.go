@@ -49,7 +49,7 @@ func Run(opts Options) error {
 		Handler:      opts.Handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  2 * time.Second,
+		IdleTimeout:  30 * time.Second,
 	}
 
 	useTLS := UseTLS(opts.CertFile, opts.KeyFile, false)
