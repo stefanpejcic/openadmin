@@ -11,12 +11,14 @@ import (
 	"io"
 	"net/http"
 	"net/netip"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -79,6 +81,60 @@ var botRestartOpenPanel = func(ctx context.Context) error {
 }
 
 const botModuleName = "bot_control"
+
+// BotControlConfPath holds the crawler snippets, the rate limit lives in it so caddy and the panel read the same number
+var BotControlConfPath = "/etc/openpanel/caddy/botcontrol.conf"
+
+const (
+	botDefaultRateLimit = 10
+	botMaxRateLimit     = 100000
+)
+
+var bcEventsRE = regexp.MustCompile(`(?s)(\(botcontrol_ratelimit\)\s*\{.*?\bevents[ \t]+)(\d+)`)
+
+// botRateLimit is the requests per minute each crawler gets per site, 10 when the file has no usable value
+func botRateLimit() int {
+	b, err := os.ReadFile(BotControlConfPath)
+	if err != nil {
+		return botDefaultRateLimit
+	}
+	m := bcEventsRE.FindSubmatch(b)
+	if m == nil {
+		return botDefaultRateLimit
+	}
+	n, err := strconv.Atoi(string(m[2]))
+	if err != nil || n < 1 {
+		return botDefaultRateLimit
+	}
+	return n
+}
+
+// botSetRateLimit rewrites events in the botcontrol_ratelimit snippet and reloads caddy, the old file goes back if caddy says no
+func botSetRateLimit(ctx context.Context, n int) error {
+	if n < 1 || n > botMaxRateLimit {
+		return fmt.Errorf("the limit has to be between 1 and %d requests per minute", botMaxRateLimit)
+	}
+	old, err := os.ReadFile(BotControlConfPath)
+	if err != nil {
+		return err
+	}
+	if !bcEventsRE.Match(old) {
+		return errors.New("no botcontrol_ratelimit snippet in " + BotControlConfPath)
+	}
+	updated := bcEventsRE.ReplaceAll(old, []byte("${1}"+strconv.Itoa(n)))
+	if string(updated) == string(old) {
+		return nil
+	}
+	// written in place, caddy has the file bind-mounted
+	if err := os.WriteFile(BotControlConfPath, updated, 0o644); err != nil {
+		return err
+	}
+	if err := botReloadCaddy(ctx); err != nil {
+		_ = os.WriteFile(BotControlConfPath, old, 0o644)
+		return fmt.Errorf("caddy rejected the change, nothing was changed: %w", err)
+	}
+	return nil
+}
 
 func botModuleEnabled() bool {
 	return slices.Contains(modulesEnabledList(ModulesConfigFilePath), botModuleName)
@@ -722,97 +778,104 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 }
 
 // ServeBotControl handles GET/POST /security/bot-control.
-func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
+// botActionResult is what a POST did, the page shows it as a flash and the API as JSON
+type botActionResult struct {
+	Status  int
+	Message string
+}
+
+func (res botActionResult) ok() bool { return res.Status < 300 }
+
+func botFail(status int, msg string) botActionResult { return botActionResult{status, msg} }
+func botDone(msg string) botActionResult             { return botActionResult{http.StatusOK, msg} }
+
+// botAction runs one change, resellers only touch their own domains and never the module or the limit
+func (bc *BotControl) botAction(ctx context.Context, r *http.Request, action, policyRaw, dom, limitRaw string) botActionResult {
 	wf := &WAF{Sessions: bc.Sessions, MySQL: bc.MySQL}
-	domains, owners := wf.wafDomainsFor(r)
+	domains, _ := wf.wafDomainsFor(r)
+	reseller := actingReseller(r) != ""
 
-	if r.Method == http.MethodPost {
-		_ = r.ParseForm()
-		action := strings.TrimSpace(r.PostFormValue("action"))
-
-		if action == "enable_module" {
-			restarted, err := botSetModuleEnabled(r.Context(), true)
-			if err != nil {
-				auth.AddFlash(w, r, bc.Sessions, "Failed to enable AI & Bot Control module: "+err.Error(), "error")
-			} else if restarted {
-				auth.AddFlash(w, r, bc.Sessions, "AI & Bot Control module enabled and OpenPanel restarted.", "success")
-			} else {
-				auth.AddFlash(w, r, bc.Sessions, "AI & Bot Control module enabled. Restart OpenPanel to expose it to users.", "success")
-			}
-			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-			return
+	switch action {
+	case "enable_module", "disable_module", "set_rate_limit":
+		if reseller {
+			return botFail(http.StatusForbidden, "Only administrators can change the AI & Bot Control module and its rate limit.")
 		}
+	}
 
-		if action == "disable_module" {
-			restarted, err := botSetModuleEnabled(r.Context(), false)
-			if err != nil {
-				auth.AddFlash(w, r, bc.Sessions, "Failed to disable AI & Bot Control module: "+err.Error(), "error")
-				http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-				return
-			}
-			if _, _, err := botApplyPolicy(r.Context(), domains, botPolicyAllow); err != nil {
-				auth.AddFlash(w, r, bc.Sessions, "Module disabled, but resetting domains to Allow failed: "+err.Error(), "error")
-				http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-				return
-			}
-			if restarted {
-				auth.AddFlash(w, r, bc.Sessions, "AI & Bot Control module disabled, all domains reset to Allow, and OpenPanel restarted.", "success")
-			} else {
-				auth.AddFlash(w, r, bc.Sessions, "AI & Bot Control module disabled and all domains reset to Allow. Restart OpenPanel to update user menus.", "success")
-			}
-			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-			return
+	switch action {
+	case "enable_module":
+		restarted, err := botSetModuleEnabled(ctx, true)
+		switch {
+		case err != nil:
+			return botFail(http.StatusInternalServerError, "Failed to enable AI & Bot Control module: "+err.Error())
+		case restarted:
+			return botDone("AI & Bot Control module enabled and OpenPanel restarted.")
+		default:
+			return botDone("AI & Bot Control module enabled. Restart OpenPanel to expose it to users.")
 		}
-
-		if !botModuleEnabled() {
-			auth.AddFlash(w, r, bc.Sessions, "Enable the AI & Bot Control module before updating domain policies.", "error")
-			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-			return
+	case "disable_module":
+		restarted, err := botSetModuleEnabled(ctx, false)
+		if err != nil {
+			return botFail(http.StatusInternalServerError, "Failed to disable AI & Bot Control module: "+err.Error())
 		}
-
-		policy := botPolicy(strings.TrimSpace(r.PostFormValue("policy")))
-		if !botValidPolicy(policy) {
-			auth.AddFlash(w, r, bc.Sessions, "Invalid AI & bot policy.", "error")
-			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-			return
+		if _, _, err := botApplyPolicy(ctx, domains, botPolicyAllow); err != nil {
+			return botFail(http.StatusInternalServerError, "Module disabled, but resetting domains to Allow failed: "+err.Error())
 		}
-
-		if action == "apply_all" {
-			_, skipped, err := botApplyPolicy(r.Context(), domains, policy)
-			switch {
-			case err != nil:
-				auth.AddFlash(w, r, bc.Sessions, "Failed to apply '"+string(policy)+"': "+err.Error(), "error")
-			case len(skipped) > 0:
-				auth.AddFlash(w, r, bc.Sessions, "Applied '"+string(policy)+"' policy, skipped (no Caddy config to change): "+strings.Join(skipped, ", "), "error")
-			default:
-				auth.AddFlash(w, r, bc.Sessions, "Applied '"+string(policy)+"' policy to all domains and reloaded Caddy.", "success")
-			}
-			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-			return
+		if restarted {
+			return botDone("AI & Bot Control module disabled, all domains reset to Allow, and OpenPanel restarted.")
 		}
+		return botDone("AI & Bot Control module disabled and all domains reset to Allow. Restart OpenPanel to update user menus.")
+	case "set_rate_limit":
+		n, err := strconv.Atoi(strings.TrimSpace(limitRaw))
+		if err != nil {
+			return botFail(http.StatusBadRequest, "The rate limit has to be a whole number of requests per minute.")
+		}
+		if err := botSetRateLimit(ctx, n); err != nil {
+			return botFail(http.StatusBadRequest, "Failed to change the rate limit: "+err.Error())
+		}
+		return botDone(fmt.Sprintf("AI crawlers on rate-limited domains now get %d requests per minute per site.", n))
+	}
 
-		dom := strings.TrimSpace(r.PostFormValue("domain"))
+	if !botModuleEnabled() {
+		return botFail(http.StatusConflict, "Enable the AI & Bot Control module before updating domain policies.")
+	}
+	policy := botPolicy(strings.TrimSpace(policyRaw))
+	if !botValidPolicy(policy) {
+		return botFail(http.StatusBadRequest, "Invalid AI & bot policy.")
+	}
+
+	switch action {
+	case "apply_all":
+		_, skipped, err := botApplyPolicy(ctx, domains, policy)
+		switch {
+		case err != nil:
+			return botFail(http.StatusInternalServerError, "Failed to apply '"+string(policy)+"': "+err.Error())
+		case len(skipped) > 0:
+			return botActionResult{http.StatusMultiStatus, "Applied '" + string(policy) + "' policy, skipped (no Caddy config to change): " + strings.Join(skipped, ", ")}
+		default:
+			return botDone("Applied '" + string(policy) + "' policy to all domains and reloaded Caddy.")
+		}
+	case "", "set_policy":
+		dom = strings.TrimSpace(dom)
 		if dom == "" || !wafContains(domains, dom) {
-			auth.AddFlash(w, r, bc.Sessions, "Domain not found or outside your scope.", "error")
-			http.Redirect(w, r, "/security/bot-control", http.StatusSeeOther)
-			return
+			return botFail(http.StatusNotFound, "Domain not found or outside your scope.")
 		}
-		_, skipped, err := botApplyPolicy(r.Context(), []string{dom}, policy)
+		_, skipped, err := botApplyPolicy(ctx, []string{dom}, policy)
 		if err == nil && len(skipped) > 0 {
 			err = errBotNoAnchor
 		}
 		if err != nil {
-			auth.AddFlash(w, r, bc.Sessions, "Failed to update "+dom+": "+err.Error(), "error")
-		} else {
-			auth.AddFlash(w, r, bc.Sessions, "Updated AI & bot policy for "+dom+" to '"+string(policy)+"'.", "success")
+			return botFail(http.StatusInternalServerError, "Failed to update "+dom+": "+err.Error())
 		}
-		redirectURL := "/security/bot-control"
-		if sel := strings.TrimSpace(r.PostFormValue("selected_domain")); sel != "" {
-			redirectURL += "?domain=" + sel
-		}
-		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
-		return
+		return botDone("Updated AI & bot policy for " + dom + " to '" + string(policy) + "'.")
 	}
+	return botFail(http.StatusBadRequest, "Unknown action.")
+}
+
+// botState is the page data, also served as JSON to the page's ?output=json and the API
+func (bc *BotControl) botState(r *http.Request) (map[string]any, []BotDomainRow, BotTrafficReport, string) {
+	wf := &WAF{Sessions: bc.Sessions, MySQL: bc.MySQL}
+	domains, owners := wf.wafDomainsFor(r)
 
 	selectedDomain := strings.TrimSpace(r.URL.Query().Get("domain"))
 	if selectedDomain != "" && !wafContains(domains, selectedDomain) {
@@ -836,27 +899,79 @@ func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
 			BlockedCount: c[2],
 		})
 	}
+	return map[string]any{
+		"module_enabled": botModuleEnabled(),
+		"rate_limit":     botRateLimit(),
+		"domains":        rows,
+		"policy_counts":  policyCounts,
+		"report":         report,
+	}, rows, report, selectedDomain
+}
 
-	moduleEnabled := botModuleEnabled()
+func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		_ = r.ParseForm()
+		action := strings.TrimSpace(r.PostFormValue("action"))
+		res := bc.botAction(r.Context(), r, action, r.PostFormValue("policy"), r.PostFormValue("domain"), r.PostFormValue("rate_limit"))
+		kind := "success"
+		if !res.ok() || res.Status == http.StatusMultiStatus {
+			kind = "error"
+		}
+		auth.AddFlash(w, r, bc.Sessions, res.Message, kind)
+		redirectURL := "/security/bot-control"
+		if sel := strings.TrimSpace(r.PostFormValue("selected_domain")); sel != "" && (action == "" || action == "set_policy") {
+			redirectURL += "?domain=" + url.QueryEscape(sel)
+		}
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+		return
+	}
 
+	state, rows, report, selectedDomain := bc.botState(r)
 	if r.URL.Query().Get("output") == "json" {
-		writeJSON(w, map[string]any{
-			"module_enabled": moduleEnabled,
-			"domains":        rows,
-			"policy_counts":  policyCounts,
-			"report":         report,
-		})
+		writeJSON(w, state)
 		return
 	}
 
 	webtemplates.Render(w, "security_bot_control.html", mergeChrome(map[string]any{
-		"ModuleEnabled":  moduleEnabled,
+		"ModuleEnabled":  state["module_enabled"],
+		"RateLimit":      state["rate_limit"],
 		"Domains":        rows,
 		"TotalDomains":   len(rows),
-		"PolicyCounts":   policyCounts,
+		"PolicyCounts":   state["policy_counts"],
 		"Report":         report,
 		"SelectedDomain": selectedDomain,
 		"CSRFToken":      csrf.Token(r),
 		"Flashes":        auth.PopFlashes(w, r, bc.Sessions),
 	}, r, "AI & Bot Control"))
+}
+
+// ServeAPI is GET/POST /api/security/bot-control, same rules as the page
+func (bc *BotControl) ServeAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		state, _, _, _ := bc.botState(r)
+		writeJSON(w, state)
+		return
+	}
+	var body struct {
+		Action    string `json:"action"`
+		Domain    string `json:"domain"`
+		Policy    string `json:"policy"`
+		RateLimit any    `json:"rate_limit"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<16)).Decode(&body); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid JSON body.")
+		return
+	}
+	limit := ""
+	if body.RateLimit != nil {
+		limit = strings.TrimSpace(fmt.Sprint(body.RateLimit))
+	}
+	res := bc.botAction(r.Context(), r, strings.TrimSpace(body.Action), body.Policy, body.Domain, limit)
+	if !res.ok() {
+		writeJSONError(w, res.Status, res.Message)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(res.Status)
+	_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "message": res.Message, "rate_limit": botRateLimit()})
 }

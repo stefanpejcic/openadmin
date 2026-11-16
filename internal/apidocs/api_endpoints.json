@@ -873,6 +873,55 @@
             },
             {
                 "method": "GET",
+                "path": "/api/security/bot-control",
+                "auth": "RequireAPIAdminOrReseller",
+                "description": "AI & bot control state: whether the bot_control module is on, the rate limit (requests per minute per AI crawler per domain), the policy of every domain and the \"Who's hitting the server\" traffic report from the Caddy access logs. A reseller only gets the domains of their own users and their logs.",
+                "params": "domain (optional, limits the traffic report to one domain), window (optional: 1h, 24h or 7d, default 24h)",
+                "response": {
+                    "module_enabled": true,
+                    "rate_limit": 10,
+                    "domains": [
+                        {
+                            "domain": "example.com",
+                            "owner": "stefan",
+                            "policy": "ratelimit",
+                            "requests": 1520,
+                            "ai_requests": 312,
+                            "blocked_count": 40
+                        }
+                    ],
+                    "policy_counts": {
+                        "allow": 3,
+                        "ratelimit": 1,
+                        "block": 0
+                    },
+                    "report": {
+                        "window": "24h",
+                        "scope": "All domains",
+                        "total_requests": 1520,
+                        "ai_requests": 312,
+                        "blocked_count": 40
+                    }
+                }
+            },
+            {
+                "method": "POST",
+                "path": "/api/security/bot-control",
+                "auth": "RequireAPIAdminOrReseller",
+                "description": "Change AI & bot control. action set_policy sets one domain to allow, ratelimit or block; apply_all sets every domain (a reseller's own users' domains only); set_rate_limit changes the requests per minute (1-100000, default 10) saved in /etc/openpanel/caddy/botcontrol.conf; enable_module and disable_module toggle the bot_control module, disabling puts every domain back on allow. set_rate_limit, enable_module and disable_module are administrator only, a reseller gets 403. Caddy is reloaded and the files are put back if it rejects the change.",
+                "body": {
+                    "action": "set_policy",
+                    "domain": "example.com",
+                    "policy": "block"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Updated AI & bot policy for example.com to 'block'.",
+                    "rate_limit": 10
+                }
+            },
+            {
+                "method": "GET",
                 "path": "/api/security/waf",
                 "auth": "RequireAPIAdmin",
                 "description": "Returns whether CorazaWAF is enabled and a summary count of total/active/inactive WAF rule sets.",
