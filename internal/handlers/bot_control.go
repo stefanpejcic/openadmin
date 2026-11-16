@@ -1,4 +1,4 @@
-// This file implements /security/bot-control: per-site AI crawler control and the "Who's hitting me" traffic breakdown.
+// This file implements /security/bot-control: per-site AI crawler control and the "Who's hitting the server" traffic breakdown.
 package handlers
 
 import (
@@ -377,7 +377,7 @@ type BotDomainRow struct {
 	BlockedCount int       `json:"blocked_count"`
 }
 
-// BotTrafficReport holds the "Who's hitting me" aggregated breakdown.
+// BotTrafficReport holds the "Who's hitting the server" aggregated breakdown.
 type BotTrafficReport struct {
 	Scope         string       `json:"scope"`
 	Window        string       `json:"window"`
@@ -605,7 +605,7 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 				domAI++
 			}
 
-			// Always roll up per-domain counts for the domain table, and filter the "Who's hitting me" view when a single domain is picked.
+			// Always roll up per-domain counts for the domain table, and filter the "Who's hitting the server" view when a single domain is picked.
 			if selectedDomain != "" && dom != selectedDomain {
 				continue
 			}
