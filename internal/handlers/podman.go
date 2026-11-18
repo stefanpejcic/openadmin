@@ -17,6 +17,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -1112,6 +1113,9 @@ func (p *Podman) podmanDeleteImageIfUnused(id string) (string, error) {
 	if u := podmanImageUsageCounts(p.MySQL)[id]; u != nil && (u.System > 0 || u.User > 0) {
 		return "", fmt.Errorf("image is still in use by %d system and %d user container(s)", u.System, u.User)
 	}
+	if err := podmanSharedLayerGuardRun(p.MySQL, id); err != nil {
+		return "", err
+	}
 	return podmanDeleteImageRun(id)
 }
 
@@ -1318,6 +1322,8 @@ func (p *Podman) ServePodmanImagesBulkAction(w http.ResponseWriter, r *http.Requ
 
 		updatesAvailable := 0
 		vulnerableImages := 0
+		// shared images blocked only by a root store image built on them get retried once that one is gone
+		var blocked []string
 		for _, ref := range refs {
 			pendingPodmanBulkMu.Lock()
 			result.Current = ref
@@ -1329,6 +1335,13 @@ func (p *Podman) ServePodmanImagesBulkAction(w http.ResponseWriter, r *http.Requ
 				_, err = podmanPullImageRun(ref)
 			case "delete-unused":
 				_, err = p.podmanDeleteImageIfUnused(ref)
+				if errors.Is(err, errPodmanSharedLayerInUse) {
+					blocked = append(blocked, ref)
+					pendingPodmanBulkMu.Lock()
+					result.Completed++
+					pendingPodmanBulkMu.Unlock()
+					continue
+				}
 			case "check-updates":
 				var available bool
 				available, err = podmanCheckImageUpdateRun(ref)
@@ -1361,7 +1374,23 @@ func (p *Podman) ServePodmanImagesBulkAction(w http.ResponseWriter, r *http.Requ
 			pendingPodmanBulkMu.Unlock()
 		}
 
+		for len(blocked) > 0 {
+			var still []string
+			for _, ref := range blocked {
+				pendingPodmanBulkMu.Lock()
+				result.Current = ref
+				pendingPodmanBulkMu.Unlock()
+				if _, err := p.podmanDeleteImageIfUnused(ref); err != nil {
+					still = append(still, ref)
+				}
+			}
+			if len(still) == len(blocked) {
+				break
+			}
+			blocked = still
+		}
 		pendingPodmanBulkMu.Lock()
+		result.Failed = append(result.Failed, blocked...)
 		result.Done = true
 		result.Current = ""
 		succeeded := result.Total - len(result.Failed)
