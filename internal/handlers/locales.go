@@ -39,8 +39,11 @@ var (
 	DefaultLocaleFilePath = "/etc/openpanel/openpanel/default_locale"
 )
 
-// must match the key OpenPanel's i18n.AvailableLocales memoizes under
-const localesCacheKey = "openpanel_cache_app.get_available_locales"
+// must match the keys OpenPanel's i18n memoizes the locale list and the default under
+const (
+	localesCacheKey       = "openpanel_cache_app.get_available_locales"
+	defaultLocaleCacheKey = "openpanel_cache_app.get_system_default_locale"
+)
 
 var localeFormatRe = regexp.MustCompile(`(?i)^[a-z]{2,3}-[a-z]{2,3}$`)
 
@@ -118,7 +121,7 @@ var localesInstallAllRun = func(locales []string) error {
 	return exec.Command("opencli", append([]string{"locale"}, locales...)...).Run()
 }
 
-// drops OpenPanel's cached locale list so installs/deletes show up right away, injectable for tests
+// drops OpenPanel's cached locale list and default so changes show up right away, injectable for tests
 var localesFlushCacheRun = func() {
 	conn, err := net.DialTimeout("unix", FeaturesRedisSocketPath, 2*time.Second)
 	if err != nil {
@@ -128,7 +131,7 @@ var localesFlushCacheRun = func() {
 	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return
 	}
-	respCommand(bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)), "DEL", localesCacheKey)
+	respCommand(bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)), "DEL", localesCacheKey, defaultLocaleCacheKey)
 }
 
 // same hash git uses for blobs, so it compares directly with GitHub's sha
@@ -274,6 +277,8 @@ func setDefaultLocale(locale string) localeActionResult {
 	if err != nil {
 		return localeFail(http.StatusInternalServerError, fmt.Sprintf("Failed to set default locale: %s", err))
 	}
+	// OpenPanel caches the default for 24h
+	localesFlushCacheRun()
 	return localeOK(fmt.Sprintf("Default locale set to '%s'.", baseLocale))
 }
 

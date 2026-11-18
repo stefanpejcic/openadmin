@@ -256,6 +256,8 @@ func TestServeLocalesPostInstallFailureJSON(t *testing.T) {
 func TestServeLocalesPostSetDefaultSuccess(t *testing.T) {
 	withScratchLocalesPaths(t)
 	os.MkdirAll(filepath.Join(TranslationsDir, "de"), 0755)
+	flushed := false
+	localesFlushCacheRun = func() { flushed = true }
 
 	l := &Locales{}
 	srv, client := newLocalesTestServer(t, l)
@@ -273,6 +275,9 @@ func TestServeLocalesPostSetDefaultSuccess(t *testing.T) {
 	}
 	if string(saved) != "de" {
 		t.Fatalf("expected base locale 'de' saved, got %q", saved)
+	}
+	if !flushed {
+		t.Fatal("expected OpenPanel's cached default locale to be dropped")
 	}
 }
 
