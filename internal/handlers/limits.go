@@ -159,6 +159,7 @@ func (l *Limits) ServeLimits(w http.ResponseWriter, r *http.Request) {
 		}
 
 		newLines := make([]string, 0, len(rawLines))
+		changed := map[string]string{}
 		for _, line := range rawLines {
 			trimmed := strings.TrimSpace(line)
 			if trimmed == "" || strings.HasPrefix(trimmed, "#") || !strings.Contains(line, "=") {
@@ -174,6 +175,10 @@ func (l *Limits) ServeLimits(w http.ResponseWriter, r *http.Request) {
 				if strings.HasSuffix(key, "_RAM") && newValue != "0" {
 					newValue += "G"
 				}
+				oldValue := strings.Trim(strings.TrimSpace(parts[1]), `"'`)
+				if !strings.EqualFold(oldValue, newValue) {
+					changed[key] = newValue
+				}
 				newLines = append(newLines, key+`="`+newValue+"\"\n")
 			} else {
 				newLines = append(newLines, line)
@@ -183,7 +188,15 @@ func (l *Limits) ServeLimits(w http.ResponseWriter, r *http.Request) {
 		if err := os.WriteFile(GlobalEnvPath, []byte(strings.Join(newLines, "")), 0644); err != nil {
 			auth.AddFlash(w, r, l.Sessions, "Failed to update limits: "+err.Error(), "error")
 		} else {
-			auth.AddFlash(w, r, l.Sessions, "New limits saved successfully!", "success")
+			msg := "New limits saved successfully!"
+			applied, failed := applyLimitsLive(changed)
+			if len(applied) > 0 {
+				msg += " Applied right away to: " + strings.Join(applied, ", ") + "."
+			}
+			if len(failed) > 0 {
+				msg += " Not running, applied when it starts: " + strings.Join(failed, ", ") + "."
+			}
+			auth.AddFlash(w, r, l.Sessions, msg, "success")
 		}
 	}
 

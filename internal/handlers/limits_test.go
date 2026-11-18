@@ -21,6 +21,11 @@ func withScratchGlobalEnvPath(t *testing.T) string {
 	orig := GlobalEnvPath
 	GlobalEnvPath = filepath.Join(dir, ".env")
 	t.Cleanup(func() { GlobalEnvPath = orig })
+	// never touch real containers or compose
+	origCompose, origRun := LimitsComposePath, limitsPodmanUpdateRun
+	LimitsComposePath = filepath.Join(dir, "docker-compose.yml")
+	limitsPodmanUpdateRun = func(string, string) error { return nil }
+	t.Cleanup(func() { LimitsComposePath, limitsPodmanUpdateRun = origCompose, origRun })
 	return GlobalEnvPath
 }
 
@@ -312,6 +317,9 @@ func TestServeLimitsPostMissingFile(t *testing.T) {
 }
 
 func TestServeLimitsPostWriteFailure(t *testing.T) {
+	origRun := limitsPodmanUpdateRun
+	limitsPodmanUpdateRun = func(string, string) error { return nil }
+	t.Cleanup(func() { limitsPodmanUpdateRun = origRun })
 	dir := t.TempDir()
 	orig := GlobalEnvPath
 	GlobalEnvPath = filepath.Join(dir, ".env")
