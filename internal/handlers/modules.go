@@ -170,25 +170,18 @@ func (m *Modules) ServeModules(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// exact names, dynamic_dns used to switch on bind as if dns was enabled
+		saved := strings.Split(enabledModulesValue, ",")
+
 		// added in 1.7.60 to autostart phpmyadmin when enabled module
-		phpmyadminEnabled := strings.Contains(enabledModulesValue, "phpmyadmin")
+		phpmyadminEnabled := hasModule(saved, "phpmyadmin")
 		updateServiceInDockerCompose("phpmyadmin", phpmyadminEnabled)
 		setNotificationServiceMonitored("phpmyadmin", phpmyadminEnabled)
-		if strings.Contains(enabledModulesValue, "malware_scan") {
-			updateServiceInDockerCompose("clamav", true)
-		} else {
-			updateServiceInDockerCompose("clamav", false)
-		}
+		updateServiceInDockerCompose("clamav", hasModule(saved, "malware_scan"))
 		syncImunifyPanelGUI(enabledModulesValue)
 
-		// added in 1.7.61 to generate rndc.key when dns module is enabled --
-		// this is a raw substring check against the whole comma-joined
-		// value (not a proper membership check like the one used just
-		// below for rendering feature status), so it would also trigger
-		// for any hypothetical enabled module whose name merely contains
-		// "dns" as a substring. This is intentional, not a bug -- kept as a
-		// simple substring check rather than a proper membership check.
-		dnsEnabled := strings.Contains(enabledModulesValue, "dns")
+		// added in 1.7.61 to generate rndc.key when dns module is enabled
+		dnsEnabled := hasModule(saved, "dns")
 		if dnsEnabled {
 			if _, err := os.Stat(ModulesRndcKeyPath); os.IsNotExist(err) {
 				modulesRndcGenRun()

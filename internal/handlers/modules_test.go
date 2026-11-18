@@ -308,3 +308,27 @@ func TestServeModulesPostMissingConfigFileReturns500(t *testing.T) {
 		t.Fatalf("expected 500 for missing config file, got %d", resp.StatusCode)
 	}
 }
+
+func TestServeModulesPostDynamicDNSAloneDoesNotEnableBind(t *testing.T) {
+	withScratchModulesPaths(t)
+	os.WriteFile(ModulesConfigFilePath, []byte(`enabled_modules=""`+"\n"), 0644)
+	os.WriteFile(ModulesFeaturesJSONPath, []byte(`[]`), 0644)
+	os.WriteFile(ModulesDockerComposePath, []byte(""), 0644)
+
+	rndcCalled := false
+	origRndc := modulesRndcGenRun
+	modulesRndcGenRun = func() { rndcCalled = true }
+	t.Cleanup(func() { modulesRndcGenRun = origRndc })
+
+	srv, client := newModulesTestServer(t, &Modules{})
+	resp, err := client.PostForm(srv.URL+"/settings/modules", url.Values{"dynamic_dns": {"dynamic_dns"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	if rndcCalled {
+		t.Fatal("dynamic_dns alone shouldn't generate the bind rndc key")
+	}
+}
