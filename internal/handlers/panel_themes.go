@@ -60,7 +60,7 @@ func readPanelTheme(folder string) (PanelTheme, bool) {
 	if err != nil {
 		return PanelTheme{}, false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	t := PanelTheme{Folder: folder}
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
@@ -239,7 +239,7 @@ func fetchThemesList(ctx context.Context) ([]RemoteTheme, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("github returned %d", resp.StatusCode)
 	}
@@ -277,15 +277,15 @@ func (o *OpenpanelSettings) ServeInstallTheme(w http.ResponseWriter, r *http.Req
 	}
 	switch {
 	case theme == nil:
-		auth.AddFlash(w, r, o.Sessions, "Error: theme not found in the theme list.", "error")
+		_ = auth.AddFlash(w, r, o.Sessions, "Error: theme not found in the theme list.", "error")
 	case validPanelThemeFolder(folder):
-		auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Theme %s is already installed.", theme.Name), "error")
+		_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Theme %s is already installed.", theme.Name), "error")
 	default:
 		if err := installTheme(r.Context(), *theme, PanelThemesDir); err != nil {
 			log.Printf("themes: installing %s from %s: %v", theme.Folder, theme.Download, err)
-			auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Error installing theme %s: %v", theme.Name, err), "error")
+			_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Error installing theme %s: %v", theme.Name, err), "error")
 		} else {
-			auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Theme %s installed, select it and save to use it.", theme.Name), "success")
+			_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Theme %s installed, select it and save to use it.", theme.Name), "success")
 		}
 	}
 	http.Redirect(w, r, "/settings/open-panel#display", http.StatusSeeOther)
@@ -303,7 +303,7 @@ func installTheme(ctx context.Context, t RemoteTheme, dir string) error {
 	if err != nil {
 		return errors.New("download failed")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("download returned %d", resp.StatusCode)
 	}
@@ -322,7 +322,7 @@ func installTheme(ctx context.Context, t RemoteTheme, dir string) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmp)
+	defer func() { _ = os.RemoveAll(tmp) }()
 	if err := unpackTheme(data, tmp); err != nil {
 		return err
 	}
@@ -330,7 +330,9 @@ func installTheme(ctx context.Context, t RemoteTheme, dir string) error {
 	if err != nil {
 		return err
 	}
-	os.Chmod(root, 0o755)
+	if err := os.Chmod(root, 0o755); err != nil {
+		return err
+	}
 	dest := filepath.Join(dir, t.Folder)
 	if _, err := os.Stat(dest); err == nil {
 		return errors.New("folder already exists")
@@ -382,7 +384,10 @@ func unpackTheme(data []byte, dest string) error {
 			return err
 		}
 		n, err := io.Copy(f, io.LimitReader(rd, size+1))
-		f.Close()
+		// a failed close can mean the data never hit the disk
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
 		if err == nil && n > size {
 			err = errors.New("archive entry is larger than it says")
 		}
@@ -405,7 +410,7 @@ func unpackTheme(data []byte, dest string) error {
 				if err != nil {
 					return nil, nil, err
 				}
-				return rc, func() { rc.Close() }, nil
+				return rc, func() { _ = rc.Close() }, nil
 			})
 			if err != nil {
 				return err
