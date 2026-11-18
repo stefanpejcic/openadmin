@@ -26,6 +26,13 @@ func newSSHTestServer(t *testing.T, s *SSH) (*httptest.Server, *http.Client) {
 	SSHDConfigPath = filepath.Join(dir, "sshd_config")
 	t.Cleanup(func() { SSHDConfigPath = origSSHDConfig })
 
+	// no real sshd here, the file parse stands in for sshd -T
+	origDropIn, origEffective, origValidate := SSHDDropInPath, sshEffectiveRun, sshValidateRun
+	SSHDDropInPath = filepath.Join(dir, "sshd_config.d", "00-openadmin.conf")
+	sshEffectiveRun = func() (sshSettings, bool) { return sshSettings{}, false }
+	sshValidateRun = func() error { return nil }
+	t.Cleanup(func() { SSHDDropInPath, sshEffectiveRun, sshValidateRun = origDropIn, origEffective, origValidate })
+
 	origKeysPath := SSHAuthorizedKeysPath
 	SSHAuthorizedKeysPath = filepath.Join(dir, "authorized_keys")
 	t.Cleanup(func() { SSHAuthorizedKeysPath = origKeysPath })

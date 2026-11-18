@@ -98,7 +98,7 @@ func (s *APIServerSSH) ServeSSH(w http.ResponseWriter, r *http.Request) {
 	keys := sshGetAuthorizedKeys()
 	settings := sshDefaultSettings()
 	if config != "" {
-		settings = sshParseSettings(config)
+		settings = sshCurrentSettings(config)
 	}
 
 	writeJSON(w, map[string]interface{}{

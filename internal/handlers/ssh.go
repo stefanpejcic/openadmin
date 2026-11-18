@@ -6,6 +6,7 @@ package handlers
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -164,7 +165,7 @@ var sshUpdateSettingsRun = func(newSettings sshSettings) error {
 	if err != nil {
 		return err
 	}
-	current := sshParseSettings(raw)
+	current := sshCurrentSettings(raw)
 	merged := sshSettings{
 		Port:            firstNonEmpty(newSettings.Port, current.Port),
 		PasswordAuth:    firstNonEmpty(newSettings.PasswordAuth, current.PasswordAuth),
@@ -190,8 +191,20 @@ var sshUpdateSettingsRun = func(newSettings sshSettings) error {
 			out.WriteString(line + "\n")
 		}
 	}
+	dropIn, dropInExisted := os.ReadFile(SSHDDropInPath)
 	if err := os.WriteFile(SSHDConfigPath, []byte(out.String()), 0644); err != nil {
 		return err
+	}
+	if sshUsesDropIns(raw) {
+		if err := os.WriteFile(SSHDDropInPath, []byte(sshDropInContent(merged)), 0644); err != nil {
+			_ = os.WriteFile(SSHDConfigPath, []byte(raw), 0644)
+			return err
+		}
+	}
+	if err := sshValidateRun(); err != nil {
+		_ = os.WriteFile(SSHDConfigPath, []byte(raw), 0644)
+		restoreFile(SSHDDropInPath, dropIn, dropInExisted == nil)
+		return fmt.Errorf("sshd refused the new config, nothing was changed: %w", err)
 	}
 	sshRestartServiceRun()
 	return nil
@@ -358,7 +371,7 @@ func (s *SSH) ServeSSH(w http.ResponseWriter, r *http.Request) {
 	keys := sshGetAuthorizedKeys()
 	settings := sshDefaultSettings()
 	if config != "" {
-		settings = sshParseSettings(config)
+		settings = sshCurrentSettings(config)
 	}
 
 	if r.URL.Query().Get("output") == "json" {
