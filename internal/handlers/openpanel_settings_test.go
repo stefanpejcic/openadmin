@@ -665,4 +665,14 @@ func TestServeOpenpanelSettingsWordPressSetsAndProfiles(t *testing.T) {
 	if ps = listWPProfiles(); len(ps) != 0 {
 		t.Fatalf("expected profile deleted, got %+v", ps)
 	}
+	// several new rows in one save
+	post(url.Values{
+		"new_wp_profile_name":    {"Blog", "", "Shop"},
+		"new_wp_profile_plugins": {"akismet", "", "woocommerce"},
+		"new_wp_profile_themes":  {"", "", "storefront"},
+	})
+	ps = listWPProfiles()
+	if len(ps) != 2 || ps[0].Slug != "blog" || strings.Join(ps[0].Plugins, ",") != "akismet" || ps[1].Slug != "shop" || strings.Join(ps[1].Themes, ",") != "storefront" {
+		t.Fatalf("unexpected profiles after adding two: %+v", ps)
+	}
 }

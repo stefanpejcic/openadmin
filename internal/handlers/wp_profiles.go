@@ -109,7 +109,14 @@ func saveWPProfilesForm(r *http.Request) (string, string) {
 		return "WordPress profile deleted.", "success"
 	}
 
-	if name := cleanSuspensionName(r.PostFormValue("new_wp_profile_name")); name != "" {
+	// the add form can have several rows, each posts the same three fields
+	names, plugins, themes := r.PostForm["new_wp_profile_name"], r.PostForm["new_wp_profile_plugins"], r.PostForm["new_wp_profile_themes"]
+	var added []string
+	for i, raw := range names {
+		name := cleanSuspensionName(raw)
+		if name == "" {
+			continue
+		}
 		slug := suspensionSlugFromName(name)
 		if slug == "" {
 			return "Profile name needs at least one letter or number.", "error"
@@ -117,10 +124,24 @@ func saveWPProfilesForm(r *http.Request) (string, string) {
 		if wpProfileExists(slug) {
 			return "A WordPress profile with that name already exists.", "error"
 		}
-		if err := saveWPProfile(slug, name, r.PostFormValue("new_wp_profile_plugins"), r.PostFormValue("new_wp_profile_themes")); err != nil {
+		if err := saveWPProfile(slug, name, valueAt(plugins, i), valueAt(themes, i)); err != nil {
 			return "Failed to save WordPress profile: " + err.Error(), "error"
 		}
-		return "WordPress profile '" + name + "' added.", "success"
+		added = append(added, "'"+name+"'")
+	}
+	switch len(added) {
+	case 0:
+	case 1:
+		return "WordPress profile " + added[0] + " added.", "success"
+	default:
+		return "WordPress profiles " + strings.Join(added, ", ") + " added.", "success"
 	}
 	return "", ""
+}
+
+func valueAt(vals []string, i int) string {
+	if i < len(vals) {
+		return vals[i]
+	}
+	return ""
 }
