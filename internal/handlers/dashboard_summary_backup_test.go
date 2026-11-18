@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"bytes"
+	"compress/gzip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,5 +121,27 @@ func TestSummaryBackupForSchedule(t *testing.T) {
 	}
 	if b := summaryBackupFor("2026-11-08"); b == nil || b.Ran || b.Schedule != "Weekly" {
 		t.Errorf("scheduled sunday without a run: %+v", b)
+	}
+}
+
+// logrotate moves the day's run to .1 and older ones to .N.gz
+func TestSummaryBackupForRotatedLog(t *testing.T) {
+	withBackupFiles(t, "0 3 * * * root opencli docker-backup", "")
+	os.WriteFile(DockerBackupLogPath, nil, 0644)
+	os.WriteFile(DockerBackupLogPath+".1", []byte(strings.Split(sampleBackupLog, "2026-11-11 03:00:00 : === Backup started")[0]), 0644)
+	var gz bytes.Buffer
+	zw := gzip.NewWriter(&gz)
+	zw.Write([]byte("2026-11-09 03:00:00 : === Backup started at 2026-11-09 03:00:00 ===\n2026-11-09 03:00:01 : Found 0 active users to process\n2026-11-09 03:00:02 : No users to back up\n"))
+	zw.Close()
+	os.WriteFile(DockerBackupLogPath+".2.gz", gz.Bytes(), 0644)
+
+	if b := summaryBackupFor("2026-11-10"); b == nil || !b.OK || b.Status != "The 1 account was backed up." {
+		t.Errorf("run in .1: %+v", b)
+	}
+	if b := summaryBackupFor("2026-11-09"); b == nil || !b.Ran || !b.Finished {
+		t.Errorf("run in .2.gz: %+v", b)
+	}
+	if b := summaryBackupFor("2026-11-08"); b == nil || b.Ran {
+		t.Errorf("day without a run in any log: %+v", b)
 	}
 }

@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"bufio"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -94,7 +96,12 @@ func summaryBackupFor(day string) *summaryBackup {
 	if info, err := os.Stat(CronFilePath); err == nil {
 		savedAt = info.ModTime()
 	}
-	out := parseBackupRun(DockerBackupLogPath, day)
+	var out *summaryBackup
+	for _, path := range backupLogFiles(DockerBackupLogPath) {
+		if out = parseBackupRun(path, day); out != nil {
+			break
+		}
+	}
 	if out == nil {
 		if !backupScheduledOn(schedule, d, savedAt) {
 			return nil
@@ -133,9 +140,39 @@ func backupStatus(b *summaryBackup) (string, string) {
 	return fmt.Sprintf("All %s accounts backed up.", commaNum(b.Accounts)), "ok"
 }
 
+// backupLogFiles is the docker-backup log and its logrotate copies, newest first, a day's run ends up in .1 or a .gz once the log is rotated
+func backupLogFiles(path string) []string {
+	files := []string{path}
+	for i := 1; i <= 14; i++ {
+		for _, p := range []string{fmt.Sprintf("%s.%d", path, i), fmt.Sprintf("%s.%d.gz", path, i)} {
+			if _, err := os.Stat(p); err == nil {
+				files = append(files, p)
+			}
+		}
+	}
+	return files
+}
+
+// openBackupLog opens a plain or gzipped log
+func openBackupLog(path string) (io.ReadCloser, error) {
+	f, err := os.Open(path)
+	if err != nil || !strings.HasSuffix(path, ".gz") {
+		return f, err
+	}
+	zr, err := gzip.NewReader(f)
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	return struct {
+		io.Reader
+		io.Closer
+	}{zr, f}, nil
+}
+
 // parseBackupRun finds the last full run started on day in the docker-backup log, single --account runs don't count
 func parseBackupRun(path, day string) *summaryBackup {
-	f, err := os.Open(path)
+	f, err := openBackupLog(path)
 	if err != nil {
 		return nil
 	}
