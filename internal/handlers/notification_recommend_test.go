@@ -111,7 +111,7 @@ func TestGroupUserActions(t *testing.T) {
 		names = append(names, g.Name)
 		total += len(g.Actions)
 	}
-	if got := strings.Join(names, ","); got != "OpenAdmin,Web Firewall,Users,FTP,Domains,ImunifyAV,Backups" {
+	if got := strings.Join(names, ","); got != "OpenAdmin,Web Firewall,Users,FTP,Domains,ImunifyAV,Backups,Updates" {
 		t.Fatalf("groups = %s", got)
 	}
 	if total != len(notifUserActionOrder) {

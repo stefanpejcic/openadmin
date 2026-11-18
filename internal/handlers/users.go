@@ -8,7 +8,6 @@
 package handlers
 
 import (
-	"bufio"
 	"bytes"
 	"database/sql"
 	"encoding/json"
@@ -1427,11 +1426,17 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 		return
 	}
-	scanner := bufio.NewScanner(stdout)
+	scanner := newCommandScanner(stdout)
 	for scanner.Scan() {
-		_, _ = fmt.Fprintf(w, "%s\n", strings.TrimSpace(scanner.Text()))
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		_, _ = fmt.Fprintf(w, "%s\n", line)
 		flusher.Flush()
 	}
+	// a stopped scanner left the pipe full and the page frozen, keep reading so the command can finish
+	_, _ = io.Copy(io.Discard, stdout)
 	if err := cmd.Wait(); err != nil {
 		for _, line := range strings.Split(strings.TrimSpace(stderrBuf.String()), "\n") {
 			if line = strings.TrimSpace(line); line != "" {

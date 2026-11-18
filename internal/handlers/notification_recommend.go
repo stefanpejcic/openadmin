@@ -192,7 +192,7 @@ func groupUserActions(actions []notifToggleView) []notifActionGroup {
 
 func userActionGroupName(key string) string {
 	switch {
-	case strings.HasPrefix(key, "admin_"), key == "reseller_create":
+	case strings.HasPrefix(key, "admin_"), strings.HasPrefix(key, "reseller_"):
 		return "OpenAdmin"
 	case strings.HasPrefix(key, "waf_"):
 		return "Web Firewall"
@@ -206,6 +206,8 @@ func userActionGroupName(key string) string {
 		return "ImunifyAV"
 	case key == "docker_backup":
 		return "Backups"
+	case key == "docker_update":
+		return "Updates"
 	}
 	return "Other"
 }
