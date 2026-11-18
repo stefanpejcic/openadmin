@@ -1716,6 +1716,22 @@ func (m *Manager) openLink(userID int64, id, next string) string {
 	return "/_cluster/open?" + q.Encode()
 }
 
+var storedOpenLinkRe = regexp.MustCompile(`/_cluster/open\?next=([^"\\&]*)(?:\\u0026|&)node=([^"\\&]*)(?:\\u0026|&)sig=[0-9a-f]+`)
+
+// ResignOpenLinks signs the open links in a saved json (made with user 0 by a shell command) for the admin looking at it
+func (m *Manager) ResignOpenLinks(userID int64, raw []byte) []byte {
+	return storedOpenLinkRe.ReplaceAllFunc(raw, func(b []byte) []byte {
+		g := storedOpenLinkRe.FindSubmatch(b)
+		next, err1 := url.QueryUnescape(string(g[1]))
+		id, err2 := url.QueryUnescape(string(g[2]))
+		if err1 != nil || err2 != nil {
+			return b
+		}
+		link, _ := json.Marshal(m.openLink(userID, id, next))
+		return link[1 : len(link)-1]
+	})
+}
+
 func (m *Manager) handleOpen(w http.ResponseWriter, r *http.Request) {
 	u := m.sessionUser(r)
 	if u == nil || u.Role == "reseller" || !m.IsMaster() {

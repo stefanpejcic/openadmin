@@ -14,6 +14,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/csrf"
 
@@ -76,6 +77,11 @@ func main() {
 			fmt.Println("Settings synced: " + res.Synced)
 		}
 		return
+	}
+
+	// cron runs this every morning, the daily summary page only reads the file it saves
+	if len(os.Args) > 1 && os.Args[1] == "daily-summary" {
+		os.Exit(dailySummaryCLI(os.Args[2:]))
 	}
 
 	// opencli api list, prints the endpoints and exits before anything starts
@@ -1251,4 +1257,35 @@ func clusterExec(args []string) int {
 		return 0
 	}
 	return fail(errors.New("usage: openadmin cluster-exec servers | find user|domain NAME | run all|SERVER -- COMMAND [ARGS]"))
+}
+
+// dailySummaryCLI saves the admin daily summary of a day, yesterday by default, a master asks every member for its part
+func dailySummaryCLI(args []string) int {
+	day := ""
+	for i := 0; i < len(args); i++ {
+		switch {
+		case args[i] == "--date" && i+1 < len(args):
+			day = args[i+1]
+			i++
+		case strings.HasPrefix(args[i], "--date="):
+			day = strings.TrimPrefix(args[i], "--date=")
+		default:
+			fmt.Fprintln(os.Stderr, "usage: openadmin daily-summary [--date YYYY-MM-DD]")
+			return 1
+		}
+	}
+	db, err := mysqldb.Open()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "MySQL is not available:", err)
+		return 1
+	}
+	cluster.CLILicensed = license.CachedValid
+	handlers.ClusterManager = cluster.CLIManager(db, 2*time.Minute)
+	path, err := handlers.GenerateDailySummary(db, day, osHostname())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	fmt.Println("Daily summary saved to " + path)
+	return 0
 }

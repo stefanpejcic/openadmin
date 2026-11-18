@@ -32,7 +32,11 @@ func (m *Manager) CallAll(action string, fn func(id, name string, raw json.RawMe
 
 // CallAllData is CallAll with an argument for the action, e.g. the day of a past summary
 func (m *Manager) CallAllData(action string, data any, fn func(id, name string, raw json.RawMessage)) {
-	ctx, cancel := context.WithTimeout(context.Background(), readTimeout)
+	timeout := readTimeout
+	if m.rpcTimeout > 0 {
+		timeout = m.rpcTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	var mu sync.Mutex
 	var wg sync.WaitGroup

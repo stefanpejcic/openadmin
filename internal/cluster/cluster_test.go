@@ -1315,3 +1315,13 @@ func TestIframePagePickerGoesBeforeDocumentation(t *testing.T) {
 		t.Fatalf("server picker should be in the tab row right before Documentation: %s", out)
 	}
 }
+
+func TestResignOpenLinks(t *testing.T) {
+	m := &Manager{loaded: true, state: State{SeedHex: "00ff"}}
+	stored, _ := json.Marshal(map[string]string{"link": m.openLink(0, "n1", "/users/bob")})
+	got := string(m.ResignOpenLinks(7, stored))
+	want, _ := json.Marshal(map[string]string{"link": m.openLink(7, "n1", "/users/bob")})
+	if got != string(want) {
+		t.Errorf("got %s want %s", got, want)
+	}
+}

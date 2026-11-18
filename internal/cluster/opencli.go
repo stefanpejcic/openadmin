@@ -101,6 +101,14 @@ func cliManager() *Manager {
 	return &Manager{Hostname: host, Licensed: CLILicensed, rpcTimeout: opencliTimeout + time.Minute}
 }
 
+// CLIManager is a manager for a command run from a shell, like openadmin daily-summary asking the other servers for their part
+func CLIManager(mysql *sql.DB, timeout time.Duration) *Manager {
+	m := cliManager()
+	m.MySQL = mysql
+	m.rpcTimeout = timeout
+	return m
+}
+
 // Servers lists the live slaves for opencli, it's empty when this isn't a master with slaves
 func Servers() []string {
 	m := cliManager()

@@ -73,6 +73,8 @@ type dashboardPageData struct {
 	SummaryDays []summaryServerDay
 	// slowest websites by that day's PageSpeed checks, every server on a master
 	Slowest []summarySpeed
+	// the saved day when it had no account summaries, the day picker still needs it
+	StoredDate string
 	// day picker: the shown day, previous/next and the days that have a summary
 	Nav *summaryNav
 	// the admin's saved widget order, sizes, collapsed widgets and header buttons, "null" when never changed
@@ -222,65 +224,48 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 		picked = ""
 	}
 	u := auth.CurrentUser(r)
-	var s *serverSummary
-	if picked == "" {
-		s = d.pageSummary(r)
-		// opening it clears the tab's mark until a newer day's summary comes in
-		if u != nil && s != nil && d.AdminDB != nil {
-			_ = d.AdminDB.SetPref(u.ID, summarySeenPref, s.Date)
-		}
-	} else {
-		s = d.pageSummaryDay(r, picked)
-	}
 	data := dashboardPageData{
 		Chrome:  buildChrome(r, "Daily summary"),
 		Flashes: auth.PopFlashes(w, r, d.Sessions),
-		Summary: s,
+	}
+	reseller := u != nil && u.Role == "reseller"
+	var dates []string
+	if !reseller {
+		// admins get the file openadmin daily-summary saved, nothing is worked out on open
+		if summaryEnabled() && u != nil {
+			if st := loadStoredDailySummary(picked, u.ID); st != nil {
+				data.Summary, data.SummaryDays, data.Slowest = st.Summary, st.Days, st.Slowest
+				if data.Summary == nil {
+					data.StoredDate = st.Date
+				}
+			}
+		}
+		dates = storedDailySummaryDates()
+	} else {
+		if picked == "" {
+			data.Summary = d.pageSummary(r)
+		} else {
+			data.Summary = d.pageSummaryDay(r, picked)
+		}
+		if users, err := paneldb.ListUsernames(d.MySQL, u.Username); err == nil {
+			dates = summaryDates(users)
+		}
+	}
+	// opening it clears the tab's mark until a newer day's summary comes in
+	if picked == "" && u != nil && data.Summary != nil && d.AdminDB != nil {
+		_ = d.AdminDB.SetPref(u.ID, summarySeenPref, data.Summary.Date)
 	}
 	if summaryEnabled() {
-		owner := ""
-		if u != nil && u.Role == "reseller" {
-			owner = u.Username
+		shown := data.StoredDate
+		if data.Summary != nil {
+			shown = data.Summary.Date
 		}
-		shown := ""
-		if s != nil {
-			shown = s.Date
-		}
-		if users, err := paneldb.ListUsernames(d.MySQL, owner); err == nil {
-			data.Nav = buildSummaryNav(summaryDates(users), shown, picked)
-		}
+		data.Nav = buildSummaryNav(dates, shown, picked)
 		// the day picker sits at the right of the tab bar, before Documentation
 		if data.Nav != nil {
 			if picker, err := webtemplates.RenderToString("summary_day_picker", data.Nav); err == nil {
 				data.TabExtra = template.HTML(picker)
 			}
-		}
-	}
-	day := picked
-	if s != nil {
-		day = s.Date
-	}
-	if u != nil && u.Role != "reseller" && day != "" {
-		data.SummaryDays = summaryServerDays(d.MySQL, u.ID, day, data.ServerHostname)
-		data.Slowest = slowestSites(data.SummaryDays, 5)
-		// malware found that day goes on top of Needs attention, on a copy since the summary is cached
-		var malware []summaryFinding
-		for _, sd := range data.SummaryDays {
-			for _, f := range sd.Day.Malware {
-				if len(data.SummaryDays) > 1 && f.Server == "" {
-					f.Server = sd.Name
-				}
-				malware = append(malware, f)
-			}
-		}
-		if len(malware) > 0 && s != nil {
-			withMalware := *s
-			withMalware.Attention = append(malware, s.Attention...)
-			withMalware.AttentionTotal = len(withMalware.Attention)
-			withMalware.MoreAttn = max(0, withMalware.AttentionTotal-8)
-			withMalware.AttentionGroups = groupAttention(withMalware.Attention)
-			withMalware.MainProblem = mainAttentionProblem(withMalware.AttentionGroups)
-			data.Summary = &withMalware
 		}
 	}
 	webtemplates.Render(w, "dashboard_summary.html", data)
@@ -391,27 +376,27 @@ func ClusterDashCounts(db *sql.DB) func() any {
 	}
 }
 
-// pageSummaryDay is pageSummary for a day the admin picked
+// pageSummaryDay is a reseller's summary for a day they picked, admins read the saved files
 func (d *Dashboard) pageSummaryDay(r *http.Request, day string) *serverSummary {
 	if !summaryEnabled() {
 		return nil
 	}
-	u := auth.CurrentUser(r)
-	if u != nil && u.Role == "reseller" {
+	if u := auth.CurrentUser(r); u != nil && u.Role == "reseller" {
 		return cachedServerSummaryDay(d.MySQL, u.Username, day)
 	}
-	if u != nil && ClusterManager != nil && ClusterManager.IsMaster() {
-		return cachedClusterSummaryDay(d.MySQL, u.ID, day)
-	}
-	return cachedServerSummaryDay(d.MySQL, "", day)
+	return nil
 }
 
-// adminSummary adds up all members on a master
+// adminSummary is the newest day openadmin daily-summary saved, every member added up on a master
 func (d *Dashboard) adminSummary(r *http.Request) *serverSummary {
-	if u := auth.CurrentUser(r); u != nil && summaryEnabled() && ClusterManager != nil && ClusterManager.IsMaster() {
-		return cachedClusterSummary(d.MySQL, u.ID)
+	u := auth.CurrentUser(r)
+	if u == nil || !summaryEnabled() {
+		return nil
 	}
-	return d.summary("")
+	if st := loadStoredDailySummary("", u.ID); st != nil {
+		return st.Summary
+	}
+	return nil
 }
 
 // summary is the combined daily summary for the widget, owner scopes it to a reseller's accounts
