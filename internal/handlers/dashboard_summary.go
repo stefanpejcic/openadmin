@@ -171,9 +171,9 @@ func mainAttentionProblem(groups []attentionGroup) string {
 		return ""
 	}
 	if best.plugin {
-		return fmt.Sprintf("The main problem is %s: it has known security holes on %d of %d accounts (%d%%), updating it clears most of the list.", best.label, best.n, len(groups), share)
+		return fmt.Sprintf("The main problem is %s: it has known security holes on %d of the %d accounts that need attention (%d%%), updating it clears most of the list.", best.label, best.n, len(groups), share)
 	}
-	return fmt.Sprintf("The main problem is \"%s\" on %d of %d accounts (%d%%).", best.label, best.n, len(groups), share)
+	return fmt.Sprintf("The main problem is \"%s\" on %d of the %d accounts that need attention (%d%%).", best.label, best.n, len(groups), share)
 }
 
 // groupAttention puts each account's findings together, worst accounts first, websites in the order their findings came
