@@ -301,3 +301,16 @@ func TestServeCustomCodeMovesLegacyStartupScript(t *testing.T) {
 		t.Fatalf("expected it copied to the mounted path, got %q", b)
 	}
 }
+
+func TestCustomCodeContentNormalizesListFiles(t *testing.T) {
+	if got := string(customCodeContent("forbidden_usernames", "admin\r\nroot\r\npwlast")); got != "admin\nroot\npwlast\n" {
+		t.Fatalf("got %q", got)
+	}
+	if got := string(customCodeContent("forbidden_usernames", "")); got != "" {
+		t.Fatalf("empty list should stay empty, got %q", got)
+	}
+	// css keeps exactly what was typed
+	if got := string(customCodeContent("custom_css", "a{}\r\n")); got != "a{}\r\n" {
+		t.Fatalf("got %q", got)
+	}
+}

@@ -379,7 +379,7 @@ func (a *APIUsers) handleCreate(w http.ResponseWriter, r *http.Request) {
 	if forbidden, err := os.ReadFile(ForbiddenUsernamesPath); err == nil {
 		lower := strings.ToLower(body.Username)
 		for _, line := range strings.Split(string(forbidden), "\n") {
-			if strings.TrimSpace(line) == lower {
+			if strings.ToLower(strings.TrimSpace(line)) == lower {
 				writeJSONError(w, http.StatusBadRequest, "Username is not allowed")
 				return
 			}

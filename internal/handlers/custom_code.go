@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gorilla/csrf"
 
@@ -78,6 +79,21 @@ func moveLegacyStartupScript() {
 	}
 }
 
+// one entry per line files, opencli reads them line by line and skipped a last line with no newline or a \r from the browser
+var customCodeListFields = map[string]bool{"forbidden_usernames": true, "restricted_domains": true, "wp_plugins": true, "wp_themes": true}
+
+// customCodeContent is what gets written for a field, list files get \n line ends and a final newline
+func customCodeContent(key, value string) []byte {
+	if !customCodeListFields[key] {
+		return []byte(value)
+	}
+	value = strings.TrimRight(strings.ReplaceAll(value, "\r\n", "\n"), "\n")
+	if value != "" {
+		value += "\n"
+	}
+	return []byte(value)
+}
+
 // CustomCodeRestartFlagPath is the restart-flag file written
 // unconditionally on every POST, regardless of which (if any) fields were
 // actually submitted.
@@ -117,7 +133,7 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 			if customCodeEnterpriseFields[key] && !enterpriseOK {
 				continue
 			}
-			if err := os.WriteFile(customCodeFilePaths[key], []byte(r.PostFormValue(key)), 0644); err != nil {
+			if err := os.WriteFile(customCodeFilePaths[key], customCodeContent(key, r.PostFormValue(key)), 0644); err != nil {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}

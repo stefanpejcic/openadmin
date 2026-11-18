@@ -372,7 +372,7 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 			if key == "howto_guides" && !enterpriseOK {
 				continue
 			}
-			if err := os.WriteFile(customCodeFilePaths[key], []byte(r.PostFormValue(key)), 0644); err != nil {
+			if err := os.WriteFile(customCodeFilePaths[key], customCodeContent(key, r.PostFormValue(key)), 0644); err != nil {
 				errorMessages = append(errorMessages, "Error saving configuration file.")
 				continue
 			}

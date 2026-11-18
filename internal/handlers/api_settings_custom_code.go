@@ -44,7 +44,7 @@ func (a *APISettingsCustomCode) handlePost(w http.ResponseWriter, r *http.Reques
 		if !isString {
 			continue
 		}
-		if err := os.WriteFile(customCodeFilePaths[key], []byte(strVal), 0644); err != nil {
+		if err := os.WriteFile(customCodeFilePaths[key], customCodeContent(key, strVal), 0644); err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
