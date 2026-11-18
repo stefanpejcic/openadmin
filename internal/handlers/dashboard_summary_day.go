@@ -34,6 +34,8 @@ type summaryDay struct {
 	Backup *summaryBackup
 	// PageSpeed checks that ran that day
 	Speeds []summarySpeed
+	// what the web firewall blocked that day, nil when it blocked nothing
+	WAF *summaryWAF
 }
 
 type summaryHealth struct {
@@ -77,9 +79,9 @@ func loadSummaryDay(db *sql.DB, day string) *summaryDay {
 	if err != nil {
 		return nil
 	}
-	out := &summaryDay{Health: summaryHealthFor(day), Mail: summaryMailFor(d), Malware: summaryMalwareFor(db, day), Backup: summaryBackupFor(day), Speeds: summarySpeedsFor(db, day)}
+	out := &summaryDay{Health: summaryHealthFor(day), Mail: summaryMailFor(d), Malware: summaryMalwareFor(db, day), Backup: summaryBackupFor(day), Speeds: summarySpeedsFor(db, day), WAF: summaryWAFFor(db, day)}
 	out.Problems, out.MoreProblems = summaryProblemsFor(day, 8)
-	if out.Health == nil && out.Mail == nil && len(out.Problems) == 0 && len(out.Malware) == 0 && out.Backup == nil && len(out.Speeds) == 0 {
+	if out.Health == nil && out.Mail == nil && len(out.Problems) == 0 && len(out.Malware) == 0 && out.Backup == nil && len(out.Speeds) == 0 && out.WAF == nil {
 		return nil
 	}
 	return out
@@ -396,8 +398,16 @@ func summaryServerDays(db *sql.DB, userID int64, day, hostname string) []summary
 	var mu sync.Mutex
 	ClusterManager.CallAllData("summary_health", day, func(id, name string, raw json.RawMessage) {
 		var d summaryDay
-		if json.Unmarshal(raw, &d) != nil || (d.Health == nil && d.Mail == nil && len(d.Problems) == 0 && len(d.Malware) == 0 && d.Backup == nil && len(d.Speeds) == 0) {
+		if json.Unmarshal(raw, &d) != nil || (d.Health == nil && d.Mail == nil && len(d.Problems) == 0 && len(d.Malware) == 0 && d.Backup == nil && len(d.Speeds) == 0 && d.WAF == nil) {
 			return
+		}
+		if d.WAF != nil {
+			for i := range d.WAF.Domains {
+				d.WAF.Domains[i].Server = name
+				if d.WAF.Domains[i].Link != "" {
+					d.WAF.Domains[i].Link = ClusterManager.OpenLink(userID, id, d.WAF.Domains[i].Link)
+				}
+			}
 		}
 		for i := range d.Speeds {
 			d.Speeds[i].Server = name

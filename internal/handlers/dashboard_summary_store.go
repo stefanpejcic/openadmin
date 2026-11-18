@@ -23,6 +23,7 @@ type storedDailySummary struct {
 	Summary     *serverSummary     `json:"summary"`
 	Days        []summaryServerDay `json:"days"`
 	Slowest     []summarySpeed     `json:"slowest"`
+	WAF         *summaryWAF        `json:"waf"`
 }
 
 // GenerateDailySummary builds day's summary the way the page used to on open (every member on a master) and saves it, older files than the retention go away
@@ -43,7 +44,7 @@ func GenerateDailySummary(db *sql.DB, day, hostname string) (string, error) {
 		s = cachedServerSummaryDay(db, "", day)
 	}
 	days := summaryServerDays(db, 0, day, hostname)
-	out := storedDailySummary{Date: day, GeneratedAt: time.Now(), Summary: withMalware(s, days), Days: days, Slowest: slowestSites(days, 5)}
+	out := storedDailySummary{Date: day, GeneratedAt: time.Now(), Summary: withMalware(s, days), Days: days, Slowest: slowestSites(days, 5), WAF: combinedWAF(days)}
 	raw, err := json.Marshal(out)
 	if err != nil {
 		return "", err

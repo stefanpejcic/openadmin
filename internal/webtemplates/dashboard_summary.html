@@ -179,6 +179,43 @@
     </div>
     {{end}}
 
+    {{with $.WAF}}
+    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Web firewall</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">{{.BlockedLabel}} blocked that day: the rules that caught the most, the websites attacked the most and the addresses behind it (the visitor's real IP, not Cloudflare's).</p>
+        </div>
+        <div class="lg:col-span-2 space-y-6" id="summary-waf">
+            {{if .Rules}}
+            <div>
+                <h3 class="text-xs font-medium text-gray-500 dark:text-gray-500">Top rules</h3>
+                <ul role="list" class="mt-2 space-y-1.5">
+                    {{range .Rules}}<li class="flex items-center justify-between gap-2 text-sm"><span class="min-w-0 truncate text-gray-900 dark:text-gray-50" title="{{.Msg}}">{{.Msg}} <span class="font-mono text-xs text-gray-400 dark:text-gray-600">{{.ID}}</span></span><span class="shrink-0 tabular-nums text-gray-500 dark:text-gray-500">{{.CountLabel}}</span></li>{{end}}
+                </ul>
+            </div>
+            {{end}}
+            {{if .Domains}}
+            <div>
+                <h3 class="text-xs font-medium text-gray-500 dark:text-gray-500">Most attacked websites</h3>
+                <ul role="list" class="mt-2 space-y-1.5">
+                    {{range .Domains}}<li class="flex items-center justify-between gap-2 text-sm"><span class="flex min-w-0 items-center gap-2 truncate text-gray-900 dark:text-gray-50"><img class="size-4 shrink-0 rounded-full" src="{{.Favicon}}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="truncate">{{.Name}}</span>{{if .Username}} <a href="{{.Link}}" class="text-gray-500 hover:text-gray-900 hover:underline dark:hover:text-gray-50">{{stripSuspendedPrefix .Username}}</a>{{end}}{{if .Server}} <span class="text-xs text-gray-400 dark:text-gray-600">{{.Server}}</span>{{end}}</span><span class="shrink-0 tabular-nums text-gray-500 dark:text-gray-500">{{.CountLabel}}</span></li>{{end}}
+                </ul>
+            </div>
+            {{end}}
+            {{if .IPs}}
+            <div>
+                <h3 class="text-xs font-medium text-gray-500 dark:text-gray-500">Top blocked addresses</h3>
+                <ul role="list" class="mt-2 space-y-1.5">
+                    {{range .IPs}}<li class="flex items-center justify-between gap-2 text-sm"><span class="min-w-0 truncate font-mono text-gray-900 dark:text-gray-50">{{.IP}}{{if .Country}} <span class="font-sans text-xs text-gray-500 dark:text-gray-500">{{.Country}}</span>{{end}}{{if gt .Domains 1}} <span class="font-sans text-xs text-gray-500 dark:text-gray-500">on {{.Domains}} websites</span>{{end}}</span><span class="shrink-0 tabular-nums text-gray-500 dark:text-gray-500">{{.CountLabel}}</span></li>{{end}}
+                </ul>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+
     {{with $.SummaryDays}}{{template "summary_day_sections" .}}{{end}}
 </div>
 </div>

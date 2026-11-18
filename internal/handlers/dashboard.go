@@ -75,6 +75,8 @@ type dashboardPageData struct {
 	Slowest []summarySpeed
 	// the saved day when it had no account summaries, the day picker still needs it
 	StoredDate string
+	// what the web firewall blocked that day, every server on a master
+	WAF *summaryWAF
 	// day picker: the shown day, previous/next and the days that have a summary
 	Nav *summaryNav
 	// the admin's saved widget order, sizes, collapsed widgets and header buttons, "null" when never changed
@@ -234,7 +236,7 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 		// admins get the file openadmin daily-summary saved, nothing is worked out on open
 		if summaryEnabled() && u != nil {
 			if st := loadStoredDailySummary(picked, u.ID); st != nil {
-				data.Summary, data.SummaryDays, data.Slowest = st.Summary, st.Days, st.Slowest
+				data.Summary, data.SummaryDays, data.Slowest, data.WAF = st.Summary, st.Days, st.Slowest, st.WAF
 				if data.Summary == nil {
 					data.StoredDate = st.Date
 				}
