@@ -172,6 +172,7 @@ func TestOpenpanelSectionForKey(t *testing.T) {
 		"autopurge_trash":              "FILES",
 		"terminal_timeout":             "PANEL",
 		"menu_style":                   "PANEL",
+		"template":                     "PANEL",
 		"applications_dashboard_items": "PANEL",
 		"login_ratelimit":              "USERS",
 	}
@@ -581,7 +582,8 @@ func TestOpenpanelSettingsFormFieldsMatchHandler(t *testing.T) {
 	}
 	var posted []string
 	for _, m := range regexp.MustCompile(`\bname="([^"]+)"`).FindAllStringSubmatch(string(raw), -1) {
-		if m[1] != "csrf_token" {
+		// install_theme goes to its own endpoint through formaction
+		if m[1] != "csrf_token" && m[1] != "install_theme" {
 			posted = append(posted, m[1])
 		}
 	}

@@ -394,10 +394,13 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 	"POST /settings/updates/update_now": func(r *http.Request) string { return "Started an OpenPanel update" },
 	"POST /settings/updates":            func(r *http.Request) string { return "Changed update settings" },
 	"POST /settings/open-panel":         func(r *http.Request) string { return "Changed OpenPanel settings" },
-	"POST /settings/defaults":           func(r *http.Request) string { return "Changed default settings for new users" },
-	"POST /settings/defaults/files":     func(r *http.Request) string { return "Added a default file for new users" },
-	"PUT /settings/defaults/files":      func(r *http.Request) string { return "Edited a default file for new users" },
-	"DELETE /settings/defaults/files":   func(r *http.Request) string { return "Deleted a default file for new users" },
+	"POST /settings/open-panel/themes/install": func(r *http.Request) string {
+		return "Installed OpenPanel theme " + r.PostFormValue("install_theme")
+	},
+	"POST /settings/defaults":         func(r *http.Request) string { return "Changed default settings for new users" },
+	"POST /settings/defaults/files":   func(r *http.Request) string { return "Added a default file for new users" },
+	"PUT /settings/defaults/files":    func(r *http.Request) string { return "Edited a default file for new users" },
+	"DELETE /settings/defaults/files": func(r *http.Request) string { return "Deleted a default file for new users" },
 	"POST /settings/defaults/files/{username}": func(r *http.Request) string {
 		return actJoin("Copied default files to user", quoted(actPath(r, "username")))
 	},

@@ -65,7 +65,7 @@ var openpanelIntFields = []string{
 // openpanelIntFields above, and not the "weakpass" checkbox).
 var openpanelStringFields = []string{
 	"brand_name", "logo", "favicon", "ns1", "ns2", "ns3", "ns4",
-	"menu_style", "avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
+	"menu_style", "template", "avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
 	"permit_username_change_by_user", "permit_subdomain_sharing",
 	"twofa_nag", "twofa_enforce", "how_to_guides", "onboarding", "found_a_bug_link", "ip_county_flag",
 	"validate_ip_address_cookie",
@@ -92,6 +92,7 @@ const (
 	openpanelOneToMax // options[0] is the max
 	openpanelSingleLine
 	openpanelOptionList // space-separated, each from options, at least one
+	openpanelTemplateDir
 )
 
 type openpanelRule struct {
@@ -155,6 +156,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"ai_base_url":                     {kind: openpanelSingleLine},
 	"ai_api_key":                      {kind: openpanelSingleLine},
 	"logout_url":                      {kind: openpanelSingleLine},
+	"template":                        {kind: openpanelTemplateDir},
 }
 
 var openpanelSpaceSeparatedListRe = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
@@ -195,6 +197,16 @@ func validateOpenpanelValue(key, value string) (normalized string, ok bool, errM
 	case openpanelSingleLine:
 		// the config is key=value per line, a newline would break the file
 		return strings.Join(strings.Fields(value), " "), true, ""
+
+	case openpanelTemplateDir:
+		name := strings.TrimSpace(value)
+		if name == "" {
+			return "", true, ""
+		}
+		if !validPanelThemeFolder(name) {
+			return "", false, fmt.Sprintf("Error: '%s' is not a theme in %s for %s.", value, PanelThemesDir, key)
+		}
+		return name, true, ""
 
 	case openpanelOptionList:
 		items := strings.Fields(strings.ToUpper(value))
@@ -249,7 +261,7 @@ func openpanelSectionForKey(key string) string {
 	if strings.HasPrefix(key, "filemanager_") || key == "autopurge_trash" {
 		return "FILES"
 	}
-	if key == "terminal_timeout" || key == "menu_style" || key == "applications_dashboard_items" {
+	if key == "terminal_timeout" || key == "menu_style" || key == "template" || key == "applications_dashboard_items" {
 		return "PANEL"
 	}
 	switch key {
@@ -407,6 +419,8 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 		fileContents[key] = content
 	}
 
+	panelThemes := listPanelThemes()
+
 	// the file manager works inside the openpanel container, so its size limits are compared to that container's RAM
 	openpanelRAMGB := parseRAMLimitGB(readEnvGroups()["OPENPANEL"]["RAM"])
 
@@ -420,6 +434,10 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 		"MySQLCustomVersion": mysqlCustomVersion(),
 		"SiteCount":          totalSites(defaultsSiteTypesRun(o.MySQL)),
 		"ConfigData":         configData,
+		"PanelThemes":        panelThemes,
+		"AvailableThemes":    availableThemes(r.Context(), panelThemes),
+		"PanelThemeInvalid":  configData.Get("PANEL", "template", "") != "" && !validPanelThemeFolder(configData.Get("PANEL", "template", "")),
+		"PanelThemesDir":     PanelThemesDir,
 		"CSRFToken":          csrf.Token(r),
 		"Flashes":            auth.PopFlashes(w, r, o.Sessions),
 		"HasEnterprise":      hasEnterpriseAccess(r, o.LicenseChecker),

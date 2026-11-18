@@ -310,6 +310,49 @@
                 </div>
             </div>
 
+            <div class="col-span-full">
+                <span class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Theme</span>
+                <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">Each folder in <code>{{.PanelThemesDir}}</code> with a readme.txt is a theme. Pages the theme doesn't have use the built-in version. Changes apply after OpenPanel restarts.</p>
+                {{$current := .ConfigData.Get "PANEL" "template" ""}}
+                <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <label class="rounded-md border border-gray-300 bg-white dark:border-gray-800 dark:bg-gray-950 overflow-hidden cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-200">
+                        <input type="radio" name="template" value="" class="sr-only" {{if eq $current ""}}checked{{end}}>
+                        <div class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-sm text-gray-500 dark:text-gray-400" style="height:9rem">Built-in</div>
+                        <div class="p-3">
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Default</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">The templates shipped with OpenPanel.</p>
+                        </div>
+                    </label>
+                    {{range .PanelThemes}}
+                    <label class="rounded-md border border-gray-300 bg-white dark:border-gray-800 dark:bg-gray-950 overflow-hidden cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-200">
+                        <input type="radio" name="template" value="{{.Folder}}" class="sr-only" {{if eq $current .Folder}}checked{{end}}>
+                        <img src="/settings/open-panel/theme-screenshot/{{.Folder}}" alt="{{.Name}} screenshot" class="w-full object-cover bg-gray-100 dark:bg-gray-800" style="height:9rem" loading="lazy">
+                        <div class="p-3">
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-50 truncate">{{if .URI}}<a href="{{.URI}}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{.Name}}</a>{{else}}{{.Name}}{{end}}{{if .Version}} <span class="text-xs font-normal text-gray-500 dark:text-gray-500">{{.Version}}</span>{{end}}</p>
+                            {{if .Author}}<p class="mt-1 text-xs text-gray-500 dark:text-gray-500 truncate">by {{if .AuthorURI}}<a href="{{.AuthorURI}}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">{{.Author}}</a>{{else}}{{.Author}}{{end}}</p>{{end}}
+                            {{if .License}}<p class="mt-1 text-xs text-gray-500 dark:text-gray-500 truncate">License: {{if .LicenseURI}}<a href="{{.LicenseURI}}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">{{.License}}</a>{{else}}{{.License}}{{end}}</p>{{end}}
+                            {{if .Description}}<p class="mt-1 text-xs text-gray-500 dark:text-gray-500 line-clamp-2">{{.Description}}</p>{{end}}
+                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-600 truncate">{{.Folder}}/</p>
+                        </div>
+                    </label>
+                    {{end}}
+                    {{range .AvailableThemes}}
+                    <div class="rounded-md border border-dashed border-gray-300 bg-white dark:border-gray-800 dark:bg-gray-950 overflow-hidden">
+                        {{if .Screenshot}}<img src="{{.Screenshot}}" alt="{{.Name}} screenshot" class="w-full object-cover bg-gray-100 dark:bg-gray-800" style="height:9rem" loading="lazy" referrerpolicy="no-referrer">{{else}}<div class="flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-sm text-gray-500 dark:text-gray-400" style="height:9rem">No screenshot</div>{{end}}
+                        <div class="p-3">
+                            <p class="text-sm font-medium text-gray-900 dark:text-gray-50 truncate">{{if .URI}}<a href="{{.URI}}" target="_blank" rel="noopener noreferrer" class="hover:underline">{{.Name}}</a>{{else}}{{.Name}}{{end}}{{if .Version}} <span class="text-xs font-normal text-gray-500 dark:text-gray-500">{{.Version}}</span>{{end}}</p>
+                            {{if .Author}}<p class="mt-1 text-xs text-gray-500 dark:text-gray-500 truncate">by {{if .AuthorURI}}<a href="{{.AuthorURI}}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">{{.Author}}</a>{{else}}{{.Author}}{{end}}</p>{{end}}
+                            {{if .License}}<p class="mt-1 text-xs text-gray-500 dark:text-gray-500 truncate">License: {{if .LicenseURI}}<a href="{{.LicenseURI}}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">{{.License}}</a>{{else}}{{.License}}{{end}}</p>{{end}}
+                            {{if .Description}}<p class="mt-1 text-xs text-gray-500 dark:text-gray-500 line-clamp-2">{{.Description}}</p>{{end}}
+                            <button type="submit" formaction="/settings/open-panel/themes/install" formmethod="post" formnovalidate name="install_theme" value="{{.Folder}}" class="mt-2 inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 shadow-xs transition hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Install</button>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+                {{if .PanelThemeInvalid}}<p class="mt-2 text-xs text-red-600">template={{$current}} is not a valid theme, OpenPanel uses the default templates.</p>{{end}}
+            </div>
+            </div>
+
             <div class="col-span-full sm:col-span-3" x-data="{tooltip: false }">
                 
     <div class="flex items-center gap-1">
