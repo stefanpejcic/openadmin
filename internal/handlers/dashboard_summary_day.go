@@ -56,6 +56,9 @@ type summaryProblem struct {
 	IPs []string
 }
 
+// adminNewIPRe is one admin's new IP alert, several admins on the same address get one row
+var adminNewIPRe = regexp.MustCompile(`^Admin (\S+) accessed from new IP: (\S+)$`)
+
 // trailingIPRe splits "Admin stefan accessed from new IP: 1.2.3.4" into the alert and its address
 var trailingIPRe = regexp.MustCompile(`^(.+?):\s*([0-9a-fA-F.:]+)$`)
 
@@ -267,6 +270,7 @@ func summaryProblemsFor(day string, limit int) ([]summaryProblem, int) {
 		}
 		list = append(list, *p)
 	}
+	list = mergeAdminNewIPs(list)
 	sort.Slice(list, func(i, j int) bool {
 		if (list[i].Severity == "critical") != (list[j].Severity == "critical") {
 			return list[i].Severity == "critical"
@@ -282,6 +286,46 @@ func summaryProblemsFor(day string, limit int) ([]summaryProblem, int) {
 		list = list[:limit]
 	}
 	return list, more
+}
+
+// mergeAdminNewIPs puts the new IP alerts of different admins from the same address into one row
+func mergeAdminNewIPs(list []summaryProblem) []summaryProblem {
+	byIP := map[string]int{}
+	admins := map[string][]string{}
+	out := list[:0]
+	for _, p := range list {
+		m := adminNewIPRe.FindStringSubmatch(p.Title)
+		if m == nil {
+			out = append(out, p)
+			continue
+		}
+		i, seen := byIP[m[2]]
+		if !seen {
+			byIP[m[2]] = len(out)
+			admins[m[2]] = []string{m[1]}
+			out = append(out, p)
+			continue
+		}
+		admins[m[2]] = append(admins[m[2]], m[1])
+		q := &out[i]
+		q.Count += p.Count
+		if p.First != "" && (q.First == "" || p.First < q.First) {
+			q.First = p.First
+		}
+		if p.Severity == "critical" {
+			q.Severity = "critical"
+		}
+		q.Resolved = q.Resolved && p.Resolved
+	}
+	for ip, names := range admins {
+		if len(names) < 2 {
+			continue
+		}
+		sort.Strings(names)
+		who := strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+		out[byIP[ip]].Title = "Admins " + who + " accessed from new IP: " + ip
+	}
+	return out
 }
 
 var mailDayRowRe = regexp.MustCompile(`<tr><td>([A-Z][a-z]{2} \d{1,2} \d{4})</td><td>(\d+)</td><td>(\d+)</td><td>(\d+)</td><td>(\d+)</td><td>(\d+)</td></tr>`)

@@ -145,3 +145,21 @@ func TestSummaryBackupForRotatedLog(t *testing.T) {
 		t.Errorf("day without a run in any log: %+v", b)
 	}
 }
+
+func TestMergeAdminNewIPs(t *testing.T) {
+	got := mergeAdminNewIPs([]summaryProblem{
+		{Title: "Admin mirko accessed from new IP: 89.216.113.73", Severity: "warning", First: "16:40", Count: 1},
+		{Title: "Disk usage high", Severity: "warning", Count: 2},
+		{Title: "Admin jelena accessed from new IP: 89.216.113.73", Severity: "warning", First: "16:38", Count: 1, Resolved: true},
+		{Title: "Admin stefan accessed from new IP: 1.2.3.4", Severity: "warning", First: "09:00", Count: 1},
+	})
+	if len(got) != 3 {
+		t.Fatalf("rows: %+v", got)
+	}
+	if got[0].Title != "Admins jelena and mirko accessed from new IP: 89.216.113.73" || got[0].Count != 2 || got[0].First != "16:38" || got[0].Resolved {
+		t.Errorf("merged row: %+v", got[0])
+	}
+	if got[2].Title != "Admin stefan accessed from new IP: 1.2.3.4" {
+		t.Errorf("single admin row: %+v", got[2])
+	}
+}
