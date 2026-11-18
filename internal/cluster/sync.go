@@ -58,6 +58,10 @@ var (
 		"/etc/openpanel/bind9/zone_template.txt",
 		"/etc/openpanel/bind9/zone_template_ipv6.txt",
 	}
+	// files that hold a key, they go with the secrets group and are masked in the diff
+	secretFileGlobs = []string{
+		"/etc/openpanel/openpanel/service/pagespeed.api",
+	}
 )
 
 func iniPath(file string) string {
@@ -76,6 +80,11 @@ func classify(key string) string {
 		for _, g := range fileGlobs {
 			if ok, _ := filepath.Match(g, path); ok {
 				return GroupCore
+			}
+		}
+		for _, g := range secretFileGlobs {
+			if ok, _ := filepath.Match(g, path); ok {
+				return GroupSecrets
 			}
 		}
 		return ""
@@ -117,7 +126,7 @@ func BuildSnapshot() (*Snapshot, error) {
 			}
 		}
 	}
-	for _, g := range fileGlobs {
+	for _, g := range append(append([]string{}, fileGlobs...), secretFileGlobs...) {
 		matches, err := filepath.Glob(g)
 		if err != nil {
 			return nil, err

@@ -1325,3 +1325,12 @@ func TestResignOpenLinks(t *testing.T) {
 		t.Errorf("got %s want %s", got, want)
 	}
 }
+
+func TestClassifyPageSpeedKey(t *testing.T) {
+	if g := classify(filePrefix + "/etc/openpanel/openpanel/service/pagespeed.api"); g != GroupSecrets {
+		t.Errorf("pagespeed key group %q", g)
+	}
+	if g := classify(filePrefix + "/etc/openpanel/openpanel/service/other.api"); g != "" {
+		t.Errorf("other service files stay on the server, got %q", g)
+	}
+}
