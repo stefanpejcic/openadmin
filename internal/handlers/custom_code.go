@@ -1,5 +1,5 @@
-// This file implements the custom CSS/JS/header/footer/dashboard-section editor (Enterprise only) plus the Community-tier WordPress-sets files.
-// How-to Articles, Forbidden Usernames, Restricted Domains, and PageSpeed API Key moved to /settings/open-panel but still live here since they share this file-backed storage and the JSON API.
+// This file implements the custom CSS/JS/header/footer/dashboard-section editor (Enterprise only) plus the startup and after-update scripts.
+// How-to Articles, Forbidden Usernames, Restricted Domains, PageSpeed API Key and the WordPress sets moved to /settings/open-panel but still live here since they share this file-backed storage and the JSON API.
 package handlers
 
 import (
@@ -108,11 +108,7 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if msg, kind := saveWPProfilesForm(r); msg != "" {
-			_ = auth.AddFlash(w, r, c.Sessions, msg, kind)
-		} else {
-			_ = auth.AddFlash(w, r, c.Sessions, "Files updated successfully!", "success")
-		}
+		_ = auth.AddFlash(w, r, c.Sessions, "Files updated successfully!", "success")
 	}
 
 	fileContents := make(map[string]string, len(customCodeFieldOrder))
@@ -142,9 +138,6 @@ func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
 		"WelcomeEmail":  fileContents["welcome_email"],
 		"PostUpdate":    fileContents["post_update"],
 		"PreStartup":    fileContents["pre_startup"],
-		"WPThemes":      fileContents["wp_themes"],
-		"WPPlugins":     fileContents["wp_plugins"],
-		"WPProfiles":    listWPProfiles(),
 	}
 	if err := webtemplates.Render(w, "settings_custom_code.html", mergeChrome(data, r, "Custom code")); err != nil {
 		log.Printf("render settings_custom_code.html: %v", err)

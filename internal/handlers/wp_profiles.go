@@ -82,7 +82,7 @@ func saveWPProfile(slug, name, plugins, themes string) error {
 	return os.WriteFile(filepath.Join(WPProfilesDir, slug+".json"), append(data, '\n'), 0644)
 }
 
-// saveWPProfilesForm handles the profile rows on /settings/custom-code, returns a flash only when something needs saying
+// saveWPProfilesForm handles the profile rows on /settings/open-panel, returns a flash only when something needs saying
 func saveWPProfilesForm(r *http.Request) (string, string) {
 	for _, p := range listWPProfiles() {
 		name, hasName := r.PostForm["wp_profile_name__"+p.Slug]

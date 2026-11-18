@@ -31,11 +31,11 @@ type OpenpanelSettings struct {
 
 // openpanelFileFields lists the custom-code-backed fields (raw files, not
 // openpanel.config ini keys) that also render on this page: How-to
-// Articles, Forbidden Usernames, Restricted Domains, and the PageSpeed API
-// key. They share their file paths and Enterprise gating (howto_guides
+// Articles, Forbidden Usernames, Restricted Domains, the PageSpeed API
+// key and the default WordPress plugin/theme sets. They share their file paths and Enterprise gating (howto_guides
 // only) with the /settings/custom-code page -- see customCodeFilePaths in
 // custom_code.go.
-var openpanelFileFields = []string{"howto_guides", "forbidden_usernames", "restricted_domains", "pagespeed_api_key"}
+var openpanelFileFields = []string{"howto_guides", "forbidden_usernames", "restricted_domains", "pagespeed_api_key", "wp_plugins", "wp_themes"}
 
 var (
 	OpenpanelSettingsConfigPath      = "/etc/openpanel/openpanel/conf/openpanel.config"
@@ -393,6 +393,14 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 			SetMenuStyleFromConfig(OpenpanelSettingsConfigPath)
 		}
 
+		if msg, kind := saveWPProfilesForm(r); msg != "" {
+			if kind == "success" {
+				successMessages = append(successMessages, msg)
+			} else {
+				errorMessages = append(errorMessages, msg)
+			}
+		}
+
 		if restartNeeded {
 			os.WriteFile(OpenpanelSettingsRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0644)
 		}
@@ -445,6 +453,9 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 		"ForbiddenUsers":     fileContents["forbidden_usernames"],
 		"RestrictedDomains":  fileContents["restricted_domains"],
 		"PagespeedAPIKey":    fileContents["pagespeed_api_key"],
+		"WPPlugins":          fileContents["wp_plugins"],
+		"WPThemes":           fileContents["wp_themes"],
+		"WPProfiles":         listWPProfiles(),
 	}, r, "OpenPanel Settings"))
 }
 

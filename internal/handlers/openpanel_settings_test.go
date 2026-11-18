@@ -583,7 +583,8 @@ func TestOpenpanelSettingsFormFieldsMatchHandler(t *testing.T) {
 	var posted []string
 	for _, m := range regexp.MustCompile(`\bname="([^"]+)"`).FindAllStringSubmatch(string(raw), -1) {
 		// install_theme goes to its own endpoint through formaction
-		if m[1] != "csrf_token" && m[1] != "install_theme" {
+		// wp profile rows are saved by saveWPProfilesForm
+		if m[1] != "csrf_token" && m[1] != "install_theme" && !strings.Contains(m[1], "wp_profile_") {
 			posted = append(posted, m[1])
 		}
 	}
@@ -597,5 +598,71 @@ func TestOpenpanelSettingsFormFieldsMatchHandler(t *testing.T) {
 		if !slices.Contains(posted, k) {
 			t.Errorf("handler saves %q but the form has no input named it", k)
 		}
+	}
+}
+
+func TestServeOpenpanelSettingsWordPressSetsAndProfiles(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	withScratchCustomCodePaths(t)
+	srv, client := newOpenpanelSettingsTestServer(t, &OpenpanelSettings{})
+
+	post := func(extra url.Values) string {
+		t.Helper()
+		form := validOpenpanelForm()
+		for k, v := range extra {
+			form[k] = v
+		}
+		resp, err := client.PostForm(srv.URL+"/settings/open-panel", form)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+
+	post(url.Values{
+		"wp_plugins":             {"wordfence\n"},
+		"wp_themes":              {"astra\n"},
+		"new_wp_profile_name":    {"E-commerce Shop"},
+		"new_wp_profile_plugins": {"woocommerce\n\n woocommerce \nwordfence\n"},
+		"new_wp_profile_themes":  {"storefront"},
+	})
+	if b, _ := os.ReadFile(customCodeFilePaths["wp_plugins"]); string(b) != "wordfence\n" {
+		t.Fatalf("expected wp_plugins saved, got %q", b)
+	}
+	if b, _ := os.ReadFile(customCodeFilePaths["wp_themes"]); string(b) != "astra\n" {
+		t.Fatalf("expected wp_themes saved, got %q", b)
+	}
+	ps := listWPProfiles()
+	if len(ps) != 1 || ps[0].Slug != "e-commerce-shop" || ps[0].Name != "E-commerce Shop" || strings.Join(ps[0].Plugins, ",") != "woocommerce,wordfence" || strings.Join(ps[0].Themes, ",") != "storefront" {
+		t.Fatalf("unexpected profiles after add: %+v", ps)
+	}
+
+	body := post(url.Values{
+		"wp_profile_name__e-commerce-shop":    {"Shop"},
+		"wp_profile_plugins__e-commerce-shop": {"woocommerce"},
+		"wp_profile_themes__e-commerce-shop":  {""},
+	})
+	ps = listWPProfiles()
+	if len(ps) != 1 || ps[0].Name != "Shop" || len(ps[0].Plugins) != 1 || len(ps[0].Themes) != 0 {
+		t.Fatalf("unexpected profiles after edit: %+v", ps)
+	}
+	if !strings.Contains(body, `id="wordpress"`) || !strings.Contains(body, "wp_profile_name__e-commerce-shop") {
+		t.Fatalf("expected the WordPress section with the profile on the page, got %s", truncate(body))
+	}
+
+	// the browser posts the profile's own row along with the delete
+	body = post(url.Values{
+		"wp_profile_name__e-commerce-shop":    {"Shop"},
+		"wp_profile_plugins__e-commerce-shop": {"woocommerce"},
+		"wp_profile_themes__e-commerce-shop":  {""},
+		"delete_wp_profile":                   {"e-commerce-shop"},
+	})
+	if strings.Contains(body, "not found") {
+		t.Fatalf("delete reported not found: %s", truncate(body))
+	}
+	if ps = listWPProfiles(); len(ps) != 0 {
+		t.Fatalf("expected profile deleted, got %+v", ps)
 	}
 }
