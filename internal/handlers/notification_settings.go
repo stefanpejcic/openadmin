@@ -41,12 +41,13 @@ var (
 	actionToggles    = []string{
 		"admin_status", "admin_api", "admin_create", "reseller_create",
 		"admin_password", "admin_rename", "admin_suspend", "admin_unsuspend",
+		"admin_delete", "admin_port", "reseller_rename",
 		"waf_domain", "waf_status",
 		"user_status", "user_create", "user_delete", "user_email",
-		"user_ip", "user_password", "user_rename", "user_transfer",
+		"user_ip", "user_password", "user_rename", "user_transfer", "user_quota",
 		"ftp_create", "ftp_delete", "ftp_password",
 		"domains_add", "domains_delete", "domains_status", "domains_ssl", "domains_hsts",
-		"imunify_scan", "docker_backup",
+		"imunify_scan", "docker_backup", "docker_update",
 	}
 )
 
@@ -144,6 +145,9 @@ var notifUserActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"admin_rename", "Admin/Reseller renamed", "Fires when an Administrator or Reseller account is renamed."},
 	{"admin_suspend", "Admin/Reseller suspended", "Fires when an Administrator or Reseller account is suspended."},
 	{"admin_unsuspend", "Admin/Reseller unsuspended", "Fires when an Administrator or Reseller account is unsuspended."},
+	{"admin_delete", "Admin/Reseller deleted", "Fires when an Administrator or Reseller account is deleted."},
+	{"reseller_rename", "Reseller renamed", "Fires when a Reseller account is renamed."},
+	{"admin_port", "OpenAdmin port changed", `Fires when the OpenAdmin port is changed on "OpenAdmin > Settings > General".`},
 	{"waf_domain", "WAF enabled/disabled for a domain", "Triggered when WAF is toggled for a domain."},
 	{"waf_status", "WAF enabled/disabled on the server", "Fires when WAF status changes on the server."},
 	{"user_create", "User added", "Fires when a new OpenPanel user is added or imported from cPanel backup."},
@@ -153,6 +157,7 @@ var notifUserActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"user_ip", "User IP changed", "Fires when IP is changed for OpenPanel user."},
 	{"user_password", "User password changed", "Fires when password is changed for an OpenPanel user."},
 	{"user_rename", "User renamed", "Fires when the username is changed for an OpenPanel account."},
+	{"user_quota", "User near or over disk limit", "Fires when a user's disk usage gets close to or goes over the plan's disk limit."},
 	{"user_transfer", "User transferred", "Fires on the destination server when accounts are transferred to it with Transfer to another server or Migrate server, with a summary of what was moved."},
 	{"ftp_create", "FTP account created", "Fires when a new FTP account is added."},
 	{"ftp_delete", "FTP account deleted", "Fires when an FTP account is deleted."},
@@ -164,6 +169,7 @@ var notifUserActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"domains_hsts", "HSTS enabled/disabled", "Triggered when HSTS is toggled for a domain name."},
 	{"imunify_scan", "ImunifyAV scan started/finished", "Fires when an ImunifyAV malware scan starts, finishes or finds malware."},
 	{"docker_backup", "Backup failed", "Fires when the scheduled admin backup fails for one or more users."},
+	{"docker_update", "Docker image update failed", "Fires when the scheduled Docker image update has problems."},
 }
 
 // ServeSettings handles GET /settings/notifications.
@@ -198,7 +204,7 @@ func (n *NotificationSettings) ServeSettings(w http.ResponseWriter, r *http.Requ
 	for _, a := range notifServerActionOrder {
 		serverActions = append(serverActions, notifToggleView{
 			Key: a.Key, Label: a.Label, Tooltip: a.Tooltip,
-			Checked: notifConfig.Get("DEFAULT", a.Key, "") == "yes", IsAttack: a.Key == "attack",
+			Checked: notifConfig.Get("DEFAULT", a.Key, "yes") != "no", IsAttack: a.Key == "attack",
 		})
 	}
 
@@ -206,7 +212,7 @@ func (n *NotificationSettings) ServeSettings(w http.ResponseWriter, r *http.Requ
 	for _, a := range notifUserActionOrder {
 		userActions = append(userActions, notifToggleView{
 			Key: a.Key, Label: a.Label, Tooltip: a.Tooltip,
-			Checked: notifConfig.Get("ACTIONS", a.Key, "") == "yes",
+			Checked: notifConfig.Get("ACTIONS", a.Key, "yes") != "no",
 		})
 	}
 

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -433,6 +434,43 @@ func TestNotificationSettingsRendersThresholdAdvice(t *testing.T) {
 	for _, want := range []string{"at least 12, 2× the 6 CPU cores", `data-value="4"`, "Number(v) < 12", "Below 12, normal load on 6 cores"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected %q in the page", want)
+		}
+	}
+}
+
+// sentinel sends an action whose key isn't in notifications.ini, the form has to show it as on or saving turns it off
+func TestNotificationSettingsMissingKeyShowsAsOn(t *testing.T) {
+	_, notifPath, _ := withScratchNotificationConfig(t)
+	os.WriteFile(notifPath, []byte("[DEFAULT]\nlogin=no\n[ACTIONS]\nuser_create=no\n"), 0644)
+
+	ns := &NotificationSettings{Sessions: auth.NewManager("test-secret", false)}
+	srv := httptest.NewServer(newNotificationSettingsMux(ns))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/settings/notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	checked := func(key string) bool {
+		return regexp.MustCompile(`name="` + key + `" id="` + key + `" checked`).Match(body)
+	}
+	for key, want := range map[string]bool{"login": false, "user_create": false, "ssh": true, "user_quota": true, "admin_delete": true} {
+		if checked(key) != want {
+			t.Errorf("%s checked = %v, want %v", key, checked(key), want)
+		}
+	}
+}
+
+func TestNotificationActionTogglesAllHaveLabels(t *testing.T) {
+	labeled := map[string]bool{}
+	for _, a := range notifUserActionOrder {
+		labeled[a.Key] = true
+	}
+	for _, k := range actionToggles {
+		if !labeled[k] {
+			t.Errorf("%s is saved but has no row on the page", k)
 		}
 	}
 }
