@@ -203,6 +203,20 @@ func backupScheduleChoiceKey(schedule string) string {
 	return ""
 }
 
+// backupScheduleCustom is the choice for a schedule that isn't one of the
+// four presets (e.g. 0 22 * * * set on /server/crons); saving it keeps the
+// cron entry as it is instead of falling back to Disabled.
+const backupScheduleCustom = "custom"
+
+// backupsUserScheduleChoice is the dropdown value for schedule: a preset's
+// key, or backupScheduleCustom.
+func backupsUserScheduleChoice(schedule string) string {
+	if key := backupScheduleChoiceKey(schedule); key != "" {
+		return key
+	}
+	return backupScheduleCustom
+}
+
 // backupScheduleLabel renders schedule for the active-status badge: the
 // preset's name if it matches one of the four known values, or the raw
 // cron fields otherwise (a schedule set some other way, e.g. directly on
@@ -259,10 +273,7 @@ func backupsReadLastLines(path string, n int) string {
 // ServeUserBackups handles GET /backups/user.
 func (b *Backups) ServeUserBackups(w http.ResponseWriter, r *http.Request) {
 	schedule := backupsUserSchedule()
-	scheduleChoice := backupScheduleChoiceKey(schedule)
-	if scheduleChoice == "" {
-		scheduleChoice = "disabled" // dropdown fallback; ScheduleLabel still shows the real raw value
-	}
+	scheduleChoice := backupsUserScheduleChoice(schedule)
 	backupEnv, err := os.ReadFile(BackupEnvPath)
 	if err != nil {
 		backupEnv = []byte{}
@@ -276,6 +287,7 @@ func (b *Backups) ServeUserBackups(w http.ResponseWriter, r *http.Request) {
 	webtemplates.Render(w, "backups_user.html", mergeChrome(map[string]interface{}{
 		"ScheduleChoice":  scheduleChoice,
 		"ScheduleLabel":   backupScheduleLabel(schedule),
+		"ScheduleRaw":     schedule,
 		"BackupEnv":       string(backupEnv),
 		"BackupEnvForm":   parseBackupEnvForm(string(backupEnv)),
 		"Exclusions":      exclusions,
@@ -293,6 +305,16 @@ func (b *Backups) ServeUserBackups(w http.ResponseWriter, r *http.Request) {
 func (b *Backups) ServeUserBackupsSettings(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	choice := r.PostFormValue("schedule_choice")
+	if choice == backupScheduleCustom {
+		current := backupsUserSchedule()
+		if backupsUserScheduleChoice(current) != backupScheduleCustom {
+			auth.AddFlash(w, r, b.Sessions, "Invalid schedule choice.", "error")
+		} else {
+			auth.AddFlash(w, r, b.Sessions, "Saved. The custom schedule ("+current+") is kept, change it from scheduled actions.", "success")
+		}
+		http.Redirect(w, r, "/backups/user#settings", http.StatusSeeOther)
+		return
+	}
 	schedule, ok := backupScheduleChoices[choice]
 	if !ok {
 		auth.AddFlash(w, r, b.Sessions, "Invalid schedule choice.", "error")

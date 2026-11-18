@@ -88,24 +88,31 @@ func (a *APIBackups) ServeSystemBackupsActionStatus(w http.ResponseWriter, r *ht
 // ServeUserBackups handles GET /api/backups/user.
 func (a *APIBackups) ServeUserBackups(w http.ResponseWriter, r *http.Request) {
 	schedule := backupsUserSchedule()
-	scheduleChoice := backupScheduleChoiceKey(schedule)
-	if scheduleChoice == "" {
-		scheduleChoice = "disabled"
-	}
 	writeJSON(w, map[string]interface{}{
-		"schedule_choice": scheduleChoice,
+		"schedule_choice": backupsUserScheduleChoice(schedule),
 		"schedule_label":  backupScheduleLabel(schedule),
+		"schedule":        schedule,
 	})
 }
 
 // ServeUserBackupsSettings handles POST /api/backups/user/settings:
-// {"schedule_choice": "disabled"|"daily"|"weekly"|"monthly"}.
+// {"schedule_choice": "disabled"|"daily"|"weekly"|"monthly"|"custom"},
+// "custom" only while the schedule already is one and leaves it unchanged.
 func (a *APIBackups) ServeUserBackupsSettings(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		ScheduleChoice string `json:"schedule_choice"`
 	}
 	if !apiDecodeJSONBody(r, &body) {
 		writeJSONError(w, http.StatusBadRequest, "Invalid JSON format")
+		return
+	}
+	if body.ScheduleChoice == backupScheduleCustom {
+		current := backupsUserSchedule()
+		if backupsUserScheduleChoice(current) != backupScheduleCustom {
+			writeJSONError(w, http.StatusBadRequest, "Invalid schedule choice.")
+			return
+		}
+		writeJSON(w, map[string]interface{}{"success": true, "schedule_choice": backupScheduleCustom, "schedule": current})
 		return
 	}
 	schedule, ok := backupScheduleChoices[body.ScheduleChoice]
