@@ -13,6 +13,7 @@ func TestAPISettingsGeneralGetReturnsCurrentValues(t *testing.T) {
 	withScratchGeneralGetters(t, "2083", "2087", "example.com", "openpanel")
 
 	g := &APISettingsGeneral{DevMode: true}
+	stubSavedDevMode(t)
 	req := httptest.NewRequest(http.MethodGet, "/api/settings/general", nil)
 	rec := httptest.NewRecorder()
 	g.ServeSettingsGeneral(rec, req)
@@ -29,6 +30,7 @@ func TestAPISettingsGeneralGetReturnsCurrentValues(t *testing.T) {
 
 func TestAPISettingsGeneralPostInvalidJSONReturns400(t *testing.T) {
 	g := &APISettingsGeneral{}
+	stubSavedDevMode(t)
 	req := httptest.NewRequest(http.MethodPost, "/api/settings/general", strings.NewReader("not json"))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -41,6 +43,7 @@ func TestAPISettingsGeneralPostInvalidJSONReturns400(t *testing.T) {
 func TestAPISettingsGeneralPostInvalidPortReturns400(t *testing.T) {
 	withScratchGeneralGetters(t, "2083", "2087", "example.com", "openpanel")
 	g := &APISettingsGeneral{}
+	stubSavedDevMode(t)
 	req := httptest.NewRequest(http.MethodPost, "/api/settings/general", strings.NewReader(`{"2087_port":"not-a-number"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -56,6 +59,7 @@ func TestAPISettingsGeneralPostAppliesOnlyChangedValues(t *testing.T) {
 	calls := withScratchGeneralSetters(t)
 
 	g := &APISettingsGeneral{}
+	stubSavedDevMode(t)
 	req := httptest.NewRequest(http.MethodPost, "/api/settings/general",
 		strings.NewReader(`{"force_domain":"new.example.com"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -87,6 +91,7 @@ func TestAPISettingsGeneralPostNoChangesReportsMessage(t *testing.T) {
 	withScratchGeneralSetters(t)
 
 	g := &APISettingsGeneral{}
+	stubSavedDevMode(t)
 	req := httptest.NewRequest(http.MethodPost, "/api/settings/general", strings.NewReader(`{}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

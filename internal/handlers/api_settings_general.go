@@ -36,7 +36,7 @@ func (g *APISettingsGeneral) ServeSettingsGeneral(w http.ResponseWriter, r *http
 	}
 
 	devModeStr := "off"
-	if g.DevMode {
+	if (&General{DevMode: g.DevMode}).savedDevMode() {
 		devModeStr = "on"
 	}
 	writeJSON(w, map[string]interface{}{
@@ -98,7 +98,7 @@ func (g *APISettingsGeneral) handlePost(w http.ResponseWriter, r *http.Request) 
 	}
 
 	devModeCurrent := "off"
-	if g.DevMode {
+	if (&General{DevMode: g.DevMode}).savedDevMode() {
 		devModeCurrent = "on"
 	}
 	if (devModeCurrent == "on" && body.DevMode == "off") || (devModeCurrent == "off" && body.DevMode == "on") {

@@ -40,6 +40,10 @@ func withScratchGeneralSetters(t *testing.T) *generalSetterCalls {
 	generalSetOpenpanelPortRun = func(v string) { calls.port = append(calls.port, v) }
 	generalSetDomainRun = func(v string) { calls.domain = append(calls.domain, v) }
 	generalSetDevModeRun = func(v string) { calls.devMode = append(calls.devMode, v) }
+	// the General{DevMode} each test sets is the state, no real openpanel.config here
+	origSaved := generalSavedDevModeRun
+	generalSavedDevModeRun = func() (bool, bool) { return false, false }
+	t.Cleanup(func() { generalSavedDevModeRun = origSaved })
 	generalSetAdminPortRun = func(v string) { calls.adminPort = append(calls.adminPort, v) }
 	generalSetProxyRun = func(v string) { calls.proxy = append(calls.proxy, v) }
 	t.Cleanup(func() {
@@ -241,6 +245,7 @@ func TestServeGeneralGetJSON(t *testing.T) {
 	withScratchGeneralGetters(t, "2083", "2087", "srv.example.net", "openpanel")
 
 	g := &General{DevMode: true}
+	stubSavedDevMode(t)
 	srv, client := newGeneralTestServer(t, g)
 
 	resp, err := client.Get(srv.URL + "/settings/general?output=json")
@@ -260,6 +265,7 @@ func TestServeGeneralPostNoChanges(t *testing.T) {
 	openpanelFlag, openadminFlag := withScratchGeneralRestartFlags(t)
 
 	g := &General{DevMode: false}
+	stubSavedDevMode(t)
 	srv, client := newGeneralTestServer(t, g)
 
 	resp, err := client.PostForm(srv.URL+"/settings/general", url.Values{
@@ -299,6 +305,7 @@ func TestServeGeneralPostChangesEverything(t *testing.T) {
 	openpanelFlag, openadminFlag := withScratchGeneralRestartFlags(t)
 
 	g := &General{DevMode: false}
+	stubSavedDevMode(t)
 	srv, client := newGeneralTestServer(t, g)
 
 	resp, err := client.PostForm(srv.URL+"/settings/general", url.Values{
@@ -371,5 +378,35 @@ func TestServeGeneralPostProxyResetToDefaultIsDetectedAndReported(t *testing.T) 
 	}
 	if _, err := os.Stat(openadminFlag); err != nil {
 		t.Fatalf("expected the openadmin restart flag written since the proxy really changed, err=%v", err)
+	}
+}
+
+// the General{DevMode} a test sets is the state, no real openpanel.config here
+func stubSavedDevMode(t *testing.T) {
+	t.Helper()
+	orig := generalSavedDevModeRun
+	generalSavedDevModeRun = func() (bool, bool) { return false, false }
+	t.Cleanup(func() { generalSavedDevModeRun = orig })
+}
+
+func TestGeneralDevModeCanBeTurnedBackOffBeforeARestart(t *testing.T) {
+	saved := false
+	orig, origSet := generalSavedDevModeRun, generalSetDevModeRun
+	t.Cleanup(func() { generalSavedDevModeRun, generalSetDevModeRun = orig, origSet })
+	generalSavedDevModeRun = func() (bool, bool) { return saved, true }
+	generalSetDevModeRun = func(v string) { saved = v == "on" }
+
+	// started with it off, switched on, then off again without a restart
+	g := &General{DevMode: false}
+	if g.savedDevMode() {
+		t.Fatal("expected off at start")
+	}
+	generalSetDevModeRun("on")
+	if !g.savedDevMode() {
+		t.Fatal("the page should show the saved value, on")
+	}
+	generalSetDevModeRun("off")
+	if g.savedDevMode() {
+		t.Fatal("turning it back off has to stick")
 	}
 }

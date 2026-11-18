@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"net/http"
+	"openadmin/internal/bootstrap"
 	"os"
 	"os/exec"
 	"regexp"
@@ -59,8 +60,10 @@ var (
 	generalSetOpenpanelPortRun = func(port string) { _ = exec.Command("opencli", "port", "set", port, "--no-restart").Run() }
 	generalSetDomainRun        = func(domain string) { _ = exec.Command("opencli", "domain", "set", domain, "--no-restart").Run() }
 	generalSetDevModeRun       = func(value string) { _ = exec.Command("opencli", "config", "update", "dev_mode", value).Run() }
-	generalSetAdminPortRun     = func(port string) { _ = exec.Command("opencli", "admin", "port", port, "--no-restart").Run() }
-	generalSetProxyRun         = func(proxy string) { _ = exec.Command("opencli", "proxy", "set", proxy, "--no-restart").Run() }
+	// what openpanel.config has now, the startup value lags until the restart and turning it back off was ignored
+	generalSavedDevModeRun = func() (on bool, ok bool) { return bootstrap.IsDevMode(), true }
+	generalSetAdminPortRun = func(port string) { _ = exec.Command("opencli", "admin", "port", port, "--no-restart").Run() }
+	generalSetProxyRun     = func(proxy string) { _ = exec.Command("opencli", "proxy", "set", proxy, "--no-restart").Run() }
 )
 
 // GeneralOpenpanelRestartFlagPath / GeneralOpenadminRestartFlagPath are
@@ -185,7 +188,7 @@ func (g *General) ServeGeneral(w http.ResponseWriter, r *http.Request) {
 
 		devModeNewValue := r.PostFormValue("dev_mode")
 		devModeCurrent := "off"
-		if g.DevMode {
+		if g.savedDevMode() {
 			devModeCurrent = "on"
 		}
 		if (devModeCurrent == "on" && devModeNewValue == "off") || (devModeCurrent == "off" && devModeNewValue == "on") {
@@ -234,7 +237,7 @@ func (g *General) ServeGeneral(w http.ResponseWriter, r *http.Request) {
 	// boolean) -- it does its own conversion to a 'true'/'false' string
 	// for the Alpine.js toggle.
 	devModeStr := "off"
-	if g.DevMode {
+	if g.savedDevMode() {
 		devModeStr = "on"
 	}
 
@@ -266,4 +269,12 @@ func (g *General) ServeGeneral(w http.ResponseWriter, r *http.Request) {
 	// otherwise clobber this page's "on"/"off" setting value above.
 	merged["DevMode"] = devModeStr
 	webtemplates.Render(w, "settings_general.html", merged)
+}
+
+// savedDevMode is the dev_mode value in openpanel.config, falling back to the startup value
+func (g *General) savedDevMode() bool {
+	if on, ok := generalSavedDevModeRun(); ok {
+		return on
+	}
+	return g.DevMode
 }
