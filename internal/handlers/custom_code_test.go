@@ -27,6 +27,8 @@ func withScratchCustomCodePaths(t *testing.T) {
 		newPaths[k] = filepath.Join(dir, k+".txt")
 	}
 	origProfiles := WPProfilesDir
+	origLegacy := legacyStartupScriptPath
+	legacyStartupScriptPath = filepath.Join(dir, "legacy_run_on_startup")
 	customCodeFilePaths = newPaths
 	CustomCodeRestartFlagPath = filepath.Join(dir, "restart_needed")
 	WPProfilesDir = filepath.Join(dir, "profiles")
@@ -34,6 +36,7 @@ func withScratchCustomCodePaths(t *testing.T) {
 		customCodeFilePaths = origPaths
 		CustomCodeRestartFlagPath = origFlag
 		WPProfilesDir = origProfiles
+		legacyStartupScriptPath = origLegacy
 	})
 }
 
@@ -277,5 +280,24 @@ func TestServeCustomCodeWelcomeEmailIsEnterpriseOnly(t *testing.T) {
 	}
 	if string(saved) != "<p>{{EMAIL}}</p>" {
 		t.Fatalf("expected saved content to match, got %q", saved)
+	}
+}
+
+func TestServeCustomCodeMovesLegacyStartupScript(t *testing.T) {
+	withScratchCustomCodePaths(t)
+	os.WriteFile(legacyStartupScriptPath, []byte("echo hi\n"), 0644)
+
+	srv, client := newCustomCodeTestServer(t, &CustomCode{}, "admin")
+	resp, err := client.Get(srv.URL + "/settings/custom-code?output=json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "echo hi") {
+		t.Fatalf("expected the old startup script on the page, got %s", body)
+	}
+	if b, _ := os.ReadFile(customCodeFilePaths["pre_startup"]); string(b) != "echo hi\n" {
+		t.Fatalf("expected it copied to the mounted path, got %q", b)
 	}
 }

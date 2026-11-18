@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/gorilla/csrf"
 
@@ -28,7 +29,7 @@ var customCodeFilePaths = map[string]string{
 	"in_header":           "/etc/openpanel/openpanel/custom_code/in_header.html",
 	"in_footer":           "/etc/openpanel/openpanel/custom_code/in_footer.html",
 	"post_update":         "/root/openpanel_run_after_update",
-	"pre_startup":         "/root/openpanel_run_on_startup",
+	"pre_startup":         "/etc/openpanel/openpanel/custom_code/run_on_startup",
 	"custom_section":      "/etc/openpanel/openpanel/conf/custom_dashboard_section.json",
 	"welcome_email":       "/etc/openpanel/openpanel/custom_code/welcome.html",
 	"forbidden_usernames": "/etc/openpanel/openadmin/config/forbidden_usernames.txt",
@@ -59,6 +60,24 @@ var customCodeEnterpriseFields = map[string]bool{
 	"howto_guides":   true,
 }
 
+// the openpanel container never mounted /root, so a script saved there didn't run
+var legacyStartupScriptPath = "/root/openpanel_run_on_startup"
+
+// moveLegacyStartupScript copies the old /root startup script to the mounted path once
+func moveLegacyStartupScript() {
+	newPath := customCodeFilePaths["pre_startup"]
+	if _, err := os.Stat(newPath); err == nil {
+		return
+	}
+	old, err := os.ReadFile(legacyStartupScriptPath)
+	if err != nil || len(old) == 0 {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(newPath), 0755); err == nil {
+		_ = os.WriteFile(newPath, old, 0755)
+	}
+}
+
 // CustomCodeRestartFlagPath is the restart-flag file written
 // unconditionally on every POST, regardless of which (if any) fields were
 // actually submitted.
@@ -86,6 +105,7 @@ func hasEnterpriseAccess(r *http.Request, checker *license.Checker) bool {
 // Enterprise license and non-reseller role before being written; the
 // Community-tier fields are unrestricted.
 func (c *CustomCode) ServeCustomCode(w http.ResponseWriter, r *http.Request) {
+	moveLegacyStartupScript()
 	if r.Method == http.MethodPost {
 		r.ParseForm()
 
