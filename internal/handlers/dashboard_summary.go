@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"html/template"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -254,6 +255,16 @@ type summaryDatabase struct {
 	Share                          int
 }
 
+// EngineIcon is the MySQL/MariaDB logo the databases table uses, empty for engines without one
+func (d summaryDatabase) EngineIcon() template.HTML {
+	for _, o := range userCreateSQLOptions {
+		if strings.EqualFold(o.Label, d.Engine) || o.Value == strings.ToLower(d.Engine) {
+			return template.HTML(strings.Replace(string(o.Icon), `class="w-16 h-16"`, `class="size-5 shrink-0"`, 1))
+		}
+	}
+	return ""
+}
+
 // isDatabaseFinding is a look item from the account's databases, the admin sees those under the account like the urgent ones
 func isDatabaseFinding(link string) bool {
 	for _, p := range []string{"/mysql", "/postgresql", "/mongodb", "/containers/logs?container=mysql", "/containers/logs?container=mariadb", "/containers/logs?container=postgres", "/containers/logs?container=mongodb"} {
@@ -273,6 +284,9 @@ type summarySite struct {
 	Requests string
 	Share    int
 }
+
+// Favicon is the site's icon from the same favicons url as the websites table
+func (s summarySite) Favicon() string { return faviconBase() + s.Name }
 
 // serverSummary is every account's daily summary for one day added up
 type serverSummary struct {
