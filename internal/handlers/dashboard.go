@@ -71,6 +71,8 @@ type dashboardPageData struct {
 	Summary *serverSummary
 	// resource peaks, alerts and mail on the summary's day, one per server on a cluster master, admins only
 	SummaryDays []summaryServerDay
+	// slowest websites by that day's PageSpeed checks, every server on a master
+	Slowest []summarySpeed
 	// day picker: the shown day, previous/next and the days that have a summary
 	Nav *summaryNav
 	// the admin's saved widget order, sizes, collapsed widgets and header buttons, "null" when never changed
@@ -260,6 +262,7 @@ func (d *Dashboard) ServeSummary(w http.ResponseWriter, r *http.Request) {
 	}
 	if u != nil && u.Role != "reseller" && day != "" {
 		data.SummaryDays = summaryServerDays(d.MySQL, u.ID, day, data.ServerHostname)
+		data.Slowest = slowestSites(data.SummaryDays, 5)
 		// malware found that day goes on top of Needs attention, on a copy since the summary is cached
 		var malware []summaryFinding
 		for _, sd := range data.SummaryDays {

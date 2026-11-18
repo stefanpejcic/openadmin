@@ -93,6 +93,9 @@ type attentionDomain struct {
 	Items []summaryFinding
 }
 
+// Favicon is the website's icon, same source as the websites table
+func (d attentionDomain) Favicon() string { return faviconBase() + d.Name }
+
 var (
 	attentionHolesRe = regexp.MustCompile(`(\d+) known security hole`)
 	attentionTimesRe = regexp.MustCompile(`\((\d+) times?\)`)

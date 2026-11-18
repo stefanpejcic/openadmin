@@ -75,7 +75,7 @@
                     {{end}}
                     {{range $g.Domains}}
                     <div class="mt-2 ml-1 border-l-2 border-gray-200 pl-3 dark:border-gray-800">
-                        <p class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50"><span class="text-gray-400 dark:text-gray-600" aria-hidden="true">&#8627;</span>{{.Name}}</p>
+                        <p class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50"><span class="text-gray-400 dark:text-gray-600" aria-hidden="true">&#8627;</span><img class="size-4 shrink-0 rounded-full" src="{{.Favicon}}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">{{.Name}}</p>
                         <ul role="list" class="mt-0.5 space-y-1">
                             {{range .Items}}
                             <li><span class="text-gray-900 dark:text-gray-50">{{.Title}}</span>{{if .Detail}}<span class="block text-gray-500 dark:text-gray-500 break-all">{{.Detail}}</span>{{end}}</li>
@@ -124,6 +124,30 @@
             {{end}}
         </div>
     </div>
+
+    {{with $.Slowest}}
+    <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Slowest websites</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Lowest Google PageSpeed scores from that day's checks, mobile first since most visitors are on phones.</p>
+        </div>
+        <div class="lg:col-span-2">
+            <ul role="list" id="summary-slowest" class="space-y-3">
+                {{range .}}
+                <li class="text-sm">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="flex min-w-0 items-center gap-2 truncate text-gray-900 dark:text-gray-50"><img class="size-4 shrink-0 rounded-full" src="{{.Favicon}}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="truncate">{{.Name}}</span>{{if .Username}} <a href="{{.Link}}" class="text-gray-500 hover:text-gray-900 hover:underline dark:hover:text-gray-50">{{stripSuspendedPrefix .Username}}</a>{{end}}{{if .Server}} <span class="text-xs text-gray-400 dark:text-gray-600">{{.Server}}</span>{{end}}</span>
+                        <span class="shrink-0 tabular-nums text-gray-500 dark:text-gray-500" title="{{if .MobileFCP}}Mobile: first paint {{.MobileFCP}}{{if .MobileInteractive}}, interactive {{.MobileInteractive}}{{end}}. {{end}}Checked {{.Checked}}">mobile <span class="font-medium {{.MobileColor}}">{{.Mobile}}</span> · desktop <span class="font-medium {{.DesktopColor}}">{{.Desktop}}</span></span>
+                    </div>
+                    {{if .MobileInteractive}}<p class="mt-0.5 text-xs text-gray-500 dark:text-gray-500">On mobile the first content shows after {{.MobileFCP}}, the page is usable after {{.MobileInteractive}}.</p>{{end}}
+                </li>
+                {{end}}
+            </ul>
+        </div>
+    </div>
+    {{end}}
 
     {{if .Databases}}
     <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>

@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -161,5 +162,32 @@ func TestMergeAdminNewIPs(t *testing.T) {
 	}
 	if got[2].Title != "Admin stefan accessed from new IP: 1.2.3.4" {
 		t.Errorf("single admin row: %+v", got[2])
+	}
+}
+
+func TestSummarySpeedsFor(t *testing.T) {
+	dir := t.TempDir()
+	orig := WebsitesPageSpeedDir
+	t.Cleanup(func() { WebsitesPageSpeedDir = orig })
+	WebsitesPageSpeedDir = dir
+	report := func(path, ts, site string, desktop, mobile float64) {
+		os.MkdirAll(filepath.Dir(path), 0755)
+		os.WriteFile(path, []byte(`{"timestamp":"`+ts+`","website":"`+site+`","desktop_speed":{"performance_score":`+strconv.FormatFloat(desktop, 'f', 2, 64)+`,"first_contentful_paint":"0.5 s"},"mobile_speed":{"performance_score":`+strconv.FormatFloat(mobile, 'f', 2, 64)+`,"first_contentful_paint":"2.3 s","interactive":"8.9 s"}}`), 0644)
+	}
+	// the day's copy, and the current report already overwritten by the next morning's check
+	report(filepath.Join(dir, "history", "2026-11-17", "a.com.json"), "2026-11-17 04:00:10", "a.com", 0.79, 0.41)
+	report(filepath.Join(dir, "a.com.json"), "2026-11-18 04:00:10", "a.com", 0.95, 0.90)
+	report(filepath.Join(dir, "b.com.json"), "2026-11-17 04:01:00", "b.com", 0.50, 0.20)
+
+	got := summarySpeedsFor(nil, "2026-11-17")
+	if len(got) != 2 {
+		t.Fatalf("speeds: %+v", got)
+	}
+	slow := slowestSites([]summaryServerDay{{Name: "s1", Day: &summaryDay{Speeds: got}}}, 5)
+	if slow[0].Name != "b.com" || slow[0].Mobile != 20 || slow[1].Name != "a.com" || slow[1].Mobile != 41 || slow[1].Desktop != 79 {
+		t.Errorf("slowest: %+v", slow)
+	}
+	if n := len(summarySpeedsFor(nil, "2026-11-18")); n != 1 {
+		t.Errorf("next day should only see a.com's new check, got %d", n)
 	}
 }
