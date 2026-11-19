@@ -383,6 +383,10 @@ func (d *Domains) HandleToggleFeature(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		cliArgs = []string{"opencli", "domains-dns", newStatus, domain}
+		// these two ask y/n on the terminal, without -y they timed out and nothing happened
+		if newStatus == "delete" || newStatus == "default" {
+			cliArgs = append(cliArgs, "-y")
+		}
 		switch {
 		case strings.HasSuffix(newStatus, "e"):
 			action = newStatus + "d"
