@@ -1009,7 +1009,8 @@ func (bc *BotControl) botState(r *http.Request) (map[string]any, []BotDomainRow,
 	domains, owners := wf.wafDomainsFor(r)
 
 	selectedDomain := strings.TrimSpace(r.URL.Query().Get("domain"))
-	if selectedDomain != "" && !wafContains(domains, selectedDomain) {
+	// a domain this server doesn't have counts nothing here, on a cluster it's on another server and that one's numbers are added
+	if selectedDomain != "" && !wafContains(domains, selectedDomain) && !strings.Contains(selectedDomain, ".") {
 		selectedDomain = ""
 	}
 	window := strings.TrimSpace(r.URL.Query().Get("window"))
@@ -1049,7 +1050,7 @@ func sortBotRows(rows []BotDomainRow, col, direction string) {
 	case "domain":
 		sortBy(rows, direction, func(a, b BotDomainRow) bool { return a.Domain < b.Domain })
 	case "owner":
-		sortBy(rows, direction, func(a, b BotDomainRow) bool { return a.Owner < b.Owner })
+		sortBy(rows, direction, func(a, b BotDomainRow) bool { return stripSuspendedPrefix(a.Owner) < stripSuspendedPrefix(b.Owner) })
 	case "hits":
 		sortBy(rows, direction, func(a, b BotDomainRow) bool { return a.Requests < b.Requests })
 	case "ai":

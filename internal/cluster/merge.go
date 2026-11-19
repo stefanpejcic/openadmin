@@ -1173,6 +1173,95 @@ func (m *Manager) pickerHTML(wrapClass, path, activeID string, u *admindb.User) 
 	return b.String()
 }
 
+var clusterSumRe = regexp.MustCompile(`(data-cluster-sum="([a-z0-9_-]+)"[^>]*>)\s*([0-9][0-9,]*)\s*<`)
+
+// sumClusterStats adds up the numbers a page marks with data-cluster-sum="key" (totals above a table) with the same ones of the other servers
+func sumClusterStats(page []byte, remotes []remotePage) []byte {
+	if len(remotes) == 0 || !bytes.Contains(page, []byte("data-cluster-sum")) {
+		return page
+	}
+	num := func(b []byte) int {
+		n, _ := strconv.Atoi(strings.ReplaceAll(string(b), ",", ""))
+		return n
+	}
+	totals := map[string]int{}
+	for _, rp := range remotes {
+		for _, m := range clusterSumRe.FindAllSubmatch(rp.body, -1) {
+			totals[string(m[2])] += num(m[3])
+		}
+	}
+	return clusterSumRe.ReplaceAllFunc(page, func(b []byte) []byte {
+		m := clusterSumRe.FindSubmatch(b)
+		return []byte(string(m[1]) + strconv.Itoa(num(m[3])+totals[string(m[2])]) + "<")
+	})
+}
+
+var (
+	clusterSelectRe = regexp.MustCompile(`(?s)(<select[^>]*data-cluster-options="([a-z0-9_-]+)"[^>]*>)(.*?)(</select>)`)
+	clusterOptionRe = regexp.MustCompile(`(?s)<option\b([^>]*)>(.*?)</option>`)
+	optionValueRe   = regexp.MustCompile(`\bvalue="([^"]*)"`)
+	optionCountRe   = regexp.MustCompile(`\bdata-cluster-count="([^"]*%d[^"]*)"`)
+)
+
+// mergeClusterOptions puts the options of every server into a <select data-cluster-options="key">, the empty "all" options stay on top and the one with data-cluster-count="All (%d)" counts the rest
+func mergeClusterOptions(page []byte, remotes []remotePage) []byte {
+	if len(remotes) == 0 || !bytes.Contains(page, []byte("data-cluster-options")) {
+		return page
+	}
+	type opt struct{ attrs, text, value string }
+	parse := func(inner []byte) []opt {
+		var out []opt
+		for _, m := range clusterOptionRe.FindAllSubmatch(inner, -1) {
+			v := ""
+			if vm := optionValueRe.FindSubmatch(m[1]); vm != nil {
+				v = string(vm[1])
+			}
+			out = append(out, opt{attrs: string(m[1]), text: string(m[2]), value: v})
+		}
+		return out
+	}
+	remoteOpts := map[string][]opt{}
+	for _, rp := range remotes {
+		for _, m := range clusterSelectRe.FindAllSubmatch(rp.body, -1) {
+			remoteOpts[string(m[2])] = append(remoteOpts[string(m[2])], parse(m[3])...)
+		}
+	}
+	return clusterSelectRe.ReplaceAllFunc(page, func(b []byte) []byte {
+		m := clusterSelectRe.FindSubmatch(b)
+		var head, rest []opt
+		seen := map[string]bool{}
+		for _, o := range append(parse(m[3]), remoteOpts[string(m[2])]...) {
+			if o.value == "" {
+				if len(rest) == 0 && !seen[""] {
+					head = append(head, o)
+					seen[""] = true
+				}
+				continue
+			}
+			if seen[o.value] {
+				continue
+			}
+			seen[o.value] = true
+			rest = append(rest, o)
+		}
+		sort.SliceStable(rest, func(i, j int) bool { return rest[i].value < rest[j].value })
+		var out strings.Builder
+		out.Write(m[1])
+		for _, o := range head {
+			text := o.text
+			if cm := optionCountRe.FindStringSubmatch(o.attrs); cm != nil {
+				text = html.EscapeString(fmt.Sprintf(html.UnescapeString(cm[1]), len(rest)))
+			}
+			out.WriteString("<option" + o.attrs + ">" + text + "</option>")
+		}
+		for _, o := range rest {
+			out.WriteString("<option" + o.attrs + ">" + o.text + "</option>")
+		}
+		out.Write(m[4])
+		return []byte(out.String())
+	})
+}
+
 func (m *Manager) mergePage(page []byte, r *http.Request, activeID, activeName string, u *admindb.User, next http.Handler) []byte {
 	return m.decoratePage(m.mergePageBody(page, r, activeID, activeName, u, next), r.URL.Path, activeID, u)
 }
@@ -1235,6 +1324,8 @@ func (m *Manager) mergePageBody(page []byte, r *http.Request, activeID, activeNa
 			kept = append(kept, rp)
 		}
 	}
+	page = sumClusterStats(page, kept)
+	page = mergeClusterOptions(page, kept)
 	dir, _ := r.Context().Value(serverSortKey{}).(string)
 	filterURL := func(id string) string {
 		q := r.URL.Query()

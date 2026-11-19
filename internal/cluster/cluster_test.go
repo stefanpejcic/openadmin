@@ -1334,3 +1334,24 @@ func TestClassifyPageSpeedKey(t *testing.T) {
 		t.Errorf("other service files stay on the server, got %q", g)
 	}
 }
+
+func TestSumClusterStats(t *testing.T) {
+	page := []byte(`<dd data-cluster-sum="req">1,200</dd><span data-cluster-sum="ai">3</span><dd>7</dd>`)
+	out := string(sumClusterStats(page, []remotePage{{body: []byte(`<dd class="x" data-cluster-sum="req">800</dd><span data-cluster-sum="ai">2</span>`)}, {body: []byte(`<dd data-cluster-sum="req">5</dd>`)}}))
+	if out != `<dd data-cluster-sum="req">2005</dd><span data-cluster-sum="ai">5</span><dd>7</dd>` {
+		t.Errorf("got %s", out)
+	}
+}
+
+func TestMergeClusterOptions(t *testing.T) {
+	sel := func(opts string) string {
+		return `<select name="domain" data-cluster-options="d"><option value="" data-cluster-count="All domains (%d)">All domains (9)</option>` + opts + `</select>`
+	}
+	page := []byte(sel(`<option value="b.com">b.com</option>`))
+	out := string(mergeClusterOptions(page, []remotePage{{body: []byte(sel(`<option value="a.com" selected>a.com</option><option value="b.com">b.com</option>`))}}))
+	want := sel(`<option value="a.com" selected>a.com</option><option value="b.com">b.com</option>`)
+	want = strings.Replace(want, "All domains (9)", "All domains (2)", 1)
+	if out != want {
+		t.Errorf("got  %s\nwant %s", out, want)
+	}
+}

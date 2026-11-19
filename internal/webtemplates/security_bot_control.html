@@ -86,22 +86,22 @@
             <dl class="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
                     <dt class="text-sm text-gray-500 dark:text-gray-400">Domains</dt>
-                    <dd class="mt-1 text-lg font-semibold tabular-nums">{{.TotalDomains}}</dd>
-                    <dd class="mt-1 text-xs text-gray-500">{{index .PolicyCounts "block"}} block · {{index .PolicyCounts "ratelimit"}} rate-limit · {{index .PolicyCounts "allow"}} allow</dd>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums" data-cluster-sum="bot-domains">{{.TotalDomains}}</dd>
+                    <dd class="mt-1 text-xs text-gray-500"><span data-cluster-sum="bot-block">{{index .PolicyCounts "block"}}</span> block · <span data-cluster-sum="bot-ratelimit">{{index .PolicyCounts "ratelimit"}}</span> rate-limit · <span data-cluster-sum="bot-allow">{{index .PolicyCounts "allow"}}</span> allow</dd>
                 </div>
                 <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
                     <dt class="text-sm text-gray-500 dark:text-gray-400">Total requests ({{.Report.Window}})</dt>
-                    <dd class="mt-1 text-lg font-semibold tabular-nums">{{.Report.TotalRequests}}</dd>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums" data-cluster-sum="bot-requests">{{.Report.TotalRequests}}</dd>
                     <dd class="mt-1 text-xs text-gray-500">Scope: {{.Report.Scope}}</dd>
                 </div>
                 <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
                     <dt class="text-sm text-gray-500 dark:text-gray-400">AI crawler hits</dt>
-                    <dd class="mt-1 text-lg font-semibold tabular-nums text-yellow-700 dark:text-yellow-500">{{.Report.AIRequests}}</dd>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums text-yellow-700 dark:text-yellow-500" data-cluster-sum="bot-ai">{{.Report.AIRequests}}</dd>
                     <dd class="mt-1 text-xs text-gray-500">GPTBot, ClaudeBot, Bytespider, etc.</dd>
                 </div>
                 <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
                     <dt class="text-sm text-gray-500 dark:text-gray-400">Blocked / throttled</dt>
-                    <dd class="mt-1 text-lg font-semibold tabular-nums text-red-600 dark:text-red-400">{{.Report.BlockedCount}}</dd>
+                    <dd class="mt-1 text-lg font-semibold tabular-nums text-red-600 dark:text-red-400" data-cluster-sum="bot-blocked">{{.Report.BlockedCount}}</dd>
                     <dd class="mt-1 text-xs text-gray-500">HTTP 403 &amp; 429 responses</dd>
                 </div>
             </dl>
@@ -110,8 +110,8 @@
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 class="text-base font-semibold">Who's hitting the server</h2>
                     <form method="get" action="/security/bot-control" class="flex flex-wrap items-center gap-2">
-                        <select name="domain" onchange="this.form.submit()" class="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
-                            <option value="">All domains ({{.TotalDomains}})</option>
+                        <select name="domain" data-cluster-options="bot-domains" onchange="this.form.submit()" class="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                            <option value="" data-cluster-count="All domains (%d)">All domains ({{.TotalDomains}})</option>
                             {{range .Domains}}
                             <option value="{{.Domain}}" {{if eq $.SelectedDomain .Domain}}selected{{end}}>{{.Domain}}</option>
                             {{end}}
@@ -223,10 +223,10 @@
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                             {{range .Domains}}
                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
-                                <td class="px-4 py-2.5 font-medium">
-                                    <a href="/security/bot-control?domain={{.Domain}}&amp;window={{$.Report.Window}}" class="text-blue-600 hover:underline dark:text-blue-400">{{.Domain}}</a>
+                                <td class="relative px-4 py-2.5 font-medium">
+                                    {{template "suspended_bar" .Owner}}<a href="/security/bot-control?domain={{.Domain}}&amp;window={{$.Report.Window}}" class="text-blue-600 hover:underline dark:text-blue-400">{{.Domain}}</a>
                                 </td>
-                                <td class="px-4 py-2.5 text-gray-500">{{if .Owner}}{{.Owner}}{{else}}-{{end}}</td>
+                                <td class="px-4 py-2.5 text-gray-500">{{if .Owner}}{{template "user_link" (dict "Href" (printf "/users/%s" .Owner) "Name" .Owner "Class" "text-blue-600 hover:underline hover:underline-offset-4 dark:text-blue-400")}}{{else}}-{{end}}</td>
                                 <td class="px-4 py-2.5 text-right font-mono">{{.Requests}}</td>
                                 <td class="px-4 py-2.5 text-right font-mono text-yellow-700 dark:text-yellow-500">{{.AIRequests}}</td>
                                 <td class="px-4 py-2.5 text-right font-mono text-red-600 dark:text-red-400">{{.BlockedCount}}</td>
