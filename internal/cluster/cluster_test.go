@@ -1355,3 +1355,17 @@ func TestMergeClusterOptions(t *testing.T) {
 		t.Errorf("got  %s\nwant %s", out, want)
 	}
 }
+
+func TestMergeClusterLists(t *testing.T) {
+	li := func(k string, b int) string {
+		return fmt.Sprintf(`<li data-cluster-key="%s"><a>%s</a> <span data-cluster-sum="blocked">%d</span></li>`, k, k, b)
+	}
+	ul := func(items ...string) string {
+		return `<ul data-cluster-list="d" data-cluster-sort="blocked" data-cluster-limit="2">` + strings.Join(items, "") + `</ul>`
+	}
+	page := []byte(ul(li("a.com", 5), li("b.com", 1)))
+	out := string(mergeClusterLists(page, []remotePage{{body: []byte(ul(li("c.com", 4), li("b.com", 9)))}}))
+	if want := ul(li("b.com", 10), li("a.com", 5)); out != want {
+		t.Errorf("got  %s\nwant %s", out, want)
+	}
+}

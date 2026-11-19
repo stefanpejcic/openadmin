@@ -1173,6 +1173,89 @@ func (m *Manager) pickerHTML(wrapClass, path, activeID string, u *admindb.User) 
 	return b.String()
 }
 
+// hasClusterMarks is a page with numbers, options or lists to add up from every server
+func hasClusterMarks(page []byte) bool {
+	return bytes.Contains(page, []byte("data-cluster-sum")) || bytes.Contains(page, []byte("data-cluster-options")) || bytes.Contains(page, []byte("data-cluster-list"))
+}
+
+var (
+	clusterListRe = regexp.MustCompile(`(?s)(<ul[^>]*data-cluster-list="([a-z0-9_-]+)"[^>]*>)(.*?)(</ul>)`)
+	clusterItemRe = regexp.MustCompile(`(?s)<li\b[^>]*data-cluster-key="([^"]*)"[^>]*>.*?</li>`)
+	listSortRe    = regexp.MustCompile(`\bdata-cluster-sort="([a-z0-9_-]+)"`)
+	listLimitRe   = regexp.MustCompile(`\bdata-cluster-limit="(\d+)"`)
+)
+
+// mergeClusterLists joins a <ul data-cluster-list="key"> of every server: items with the same data-cluster-key add up their data-cluster-sum numbers, sorted by data-cluster-sort (highest first) and cut at data-cluster-limit
+func mergeClusterLists(page []byte, remotes []remotePage) []byte {
+	if len(remotes) == 0 || !bytes.Contains(page, []byte("data-cluster-list")) {
+		return page
+	}
+	type item struct {
+		key, html string
+		fields    map[string]int
+	}
+	num := func(b []byte) int {
+		n, _ := strconv.Atoi(strings.ReplaceAll(string(b), ",", ""))
+		return n
+	}
+	parse := func(inner []byte) []item {
+		var out []item
+		for _, m := range clusterItemRe.FindAllSubmatch(inner, -1) {
+			it := item{key: string(m[1]), html: string(m[0]), fields: map[string]int{}}
+			for _, f := range clusterSumRe.FindAllSubmatch(m[0], -1) {
+				it.fields[string(f[2])] += num(f[3])
+			}
+			out = append(out, it)
+		}
+		return out
+	}
+	remote := map[string][]item{}
+	for _, rp := range remotes {
+		for _, m := range clusterListRe.FindAllSubmatch(rp.body, -1) {
+			remote[string(m[2])] = append(remote[string(m[2])], parse(m[3])...)
+		}
+	}
+	return clusterListRe.ReplaceAllFunc(page, func(b []byte) []byte {
+		m := clusterListRe.FindSubmatch(b)
+		var items []*item
+		byKey := map[string]*item{}
+		for _, it := range append(parse(m[3]), remote[string(m[2])]...) {
+			if have, ok := byKey[it.key]; ok {
+				for k, v := range it.fields {
+					have.fields[k] += v
+				}
+				continue
+			}
+			c := it
+			byKey[it.key] = &c
+			items = append(items, &c)
+		}
+		if len(items) == 0 {
+			return b
+		}
+		if sm := listSortRe.FindSubmatch(m[1]); sm != nil {
+			field := string(sm[1])
+			sort.SliceStable(items, func(i, j int) bool { return items[i].fields[field] > items[j].fields[field] })
+		}
+		if lm := listLimitRe.FindSubmatch(m[1]); lm != nil {
+			if n := num(lm[1]); n > 0 && len(items) > n {
+				items = items[:n]
+			}
+		}
+		var out strings.Builder
+		out.Write(m[1])
+		for _, it := range items {
+			fields := it.fields
+			out.WriteString(clusterSumRe.ReplaceAllStringFunc(it.html, func(s string) string {
+				f := clusterSumRe.FindStringSubmatch(s)
+				return f[1] + strconv.Itoa(fields[f[2]]) + "<"
+			}))
+		}
+		out.Write(m[4])
+		return []byte(out.String())
+	})
+}
+
 var clusterSumRe = regexp.MustCompile(`(data-cluster-sum="([a-z0-9_-]+)"[^>]*>)\s*([0-9][0-9,]*)\s*<`)
 
 // sumClusterStats adds up the numbers a page marks with data-cluster-sum="key" (totals above a table) with the same ones of the other servers
@@ -1262,27 +1345,15 @@ func mergeClusterOptions(page []byte, remotes []remotePage) []byte {
 	})
 }
 
-func (m *Manager) mergePage(page []byte, r *http.Request, activeID, activeName string, u *admindb.User, next http.Handler) []byte {
-	return m.decoratePage(m.mergePageBody(page, r, activeID, activeName, u, next), r.URL.Path, activeID, u)
-}
-
-func (m *Manager) mergePageBody(page []byte, r *http.Request, activeID, activeName string, u *admindb.User, next http.Handler) []byte {
-	if _, ok := pickerSpots[r.URL.Path]; ok {
-		return m.serverPicker(page, r.URL.Path, activeID, u)
-	}
-	if match := userPageRe.FindStringSubmatch(r.URL.Path); match != nil {
-		return m.transferPicker(page, match[1], activeID)
-	}
-	if !tablesMerge(r.URL.Path) || !bytes.Contains(page, []byte("<table")) {
-		return m.pagePicker(page, r, activeID, activeName, u)
-	}
+// otherPages fetches the same page from every other online server (the master's own too when another one is active), servers lists them all for the pickers
+func (m *Manager) otherPages(r *http.Request, activeID string, u *admindb.User, next http.Handler) (kept []remotePage, servers []serverEntry, only, uri string) {
 	type target struct {
 		id, name string
 		node     *Node
 	}
-	only, _ := r.Context().Value(serverFilterKey{}).(string)
+	only, _ = r.Context().Value(serverFilterKey{}).(string)
 	wanted := func(id string) bool { return id != activeID && (only == "" || only == id) }
-	servers := []serverEntry{{ID: LocalNode, Name: m.displayName()}}
+	servers = []serverEntry{{ID: LocalNode, Name: m.displayName()}}
 	targets := []target{}
 	if wanted(LocalNode) {
 		targets = append(targets, target{id: LocalNode, name: m.displayName()})
@@ -1300,7 +1371,7 @@ func (m *Manager) mergePageBody(page []byte, r *http.Request, activeID, activeNa
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), mergeFetchTimeout)
 	defer cancel()
-	uri := r.URL.RequestURI()
+	uri = r.URL.RequestURI()
 	ip := clientIPOf(r)
 	remotes := make([]remotePage, len(targets))
 	var wg sync.WaitGroup
@@ -1318,14 +1389,36 @@ func (m *Manager) mergePageBody(page []byte, r *http.Request, activeID, activeNa
 		}(i, t)
 	}
 	wg.Wait()
-	kept := remotes[:0]
+	kept = remotes[:0]
 	for _, rp := range remotes {
 		if rp.body != nil {
 			kept = append(kept, rp)
 		}
 	}
-	page = sumClusterStats(page, kept)
-	page = mergeClusterOptions(page, kept)
+	return kept, servers, only, uri
+}
+
+func (m *Manager) mergePage(page []byte, r *http.Request, activeID, activeName string, u *admindb.User, next http.Handler) []byte {
+	return m.decoratePage(m.mergePageBody(page, r, activeID, activeName, u, next), r.URL.Path, activeID, u)
+}
+
+func (m *Manager) mergePageBody(page []byte, r *http.Request, activeID, activeName string, u *admindb.User, next http.Handler) []byte {
+	if _, ok := pickerSpots[r.URL.Path]; ok {
+		return m.serverPicker(page, r.URL.Path, activeID, u)
+	}
+	if match := userPageRe.FindStringSubmatch(r.URL.Path); match != nil {
+		return m.transferPicker(page, match[1], activeID)
+	}
+	if !tablesMerge(r.URL.Path) || !bytes.Contains(page, []byte("<table")) {
+		// totals, pickers and top lists still add up every server where the page marks them
+		if hasClusterMarks(page) {
+			kept, _, _, _ := m.otherPages(r, activeID, u, next)
+			page = mergeClusterLists(mergeClusterOptions(sumClusterStats(page, kept), kept), kept)
+		}
+		return m.pagePicker(page, r, activeID, activeName, u)
+	}
+	kept, servers, only, uri := m.otherPages(r, activeID, u, next)
+	page = mergeClusterLists(mergeClusterOptions(sumClusterStats(page, kept), kept), kept)
 	dir, _ := r.Context().Value(serverSortKey{}).(string)
 	filterURL := func(id string) string {
 		q := r.URL.Query()

@@ -33,8 +33,8 @@
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
             <dt class="text-sm text-gray-500 dark:text-gray-500">Domains</dt>
-            <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.TotalDomains}}</dd>
-            <dd class="mt-1 text-xs text-gray-500 dark:text-gray-500">{{index .Modes "On"}} protect · {{index .Modes "DetectionOnly"}} monitor · {{index .Modes "Off"}} off</dd>
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50" data-cluster-sum="waf-domains">{{.TotalDomains}}</dd>
+            <dd class="mt-1 text-xs text-gray-500 dark:text-gray-500"><span data-cluster-sum="waf-on">{{index .Modes "On"}}</span> protect · <span data-cluster-sum="waf-monitor">{{index .Modes "DetectionOnly"}}</span> monitor · <span data-cluster-sum="waf-off">{{index .Modes "Off"}}</span> off</dd>
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
             <dt class="text-sm text-gray-500 dark:text-gray-500">Rule sets</dt>
@@ -43,8 +43,8 @@
         </div>
         <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
             <dt class="text-sm text-gray-500 dark:text-gray-500">Recent requests stopped</dt>
-            <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Report.Blocked}}</dd>
-            <dd class="mt-1 text-xs text-gray-500 dark:text-gray-500">{{.Report.WouldBlock}} would block · {{.Report.Flagged}} flagged</dd>
+            <dd class="mt-1 text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50" data-cluster-sum="waf-blocked">{{.Report.Blocked}}</dd>
+            <dd class="mt-1 text-xs text-gray-500 dark:text-gray-500"><span data-cluster-sum="waf-would">{{.Report.WouldBlock}}</span> would block · <span data-cluster-sum="waf-flagged">{{.Report.Flagged}}</span> flagged</dd>
         </div>
     </dl>
 
@@ -182,11 +182,11 @@
             <div>
                 <h3 class="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-50">Domains</h3>
                 {{if .Report.Domains}}
-                <ul class="divide-y divide-gray-200 rounded-md border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
+                <ul data-cluster-list="waf-domains" data-cluster-sort="blocked" data-cluster-limit="5" class="divide-y divide-gray-200 rounded-md border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
                     {{range .Report.Domains}}
-                    <li class="flex items-center justify-between gap-3 px-3 py-2">
+                    <li data-cluster-key="{{.Domain}}" class="flex items-center justify-between gap-3 px-3 py-2">
                         <a href="/security/waf/logs/{{.Domain}}" class="min-w-0 truncate text-blue-500 hover:underline hover:underline-offset-4">{{.Domain}}</a>
-                        <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500"><span class="font-semibold text-red-600 dark:text-red-500">{{.Blocked}}</span> blocked · {{.Total}} total</span>
+                        <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500"><span class="font-semibold text-red-600 dark:text-red-500" data-cluster-sum="blocked">{{.Blocked}}</span> blocked · <span data-cluster-sum="total">{{.Total}}</span> total</span>
                     </li>
                     {{end}}
                 </ul>
@@ -197,12 +197,12 @@
             <div>
                 <h3 class="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-50">Rules triggered most</h3>
                 {{if .Report.Rules}}
-                <ul class="divide-y divide-gray-200 rounded-md border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
+                <ul data-cluster-list="waf-rules" data-cluster-sort="hits" data-cluster-limit="5" class="divide-y divide-gray-200 rounded-md border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
                     {{range .Report.Rules}}
-                    <li class="px-3 py-2">
+                    <li data-cluster-key="{{.ID}}" class="px-3 py-2">
                         <div class="flex items-center justify-between gap-3">
                             <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">{{.ID}}</code>
-                            <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500">{{.Count}} hit{{if ne .Count 1}}s{{end}} · {{len .Domains}} domain{{if ne (len .Domains) 1}}s{{end}}</span>
+                            <span class="shrink-0 text-xs tabular-nums text-gray-500 dark:text-gray-500">hits: <span data-cluster-sum="hits">{{.Count}}</span> · domains: <span data-cluster-sum="domains">{{len .Domains}}</span></span>
                         </div>
                         <p class="truncate text-xs text-gray-500 dark:text-gray-500" title="{{.Msg}}">{{.Category}}{{if .Msg}}: {{.Msg}}{{end}}</p>
                     </li>
