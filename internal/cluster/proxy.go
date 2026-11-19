@@ -158,6 +158,10 @@ func (m *Manager) Middleware(next http.Handler) http.Handler {
 			m.handleUserSearch(w, r, u, next)
 			return
 		}
+		if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, websiteSearchPrefix) {
+			m.handleWebsiteSearch(w, r, u, next)
+			return
+		}
 		if r.Method == http.MethodPost && userRoutedPaths[r.URL.Path] {
 			activeID := LocalNode
 			if proxied {

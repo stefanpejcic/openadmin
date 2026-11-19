@@ -415,6 +415,31 @@ func (m *Manager) handleUserSearch(w http.ResponseWriter, r *http.Request, u *ad
 	json.NewEncoder(w).Encode(out)
 }
 
+const websiteSearchPrefix = "/search/websites/"
+
+// handleWebsiteSearch is the website part of the search box, every server's matches with the server as a second item
+func (m *Manager) handleWebsiteSearch(w http.ResponseWriter, r *http.Request, u *admindb.User, next http.Handler) {
+	out := [][]string{}
+	for _, p := range m.allPages(r, u, next, false) {
+		var rows [][]string
+		if json.Unmarshal(p.body, &rows) != nil {
+			continue
+		}
+		for _, row := range rows {
+			if len(row) > 0 {
+				out = append(out, []string{row[0], p.name})
+			}
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i][0] < out[j][0] })
+	if len(out) > 10 {
+		out = out[:10]
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	json.NewEncoder(w).Encode(out)
+}
+
 // splitUserLabel undoes what the user picker shows, the server name has to be a real member so a username with brackets stays as it is
 func (m *Manager) splitUserLabel(label string) (name, id string, ok bool) {
 	open := strings.LastIndex(label, " (")
