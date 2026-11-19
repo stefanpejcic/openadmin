@@ -1399,6 +1399,7 @@ func (u *Users) handleCreateUserPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
+	longStream(w, 20*time.Minute)
 
 	if slave != "" && sshKeyPath == "" {
 		_, _ = fmt.Fprintf(w, "Error: SSH key path is required for creating account on %s\n", slave)

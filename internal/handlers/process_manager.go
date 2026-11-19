@@ -394,6 +394,7 @@ func (p *ProcessManager) streamStrace(w http.ResponseWriter, r *http.Request, pi
 	// rather than removing that redundant object, since fixing the
 	// template is out of scope here.
 	w.Header().Set("Content-Type", "text/event-stream;charset=utf-8")
+	longStream(w, 30*time.Minute)
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		fmt.Fprintf(w, "%s\n", scanner.Text())

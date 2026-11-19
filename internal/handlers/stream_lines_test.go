@@ -1,8 +1,13 @@
 package handlers
 
 import (
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCommandScannerSplitsCarriageReturnsAndLongLines(t *testing.T) {
@@ -20,5 +25,28 @@ func TestCommandScannerSplitsCarriageReturnsAndLongLines(t *testing.T) {
 	}
 	if last != "user created successfully" {
 		t.Fatalf("last line %q", last)
+	}
+}
+
+func TestLongStreamOutlivesTheServerWriteTimeout(t *testing.T) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		longStream(w, time.Minute)
+		fmt.Fprintln(w, "start")
+		w.(http.Flusher).Flush()
+		time.Sleep(1500 * time.Millisecond)
+		fmt.Fprintln(w, "Successfully added user")
+	})
+	srv := httptest.NewUnstartedServer(h)
+	srv.Config.WriteTimeout = time.Second
+	srv.Start()
+	defer srv.Close()
+	resp, err := http.Get(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "Successfully added user") {
+		t.Fatalf("stream was cut: %q", body)
 	}
 }

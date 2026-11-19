@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"net/http"
+	"time"
 )
 
 // scanLinesOrCR splits on \n and on \r, podman pull progress only ever writes \r and became one huge line
@@ -26,4 +28,9 @@ func newCommandScanner(r io.Reader) *bufio.Scanner {
 	s.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	s.Split(scanLinesOrCR)
 	return s
+}
+
+// longStream lifts the server's 30s WriteTimeout for a response that streams a long command, it cut account creation mid-way
+func longStream(w http.ResponseWriter, d time.Duration) {
+	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(d))
 }

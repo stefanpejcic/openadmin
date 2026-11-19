@@ -74,6 +74,9 @@ func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 // Same embedding gap as Hijack above: without this, every route behind this
 // middleware that streams a response (e.g. the SSE progress output from
 // /user/new) 500s with "Streaming unsupported".
+// Unwrap lets http.ResponseController reach the connection, long streams extend their write deadline through it
+func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
+
 func (r *statusRecorder) Flush() {
 	if f, ok := r.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
