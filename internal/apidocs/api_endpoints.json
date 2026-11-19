@@ -214,7 +214,43 @@
                 "auth": "RequireAPIOwnerOrAdmin",
                 "description": "Generates a one-time admin_token file and returns a signed autologin link that the user-panel's /login_autologin route uses to sign the caller in as this user. Exists as a dedicated route rather than an HTTP-method dispatch on /api/users/{username} because CONNECT-style addressing doesn't fit an ordinary path-based resource.",
                 "response": {
-                    "link": "http://203.0.113.10:2087/login_autologin?username=bob&admin_token=aBcD1234..."
+                    "link": "http://203.0.113.10:2083/login_autologin?username=bob&admin_token=aBcD1234..."
+                }
+            },
+            {
+                "method": "POST",
+                "path": "/api/users/{username}/permissions/reset",
+                "auth": "RequireAPIOwnerOrAdmin",
+                "description": "Deletes the user's per-account permission overrides, so their permissions follow their plan's feature-set defaults again.",
+                "response": {
+                    "success": true
+                }
+            },
+            {
+                "method": "GET",
+                "path": "/api/users/{username}/export/status",
+                "auth": "RequireAPIOwnerOrAdmin",
+                "description": "Whether a full-account backup (opencli user-backup) is running for the user, plus the existing backup archives (name, size, created time)."
+            },
+            {
+                "method": "POST",
+                "path": "/api/users/{username}/export/create",
+                "auth": "RequireAPIOwnerOrAdmin",
+                "description": "Starts a new full-account backup in the background, the same one the user's own Backup Wizard makes. 409 if one is already running."
+            },
+            {
+                "method": "GET",
+                "path": "/api/users/{username}/export/download/{filename...}",
+                "auth": "RequireAPIOwnerOrAdmin",
+                "description": "Downloads a full-account backup archive."
+            },
+            {
+                "method": "POST",
+                "path": "/api/users/{username}/export/delete",
+                "auth": "RequireAPIOwnerOrAdmin",
+                "description": "Deletes a full-account backup archive.",
+                "body": {
+                    "filename": "alice_backup_2026-08-20_23-31-03.tar.gz"
                 }
             }
         ]
@@ -335,6 +371,21 @@
                 "response": {
                     "success": true,
                     "message": "Templates updated successfully!"
+                }
+            },
+            {
+                "method": "GET",
+                "path": "/api/domains/vhost-templates",
+                "auth": "RequireAPIAdmin",
+                "description": "VirtualHost configuration templates used for new domains: docker_nginx_domain, docker_openresty_domain, docker_apache_domain, docker_varnish, docker_caddy."
+            },
+            {
+                "method": "POST",
+                "path": "/api/domains/vhost-templates",
+                "auth": "RequireAPIAdmin",
+                "description": "Updates VirtualHost templates for new domains, send only the keys to change.",
+                "body": {
+                    "docker_nginx_domain": "server { ... }"
                 }
             }
         ]
@@ -1146,6 +1197,181 @@
         ]
     },
     {
+        "group": "Podman",
+        "endpoints": [
+            {
+                "method": "GET",
+                "path": "/api/services/podman",
+                "auth": "RequireAPIAdmin",
+                "description": "podman info text, every image, volume and network, and disk usage in one call."
+            },
+            {
+                "method": "GET",
+                "path": "/api/services/podman/images",
+                "auth": "RequireAPIAdmin",
+                "description": "Every image in the shared podman store, with system/user container usage, update-check and vulnerability-scan status."
+            },
+            {
+                "method": "GET",
+                "path": "/api/services/podman/volumes",
+                "auth": "RequireAPIAdmin",
+                "description": "Every podman volume."
+            },
+            {
+                "method": "GET",
+                "path": "/api/services/podman/networks",
+                "auth": "RequireAPIAdmin",
+                "description": "Every podman network."
+            },
+            {
+                "method": "GET",
+                "path": "/api/services/podman/disk-usage",
+                "auth": "RequireAPIAdmin",
+                "description": "podman system df: disk used by images, containers and volumes."
+            },
+            {
+                "method": "POST",
+                "path": "/api/services/podman/images/{action}/{id...}",
+                "auth": "RequireAPIAdmin",
+                "description": "action is delete (id = full image ID) or pull (id = repository:tag). Runs in the background, poll /api/services/podman/images/action-status. Never affects running containers."
+            },
+            {
+                "method": "GET",
+                "path": "/api/services/podman/images/action-status",
+                "auth": "RequireAPIAdmin",
+                "description": "Progress of an image delete/pull.",
+                "params": "?id=<id>"
+            },
+            {
+                "method": "GET",
+                "path": "/api/services/podman/images/check-update",
+                "auth": "RequireAPIAdmin",
+                "description": "Compares the local manifest digest of an image with the registry, only runs on demand.",
+                "params": "?ref=docker.io/openpanel/nginx:latest"
+            },
+            {
+                "method": "POST",
+                "path": "/api/services/podman/images/bulk/{action}",
+                "auth": "RequireAPIAdmin",
+                "description": "action is pull-missing, delete-unused, check-updates or check-vulnerabilities (Trivy HIGH/CRITICAL scan, Trivy is installed on first use). Runs in the background across all applicable images, poll /api/services/podman/images/bulk-status."
+            },
+            {
+                "method": "GET",
+                "path": "/api/services/podman/images/bulk-status",
+                "auth": "RequireAPIAdmin",
+                "description": "Progress of the running bulk image action."
+            },
+            {
+                "method": "GET",
+                "path": "/api/services/podman/images/vulnerabilities",
+                "auth": "RequireAPIAdmin",
+                "description": "Cached findings of the last check-vulnerabilities run for an image, never starts a scan. checked is false if the image was never scanned.",
+                "params": "?ref=docker.io/openpanel/nginx:latest",
+                "response": {
+                    "checked": true,
+                    "details": [
+                        {
+                            "id": "CVE-2024-12345",
+                            "package": "openssl",
+                            "installed_version": "1.1.1",
+                            "fixed_version": "1.1.2",
+                            "severity": "CRITICAL",
+                            "title": "Buffer overflow in OpenSSL",
+                            "url": "https://avd.aquasec.com/nvd/cve-2024-12345"
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "group": "Backups",
+        "endpoints": [
+            {
+                "method": "GET",
+                "path": "/api/backups/system",
+                "auth": "RequireAPIAdmin",
+                "description": "System (config-only) backup destination and retention settings, run history and existing archives."
+            },
+            {
+                "method": "POST",
+                "path": "/api/backups/system/settings",
+                "auth": "RequireAPIAdmin",
+                "description": "Saves the system backup destination and retention.",
+                "body": {
+                    "destination": "/var/backups/openpanel",
+                    "retention_days": "30"
+                }
+            },
+            {
+                "method": "POST",
+                "path": "/api/backups/system/run",
+                "auth": "RequireAPIAdmin",
+                "description": "Starts a new config-only system backup (opencli backup) in the background, poll /api/backups/system/action-status."
+            },
+            {
+                "method": "POST",
+                "path": "/api/backups/system/restore/{filename...}",
+                "auth": "RequireAPIAdmin",
+                "description": "Restores a system backup archive in the background, poll /api/backups/system/action-status."
+            },
+            {
+                "method": "POST",
+                "path": "/api/backups/system/delete/{filename...}",
+                "auth": "RequireAPIAdmin",
+                "description": "Deletes a system backup archive."
+            },
+            {
+                "method": "GET",
+                "path": "/api/backups/system/action-status",
+                "auth": "RequireAPIAdmin",
+                "description": "Progress of the running system backup or restore."
+            },
+            {
+                "method": "GET",
+                "path": "/api/backups/user",
+                "auth": "RequireAPIAdmin",
+                "description": "The central per-user backup schedule: disabled (each user manages their own backups), daily, weekly or monthly."
+            },
+            {
+                "method": "POST",
+                "path": "/api/backups/user/settings",
+                "auth": "RequireAPIAdmin",
+                "description": "Sets the central per-user backup schedule.",
+                "body": {
+                    "schedule_choice": "daily"
+                }
+            },
+            {
+                "method": "GET",
+                "path": "/api/backups/user/configuration",
+                "auth": "RequireAPIAdmin",
+                "description": "Raw contents of the backup.env template new accounts are provisioned with."
+            },
+            {
+                "method": "POST",
+                "path": "/api/backups/user/configuration",
+                "auth": "RequireAPIAdmin",
+                "description": "Saves the backup.env template, applies to new users only.",
+                "body": {
+                    "backup_env": "..."
+                }
+            },
+            {
+                "method": "POST",
+                "path": "/api/backups/user/run",
+                "auth": "RequireAPIAdmin",
+                "description": "Starts a central opencli docker-backup run in the background. 400 unless the schedule is daily, weekly or monthly. Poll /api/backups/user/action-status."
+            },
+            {
+                "method": "GET",
+                "path": "/api/backups/user/action-status",
+                "auth": "RequireAPIAdmin",
+                "description": "Progress of the running central user backup."
+            }
+        ]
+    },
+    {
         "group": "System",
         "endpoints": [
             {
@@ -1472,6 +1698,27 @@
                     "status": "success",
                     "message": "Swap clearing started in background."
                 }
+            },
+            {
+                "method": "GET",
+                "path": "/api/server/swap",
+                "auth": "RequireAPIAdmin",
+                "description": "Swap total/used/free/percent, every active swap device, the alert threshold and whether a managed swap file exists."
+            },
+            {
+                "method": "POST",
+                "path": "/api/server/swap/action/{action}",
+                "auth": "RequireAPIAdmin",
+                "description": "action is resize (recreate the managed swap file at size_mb, minimum 128, and enable it, adding it to /etc/fstab if needed) or drop (swapoff -a; swapon -a). Runs in the background, poll /api/server/swap/action-status.",
+                "body": {
+                    "size_mb": 2048
+                }
+            },
+            {
+                "method": "GET",
+                "path": "/api/server/swap/action-status",
+                "auth": "RequireAPIAdmin",
+                "description": "Progress of the running swap resize/drop."
             }
         ]
     },
@@ -1698,6 +1945,28 @@
                     "token": "3f9c...",
                     "login_path": "/login/sso/3f9c...",
                     "expires_in": 120
+                }
+            },
+            {
+                "method": "GET",
+                "path": "/api/settings/resellers/enabled",
+                "auth": "RequireAPIAdmin",
+                "description": "Whether reseller accounts can be created (off by default).",
+                "response": {
+                    "enabled": false
+                }
+            },
+            {
+                "method": "POST",
+                "path": "/api/settings/resellers/enabled",
+                "auth": "RequireAPIAdmin",
+                "description": "Turns reseller accounts on or off. Turning it off is refused with 409 while any reseller account exists.",
+                "body": {
+                    "enabled": true
+                },
+                "response": {
+                    "success": true,
+                    "enabled": true
                 }
             }
         ]
@@ -2425,6 +2694,12 @@
                     "status": "success",
                     "log": "transfer log"
                 }
+            },
+            {
+                "method": "POST",
+                "path": "/api/import/upload",
+                "auth": "RequireAPIAdminOrReseller",
+                "description": "Uploads an OpenPanel backup (.tar.gz in a multipart 'file' field) to /home/reseller_imports/<username>/; the response has the path to pass to POST /api/import/openpanel."
             }
         ]
     }
