@@ -151,9 +151,18 @@ var emailsPodmanPsRun = func(filterArgs ...string) (string, error) {
 	return string(out), err
 }
 
+// roundcube depends on the mailserver so it goes down too, otherwise podman keeps the old container and env changes never apply
+const emailsRestartMailserverScript = `cd /usr/local/mail/openmail/ || exit 1
+rc=$(podman ps --format '{{.Names}}' | grep -qx openadmin_roundcube && echo 1)
+podman-compose down roundcube mailserver
+podman-compose up -d mailserver
+if [ -n "$rc" ]; then podman-compose up -d roundcube; fi`
+
 var emailsRestartMailserverRun = func() {
-	_ = exec.Command("/bin/bash", "-c",
-		"cd /usr/local/mail/openmail/ && podman-compose down mailserver && podman-compose up -d mailserver").Start()
+	cmd := exec.Command("/bin/bash", "-c", emailsRestartMailserverScript)
+	if cmd.Start() == nil {
+		go cmd.Wait()
+	}
 }
 
 // mailserver status is asked for on every email page, podman ps is ~50ms so it's reused for a few seconds
