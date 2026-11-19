@@ -911,6 +911,30 @@ func (bc *BotControl) botState(r *http.Request) (map[string]any, []BotDomainRow,
 	}, rows, report, selectedDomain
 }
 
+var botSortKeys = map[string]bool{"domain": true, "owner": true, "hits": true, "ai": true, "blocked": true, "policy": true}
+
+// policies sort from the most open to the strictest
+var botPolicyOrder = map[string]int{"allow": 0, "ratelimit": 1, "block": 2}
+
+func sortBotRows(rows []BotDomainRow, col, direction string) {
+	switch col {
+	case "domain":
+		sortBy(rows, direction, func(a, b BotDomainRow) bool { return a.Domain < b.Domain })
+	case "owner":
+		sortBy(rows, direction, func(a, b BotDomainRow) bool { return a.Owner < b.Owner })
+	case "hits":
+		sortBy(rows, direction, func(a, b BotDomainRow) bool { return a.Requests < b.Requests })
+	case "ai":
+		sortBy(rows, direction, func(a, b BotDomainRow) bool { return a.AIRequests < b.AIRequests })
+	case "blocked":
+		sortBy(rows, direction, func(a, b BotDomainRow) bool { return a.BlockedCount < b.BlockedCount })
+	case "policy":
+		sortBy(rows, direction, func(a, b BotDomainRow) bool {
+			return botPolicyOrder[string(a.Policy)] < botPolicyOrder[string(b.Policy)]
+		})
+	}
+}
+
 func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		_ = r.ParseForm()
@@ -934,6 +958,15 @@ func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, state)
 		return
 	}
+	sortCol, sortDirection := readSort(r, botSortKeys)
+	sortBotRows(rows, sortCol, sortDirection)
+	// the day window and the picked domain stay when a column is sorted
+	sortExtra := url.Values{}
+	for _, k := range []string{"window", "domain"} {
+		if v := r.URL.Query().Get(k); v != "" {
+			sortExtra.Set(k, v)
+		}
+	}
 
 	webtemplates.Render(w, "security_bot_control.html", mergeChrome(map[string]any{
 		"ModuleEnabled":  state["module_enabled"],
@@ -943,6 +976,9 @@ func (bc *BotControl) ServeBotControl(w http.ResponseWriter, r *http.Request) {
 		"PolicyCounts":   state["policy_counts"],
 		"Report":         report,
 		"SelectedDomain": selectedDomain,
+		"SortCol":        sortCol,
+		"SortDirection":  sortDirection,
+		"SortExtra":      sortExtra,
 		"CSRFToken":      csrf.Token(r),
 		"Flashes":        auth.PopFlashes(w, r, bc.Sessions),
 	}, r, "AI & Bot Control"))

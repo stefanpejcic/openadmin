@@ -231,6 +231,15 @@ const serverRowClass = "relative px-4 py-2.5 text-sm font-medium text-gray-900 d
 func serverCell(tag, class, inner string) string {
 	if tag == "td" {
 		class = serverRowClass
+	} else {
+		// the heading copies a numbers column's right alignment, the server names under it are on the left
+		var kept []string
+		for _, c := range strings.Fields(class) {
+			if base := c[strings.LastIndex(c, ":")+1:]; base != "text-right" && base != "text-center" && base != "text-end" {
+				kept = append(kept, c)
+			}
+		}
+		class = strings.Join(append(kept, "text-left"), " ")
 	}
 	return "<" + tag + ` data-cluster-server class="` + html.EscapeString(visibleClass(class)) + ` whitespace-nowrap">` + inner + "</" + tag + ">"
 }
@@ -1374,7 +1383,8 @@ func (m *Manager) pagePicker(page []byte, r *http.Request, activeID, activeName 
 	} else if title := titleAnchor(page); title >= 0 {
 		at = title
 		spacing = "ml-4"
-		float = ` style="float:right;margin-left:auto"`
+		// order puts it after the title when the title's line is a flex row, there float does nothing
+		float = ` style="float:right;margin-left:auto;order:99"`
 		menu = strings.Replace(menu, filterMenuClass, "right-0 "+filterMenuClass, 1)
 	} else if help := helpAnchor(page); help >= 0 {
 		// pages that are just an iframe (ImunifyAV, mail reports) have no header, a row above the iframe pushes it around, so it sits in the tab row before Documentation

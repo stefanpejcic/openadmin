@@ -324,7 +324,7 @@ func TestServerColumnGoesAfterTheFirstNamedColumn(t *testing.T) {
 	if !strings.Contains(out, `<td>bob</td><td data-cluster-server class="`+serverRowClass+` whitespace-nowrap">`+serverDot("")+`stefan</td>`) {
 		t.Fatalf("local Server cell isn't after the name or is still hidden: %s", out)
 	}
-	if !strings.Contains(out, `<span>Username</span></th><th data-cluster-server class="x whitespace-nowrap"><a`) {
+	if !strings.Contains(out, `<span>Username</span></th><th data-cluster-server class="x text-left whitespace-nowrap"><a`) {
 		t.Fatalf("header cell isn't after the name: %s", out)
 	}
 	if !strings.Contains(out, `<td>amy</td><td data-cluster-server class="`+serverRowClass+` whitespace-nowrap"><a href="/open/n?n=">`+serverDot("")+`petar</a></td>`) {
