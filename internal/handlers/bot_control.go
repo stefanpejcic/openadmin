@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -16,10 +17,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/csrf"
@@ -548,6 +551,73 @@ type botCaddyLogLine struct {
 	} `json:"request"`
 }
 
+type botAnalysis struct {
+	report BotTrafficReport
+	counts map[string][3]int
+	at     time.Time
+}
+
+var (
+	botAnalysisMu    sync.Mutex
+	botAnalysisCache = map[string]botAnalysis{}
+)
+
+// botAnalysisTTL keeps a report around so sorting the table or opening the page again doesn't read every log again
+const botAnalysisTTL = 2 * time.Minute
+
+// botAnalyzeCached is botAnalyzeDomains for the same domains, picked domain and window at most once per botAnalysisTTL
+func botAnalyzeCached(domains []string, selectedDomain, window string) (BotTrafficReport, map[string][3]int) {
+	key := window + "|" + selectedDomain + "|" + strings.Join(domains, ",")
+	botAnalysisMu.Lock()
+	if c, ok := botAnalysisCache[key]; ok && time.Since(c.at) < botAnalysisTTL {
+		botAnalysisMu.Unlock()
+		return c.report, c.counts
+	}
+	botAnalysisMu.Unlock()
+	report, counts := botAnalyzeDomains(domains, selectedDomain, window, time.Now())
+	botAnalysisMu.Lock()
+	for k, c := range botAnalysisCache {
+		if time.Since(c.at) >= botAnalysisTTL {
+			delete(botAnalysisCache, k)
+		}
+	}
+	botAnalysisCache[key] = botAnalysis{report: report, counts: counts, at: time.Now()}
+	botAnalysisMu.Unlock()
+	return report, counts
+}
+
+// botLogLite is the part of a caddy access log line the report uses, decoding only these is much faster than every header
+type botLogLite struct {
+	TS      float64 `json:"ts"`
+	Status  int     `json:"status"`
+	Request struct {
+		ClientIP string `json:"client_ip"`
+		URI      string `json:"uri"`
+		Headers  struct {
+			UserAgent []string `json:"User-Agent"`
+		} `json:"headers"`
+	} `json:"request"`
+}
+
+// botLineTS reads the "ts" near the start of a caddy log line without decoding it
+func botLineTS(line []byte) (float64, bool) {
+	head := line
+	if len(head) > 120 {
+		head = head[:120]
+	}
+	i := bytes.Index(head, []byte(`"ts":`))
+	if i < 0 {
+		return 0, false
+	}
+	rest := line[i+5:]
+	end := bytes.IndexAny(rest, ",}")
+	if end < 0 {
+		return 0, false
+	}
+	ts, err := strconv.ParseFloat(string(bytes.TrimSpace(rest[:end])), 64)
+	return ts, err == nil
+}
+
 func botNormalizePath(raw string) string {
 	if raw == "" {
 		return "/"
@@ -613,18 +683,25 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 	cutoff := float64(now.Add(-dur).UnixNano()) / 1e9
 	asnTable := botLoadASNPrefixes(BotASNPrefixesPath)
 
-	for _, dom := range domains {
-		logPath := filepath.Join(CaddyDomlogsDir, dom, "access.log")
-		f, err := os.Open(logPath)
+	// each domain's log is read on its own goroutine with its own counters, merged once they're all done
+	type domPart struct {
+		tot, ai, blk          int
+		total, aiReqs, blkReq int
+		bots                  map[botKey]*BotStatRow
+		nets                  map[string]*netAcc
+		urls                  map[string]*urlAcc
+		ok                    bool
+	}
+	analyze := func(dom string) (p domPart) {
+		f, err := os.Open(filepath.Join(CaddyDomlogsDir, dom, "access.log"))
 		if err != nil {
-			continue
+			return
 		}
+		defer f.Close()
 		info, statErr := f.Stat()
 		if statErr != nil || info.Size() == 0 {
-			f.Close()
-			continue
+			return
 		}
-
 		var r io.Reader = f
 		if info.Size() > botMaxLogTailBytes {
 			if _, seekErr := f.Seek(-botMaxLogTailBytes, io.SeekEnd); seekErr == nil {
@@ -633,64 +710,65 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 				r = br
 			}
 		}
-
-		var domTot, domAI, domBlk int
+		p = domPart{ok: true, bots: map[botKey]*BotStatRow{}, nets: map[string]*netAcc{}, urls: map[string]*urlAcc{}}
 		sc := bufio.NewScanner(r)
 		sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 		for sc.Scan() {
-			line := strings.TrimSpace(sc.Text())
-			if line == "" {
+			line := bytes.TrimSpace(sc.Bytes())
+			if len(line) == 0 {
 				continue
 			}
-			var entry botCaddyLogLine
-			if json.Unmarshal([]byte(line), &entry) != nil {
+			// most of the tail is older than a short window, the timestamp alone says so without decoding the line
+			if ts, ok := botLineTS(line); ok && ts > 0 && ts < cutoff {
+				continue
+			}
+			var entry botLogLite
+			if json.Unmarshal(line, &entry) != nil {
 				continue
 			}
 			if entry.TS > 0 && entry.TS < cutoff {
 				continue
 			}
-
-			domTot++
+			p.tot++
 			isBlk := entry.Status == 403 || entry.Status == 429
 			if isBlk {
-				domBlk++
+				p.blk++
 			}
-			ua := botFirstHeader(entry.Request.Headers, "User-Agent")
+			ua := ""
+			if len(entry.Request.Headers.UserAgent) > 0 {
+				ua = entry.Request.Headers.UserAgent[0]
+			}
 			name, op, cat, isAI := botClassifyUA(ua)
 			if isAI {
-				domAI++
+				p.ai++
 			}
-
-			// Always roll up per-domain counts for the domain table, and filter the "Who's hitting the server" view when a single domain is picked.
+			// per-domain counts always count, the "Who's hitting the server" view only for the picked domain
 			if selectedDomain != "" && dom != selectedDomain {
 				continue
 			}
-
-			report.TotalRequests++
+			p.total++
 			if isAI {
-				report.AIRequests++
+				p.aiReqs++
 			}
 			if isBlk {
-				report.BlockedCount++
+				p.blkReq++
 			}
-
 			bk := botKey{name: name, op: op, cat: cat}
-			bs, ok := bots[bk]
+			bs, ok := p.bots[bk]
 			if !ok {
 				bs = &BotStatRow{Name: name, Operator: op, Category: cat}
-				bots[bk] = bs
+				p.bots[bk] = bs
 			}
 			bs.Requests++
 			if isBlk {
 				bs.Blocked++
 			}
-
 			ipStr := strings.TrimSpace(entry.Request.ClientIP)
 			netLabel, asnLabel := botLookupNet(ipStr, asnTable)
-			na, ok := nets[netLabel]
+			na, ok := p.nets[netLabel]
 			if !ok {
 				na = &netAcc{net: netLabel, asn: asnLabel, ips: map[string]struct{}{}}
-				nets[netLabel] = na
+				p.nets[netLabel] = na
 			}
 			na.reqs++
 			if isBlk {
@@ -699,15 +777,14 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 			if ipStr != "" {
 				na.ips[ipStr] = struct{}{}
 			}
-
 			target := botNormalizePath(entry.Request.URI)
 			if selectedDomain == "" {
 				target = dom + target
 			}
-			uaAcc, ok := urls[target]
+			uaAcc, ok := p.urls[target]
 			if !ok {
 				uaAcc = &urlAcc{}
-				urls[target] = uaAcc
+				p.urls[target] = uaAcc
 			}
 			uaAcc.reqs++
 			if cat != botCatHuman {
@@ -717,8 +794,59 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 				uaAcc.blocked++
 			}
 		}
-		f.Close()
-		perDomainCounts[dom] = [3]int{domTot, domAI, domBlk}
+		return p
+	}
+
+	parts := make([]domPart, len(domains))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, max(2, runtime.NumCPU()))
+	for i, dom := range domains {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, dom string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			parts[i] = analyze(dom)
+		}(i, dom)
+	}
+	wg.Wait()
+
+	for i, p := range parts {
+		if !p.ok {
+			continue
+		}
+		perDomainCounts[domains[i]] = [3]int{p.tot, p.ai, p.blk}
+		report.TotalRequests += p.total
+		report.AIRequests += p.aiReqs
+		report.BlockedCount += p.blkReq
+		for k, b := range p.bots {
+			if have, ok := bots[k]; ok {
+				have.Requests += b.Requests
+				have.Blocked += b.Blocked
+			} else {
+				bots[k] = b
+			}
+		}
+		for k, n := range p.nets {
+			if have, ok := nets[k]; ok {
+				have.reqs += n.reqs
+				have.blocked += n.blocked
+				for ip := range n.ips {
+					have.ips[ip] = struct{}{}
+				}
+			} else {
+				nets[k] = n
+			}
+		}
+		for k, u := range p.urls {
+			if have, ok := urls[k]; ok {
+				have.reqs += u.reqs
+				have.botReqs += u.botReqs
+				have.blocked += u.blocked
+			} else {
+				urls[k] = u
+			}
+		}
 	}
 
 	for _, b := range bots {
@@ -886,7 +1014,7 @@ func (bc *BotControl) botState(r *http.Request) (map[string]any, []BotDomainRow,
 	}
 	window := strings.TrimSpace(r.URL.Query().Get("window"))
 
-	report, perDomainCounts := botAnalyzeDomains(domains, selectedDomain, window, time.Now())
+	report, perDomainCounts := botAnalyzeCached(domains, selectedDomain, window)
 	rows := make([]BotDomainRow, 0, len(domains))
 	policyCounts := map[string]int{"allow": 0, "ratelimit": 0, "block": 0}
 	for _, d := range domains {
