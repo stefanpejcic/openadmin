@@ -75,9 +75,11 @@ func TestQuickStartPHPWebserverCustomized(t *testing.T) {
 	DefaultsEnvPath = filepath.Join(dir, ".env")
 	t.Cleanup(func() { DefaultsEnvPath = origPath })
 
-	os.WriteFile(DefaultsEnvPath, []byte("WEB_SERVER=\"apache\"\nDEFAULT_PHP_VERSION=8.5\n"), 0644)
-	if quickStartPHPWebserverCustomized() {
-		t.Fatalf("expected factory-default PHP/webserver values to not be flagged as customized")
+	for _, v := range []string{"8.6", "8.5"} {
+		os.WriteFile(DefaultsEnvPath, []byte("WEB_SERVER=\"apache\"\nDEFAULT_PHP_VERSION="+v+"\n"), 0644)
+		if quickStartPHPWebserverCustomized() {
+			t.Fatalf("expected factory-default PHP %s/webserver values to not be flagged as customized", v)
+		}
 	}
 
 	os.WriteFile(DefaultsEnvPath, []byte("WEB_SERVER=\"nginx\"\nDEFAULT_PHP_VERSION=8.5\n"), 0644)

@@ -201,7 +201,8 @@ func quickStartPHPWebserverCustomized() bool {
 	if v, ok := current["WEB_SERVER"]; ok && v != "apache" {
 		return true
 	}
-	if v, ok := current["DEFAULT_PHP_VERSION"]; ok && v != "8.5" {
+	// 8.6 is the factory default since 2.0.28, 8.5 before it (kept on servers whose template could not get php-fpm-8.6)
+	if v, ok := current["DEFAULT_PHP_VERSION"]; ok && v != "8.6" && v != "8.5" {
 		return true
 	}
 	return false
