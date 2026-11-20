@@ -65,7 +65,7 @@ var openpanelIntFields = []string{
 // openpanelIntFields above, and not the "weakpass" checkbox).
 var openpanelStringFields = []string{
 	"brand_name", "logo", "favicon", "ns1", "ns2", "ns3", "ns4",
-	"menu_style", "template", "avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
+	"menu_style", "template", "allow_user_theme", "avatar_type", "resource_usage_charts_mode", "password_reset", "password_strength",
 	"permit_username_change_by_user", "permit_subdomain_sharing",
 	"twofa_nag", "twofa_enforce", "how_to_guides", "onboarding", "found_a_bug_link", "ip_county_flag",
 	"validate_ip_address_cookie",
@@ -157,6 +157,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"ai_api_key":                      {kind: openpanelSingleLine},
 	"logout_url":                      {kind: openpanelSingleLine},
 	"template":                        {kind: openpanelTemplateDir},
+	"allow_user_theme":                {kind: openpanelEnum, options: []string{"yes", "no"}},
 }
 
 var openpanelSpaceSeparatedListRe = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
@@ -261,7 +262,7 @@ func openpanelSectionForKey(key string) string {
 	if strings.HasPrefix(key, "filemanager_") || key == "autopurge_trash" {
 		return "FILES"
 	}
-	if key == "terminal_timeout" || key == "menu_style" || key == "template" || key == "applications_dashboard_items" {
+	if key == "terminal_timeout" || key == "menu_style" || key == "template" || key == "allow_user_theme" || key == "applications_dashboard_items" {
 		return "PANEL"
 	}
 	switch key {
