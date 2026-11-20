@@ -37,7 +37,7 @@ var (
 var (
 	notifNumericKeys = []string{"load", "cpu", "ram", "du", "swap", "mail_bounce", "mail_defer"}
 	httpNumericKeys  = []string{"max_total_conn", "max_conn_per_ip"}
-	defaultToggles   = []string{"update", "attack", "ratelimit", "limit", "login", "ssh", "reboot", "dns", "mail"}
+	defaultToggles   = []string{"update", "attack", "ratelimit", "limit", "login", "ssh", "reboot", "dns", "mail", "rbl"}
 	actionToggles    = []string{
 		"admin_status", "admin_api", "admin_create", "reseller_create",
 		"admin_password", "admin_rename", "admin_suspend", "admin_unsuspend",
@@ -134,6 +134,7 @@ var notifServerActionOrder = []struct{ Key, Label, Tooltip string }{
 	{"ssh", "SSH login from new IP", `Triggered when root SSH access is detected from an unknown IP address. IP can be whitelisted in "Login Whitelist" below.`},
 	{"update", "New update available", "Triggered when a new version of OpenPanel is available for update."},
 	{"mail", "Mail delivery problems", "Checked once a day from yesterday's mail log, the same numbers as Emails > Summary reports: fires when bounced or deferred mail goes over the Mail bounced / Mail deferred thresholds, or when the mail server isn't running."},
+	{"rbl", "Server IP on a mail blocklist", "Checked once a day when this server sends its own mail (mail server running, email accounts, no relay host): fires when the server IP is on one of the blocklists in /etc/openpanel/openadmin/config/rbl.txt. The result also shows in the daily summary."},
 }
 
 var notifUserActionOrder = []struct{ Key, Label, Tooltip string }{

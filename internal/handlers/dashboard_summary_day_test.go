@@ -190,7 +190,8 @@ func TestAttentionGroupedByAccountAndWebsite(t *testing.T) {
 		t.Fatalf("the cron mentioning lager.apeiron.rs belongs under it: %+v", lager)
 	}
 	out, err := webtemplates.RenderToString("dashboard_summary.html", dashboardPageData{Summary: s})
-	if err != nil || !strings.Contains(out, "&#8627;</span>lager.apeiron.rs") || !strings.Contains(out, "4 issues") {
+	// the site row is the ↳ arrow, the site's favicon, then its name
+	if err != nil || !strings.Contains(out, "&#8627;</span><img") || !strings.Contains(out, "favicons?domain=lager.apeiron.rs") || !strings.Contains(out, "4 issues") {
 		t.Fatalf("grouped list not rendered: %v", err)
 	}
 }

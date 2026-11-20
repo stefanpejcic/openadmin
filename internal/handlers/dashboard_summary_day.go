@@ -36,6 +36,8 @@ type summaryDay struct {
 	Speeds []summarySpeed
 	// what the web firewall blocked that day, nil when it blocked nothing
 	WAF *summaryWAF
+	// sentinel's blocklist check of the server IP that day, nil when it didn't run (no mail server, relay host, no mailboxes)
+	RBL *summaryRBL
 }
 
 type summaryHealth struct {
@@ -73,15 +75,42 @@ type summaryMail struct {
 	Link      string
 }
 
+// rblDataDir has sentinel's daily blocklist result, one <day>.json each
+var rblDataDir = "/var/lib/openpanel/rbl"
+
+type summaryRBL struct {
+	IP      string `json:"ip"`
+	Checked int    `json:"checked"`
+	Listed  []struct {
+		Zone   string `json:"zone"`
+		Answer string `json:"answer"`
+	} `json:"listed"`
+	// lists that refused the query, usually because the server uses a public resolver
+	Refused []string `json:"refused"`
+}
+
+// summaryRBLFor is sentinel's blocklist check of that day, nil when it didn't run
+func summaryRBLFor(day string) *summaryRBL {
+	raw, err := os.ReadFile(filepath.Join(rblDataDir, day+".json"))
+	if err != nil {
+		return nil
+	}
+	var r summaryRBL
+	if json.Unmarshal(raw, &r) != nil || r.Checked == 0 {
+		return nil
+	}
+	return &r
+}
+
 // loadSummaryDay reads everything for one day ("2006-01-02"), nil when there's nothing at all
 func loadSummaryDay(db *sql.DB, day string) *summaryDay {
 	d, err := time.Parse("2006-01-02", day)
 	if err != nil {
 		return nil
 	}
-	out := &summaryDay{Health: summaryHealthFor(day), Mail: summaryMailFor(d), Malware: summaryMalwareFor(db, day), Backup: summaryBackupFor(day), Speeds: summarySpeedsFor(db, day), WAF: summaryWAFFor(db, day)}
+	out := &summaryDay{Health: summaryHealthFor(day), Mail: summaryMailFor(d), Malware: summaryMalwareFor(db, day), Backup: summaryBackupFor(day), Speeds: summarySpeedsFor(db, day), WAF: summaryWAFFor(db, day), RBL: summaryRBLFor(day)}
 	out.Problems, out.MoreProblems = summaryProblemsFor(day, 8)
-	if out.Health == nil && out.Mail == nil && len(out.Problems) == 0 && len(out.Malware) == 0 && out.Backup == nil && len(out.Speeds) == 0 && out.WAF == nil {
+	if out.Health == nil && out.Mail == nil && len(out.Problems) == 0 && len(out.Malware) == 0 && out.Backup == nil && len(out.Speeds) == 0 && out.WAF == nil && out.RBL == nil {
 		return nil
 	}
 	return out
@@ -398,7 +427,7 @@ func summaryServerDays(db *sql.DB, userID int64, day, hostname string) []summary
 	var mu sync.Mutex
 	ClusterManager.CallAllData("summary_health", day, func(id, name string, raw json.RawMessage) {
 		var d summaryDay
-		if json.Unmarshal(raw, &d) != nil || (d.Health == nil && d.Mail == nil && len(d.Problems) == 0 && len(d.Malware) == 0 && d.Backup == nil && len(d.Speeds) == 0 && d.WAF == nil) {
+		if json.Unmarshal(raw, &d) != nil || (d.Health == nil && d.Mail == nil && len(d.Problems) == 0 && len(d.Malware) == 0 && d.Backup == nil && len(d.Speeds) == 0 && d.WAF == nil && d.RBL == nil) {
 			return
 		}
 		if d.WAF != nil {

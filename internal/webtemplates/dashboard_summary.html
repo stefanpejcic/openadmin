@@ -228,7 +228,7 @@
 {{else}}
 <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Daily summary</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-500">No daily summary yet. Summaries are saved each day at 06:15 for the day before, for accounts that have the summary feature.</p>
+    <p class="text-sm text-gray-500 dark:text-gray-500">No daily summary yet. It is saved each day at 06:45 for the day before, run <code>/usr/local/admin/openadmin-amd64 daily-summary</code> to save yesterday's now.</p>
 </div>
 {{end}}{{end}}
     </main>
@@ -334,16 +334,18 @@
     </div>
     {{end}}
 
-    {{$mail := false}}{{range .}}{{if .Day.Mail}}{{$mail = true}}{{end}}{{end}}
+    {{$mail := false}}{{range .}}{{if or .Day.Mail .Day.RBL}}{{$mail = true}}{{end}}{{end}}
     {{if $mail}}
     <div class="my-8 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
 
     <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
         <div>
             <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Mail</h2>
-            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">From each mail server's summary report for that day. Deferrals count delivery retries, not messages.</p>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">From each mail server's summary report for that day. Deferrals count delivery retries, not messages. Blocklists is sentinel's daily check of the server IP, it runs when the server sends its own mail.</p>
         </div>
         <div class="lg:col-span-2 overflow-x-auto">
+            {{$anyMail := false}}{{range .}}{{if .Day.Mail}}{{$anyMail = true}}{{end}}{{end}}
+            {{if $anyMail}}
             <table class="w-full text-sm">
                 <thead><tr class="border-b border-gray-200 text-left text-xs text-gray-500 dark:border-gray-800 dark:text-gray-500">
                     {{if $multi}}<th scope="col" class="py-2 pr-4 font-medium">Server</th>{{end}}
@@ -361,6 +363,27 @@
                 {{end}}{{end}}{{end}}
                 </tbody>
             </table>
+            {{end}}
+            {{$anyRBL := false}}{{range .}}{{if .Day.RBL}}{{$anyRBL = true}}{{end}}{{end}}
+            {{if $anyRBL}}
+            <h3 class="{{if $anyMail}}mt-6 {{end}}text-xs font-medium text-gray-500 dark:text-gray-500">Blocklists</h3>
+            <ul role="list" class="mt-1 divide-y divide-gray-200 text-sm dark:divide-gray-800">
+                {{range .}}{{$sd := .}}{{with .Day.RBL}}
+                <li class="flex flex-wrap items-baseline gap-x-2 gap-y-1 py-2 text-gray-900 dark:text-gray-50">
+                    {{if $multi}}<span class="whitespace-nowrap font-medium"><span class="mr-1.5 inline-block size-2.5 rounded-xs align-middle {{$sd.Color}}" aria-hidden="true"></span>{{$sd.Name}}</span>{{end}}
+                    <span class="font-mono text-xs text-gray-500">{{.IP}}</span>
+                    {{if .Listed}}
+                    <span class="font-semibold text-red-600 dark:text-red-500">listed on {{len .Listed}} of {{.Checked}}:</span>
+                    <span>{{range $i, $l := .Listed}}{{if $i}}, {{end}}{{$l.Zone}}{{end}}</span>
+                    <a href="https://mxtoolbox.com/SuperTool.aspx?action=blacklist%3a{{.IP}}" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline hover:underline-offset-4">Look up</a>
+                    {{else}}
+                    <span class="text-emerald-700 dark:text-emerald-500">not listed on any of {{.Checked}} lists</span>
+                    {{end}}
+                    {{if .Refused}}<span class="w-full text-xs text-gray-500">{{range $i, $z := .Refused}}{{if $i}}, {{end}}{{$z}}{{end}} refused the query, the server likely uses a public DNS resolver.</span>{{end}}
+                </li>
+                {{end}}{{end}}
+            </ul>
+            {{end}}
         </div>
     </div>
     {{end}}
