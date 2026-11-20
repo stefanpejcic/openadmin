@@ -161,8 +161,8 @@ func TestTranslateCaddyCertPath(t *testing.T) {
 	caddyCertContainerPrefix = "/data/caddy/certificates/"
 	t.Cleanup(func() { caddyCertContainerPrefix = origPrefix })
 
-	got := translateCaddyCertPath("/data/caddy/certificates/custom/unl.rs/fullchain.pem")
-	want := filepath.Join(dir, "custom", "unl.rs", "fullchain.pem")
+	got := translateCaddyCertPath("/data/caddy/certificates/custom/example.net/fullchain.pem")
+	want := filepath.Join(dir, "custom", "example.net", "fullchain.pem")
 	if got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
@@ -180,7 +180,7 @@ const sampleCaddyAppsConfig = `{
 			"srv1": {
 				"tls_connection_policies": [
 					{
-						"match": [{"sni": ["*.unl.rs", "unl.rs"]}],
+						"match": [{"sni": ["*.example.net", "example.net"]}],
 						"certificate_selection": {"any_tag": ["cert0"]}
 					},
 					{}
@@ -192,12 +192,12 @@ const sampleCaddyAppsConfig = `{
 		"automation": {
 			"policies": [
 				{"on_demand": true, "subjects": ["example.com", "www.example.com"]},
-				{"subjects": ["unl.rs", "server.pejcic.rs"]}
+				{"subjects": ["example.net", "server.pejcic.rs"]}
 			]
 		},
 		"certificates": {
 			"load_files": [
-				{"certificate": "/data/caddy/certificates/custom/unl.rs/fullchain.pem", "key": "/data/caddy/certificates/custom/unl.rs/key.pem", "tags": ["cert0"]}
+				{"certificate": "/data/caddy/certificates/custom/example.net/fullchain.pem", "key": "/data/caddy/certificates/custom/example.net/key.pem", "tags": ["cert0"]}
 			]
 		}
 	}
@@ -218,12 +218,12 @@ func TestFetchCaddyTLSIndexParsesCustomCertPaths(t *testing.T) {
 		t.Fatal("expected ok=true on successful parse")
 	}
 
-	want := filepath.Join(dir, "custom", "unl.rs", "fullchain.pem")
-	if got := idx.customCertPaths["unl.rs"]; got != want {
-		t.Fatalf("customCertPaths[unl.rs] = %q, want %q", got, want)
+	want := filepath.Join(dir, "custom", "example.net", "fullchain.pem")
+	if got := idx.customCertPaths["example.net"]; got != want {
+		t.Fatalf("customCertPaths[example.net] = %q, want %q", got, want)
 	}
-	if got := idx.customCertPaths["*.unl.rs"]; got != want {
-		t.Fatalf("customCertPaths[*.unl.rs] = %q, want %q", got, want)
+	if got := idx.customCertPaths["*.example.net"]; got != want {
+		t.Fatalf("customCertPaths[*.example.net] = %q, want %q", got, want)
 	}
 }
 

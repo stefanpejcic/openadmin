@@ -130,31 +130,31 @@ func TestSummaryMalwareFindings(t *testing.T) {
 	NotificationsLogPath = filepath.Join(t.TempDir(), "n.log")
 	t.Cleanup(func() { NotificationsLogPath = orig })
 	os.WriteFile(NotificationsLogPath, []byte(
-		`{"time":"2026-11-12 21:16:00","source":"imunify_scan","severity":"info","title":"ImunifyAV scan running: koraciznanja","details":{"user":"koraciznanja","malicious":0}}`+"\n"+
-			`{"time":"2026-11-12 21:29:59","source":"imunify_scan","severity":"warning","title":"ImunifyAV found 20 malicious files: koraciznanja","details":{"user":"koraciznanja","malicious":20,"malicious_files":["/home/koraciznanja/docker-data/volumes/koraciznanja_html_data/_data/a.php","/home/koraciznanja/docker-data/volumes/koraciznanja_html_data/_data/b.php","/x/c.php","/x/d.php"]}}`+"\n"+
+		`{"time":"2026-11-12 21:16:00","source":"imunify_scan","severity":"info","title":"ImunifyAV scan running: carol","details":{"user":"carol","malicious":0}}`+"\n"+
+			`{"time":"2026-11-12 21:29:59","source":"imunify_scan","severity":"warning","title":"ImunifyAV found 20 malicious files: carol","details":{"user":"carol","malicious":20,"malicious_files":["/home/carol/docker-data/volumes/carol_html_data/_data/a.php","/home/carol/docker-data/volumes/carol_html_data/_data/b.php","/x/c.php","/x/d.php"]}}`+"\n"+
 			`{"time":"2026-11-11 05:00:00","source":"imunify_scan","severity":"warning","title":"ImunifyAV found 1 malicious file: other","details":{"user":"other","malicious":1,"malicious_files":["/x"]}}`+"\n"), 0o644)
 	got := summaryMalwareFor(nil, "2026-11-12")
-	if len(got) != 1 || got[0].Username != "koraciznanja" || got[0].Title != "ImunifyAV found 20 malicious files" ||
-		got[0].Detail != "/var/www/html/a.php, /var/www/html/b.php, /x/c.php and 17 more" || got[0].Link != "/security/imunify/koraciznanja" {
+	if len(got) != 1 || got[0].Username != "carol" || got[0].Title != "ImunifyAV found 20 malicious files" ||
+		got[0].Detail != "/var/www/html/a.php, /var/www/html/b.php, /x/c.php and 17 more" || got[0].Link != "/security/imunify/carol" {
 		t.Fatalf("malware findings: %+v", got)
 	}
 }
 
 func TestDailyReportEmailRendersSummary(t *testing.T) {
 	s := &serverSummary{Date: "2026-11-11", DayLabel: "Wednesday, 11 November", Accounts: 73, Servers: 2, Requests: "603,330", Visitors: "56,266", Sent: "14.0 GB", Errors: "1,412",
-		Attention:      []summaryFinding{{Username: "koraciznanja", Server: "s1", Title: "ImunifyAV found 20 malicious files"}, {Username: "a", Title: "t2"}, {Username: "b", Title: "t3"}, {Username: "c", Title: "t4"}, {Username: "d", Title: "t5"}, {Username: "e", Title: "sixth"}},
-		AttentionTotal: 6, MoreAttn: 1, Sites: []summarySite{{Name: "elit.rs", Username: "zlatko888", Requests: "255,542"}}}
+		Attention:      []summaryFinding{{Username: "carol", Server: "s1", Title: "ImunifyAV found 20 malicious files"}, {Username: "a", Title: "t2"}, {Username: "b", Title: "t3"}, {Username: "c", Title: "t4"}, {Username: "d", Title: "t5"}, {Username: "e", Title: "sixth"}},
+		AttentionTotal: 6, MoreAttn: 1, Sites: []summarySite{{Name: "blog.example.net", Username: "dave", Requests: "255,542"}}}
 	s.AttentionGroups = groupAttention(s.Attention)
 	s.MainProblem = "The main problem is X."
-	days := []summaryServerDay{{Name: "s1.maxhost.rs", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "8.64", LoadPct: 48, Cores: 18, PeakCPU: 78, Disk: 66, Runs: 258, FailedRuns: 1}, Mail: &summaryMail{Received: 143, Bounced: 58, BouncePct: 18}}},
-		{Name: "s2.maxhost.rs", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "14.91", LoadPct: 82, Cores: 18}, Backup: &summaryBackup{Ran: true, Finished: true, Started: "03:00", Duration: "31s", Accounts: 4, Done: 4, Size: "1.2 GB", Status: "All 4 accounts backed up.", Tone: "ok"}}}}
+	days := []summaryServerDay{{Name: "s1.example.org", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "8.64", LoadPct: 48, Cores: 18, PeakCPU: 78, Disk: 66, Runs: 258, FailedRuns: 1}, Mail: &summaryMail{Received: 143, Bounced: 58, BouncePct: 18}}},
+		{Name: "s2.example.org", Day: &summaryDay{Health: &summaryHealth{PeakLoad: "14.91", LoadPct: 82, Cores: 18}, Backup: &summaryBackup{Ran: true, Finished: true, Started: "03:00", Duration: "31s", Accounts: 4, Done: 4, Size: "1.2 GB", Status: "All 4 accounts backed up.", Tone: "ok"}}}}
 	out, err := webtemplates.RenderToString("email_daily_system_report.html", map[string]interface{}{
-		"Title": "Daily Usage Report", "Hostname": "s1.maxhost.rs", "AdminURL": "https://s1.maxhost.rs:2087/", "Summary": s, "Days": days, "Multi": true, "TotalUsers": 46,
+		"Title": "Daily Usage Report", "Hostname": "s1.example.org", "AdminURL": "https://s1.example.org:2087/", "Summary": s, "Days": days, "Multi": true, "TotalUsers": 46,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Wednesday, 11 November", "603,330", "koraciznanja", "ImunifyAV found 20 malicious files", "and 1 more accounts on the daily summary", "The main problem is X.", "elit.rs", "s2.maxhost.rs", "14.91", "18%</span>", "dashboard/summary?date=2026-11-11", "emails/reports", ">46<", "All 4 accounts backed up.", "took 31s", "4 of 4 accounts", "backups/user#runs"} {
+	for _, want := range []string{"Wednesday, 11 November", "603,330", "carol", "ImunifyAV found 20 malicious files", "and 1 more accounts on the daily summary", "The main problem is X.", "blog.example.net", "s2.example.org", "14.91", "18%</span>", "dashboard/summary?date=2026-11-11", "emails/reports", ">46<", "All 4 accounts backed up.", "took 31s", "4 of 4 accounts", "backups/user#runs"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("daily report email is missing %q", want)
 		}
@@ -166,10 +166,10 @@ func TestDailyReportEmailRendersSummary(t *testing.T) {
 
 func TestAttentionGroupedByAccountAndWebsite(t *testing.T) {
 	var u userSummary
-	if err := json.Unmarshal([]byte(`{"username":"apeiron","date":"2026-11-11","websites":[{"name":"apeiron.rs","requests":5},{"name":"lager.apeiron.rs","requests":3}],"attention":[
-		{"title":"apeiron.rs has 1 known security hole","detail":"They're in WP Fastest Cache &#8211; Plugin.","link":"/website?domain=apeiron.rs"},
-		{"title":"lager.apeiron.rs has 18 known security holes","detail":"They're in 7.1.3.","link":"/website?domain=lager.apeiron.rs"},
-		{"title":"Your scheduled task \"wp-cron-lager.apeiron.rs\" failed every time it ran (96 times)","detail":"No such container","link":"/cronjobs"},
+	if err := json.Unmarshal([]byte(`{"username":"alice","date":"2026-11-11","websites":[{"name":"example.com","requests":5},{"name":"shop.example.com","requests":3}],"attention":[
+		{"title":"example.com has 1 known security hole","detail":"They're in WP Fastest Cache &#8211; Plugin.","link":"/website?domain=example.com"},
+		{"title":"shop.example.com has 18 known security holes","detail":"They're in 7.1.3.","link":"/website?domain=shop.example.com"},
+		{"title":"Your scheduled task \"wp-cron-shop.example.com\" failed every time it ran (96 times)","detail":"No such container","link":"/cronjobs"},
 		{"title":"Disk almost full","detail":"95% used","link":"/disk-usage"}]}`), &u); err != nil {
 		t.Fatal(err)
 	}
@@ -179,19 +179,19 @@ func TestAttentionGroupedByAccountAndWebsite(t *testing.T) {
 		Link   string `json:"link"`
 	}{{Title: "x"}}}})
 	g := s.AttentionGroups
-	if len(g) != 2 || g[0].Username != "apeiron" || g[0].Count != 4 || len(g[0].General) != 1 || g[0].General[0].Title != "Disk almost full" {
+	if len(g) != 2 || g[0].Username != "alice" || g[0].Count != 4 || len(g[0].General) != 1 || g[0].General[0].Title != "Disk almost full" {
 		t.Fatalf("groups: %+v", g)
 	}
-	if len(g[0].Domains) != 2 || g[0].Domains[0].Name != "apeiron.rs" || g[0].Domains[0].Items[0].Title != "1 known security hole" || g[0].Domains[0].Items[0].Detail != "They're in WP Fastest Cache – Plugin." {
-		t.Fatalf("apeiron.rs: %+v", g[0].Domains)
+	if len(g[0].Domains) != 2 || g[0].Domains[0].Name != "example.com" || g[0].Domains[0].Items[0].Title != "1 known security hole" || g[0].Domains[0].Items[0].Detail != "They're in WP Fastest Cache – Plugin." {
+		t.Fatalf("example.com: %+v", g[0].Domains)
 	}
-	lager := g[0].Domains[1]
-	if lager.Name != "lager.apeiron.rs" || len(lager.Items) != 2 || lager.Items[0].Title != "18 known security holes" || !strings.Contains(lager.Items[1].Title, "wp-cron-lager") {
-		t.Fatalf("the cron mentioning lager.apeiron.rs belongs under it: %+v", lager)
+	shop := g[0].Domains[1]
+	if shop.Name != "shop.example.com" || len(shop.Items) != 2 || shop.Items[0].Title != "18 known security holes" || !strings.Contains(shop.Items[1].Title, "wp-cron-shop") {
+		t.Fatalf("the cron mentioning shop.example.com belongs under it: %+v", shop)
 	}
 	out, err := webtemplates.RenderToString("dashboard_summary.html", dashboardPageData{Summary: s})
 	// the site row is the ↳ arrow, the site's favicon, then its name
-	if err != nil || !strings.Contains(out, "&#8627;</span><img") || !strings.Contains(out, "favicons?domain=lager.apeiron.rs") || !strings.Contains(out, "4 issues") {
+	if err != nil || !strings.Contains(out, "&#8627;</span><img") || !strings.Contains(out, "favicons?domain=shop.example.com") || !strings.Contains(out, "4 issues") {
 		t.Fatalf("grouped list not rendered: %v", err)
 	}
 }
