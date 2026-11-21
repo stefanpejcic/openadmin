@@ -1,0 +1,145 @@
+name: E2E (admin panel)
+
+# Runs the OpenAdmin Playwright suite against the shared test server on every
+# build (push to main) and on demand (workflow_dispatch). It builds the admin
+# binary from this commit, ships it to the test box, restarts the admin
+# service, then runs the suite from the runner over the network. A failing run
+# opens/updates a single persistent issue on this repo.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_mutating:
+        description: "Run mutating tests too (changes state on the box)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  # one E2E run against the shared box at a time, newer push wins
+  group: e2e-admin-shared-box
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "stable"
+          check-latest: true
+      - name: Build amd64 binary
+        env:
+          GOOS: linux
+          GOARCH: amd64
+          CGO_ENABLED: 0
+        run: go build -buildvcs=false -trimpath -buildmode=pie -ldflags="-s -w" -o openadmin-amd64 ./cmd/openadmin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openadmin-amd64
+          path: openadmin-amd64
+
+  deploy-and-test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tests
+        uses: actions/checkout@v4
+        with:
+          repository: stefanpejcic/openpanel-tests
+          path: tests
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: openadmin-amd64
+
+      - name: Setup SSH to test box
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.TEST_SSH_KEY }}" > ~/.ssh/id
+          chmod 600 ~/.ssh/id
+          ssh-keyscan -H "${{ secrets.TEST_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy this build to the test box
+        run: |
+          # mirrors opencli update --admin: binary lives at /usr/local/admin/openadmin-amd64, service is `admin`
+          chmod +x openadmin-amd64
+          scp -i ~/.ssh/id openadmin-amd64 "root@${{ secrets.TEST_SSH_HOST }}:/usr/local/admin/openadmin-amd64.new"
+          ssh -i ~/.ssh/id "root@${{ secrets.TEST_SSH_HOST }}" '
+            set -e
+            chmod +x /usr/local/admin/openadmin-amd64.new
+            mv -f /usr/local/admin/openadmin-amd64.new /usr/local/admin/openadmin-amd64
+            systemctl restart admin
+            for i in $(seq 1 30); do
+              systemctl is-active --quiet admin && curl -ksf https://127.0.0.1:2087/login >/dev/null && exit 0
+              sleep 2
+            done
+            echo "admin service did not come healthy" >&2
+            systemctl status admin --no-pager | tail -20 >&2
+            exit 1
+          '
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        working-directory: tests
+        run: |
+          npm ci || npm install
+          npx playwright install --with-deps chromium
+
+      - name: Write .env
+        working-directory: tests
+        run: |
+          cat > openadmin/.env <<EOF
+          BASE_URL=${{ secrets.ADMIN_BASE_URL }}
+          PANEL_USERNAME=${{ secrets.ADMIN_USERNAME }}
+          PANEL_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+          RUN_MUTATING=${{ inputs.run_mutating && '1' || '' }}
+          EOF
+
+      - name: Run admin suite
+        working-directory: tests
+        run: ./openadmin/run-tests.sh || echo "TESTS_FAILED=1" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-admin
+          path: |
+            tests/logs/html-report-*
+            tests/logs/*.json
+          if-no-files-found: ignore
+
+      - name: Open/update issue on failure
+        if: always() && env.TESTS_FAILED == '1'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'E2E: admin panel suite failing';
+            const body = [
+              `The admin E2E suite failed on commit ${context.sha.slice(0,7)}.`,
+              ``,
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            ].join('\n');
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'e2e-failure', per_page: 100,
+            });
+            const hit = existing.data.find(i => i.title === title);
+            if (hit) {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: hit.number, body });
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['e2e-failure'] });
+            }
+
+      - name: Fail the job if tests failed
+        if: always() && env.TESTS_FAILED == '1'
+        run: exit 1
