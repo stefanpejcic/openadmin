@@ -129,6 +129,9 @@ jobs:
 
       - name: Run admin suite
         working-directory: tests
+        env:
+          # suite wall clock (ms); normal is ~90m, abort at 140m so a stuck spec exits cleanly with reports instead of hitting the job cap
+          PW_GLOBAL_TIMEOUT: "8400000"
         run: ./openadmin/run-tests.sh || echo "TESTS_FAILED=1" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
@@ -138,6 +141,7 @@ jobs:
           path: |
             tests/logs/html-report-*
             tests/logs/*.json
+            tests/logs/*.log
           if-no-files-found: ignore
 
       - name: Release box lock
