@@ -1163,6 +1163,10 @@ func TestServeEmailsQueuePagesSearchesAndFilters(t *testing.T) {
 		return string(body)
 	}
 	body := get("")
+	// inline handlers resolve names against document first, so a bare URL there is document.URL, not the constructor
+	if !strings.Contains(body, "new window.URL(window.location.href)") {
+		t.Fatalf("Refresh must build its link with window.URL")
+	}
 	if n := strings.Count(body, `href="/emails/queue?view=`); n != 2*emailQueuePageSize {
 		t.Fatalf("first page should hold %d messages (2 links each), got %d links", emailQueuePageSize, n)
 	}
