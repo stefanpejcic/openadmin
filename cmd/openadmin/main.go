@@ -36,7 +36,15 @@ import (
 // defaultMemoryLimit makes the GC give memory back after a heavy page instead of keeping it, GOMEMLIMIT in the service overrides it
 const defaultMemoryLimit = 64 << 20
 
+// version is set by the release build with -ldflags "-X main.version=..."
+var version = "dev"
+
 func main() {
+	// opencli update runs this on a downloaded binary before swapping it in
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
+		fmt.Println(version)
+		return
+	}
 	// prints a join code so a server can be added to a cluster from ssh too
 	if len(os.Args) > 1 && os.Args[1] == "cluster-join-code" {
 		code, err := cluster.GenerateJoinCode(adminPortAtStartup())

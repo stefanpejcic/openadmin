@@ -37,7 +37,7 @@ jobs:
           GOOS: linux
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: 0
-        run: go build -buildvcs=false -trimpath -buildmode=pie -ldflags="-s -w" -o openadmin-${{ matrix.arch }} ./cmd/openadmin
+        run: go build -buildvcs=false -trimpath -buildmode=pie -ldflags="-s -w -X main.version=${{ inputs.version }}" -o openadmin-${{ matrix.arch }} ./cmd/openadmin
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -55,6 +55,10 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      # opencli update --admin and the installer check the download against this
+      - name: Checksums
+        run: cd artifacts && sha256sum openadmin-amd64 openadmin-arm64 > SHA256SUMS
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
@@ -63,3 +67,4 @@ jobs:
           files: |
             artifacts/openadmin-amd64
             artifacts/openadmin-arm64
+            artifacts/SHA256SUMS
