@@ -649,7 +649,7 @@ func TestServeUpdatesWarnsWhenAutoUpdatesAreOff(t *testing.T) {
 	for _, want := range []string{
 		`data-pref="none"`,
 		"at least once a month. The last update ran 40 days ago.",
-		"https://openpanel.com/docs/articles/opencli/update/",
+		"https://openpanel.com/docs/opencli/update/",
 		"at least once a quarter to get them.</p>",
 	} {
 		if !strings.Contains(string(body), want) {
