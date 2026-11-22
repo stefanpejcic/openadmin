@@ -77,7 +77,7 @@ func NotFoundHandler(mux *http.ServeMux) http.Handler {
 			w.WriteHeader(http.StatusNotFound)
 			if apiEnabled() {
 				json.NewEncoder(w).Encode(map[string]string{
-					"error": "This api route does not exist. Please check the documentation: https://openpanel.com/docs/articles/dev-experience/openadmin-api",
+					"error": "This api route does not exist. Please check the documentation: https://openpanel.com/docs/admin/api/",
 				})
 			} else {
 				json.NewEncoder(w).Encode(map[string]string{
