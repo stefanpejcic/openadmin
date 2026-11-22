@@ -17,7 +17,7 @@
                 <p class="text-sm text-gray-500 dark:text-gray-500">View, delete, and attempt to deliver queued messages that the system has not yet delivered to their destinations.</p>
             </div>
             <div class="flex flex-none items-center gap-2">
-                <button type="button" onclick="location.reload()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5.46257 4.43262C7.21556 2.91688 9.5007 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C9.84982 4 7.89777 4.84827 6.46023 6.22842L5.46257 4.43262ZM18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 9.86386 2.66979 7.88416 3.8108 6.25944L7 12H4C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg>Refresh</button>
+                <button type="button" onclick="const u = new URL(location.href); u.searchParams.set('refresh', '1'); location.href = u.toString()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5.46257 4.43262C7.21556 2.91688 9.5007 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C9.84982 4 7.89777 4.84827 6.46023 6.22842L5.46257 4.43262ZM18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 9.86386 2.66979 7.88416 3.8108 6.25944L7 12H4C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg>Refresh</button>
             </div>
         </div>
     </header>
@@ -28,7 +28,6 @@
 <script>
 function queueManager() {
     return {
-        searchQuery: '',
         selected: [],
         busy: false,
         toggleAll(ids) {
@@ -107,13 +106,15 @@ function queueManager() {
 
     <div class="flex px-4 sm:px-6 lg:px-8 pt-3 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
         <div class="flex w-full flex-col gap-2 sm:w-fit sm:flex-row sm:items-center">
-            <div class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
-                <input x-model="searchQuery" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search queue…" aria-label="Search queue…" type="search" />
+            <form method="get" action="/emails/queue" class="relative w-full sm:max-w-[250px] sm:[&>input]:h-[30px]">
+                {{with .QueueFilter}}<input type="hidden" name="queue" value="{{.}}">{{end}}
+                {{if .SortCol}}<input type="hidden" name="sort" value="{{.SortCol}}"><input type="hidden" name="direction" value="{{.SortDirection}}">{{end}}
+                <input name="q" value="{{.Query}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden pl-8" placeholder="Search queue…" aria-label="Search queue…" type="search" />
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" aria-hidden="true" class="remixicon size-[1.125rem] shrink-0"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"></path></svg>
                 </div>
-            </div>
-            {{if .Queue}}<p class="text-sm text-gray-500 dark:text-gray-500"><b>{{len .Queue}}</b> message{{if ne (len .Queue) 1}}s{{end}}{{range .Counts}} · {{.Count}} {{.Name}}{{end}}</p>{{end}}
+            </form>
+            {{if .Total}}<p class="text-sm text-gray-500 dark:text-gray-500"><a href="/emails/queue" class="hover:underline hover:underline-offset-4{{if not .QueueFilter}} font-semibold text-gray-900 dark:text-gray-50{{end}}"><b>{{.Total}}</b> message{{if ne .Total 1}}s{{end}}</a>{{range .Counts}} · <a href="/emails/queue?queue={{.Name}}" class="hover:underline hover:underline-offset-4{{if eq $.QueueFilter .Name}} font-semibold text-gray-900 dark:text-gray-50{{end}}">{{.Count}} {{.Name}}</a>{{end}}{{if or .Query .QueueFilter}} · {{.Matched}} matching{{end}}</p>{{end}}
         </div>
 
         <div class="flex items-center gap-2">
@@ -124,7 +125,7 @@ function queueManager() {
                     <button type="button" :disabled="busy" @click="doAction('delete', 'selected')" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400">Delete selected</button>
                 </div>
             </template>
-            {{if .Queue}}
+            {{if .Total}}
             <button type="button" :disabled="busy" @click="doAction('retry', 'all')" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Retry all</button>
             <button type="button" :disabled="busy" @click="doAction('delete', 'all')" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400">Delete all</button>
             {{end}}
@@ -136,28 +137,27 @@ function queueManager() {
             <thead>
                 <tr class="[&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 border-y border-gray-200 dark:border-gray-800">
                     <th scope="col" class="w-10 py-2.5 pl-4 border-b border-gray-200 dark:border-gray-800">
-                        {{if .Queue}}<input type="checkbox" data-all-ids="{{toJSON .QueueIDs}}" @change="toggleAll(JSON.parse($el.dataset.allIds))" :checked="selected.length === {{len .Queue}}" aria-label="Select all messages">{{end}}
+                        {{if .Queue}}<input type="checkbox" data-all-ids="{{toJSON .QueueIDs}}" @change="toggleAll(JSON.parse($el.dataset.allIds))" :checked="selected.length === {{len .Queue}}" aria-label="Select all messages on this page" title="Select all messages on this page">{{end}}
                     </th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Queue ID" "Key" "id" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Queue" "Key" "queue" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "From" "Key" "from" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "To" "Key" "to" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Size" "Key" "size" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Arrival" "Key" "arrival" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
-                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Reason" "Key" "reason" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Queue ID" "Key" "id" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection "Extra" $.SortExtra)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Queue" "Key" "queue" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection "Extra" $.SortExtra)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "From" "Key" "from" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection "Extra" $.SortExtra)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "To" "Key" "to" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection "Extra" $.SortExtra)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Size" "Key" "size" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection "Extra" $.SortExtra)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Arrival" "Key" "arrival" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection "Extra" $.SortExtra)}}</th>
+                    <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs">{{template "sort_header" (dict "Label" "Reason" "Key" "reason" "Base" "/emails/queue" "SortCol" $.SortCol "SortDirection" $.SortDirection "Extra" $.SortExtra)}}</th>
                     <th scope="col" class="border-b px-4 text-left font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-right"><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
             {{range .Queue}}
-                <tr x-show="searchQuery === '' || {{toJSON (lower (printf "%s %s %s" .ID .Sender .Summary))}}.includes(searchQuery.toLowerCase()) || {{range .Recipients}}{{toJSON (lower .Address)}}.includes(searchQuery.toLowerCase()) || {{end}}false"
-                    class="group hover:bg-gray-50 dark:hover:bg-gray-900/60 [&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8"
+                <tr class="group hover:bg-gray-50 dark:hover:bg-gray-900/60 [&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8"
                     :class="selected.includes('{{.ID}}') ? 'bg-gray-50 dark:bg-gray-900' : ''">
                     <td class="w-10 py-2.5 pl-4 align-top"><input type="checkbox" value="{{.ID}}" x-model="selected" aria-label="Select message {{.ID}}"></td>
                     <td class="px-4 py-2.5 align-top text-sm font-mono font-medium whitespace-nowrap text-gray-900 dark:text-gray-50"><a href="/emails/queue?view={{.ID}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{.ID}}</a></td>
                     <td class="px-4 py-2.5 align-top text-sm whitespace-nowrap"><span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{if eq .Queue "deferred"}}bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20{{else if eq .Queue "active"}}bg-blue-50 text-blue-900 ring-blue-600/30 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/20{{else if eq .Queue "hold"}}bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20{{else}}bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20{{end}}">{{.Queue}}</span></td>
                     <td class="px-4 py-2.5 align-top text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{if .Sender}}{{.Sender}}{{else}}<span class="text-gray-400 dark:text-gray-600" title="Bounce or notification from the mail server">&lt;&gt;</span>{{end}}</td>
-                    <td class="px-4 py-2.5 align-top text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{with .Recipients}}{{(index . 0).Address}}{{if gt (len .) 1}} <span class="text-xs text-gray-500" title="{{range .}}{{.Address}}&#10;{{end}}">+{{sub (len .) 1}}</span>{{end}}{{end}}</td>
+                    <td class="px-4 py-2.5 align-top text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{with .Recipients}}{{(index . 0).Address}}{{if gt (len .) 1}} <span class="text-xs text-gray-500" title="{{sub (len .) 1}} more recipients, open the message for the full list">+{{sub (len .) 1}}</span>{{end}}{{end}}</td>
                     <td class="px-4 py-2.5 align-top text-sm whitespace-nowrap tabular-nums text-gray-600 dark:text-gray-400">{{kbRound1 .Size}} KB</td>
                     <td class="px-4 py-2.5 align-top text-sm whitespace-nowrap tabular-nums text-gray-600 dark:text-gray-400">{{unixDateTimeUTC .Arrival}}</td>
                     <td class="min-w-64 max-w-xl px-4 py-2.5 align-top text-sm text-gray-600 dark:text-gray-400">{{if .Summary}}<span class="line-clamp-2 break-words" title="{{.Reason}}">{{.Summary}}</span>{{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}</td>
@@ -170,11 +170,20 @@ function queueManager() {
                     </td>
                 </tr>
             {{else}}
-            <tr><td colspan="9" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">Queue is empty.</td></tr>
+            <tr><td colspan="9" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-500">{{if and .Total (or .Query .QueueFilter)}}No messages match.{{else}}Queue is empty.{{end}}</td></tr>
             {{end}}
             </tbody>
         </table>
     </div>
+    {{if gt .Pages 1}}
+    <nav class="flex items-center justify-between gap-2 px-4 pb-4 sm:px-6 lg:px-8" aria-label="Queue pages">
+        <p class="text-sm text-gray-500 dark:text-gray-500">{{.FirstRow}}–{{.LastRow}} of {{.Matched}} · page {{.Page}} of {{.Pages}}</p>
+        <div class="flex items-center gap-2">
+            {{if .PrevURL}}<a href="{{.PrevURL}}" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs font-medium border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Previous</a>{{end}}
+            {{if .NextURL}}<a href="{{.NextURL}}" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs font-medium border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Next</a>{{end}}
+        </div>
+    </nav>
+    {{end}}
 </div>
 
 {{else if eq .MailserverStatus "not_installed"}}

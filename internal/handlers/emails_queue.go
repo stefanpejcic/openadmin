@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 	"unicode/utf8"
 
 	"openadmin/internal/podman"
@@ -150,3 +153,138 @@ func queueCounts(rows []queueRow) []struct {
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
+
+// postqueue -j message, only the fields the page shows
+type postqueueMsg struct {
+	QueueName   string `json:"queue_name"`
+	QueueID     string `json:"queue_id"`
+	ArrivalTime int64  `json:"arrival_time"`
+	MessageSize int64  `json:"message_size"`
+	Sender      string `json:"sender"`
+	Recipients  []struct {
+		Address     string `json:"address"`
+		DelayReason string `json:"delay_reason"`
+	} `json:"recipients"`
+}
+
+// streamEmailQueueRows decodes postqueue -j as it arrives, a big queue is 100+ MB of json with the same few delay reasons over and over, so those are kept once
+func streamEmailQueueRows() []queueRow {
+	cmd, err := podman.Command("default", "exec", emailsMailserverContainerName, "postqueue", "-j")
+	if err != nil {
+		return nil
+	}
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil
+	}
+	if cmd.Start() != nil {
+		return nil
+	}
+	defer cmd.Wait()
+	seen := map[string]string{}
+	intern := func(v string) string {
+		if v == "" {
+			return ""
+		}
+		if s, ok := seen[v]; ok {
+			return s
+		}
+		seen[v] = v
+		return v
+	}
+	summaries := map[string]string{}
+	summary := func(reason string) string {
+		if s, ok := summaries[reason]; ok {
+			return s
+		}
+		s := intern(queueReasonSummary(reason))
+		summaries[reason] = s
+		return s
+	}
+	var rows []queueRow
+	dec := json.NewDecoder(out)
+	for {
+		var m postqueueMsg
+		if err := dec.Decode(&m); err != nil {
+			break
+		}
+		r := queueRow{ID: m.QueueID, Queue: intern(m.QueueName), Sender: intern(m.Sender), Size: m.MessageSize, Arrival: m.ArrivalTime}
+		r.Recipients = make([]queueRecipient, 0, len(m.Recipients))
+		for _, rc := range m.Recipients {
+			reason := intern(rc.DelayReason)
+			r.Recipients = append(r.Recipients, queueRecipient{Address: rc.Address, Reason: reason, Summary: summary(reason)})
+			if r.Reason == "" && reason != "" {
+				r.Reason, r.Summary = reason, summary(reason)
+			}
+		}
+		rows = append(rows, r)
+	}
+	return rows
+}
+
+// loadEmailQueueRows is a var so tests can hand the page a queue
+var loadEmailQueueRows = streamEmailQueueRows
+
+// postqueue -j takes seconds on a big queue, so paging, sorting and searching reuse one read for a short while
+const emailQueueCacheTTL = 30 * time.Second
+
+var emailQueueCache struct {
+	mu   sync.Mutex
+	rows []queueRow
+	at   time.Time
+}
+
+func cachedEmailQueueRows() []queueRow {
+	emailQueueCache.mu.Lock()
+	defer emailQueueCache.mu.Unlock()
+	if emailQueueCache.at.IsZero() || time.Since(emailQueueCache.at) > emailQueueCacheTTL {
+		emailQueueCache.rows = loadEmailQueueRows()
+		emailQueueCache.at = time.Now()
+	}
+	return emailQueueCache.rows
+}
+
+// invalidateEmailQueueCache makes the next page load read the queue again, after a retry or delete
+func invalidateEmailQueueCache() {
+	emailQueueCache.mu.Lock()
+	emailQueueCache.at = time.Time{}
+	emailQueueCache.rows = nil
+	emailQueueCache.mu.Unlock()
+}
+
+// queueRowVisible is queueMessageVisible for a parsed row
+func (s *resellerScope) queueRowVisible(r queueRow) bool {
+	if s == nil {
+		return true
+	}
+	if r.Sender != "" && s.AllowsEmail(r.Sender) {
+		return true
+	}
+	if len(r.Recipients) == 0 {
+		return false
+	}
+	for _, rc := range r.Recipients {
+		if !s.AllowsEmail(rc.Address) {
+			return false
+		}
+	}
+	return true
+}
+
+// queueRowMatches is the search box: id, sender, reason or any recipient
+func queueRowMatches(r queueRow, q string) bool {
+	if q == "" {
+		return true
+	}
+	if strings.Contains(strings.ToLower(r.ID+" "+r.Sender+" "+r.Summary), q) {
+		return true
+	}
+	for _, rc := range r.Recipients {
+		if strings.Contains(strings.ToLower(rc.Address), q) {
+			return true
+		}
+	}
+	return false
+}
+
+const emailQueuePageSize = 100

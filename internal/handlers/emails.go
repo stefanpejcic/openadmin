@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -942,19 +943,20 @@ var getEmailQueue = func() []map[string]interface{} {
 	if err != nil {
 		return nil
 	}
-	out, err := cmd.Output()
-	if err != nil {
+	out, err := cmd.StdoutPipe()
+	if err != nil || cmd.Start() != nil {
 		return nil
 	}
+	defer cmd.Wait()
+	// decoded as it streams, a big queue is 100+ MB of json
 	var queue []map[string]interface{}
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-		if line == "" {
-			continue
-		}
+	dec := json.NewDecoder(out)
+	for {
 		var entry map[string]interface{}
-		if json.Unmarshal([]byte(line), &entry) == nil {
-			queue = append(queue, entry)
+		if dec.Decode(&entry) != nil {
+			break
 		}
+		queue = append(queue, entry)
 	}
 	return queue
 }
@@ -963,32 +965,92 @@ var getEmailQueue = func() []map[string]interface{} {
 // POST is accepted but never actually distinguished from GET.
 func (e *Emails) ServeEmailsQueue(w http.ResponseWriter, r *http.Request) {
 	mailserverStatus := checkMailserverStatus()
-	queue := scopeFor(r, e.MySQL).filterQueue(getEmailQueue())
-
 	if r.URL.Query().Get("output") == "json" {
+		queue := scopeFor(r, e.MySQL).filterQueue(getEmailQueue())
 		writeJSON(w, map[string]interface{}{"queue": queue, "mailserver_status": mailserverStatus})
 		return
 	}
-	rows := queueRowsFrom(queue)
+	// the Refresh button skips the short cache
+	if r.URL.Query().Get("refresh") == "1" {
+		invalidateEmailQueueCache()
+	}
+	all := filterRows(scopeFor(r, e.MySQL), cachedEmailQueueRows(), scopeFor(r, e.MySQL).queueRowVisible)
+	queueFilter := r.URL.Query().Get("queue")
+	query := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
+	rows := make([]queueRow, 0, len(all))
+	for _, row := range all {
+		if (queueFilter == "" || row.Queue == queueFilter) && queueRowMatches(row, query) {
+			rows = append(rows, row)
+		}
+	}
 	sortCol, sortDirection := readSort(r, queueSortKeys)
 	sortQueueRows(rows, sortCol, sortDirection)
-	queueIDs := make([]string, 0, len(rows))
-	for _, row := range rows {
+	// a queue can hold tens of thousands of messages, only one page goes into the html
+	pages := (len(rows) + emailQueuePageSize - 1) / emailQueuePageSize
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	if pages > 0 && page > pages {
+		page = pages
+	}
+	start := (page - 1) * emailQueuePageSize
+	end := start + emailQueuePageSize
+	if start > len(rows) {
+		start = len(rows)
+	}
+	if end > len(rows) {
+		end = len(rows)
+	}
+	pageRows := rows[start:end]
+	queueIDs := make([]string, 0, len(pageRows))
+	for _, row := range pageRows {
 		queueIDs = append(queueIDs, row.ID)
+	}
+	// sort links and paging keep the search and the queue filter
+	keep := url.Values{}
+	if v := r.URL.Query().Get("q"); v != "" {
+		keep.Set("q", v)
+	}
+	if queueFilter != "" {
+		keep.Set("queue", queueFilter)
+	}
+	pageURL := func(n int) string {
+		v := url.Values{}
+		for k, vs := range keep {
+			v[k] = vs
+		}
+		if sortCol != "" {
+			v.Set("sort", sortCol)
+			v.Set("direction", sortDirection)
+		}
+		v.Set("page", strconv.Itoa(n))
+		return "/emails/queue?" + v.Encode()
 	}
 	data := map[string]interface{}{
 		"MailserverStatus": mailserverStatus,
 		"Installing":       emailsInstallRunning(),
-		"Queue":            rows,
+		"SortExtra":        keep,
+		"PrevURL":          map[bool]string{true: pageURL(page - 1)}[page > 1],
+		"NextURL":          map[bool]string{true: pageURL(page + 1)}[page < pages],
+		"Queue":            pageRows,
 		"QueueIDs":         queueIDs,
-		"Counts":           queueCounts(rows),
+		"Total":            len(all),
+		"Matched":          len(rows),
+		"Counts":           queueCounts(all),
+		"QueueFilter":      queueFilter,
+		"Query":            r.URL.Query().Get("q"),
+		"Page":             page,
+		"Pages":            pages,
+		"FirstRow":         start + 1,
+		"LastRow":          end,
 		"SortCol":          sortCol,
 		"SortDirection":    sortDirection,
 		"Flashes":          auth.PopFlashes(w, r, e.Sessions),
 	}
 	// ?view=<queue id> opens the details of one message above the table, only for ids this admin can see
 	if id := r.URL.Query().Get("view"); id != "" {
-		for _, row := range rows {
+		for _, row := range all {
 			if row.ID == id {
 				data["Detail"] = row
 				data["DetailHeaders"] = queueMessageHeaders(id)
@@ -1051,6 +1113,7 @@ func (e *Emails) ServeEmailsQueueAction(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	invalidateEmailQueueCache()
 	if err != nil {
 		writeJSONError2(w, http.StatusInternalServerError, err.Error())
 		return

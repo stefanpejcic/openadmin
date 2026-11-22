@@ -385,6 +385,7 @@ func (a *APIEmails) ServeQueue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	invalidateEmailQueueCache()
 	if err != nil {
 		writeJSONError2(w, http.StatusInternalServerError, err.Error())
 		return

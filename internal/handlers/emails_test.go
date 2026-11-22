@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -1088,15 +1089,16 @@ func TestServeEmailsQueueSortsAndShowsDetails(t *testing.T) {
 	srv, client := newEmailsTestServer(t, e)
 	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
 	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
-	origQueue, origHeaders := getEmailQueue, queueMessageHeaders
-	t.Cleanup(func() { getEmailQueue, queueMessageHeaders = origQueue, origHeaders })
-	getEmailQueue = func() []map[string]interface{} {
-		return []map[string]interface{}{
+	origLoad, origHeaders := loadEmailQueueRows, queueMessageHeaders
+	t.Cleanup(func() { loadEmailQueueRows, queueMessageHeaders = origLoad, origHeaders; invalidateEmailQueueCache() })
+	invalidateEmailQueueCache()
+	loadEmailQueueRows = func() []queueRow {
+		return queueRowsFrom([]map[string]interface{}{
 			{"queue_id": "AAA111", "queue_name": "deferred", "sender": "z@a.com", "message_size": float64(2048), "arrival_time": float64(100),
 				"recipients": []interface{}{map[string]interface{}{"address": "x@gmail.com", "delay_reason": "connect to mx.gmail.com[1.2.3.4]:25: Connection timed out"}}},
 			{"queue_id": "BBB222", "queue_name": "active", "sender": "a@a.com", "message_size": float64(512000), "arrival_time": float64(200),
 				"recipients": []interface{}{map[string]interface{}{"address": "y@b.com"}}},
-		}
+		})
 	}
 	queueMessageHeaders = func(id string) string { return "Subject: hello " + id }
 	get := func(q string) string {
@@ -1126,6 +1128,66 @@ func TestServeEmailsQueueSortsAndShowsDetails(t *testing.T) {
 	}
 	if body = get("?view=GONE999"); !strings.Contains(body, "no longer in the queue") {
 		t.Fatalf("a message that left the queue should say so")
+	}
+}
+
+func TestServeEmailsQueuePagesSearchesAndFilters(t *testing.T) {
+	e := &Emails{}
+	srv, client := newEmailsTestServer(t, e)
+	os.WriteFile(EmailsMailComposeFile, []byte(""), 0644)
+	emailsPodmanPsRun = func(args ...string) (string, error) { return "openadmin_mailserver\n", nil }
+	origLoad := loadEmailQueueRows
+	t.Cleanup(func() { loadEmailQueueRows = origLoad; invalidateEmailQueueCache() })
+	invalidateEmailQueueCache()
+	loads := 0
+	loadEmailQueueRows = func() []queueRow {
+		loads++
+		rows := make([]queueRow, 0, 250)
+		for i := 0; i < 250; i++ {
+			q := "hold"
+			if i%5 == 0 {
+				q = "deferred"
+			}
+			rows = append(rows, queueRow{ID: fmt.Sprintf("ID%05d", i), Queue: q, Sender: "no-reply@ex.com", Arrival: int64(i),
+				Recipients: []queueRecipient{{Address: fmt.Sprintf("u%d@gmail.com", i)}, {Address: "other@gmail.com"}}})
+		}
+		return rows
+	}
+	get := func(q string) string {
+		resp, err := client.Get(srv.URL + "/emails/queue" + q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return string(body)
+	}
+	body := get("")
+	if n := strings.Count(body, `href="/emails/queue?view=`); n != 2*emailQueuePageSize {
+		t.Fatalf("first page should hold %d messages (2 links each), got %d links", emailQueuePageSize, n)
+	}
+	for _, want := range []string{"<b>250</b> messages", "50 deferred", "200 hold", "1–100 of 250", "page 1 of 3", "page=2"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("missing %q", want)
+		}
+	}
+	if strings.Contains(body, "other@gmail.com&#10;") || strings.Contains(body, "includes(searchQuery") {
+		t.Fatalf("recipients must not be inlined per row")
+	}
+	if body = get("?page=3"); !strings.Contains(body, "201–250 of 250") || !strings.Contains(body, ">ID00249<") {
+		t.Fatalf("last page")
+	}
+	if body = get("?q=u42@gmail"); !strings.Contains(body, ">ID00042<") || strings.Contains(body, ">ID00043<") || !strings.Contains(body, "1 matching") {
+		t.Fatalf("search by recipient")
+	}
+	if body = get("?queue=deferred&sort=id&direction=desc"); !strings.Contains(body, "50 matching") || strings.Index(body, ">ID00245<") > strings.Index(body, ">ID00240<") || !strings.Contains(body, "queue=deferred") {
+		t.Fatalf("queue filter keeps sort and filter in links")
+	}
+	if loads != 1 {
+		t.Fatalf("postqueue should be read once and cached, read %d times", loads)
+	}
+	if get("?refresh=1"); loads != 2 {
+		t.Fatalf("refresh=1 should read the queue again, read %d times", loads)
 	}
 }
 
