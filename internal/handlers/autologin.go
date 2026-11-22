@@ -191,10 +191,12 @@ func (a *Autologin) ServeLoginToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	randomToken := generateRandomToken(30)
-	if err := os.WriteFile(filepath.Join(tokenDir, "logintoken.txt"), []byte(randomToken), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tokenDir, "logintoken.txt"), []byte(randomToken), 0600); err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	// WriteFile keeps the old mode when the file is already there
+	_ = os.Chmod(filepath.Join(tokenDir, "logintoken.txt"), 0600)
 
 	forceDomain := autologinOpenpanelDomainRun()
 	port := autologinOpenpanelPortRun()
