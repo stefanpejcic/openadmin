@@ -128,8 +128,12 @@ func TestNotificationsUpdateAvailableLinksToUpdateNow(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), `href="/settings/updates#update-now" title="Update Now"`) || !strings.Contains(string(body), `href="/settings/notifications#update"`) {
-		t.Fatalf("expected Update Now link, got %s", truncate(string(body)))
+	if !strings.Contains(string(body), `href="/settings/updates#update-now" class="nt-manage`) || !strings.Contains(string(body), `href="/settings/notifications#update"`) {
+		t.Fatalf("expected Update Now in the row menu, got %s", truncate(string(body)))
+	}
+	// the link lives only in the menu now, no separate arrow next to it
+	if strings.Contains(string(body), `title="Update Now"`) {
+		t.Fatal("the arrow link next to the menu should be gone")
 	}
 }
 
