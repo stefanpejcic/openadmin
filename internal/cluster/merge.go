@@ -89,6 +89,7 @@ func parseTables(page []byte) []tableSpan {
 	var row *rowSpan
 	var cell *cellSpan
 	depth, inHead, inBody := 0, false, false
+	tmplDepth := 0
 	pos := offset
 	for {
 		tt := z.Next()
@@ -106,11 +107,20 @@ func parseTables(page []byte) []tableSpan {
 		}
 		t := z.Token()
 		name := t.Data
+		// tables inside an alpine template are popovers, not lists
+		if name == "template" && depth == 0 {
+			if tt == xhtml.StartTagToken {
+				tmplDepth++
+			} else if tt == xhtml.EndTagToken && tmplDepth > 0 {
+				tmplDepth--
+			}
+			continue
+		}
 		if name == "table" {
 			if tt == xhtml.StartTagToken {
 				depth++
 				if depth == 1 {
-					out = append(out, tableSpan{id: attrOf(t, "id")})
+					out = append(out, tableSpan{id: attrOf(t, "id"), hasTemplate: tmplDepth > 0})
 					cur = &out[len(out)-1]
 				}
 			} else if tt == xhtml.EndTagToken {
