@@ -1260,6 +1260,7 @@ var clusterSumRe = regexp.MustCompile(`(data-cluster-sum="([a-z0-9_-]+)"[^>]*>)\
 
 // sumClusterStats adds up the numbers a page marks with data-cluster-sum="key" (totals above a table) with the same ones of the other servers
 func sumClusterStats(page []byte, remotes []remotePage) []byte {
+	page = sumClusterBytes(page, remotes)
 	if len(remotes) == 0 || !bytes.Contains(page, []byte("data-cluster-sum")) {
 		return page
 	}
@@ -1277,6 +1278,41 @@ func sumClusterStats(page []byte, remotes []remotePage) []byte {
 		m := clusterSumRe.FindSubmatch(b)
 		return []byte(string(m[1]) + strconv.Itoa(num(m[3])+totals[string(m[2])]) + "<")
 	})
+}
+
+var clusterBytesRe = regexp.MustCompile(`(<[a-z]+[^>]*data-cluster-bytes="([a-z0-9_-]+):([0-9]+)"[^>]*>)[^<]*<`)
+
+// sumClusterBytes is the same for sizes, data-cluster-bytes="key:bytes" and the label gets rewritten from the summed bytes
+func sumClusterBytes(page []byte, remotes []remotePage) []byte {
+	if len(remotes) == 0 || !bytes.Contains(page, []byte("data-cluster-bytes")) {
+		return page
+	}
+	totals := map[string]int64{}
+	for _, rp := range remotes {
+		for _, m := range clusterBytesRe.FindAllSubmatch(rp.body, -1) {
+			n, _ := strconv.ParseInt(string(m[3]), 10, 64)
+			totals[string(m[2])] += n
+		}
+	}
+	return clusterBytesRe.ReplaceAllFunc(page, func(b []byte) []byte {
+		m := clusterBytesRe.FindSubmatch(b)
+		n, _ := strconv.ParseInt(string(m[3]), 10, 64)
+		return []byte(string(m[1]) + humanBytes(n+totals[string(m[2])]) + "<")
+	})
+}
+
+// humanBytes matches the size labels the handlers print
+func humanBytes(b int64) string {
+	switch {
+	case b < 1024:
+		return strconv.FormatInt(b, 10) + " B"
+	case b < 1024*1024:
+		return fmt.Sprintf("%.1f KB", float64(b)/1024)
+	case b < 1024*1024*1024:
+		return fmt.Sprintf("%.1f MB", float64(b)/1024/1024)
+	default:
+		return fmt.Sprintf("%.2f GB", float64(b)/1024/1024/1024)
+	}
 }
 
 var (

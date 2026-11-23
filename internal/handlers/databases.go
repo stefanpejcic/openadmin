@@ -393,6 +393,7 @@ type databasesPageData struct {
 	PHPMyAdmin    bool // phpmyadmin module is on, shows the per-database link
 	UserCount     int
 	TotalSize     string
+	TotalBytes    int64
 	MySQLIsDown   bool
 	SortCol       string
 	SortDirection string
@@ -477,6 +478,7 @@ func (d *Databases) render(w http.ResponseWriter, r *http.Request, engine, base 
 		CheckedAt:     checkedAt,
 		UserCount:     len(owners),
 		TotalSize:     humanFileSize(total),
+		TotalBytes:    total,
 		MySQLIsDown:   mysqlIsDown,
 		SortCol:       sortCol,
 		SortDirection: sortDirection,

@@ -1343,6 +1343,14 @@ func TestSumClusterStats(t *testing.T) {
 	}
 }
 
+func TestSumClusterBytes(t *testing.T) {
+	page := []byte(`<b data-cluster-sum="u">28</b> users, <b data-cluster-bytes="sz:2147483648">2.00 GB</b>`)
+	out := string(sumClusterStats(page, []remotePage{{body: []byte(`<b data-cluster-sum="u">45</b> users, <b data-cluster-bytes="sz:1073741824">1.00 GB</b>`)}}))
+	if out != `<b data-cluster-sum="u">73</b> users, <b data-cluster-bytes="sz:2147483648">3.00 GB</b>` {
+		t.Errorf("got %s", out)
+	}
+}
+
 func TestMergeClusterOptions(t *testing.T) {
 	sel := func(opts string) string {
 		return `<select name="domain" data-cluster-options="d"><option value="" data-cluster-count="All domains (%d)">All domains (9)</option>` + opts + `</select>`
