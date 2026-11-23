@@ -35,7 +35,7 @@
 </div>
 
 <!-- detail toggles in the rows, one delegated listener instead of an Alpine component each -->
-<style>.nt-toggle:not(.is-open) .nt-body,.nt-toggle:not(.is-open) .nt-hide,.nt-toggle.is-open .nt-show{display:none}.nt-full:not(.is-open) .nt-full-text,.nt-full:not(.is-open) .nt-full-less,.nt-full.is-open .nt-full-short,.nt-full.is-open .nt-full-more{display:none}</style>
+<style>.nt-menu>summary::-webkit-details-marker{display:none}.nt-toggle:not(.is-open) .nt-body,.nt-toggle:not(.is-open) .nt-hide,.nt-toggle.is-open .nt-show{display:none}.nt-full:not(.is-open) .nt-full-text,.nt-full:not(.is-open) .nt-full-less,.nt-full.is-open .nt-full-short,.nt-full.is-open .nt-full-more{display:none}</style>
 <script>
 document.addEventListener('click', function (e) {
     // a long message shows its first 150 characters with a link to the rest
@@ -46,11 +46,37 @@ document.addEventListener('click', function (e) {
         full.setAttribute('aria-expanded', on ? 'true' : 'false');
         return;
     }
+    // row menus: one open at a time, outside click closes, delete needs a second click
+    var del = e.target.closest('.nt-del');
+    if (del && !del.dataset.armed) {
+        e.preventDefault();
+        del.dataset.armed = '1';
+        del.textContent = 'Click again to delete';
+        setTimeout(function () { delete del.dataset.armed; del.textContent = 'Delete'; }, 3000);
+        return;
+    }
+    document.querySelectorAll('details.nt-menu[open]').forEach(function (d) { if (!d.contains(e.target)) d.open = false; });
     var sw = e.target.closest('.nt-switch');
     if (!sw) return;
     e.preventDefault();
     var open = sw.closest('.nt-toggle').classList.toggle('is-open');
     sw.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+// open menus upward when there's no room below
+document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d.classList || !d.classList.contains('nt-menu') || !d.open) return;
+    var list = d.querySelector('.nt-menu-list'), r = d.getBoundingClientRect();
+    var up = r.bottom + 4 + list.offsetHeight > window.innerHeight && r.top - 4 - list.offsetHeight > 0;
+    list.classList.toggle('top-full', !up); list.classList.toggle('mt-1', !up);
+    list.classList.toggle('bottom-full', up); list.classList.toggle('mb-1', up);
+    var first = list.querySelector('[role=menuitem]');
+    if (first) first.focus();
+}, true);
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    var d = document.querySelector('details.nt-menu[open]');
+    if (d) { d.open = false; d.querySelector('summary').focus(); }
 });
 </script>
 <section aria-label="Notifications">
@@ -282,59 +308,33 @@ document.addEventListener('click', function (e) {
                                         <button type="submit" aria-label="Acknowledge {{.Title}}" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M9.9997 15.1709L19.1921 5.97852L20.6063 7.39273L9.9997 17.9993L3.63574 11.6354L5.04996 10.2212L9.9997 15.1709Z"/></svg></button>
                                     </form>
                                 {{end}}
-
-                                {{if .Snoozed}}
-                                <form method="post" action="/notifications/unsnooze/{{.Index}}" class="inline">
+                                {{if .ManageHref}}<a href="{{.ManageHref}}" title="{{.ManageText}}" aria-label="{{.ManageText}}" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"/></svg></a>{{end}}
+                                {{if .Snoozed}}<form method="post" action="/notifications/unsnooze/{{.Index}}" class="inline">
                                     <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                                     <button type="submit" aria-label="Snoozed until {{.SnoozedUntil}}, unsnooze" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20 cursor-pointer hover:bg-yellow-100 dark:hover:bg-yellow-400/20 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5 shrink-0" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M18.5859 20H4.00016C3.72401 20 3.50016 19.7762 3.50016 19.5C3.50016 19.3918 3.53525 19.2866 3.60016 19.2L4.00016 18.6667V10C4.00016 8.67022 4.32462 7.41619 4.8987 6.31279L1.39355 2.80765L2.80777 1.39343L22.6068 21.1924L21.1925 22.6066L18.5859 20ZM6.40776 7.82185C6.14458 8.49707 6.00016 9.23169 6.00016 10V18H16.5859L6.40776 7.82185ZM20.0002 15.7858L18.0002 13.7858V10C18.0002 6.68633 15.3139 4.00003 12.0002 4.00003C10.9117 4.00003 9.89096 4.28986 9.01087 4.79655L7.55919 3.34486C8.8297 2.49537 10.3571 2.00003 12.0002 2.00003C16.4184 2.00003 20.0002 5.58176 20.0002 10V15.7858ZM9.50016 21H14.5002C14.5002 22.3807 13.3809 23.5 12.0002 23.5C10.6194 23.5 9.50016 22.3807 9.50016 21Z"/></svg>
                                         <span>Snoozed until {{.SnoozedUntil}}</span>
                                     </button>
-                                </form>
-                                {{else}}
-                                <div class="relative inline-block" x-data="{ open: false, up: false }" @keydown.escape="open = false">
-                                    <button type="button" aria-label="Snooze {{.Title}}" aria-haspopup="menu" :aria-expanded="open" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8" @click="open = !open; up = false; open && $nextTick(() => { const r = $el.getBoundingClientRect(), h = $refs.menu.offsetHeight; up = r.bottom + 4 + h > window.innerHeight && r.top - 4 - h > 0; $refs.menu.querySelector('[role=menuitem]').focus() })">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M18.5859 20H4.00016C3.72401 20 3.50016 19.7762 3.50016 19.5C3.50016 19.3918 3.53525 19.2866 3.60016 19.2L4.00016 18.6667V10C4.00016 8.67022 4.32462 7.41619 4.8987 6.31279L1.39355 2.80765L2.80777 1.39343L22.6068 21.1924L21.1925 22.6066L18.5859 20ZM6.40776 7.82185C6.14458 8.49707 6.00016 9.23169 6.00016 10V18H16.5859L6.40776 7.82185ZM20.0002 15.7858L18.0002 13.7858V10C18.0002 6.68633 15.3139 4.00003 12.0002 4.00003C10.9117 4.00003 9.89096 4.28986 9.01087 4.79655L7.55919 3.34486C8.8297 2.49537 10.3571 2.00003 12.0002 2.00003C16.4184 2.00003 20.0002 5.58176 20.0002 10V15.7858ZM9.50016 21H14.5002C14.5002 22.3807 13.3809 23.5 12.0002 23.5C10.6194 23.5 9.50016 22.3807 9.50016 21Z"/></svg>
-                                    </button>
-                                    <div x-show="open" x-ref="menu" role="menu" aria-label="Snooze for" @click.outside="open = false" x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" x-cloak :class="up ? 'mb-1' : 'top-full mt-1'" :style="up ? 'bottom:100%' : ''" class="absolute right-0 w-36 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
-                                        <form method="post" action="/notifications/snooze/{{.Index}}">
+                                </form>{{end}}
+                                <details class="nt-menu relative inline-block">
+                                    <summary aria-label="More actions for {{.Title}}" title="More actions" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 list-none cursor-pointer"><svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 10.5C3.675 10.5 3 11.175 3 12C3 12.825 3.675 13.5 4.5 13.5C5.325 13.5 6 12.825 6 12C6 11.175 5.325 10.5 4.5 10.5ZM19.5 10.5C18.675 10.5 18 11.175 18 12C18 12.825 18.675 13.5 19.5 13.5C20.325 13.5 21 12.825 21 12C21 11.175 20.325 10.5 19.5 10.5ZM12 10.5C11.175 10.5 10.5 11.175 10.5 12C10.5 12.825 11.175 13.5 12 13.5C12.825 13.5 13.5 12.825 13.5 12C13.5 11.175 12.825 10.5 12 10.5Z"/></svg></summary>
+                                    <div role="menu" aria-label="Actions for {{.Title}}" class="nt-menu-list absolute right-0 top-full mt-1 w-56 z-50 rounded-md border border-gray-200 bg-white p-1 text-sm whitespace-normal shadow-xl shadow-black/[2.5%] dark:border-gray-800 dark:bg-gray-950">
+                                        {{if .ManageHref}}<a role="menuitem" href="{{.ManageHref}}" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 text-gray-900 dark:text-gray-50 font-medium">{{.ManageText}}</a>{{end}}
+                                        {{if not .Snoozed}}
+                                        <form method="post" action="/notifications/snooze/{{.Index}}" class="px-1 pb-1">
                                             <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                                            <button type="submit" role="menuitem" name="duration" value="10m" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50">10 minutes</button>
-                                            <button type="submit" role="menuitem" name="duration" value="30m" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50">30 minutes</button>
-                                            <button type="submit" role="menuitem" name="duration" value="1h" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50">1 hour</button>
-                                            <button type="submit" role="menuitem" name="duration" value="6h" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50">6 hours</button>
-                                            <button type="submit" role="menuitem" name="duration" value="1d" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 aria-selected:bg-gray-100 aria-checked:font-semibold aria-disabled:pointer-events-none aria-disabled:text-gray-400 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 dark:aria-selected:bg-gray-900 dark:aria-disabled:text-gray-600 text-gray-900 dark:text-gray-50">1 day</button>
+                                            <p class="px-1 py-1 text-xs text-gray-500 dark:text-gray-500">Snooze for</p>
+                                            <div class="flex gap-1"><button type="submit" role="menuitem" name="duration" value="10m" class="flex-1 cursor-pointer rounded px-1 py-1 text-center text-xs text-gray-900 outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900">10m</button><button type="submit" role="menuitem" name="duration" value="30m" class="flex-1 cursor-pointer rounded px-1 py-1 text-center text-xs text-gray-900 outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900">30m</button><button type="submit" role="menuitem" name="duration" value="1h" class="flex-1 cursor-pointer rounded px-1 py-1 text-center text-xs text-gray-900 outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900">1h</button><button type="submit" role="menuitem" name="duration" value="6h" class="flex-1 cursor-pointer rounded px-1 py-1 text-center text-xs text-gray-900 outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900">6h</button><button type="submit" role="menuitem" name="duration" value="1d" class="flex-1 cursor-pointer rounded px-1 py-1 text-center text-xs text-gray-900 outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900">1d</button></div>
+                                        </form>
+                                        {{end}}
+                                        <div class="my-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+                                        <a role="menuitem" href="/settings/notifications{{with .SettingKey}}#{{.}}{{end}}" class="w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 text-gray-900 dark:text-gray-50">{{if .SettingKey}}Turn off these alerts{{else}}Notification settings{{end}}</a>
+                                        <form method="post" id="notification_delete_{{.Index}}" action="/notifications/delete/{{.Index}}">
+                                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                            <button type="submit" role="menuitem" class="nt-del w-full flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 text-left text-sm outline-hidden transition-colors hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-gray-900 dark:focus-visible:bg-gray-900 text-red-600 dark:text-red-500">Delete</button>
                                         </form>
                                     </div>
-                                </div>
-                                {{end}}
-
-                                <form
-                                    method="post"
-                                    id="notification_delete_{{.Index}}"
-                                    action="/notifications/delete/{{.Index}}"
-                                    x-data="{ confirm: false }"
-                                 class="inline">
-                                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-
-                                    <div class="relative inline-block">
-                                        <button type="button" aria-label="Delete {{.Title}}" aria-describedby="notification_delete_hint_{{.Index}}"
-                                            @click="
-                                                if (confirm) {
-                                                    $el.closest('form').submit()
-                                                } else {
-                                                    confirm = true
-                                                    setTimeout(() => confirm = false, 3000)
-                                                }
-                                            "
-                                            class="inline-flex shrink-0 items-center justify-center rounded-md transition hover:bg-gray-100 dark:hover:bg-gray-800/80 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8" :class="confirm ? 'text-red-600 dark:text-red-500' : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50'">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-5" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM9 11H11V17H9V11ZM13 11H15V17H13V11ZM9 4V6H15V4H9Z"/></svg>
-                                        </button>
-
-                                        <!-- Tooltip -->
-                                        <div id="notification_delete_hint_{{.Index}}" role="status" x-show="confirm" x-transition:enter="transition duration-150 ease-snappy" x-transition:enter-start="opacity-0 translate-y-1.5" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition duration-100 ease-in" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-sm font-normal text-gray-50 shadow-md dark:bg-gray-50 dark:text-gray-900">Click again to delete</div>
-                                    </div>
-                                </form>
+                                </details>
                                 </div>
 								</td>
 						</tr>

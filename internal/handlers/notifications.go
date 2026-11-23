@@ -171,6 +171,9 @@ type notificationRow struct {
 	More          string
 	LinkHref      string
 	LinkText      string
+	ManageHref    string
+	ManageText    string
+	SettingKey    string
 }
 
 // newNotificationRow adds what the template needs on top of the stored entry
@@ -202,15 +205,200 @@ func newNotificationRow(n Notification, index int) notificationRow {
 			row.LinkText, row.LinkHref = notificationLogLink(d.LogFile)
 		}
 	}
-	if row.LinkHref == "" && n.Title == "New OpenPanel update is available" {
-		row.LinkText = "Update Now"
-		row.LinkHref = "/settings/updates#update-now"
-	}
+	row.ManageText, row.ManageHref = notificationPageLink(n)
+	row.SettingKey = notificationSettingKey(n)
 	if until, snoozed := currentNotificationSnooze(n.Title); snoozed {
 		row.Snoozed = true
 		row.SnoozedUntil = until.Format("Jan 2, 15:04")
 	}
 	return row
+}
+
+// notificationPageLink points a notification at the OpenAdmin page where the admin can look into or fix it
+func notificationPageLink(n Notification) (text, href string) {
+	t := strings.TrimSpace(n.Title)
+	if text, href = notificationActionLink(n.Source, t, n.Message); href != "" {
+		return text, href
+	}
+	if who, ok := strings.CutPrefix(t, "Admin "); ok {
+		if name, _, ok := strings.Cut(who, " accessed from new IP"); ok {
+			return "View activity", "/administrators/activity/" + url.PathEscape(name)
+		}
+	}
+	if who, ok := strings.CutPrefix(t, "User "); ok {
+		if name, ok := strings.CutSuffix(who, " is close to the disk limit"); ok {
+			return "View user", "/users/" + url.PathEscape(name)
+		}
+	}
+	switch {
+	case t == "New OpenPanel update is available":
+		return "Update Now", "/settings/updates#update-now"
+	case t == "Rate limit reached":
+		return "Rate limiting", "/domains/ratelimit"
+	case t == "Mail delivery problems":
+		if strings.Contains(n.Message, "is not running") {
+			return "Services", "/services"
+		}
+		return "Mail reports", "/emails/reports"
+	case t == "Large mail queue!":
+		return "Mail queue", "/emails/queue"
+	case t == "Server IP is on a mail blocklist":
+		return "Email deliverability", "/emails/deliverability"
+	case strings.Contains(t, "SWAP"):
+		return "Swap settings", "/server/swap"
+	case t == "High CPU Usage!", t == "High Memory Usage!", t == "High System Load!":
+		return "View processes", "/server/processes"
+	case t == "Running out of Disk Space!", strings.HasPrefix(t, "OOM Alert"):
+		return "Resource usage", "/server/resource-usage"
+	case strings.HasPrefix(t, "High traffic from"), t == "Possible SYN flood", t == "High total connections":
+		return "Firewall", "/security/firewall"
+	case t == "Suspicious SSH login detected":
+		return "SSH settings", "/server/ssh"
+	case strings.HasPrefix(t, "License expires"):
+		return "License", "/license"
+	case t == "Docker Image Update failed":
+		return "Images", "/services/podman"
+	case n.Category == "service":
+		return "Services", "/services"
+	}
+	return "", ""
+}
+
+// notificationSettingKey is the /settings/notifications field that turns this alert off, its id on that page
+func notificationSettingKey(n Notification) string {
+	if n.Source != "" && n.Source != "sentinel" {
+		if n.Source == "update" {
+			return "update"
+		}
+		for _, a := range notifUserActionOrder {
+			if a.Key == n.Source {
+				return a.Key
+			}
+		}
+		return ""
+	}
+	t := strings.TrimSpace(n.Title)
+	switch {
+	case t == "Rate limit reached":
+		return "ratelimit"
+	case t == "Mail delivery problems":
+		return "mail"
+	case t == "Server IP is on a mail blocklist":
+		return "rbl"
+	case strings.Contains(t, "SWAP"):
+		return "swap"
+	case t == "High CPU Usage!":
+		return "cpu"
+	case t == "High Memory Usage!":
+		return "ram"
+	case t == "High System Load!":
+		return "load"
+	case t == "Running out of Disk Space!":
+		return "du"
+	case strings.HasPrefix(t, "OOM Alert"):
+		return "limit"
+	case strings.HasPrefix(t, "High traffic from"), t == "Possible SYN flood", t == "High total connections":
+		return "attack"
+	case strings.HasPrefix(t, "Admin ") && strings.Contains(t, " accessed from new IP"):
+		return "login"
+	case t == "Suspicious SSH login detected":
+		return "ssh"
+	case t == "SYSTEM REBOOT!":
+		return "reboot"
+	case t == "New OpenPanel update is available":
+		return "update"
+	case n.Category == "dns":
+		return "dns"
+	case n.Category == "service":
+		return "services"
+	}
+	return ""
+}
+
+// notificationActionLink covers the --action= events opencli, OpenPanel and OpenAdmin log through opencli sentinel
+func notificationActionLink(action, title, message string) (text, href string) {
+	quoted := quotedValues(message)
+	first, last := "", ""
+	if len(quoted) > 0 {
+		first, last = quoted[0], quoted[len(quoted)-1]
+	}
+	switch {
+	case action == "user_delete":
+		return "Users", "/users"
+	case action == "user_transfer":
+		if rest, ok := strings.CutPrefix(title, "User "); ok {
+			if name, _, ok := strings.Cut(rest, " transferred"); ok {
+				return "View user", "/users/" + url.PathEscape(name)
+			}
+		}
+		return "Users", "/users"
+	case strings.HasPrefix(action, "user_"):
+		name := first
+		if action == "user_rename" {
+			name = last
+		}
+		if name == "" {
+			// fall through to the title checks
+			return "", ""
+		}
+		return "View user", "/users/" + url.PathEscape(name)
+	case strings.HasPrefix(action, "ftp_"):
+		return "FTP", "/services/ftp"
+	case action == "domains_delete":
+		return "Domains", "/domains"
+	case strings.HasPrefix(action, "domains_"):
+		domain := first
+		if domain == "" {
+			// suspend/unsuspend and HSTS put the domain in the title instead
+			f := strings.Fields(strings.TrimSuffix(strings.TrimSuffix(title, " suspended"), " unsuspended"))
+			if len(f) > 0 {
+				domain = f[len(f)-1]
+			}
+		}
+		if domain == "" || !strings.Contains(domain, ".") {
+			return "Domains", "/domains"
+		}
+		if action == "domains_ssl" {
+			return "SSL", "/domains/" + url.PathEscape(domain) + "/ssl"
+		}
+		return "View owner", "/domains/" + url.PathEscape(domain)
+	case strings.HasPrefix(action, "waf"):
+		return "WAF", "/security/waf"
+	case action == "admin_api":
+		return "API settings", "/settings/api"
+	case strings.HasPrefix(action, "reseller_"):
+		return "Resellers", "/resellers"
+	case action == "admin_port", action == "admin_status":
+		return "", ""
+	case strings.HasPrefix(action, "admin_"):
+		return "Administrators", "/administrators"
+	case strings.HasPrefix(action, "imunify"):
+		return "ImunifyAV", "/security/imunify/"
+	case action == "cluster":
+		return "Cluster", "/server/cluster"
+	case action == "docker_update":
+		return "Images", "/services/podman"
+	case action == "update" && title == "Reboot required":
+		return "Reboot", "/server/reboot"
+	}
+	return "", ""
+}
+
+// quotedValues returns the 'single quoted' bits of an action message, that's where usernames and domains go
+func quotedValues(s string) []string {
+	var out []string
+	for {
+		_, rest, ok := strings.Cut(s, "'")
+		if !ok {
+			return out
+		}
+		v, after, ok := strings.Cut(rest, "'")
+		if !ok {
+			return out
+		}
+		out = append(out, v)
+		s = after
+	}
 }
 
 // notificationLogLink sends update logs to the update log viewer and anything else (backups etc.) to the Log Viewer

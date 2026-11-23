@@ -128,7 +128,7 @@ func TestNotificationsUpdateAvailableLinksToUpdateNow(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), `<a href="/settings/updates#update-now" class="ml-1 text-blue-500 hover:underline hover:underline-offset-4">Update Now</a>`) {
+	if !strings.Contains(string(body), `href="/settings/updates#update-now" title="Update Now"`) || !strings.Contains(string(body), `href="/settings/notifications#update"`) {
 		t.Fatalf("expected Update Now link, got %s", truncate(string(body)))
 	}
 }
@@ -384,5 +384,49 @@ func TestNotificationLogLinkBackupGoesToLogViewer(t *testing.T) {
 	text, href = notificationLogLink(filepath.Join(UpdateLogsDir, "2.0.12.log"))
 	if text != "View update log" || href != "/settings/updates/log/?log_name=2.0.12.log" {
 		t.Fatalf("got %q %q", text, href)
+	}
+}
+
+func TestNotificationPageLinks(t *testing.T) {
+	cases := []struct {
+		n    Notification
+		href string
+	}{
+		{Notification{Title: "Rate limit reached"}, "/domains/ratelimit"},
+		{Notification{Title: "Mail delivery problems", Message: "Mail log for Nov 22: 89 received"}, "/emails/reports"},
+		{Notification{Title: "Mail delivery problems", Message: "The mail server (openadmin_mailserver) is not running"}, "/services"},
+		{Notification{Title: "Large mail queue!"}, "/emails/queue"},
+		{Notification{Title: "High SWAP usage!"}, "/server/swap"},
+		{Notification{Title: "High traffic from 1.2.3.4 "}, "/security/firewall"},
+		{Notification{Title: "Admin stefan accessed from new IP: 1.2.3.4"}, "/administrators/activity/stefan"},
+		{Notification{Title: "User stefan is close to the disk limit", Source: "user_quota"}, "/users/stefan"},
+		{Notification{Title: "User account username changed", Source: "user_rename", Message: "Username for user account 'old' has been changed to: 'new'."}, "/users/new"},
+		{Notification{Title: "Domain name example.com suspended", Source: "domains_status"}, "/domains/example.com"},
+		{Notification{Title: "Custom SSL set for domain", Source: "domains_ssl", Message: "Custom SSL is set for domain name: 'example.com' owned by OpenPanel user 'bob'."}, "/domains/example.com/ssl"},
+		{Notification{Title: "FTP account deleted", Source: "ftp_delete"}, "/services/ftp"},
+		{Notification{Title: "OpenAdmin port changed", Source: "admin_port"}, ""},
+		{Notification{Title: "Something else"}, ""},
+	}
+	for _, c := range cases {
+		if _, href := notificationPageLink(c.n); href != c.href {
+			t.Errorf("%q: got %q, want %q", c.n.Title, href, c.href)
+		}
+	}
+}
+
+func TestNotificationSettingKeys(t *testing.T) {
+	cases := map[string]Notification{
+		"ratelimit":  {Title: "Rate limit reached", Source: "sentinel"},
+		"swap":       {Title: "SWAP cleared — now 0%", Source: "sentinel"},
+		"attack":     {Title: "High traffic from 1.2.3.4 ", Source: "sentinel"},
+		"limit":      {Title: "OOM Alert - stefan", Source: "sentinel"},
+		"services":   {Title: "caddy container restarted", Source: "sentinel", Category: "service"},
+		"user_quota": {Title: "User stefan is close to the disk limit", Source: "user_quota"},
+		"":           {Title: "Cluster node down", Source: "cluster"},
+	}
+	for want, n := range cases {
+		if got := notificationSettingKey(n); got != want {
+			t.Errorf("%q: got %q, want %q", n.Title, got, want)
+		}
 	}
 }
