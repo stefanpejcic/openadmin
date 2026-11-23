@@ -129,6 +129,7 @@
               type: 'GET',
               success: function(response) {
                   $('#custom_message_for_this_user').val(response.custom_message || '');
+                  window.renderCustomMessagePreview?.();
               },
               error: function(xhr) {
                   if (xhr.status === 404) {
@@ -169,6 +170,7 @@
                   $store?.ipStore?.fetchIPs();
                   $store?.planStore?.fetchPlans();
                   $store?.resellerStore?.fetchResellers();
+                  if (this.activeTab === 'edit') this.fetchCustomMessage();
               }
               else if (this.activeTab === 'stats') this.fetchCustomMessage();
           });
@@ -1979,11 +1981,37 @@
                         </div>
                   </form>
                   <div class="my-8 h-px w-full max-w-4xl bg-gray-200 dark:bg-gray-800"></div>
-                  <div class="flex max-w-4xl items-center justify-between gap-2">
-                       {{template "macro_tooltip" (dict "ID" "custom_message_for_this_user" "Label" "Custom message for user" "Description" "Plain text or HTML code to be displayed for this user on the Dashboard page." "Required" false)}}
-                    <button type="button" class="save_custom_message_btn relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save</button>
+                  <div class="grid max-w-4xl grid-cols-1 gap-4 lg:grid-cols-2">
+                     <section class="rounded-md border border-gray-200 dark:border-gray-800">
+                        <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+                           <div>
+                              <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Custom message</h3>
+                              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-500">Shown to the user at the top of their OpenPanel dashboard.</p>
+                           </div>
+                           <button type="button" class="save_custom_message_btn relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save</button>
+                        </div>
+                        <div class="p-4">
+                           <label for="custom_message_for_this_user" class="sr-only">Custom message for user</label>
+                           <textarea id="custom_message_for_this_user" data-username="{{lastSegment .Username `_`}}" placeholder="Plain text or HTML" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm min-h-24" rows="5"></textarea>
+                           <p class="mt-4 text-xs font-medium text-gray-500 dark:text-gray-500">Preview on the user's dashboard</p>
+                           <iframe id="custom_message_preview" title="Custom message preview" sandbox="allow-same-origin" class="mt-1.5 hidden w-full" style="border:0;height:0"></iframe>
+                           <p id="custom_message_preview_empty" class="mt-1.5 rounded-md border border-dashed border-gray-300 px-3 py-4 text-center text-xs text-gray-500 dark:border-gray-800 dark:text-gray-500">Nothing is shown while the message is empty.</p>
+                        </div>
+                     </section>
+                     <section class="rounded-md border border-gray-200 dark:border-gray-800">
+                        <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+                           <div>
+                              <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Private notes</h3>
+                              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-500">Only admins and resellers see these, never the user.</p>
+                           </div>
+                           <button type="button" class="save_private_notes_btn relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save</button>
+                        </div>
+                        <div class="p-4">
+                           <label for="private_notes_for_this_user" class="sr-only">Private notes</label>
+                           <textarea id="private_notes_for_this_user" data-username="{{.Username}}" placeholder="Anything worth remembering about this account" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm min-h-24" rows="9">{{.Notes}}</textarea>
+                        </div>
+                     </section>
                   </div>
-                  <textarea id="custom_message_for_this_user" data-username="{{lastSegment .Username `_`}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2 min-h-24 max-w-4xl" rows="5"></textarea>
 
 <script>
   const textarea = document.getElementById('custom_message_for_this_user');
@@ -2019,13 +2047,29 @@
   saveBtns.forEach(btn => btn.addEventListener('click', () => {
     saveCustomMessage();
   }));
+
+  // same blue box the user panel draws, inside a sandbox with scripts off
+  const preview = document.getElementById('custom_message_preview');
+  const previewEmpty = document.getElementById('custom_message_preview_empty');
+  const previewCSS = {{asset "/static/dist/output.css"}};
+  function renderCustomMessagePreview() {
+    const html = textarea.value.trim();
+    preview.classList.toggle('hidden', !html);
+    previewEmpty.classList.toggle('hidden', !!html);
+    if (!html) return;
+    preview.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="' + previewCSS + '"></head>'
+      + '<body class="bg-transparent"><div class="flex gap-3 rounded-md bg-blue-50 p-4 text-sm text-blue-900">'
+      + '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z"/></svg>'
+      + '<div class="min-w-0">' + html + '</div></div></body></html>';
+  }
+  preview.addEventListener('load', () => {
+    try { preview.style.height = preview.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) {}
+  });
+  let previewTimer;
+  textarea.addEventListener('input', () => { clearTimeout(previewTimer); previewTimer = setTimeout(renderCustomMessagePreview, 200); });
+  window.renderCustomMessagePreview = renderCustomMessagePreview;
 </script>
 
-                  <div class="mt-8 flex max-w-4xl items-center justify-between gap-2">
-                       {{template "macro_tooltip" (dict "ID" "private_notes_for_this_user" "Label" "Private notes" "Description" "Internal notes about this user, visible only to admins/resellers in OpenAdmin. Never shown to the user." "Required" false)}}
-                    <button type="button" class="save_private_notes_btn relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save</button>
-                  </div>
-                  <textarea id="private_notes_for_this_user" data-username="{{.Username}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm mt-2 min-h-24 max-w-4xl" rows="5">{{.Notes}}</textarea>
 
 <script>
   const notesTextarea = document.getElementById('private_notes_for_this_user');
@@ -2273,8 +2317,9 @@ function userUsageHistory(username) {
                             memBytes: d.memory?.used?.bytes ?? 0,
                             tasksNum: d.tasks?.current ?? 0,
                             date: Alpine.store('activityStore').formatDateString(d.timestamp),
+                            // usage pct is already a share of the limit, the cli's usage human isn't real cores so work them out here
                             cpuPct: d.cpu?.usage?.pct ?? 0,
-                            cpu: d.cpu?.usage?.human ?? '-',
+                            cpu: d.cpu?.total?.pct ? ((d.cpu?.usage?.pct ?? 0) * d.cpu.total.pct / 10000).toFixed(1) + ' / ' + d.cpu.total.human : (d.cpu?.usage?.human ?? '-'),
                             memPct: d.memory?.usage_pct ?? 0,
                             mem: (d.memory?.used?.human ?? '-') + ' / ' + (d.memory?.total?.human ?? '-'),
                             tasks: (d.tasks?.current ?? '-') + ' / ' + (d.tasks?.limit ?? '-'),

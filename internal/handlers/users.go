@@ -198,11 +198,8 @@ func buildUsageWidget(suspended bool, stat map[string]interface{}, disk diskUsag
 		if statFloat(stat, "memory", "total", "bytes") != 0 {
 			memPct = statFloat(stat, "memory", "usage_pct")
 		}
-		// usage pct is per core (200% on 2 cores), so scale it to the container's total
+		// collect_stats already writes usage pct as a share of the plan's cpu limit
 		cpuPct = statFloat(stat, "cpu", "usage", "pct")
-		if t := statFloat(stat, "cpu", "total", "pct"); t != 0 {
-			cpuPct = cpuPct / t * 100
-		}
 	}
 
 	w := usageWidgetData{
@@ -346,29 +343,26 @@ func buildDetailStatsWidget(suspended bool, disk diskUsage, stats map[string]int
 
 	inodesUsed, inodesHard := toFloat(disk.InodesUsed), toFloat(disk.InodesHard)
 	inodesPct := 0.0
-	if diskHard != 0 {
-		inodesPct = inodesUsed / diskHard * 100
+	if inodesHard != 0 {
+		inodesPct = inodesUsed / inodesHard * 100
 	}
 	inodesClamped := inodesPct
 	if inodesClamped > 100 {
 		inodesClamped = 100
 	}
 
-	percentCPU, totalCPU, percentMem := 0.0, 100.0, 0.0
+	percentCPU, percentMem := 0.0, 0.0
 	humanCPUUsage, humanCPUTotal := "0 cores", "0 cores"
 	humanMemUsage, humanMemTotal := "0B", "0B"
 	if !suspended && stats != nil {
 		percentCPU = statFloat(stats, "cpu", "usage", "pct")
-		if t := statFloat(stats, "cpu", "total", "pct"); t != 0 {
-			totalCPU = t
-		}
-		humanCPUUsage = statString(stats, "cpu", "usage", "human")
+		humanCPUUsage = cpuCoresUsed(stats)
 		humanCPUTotal = statString(stats, "cpu", "total", "human")
 		percentMem = statFloat(stats, "memory", "usage_pct")
 		humanMemUsage = statString(stats, "memory", "used", "human")
 		humanMemTotal = statString(stats, "memory", "total", "human")
 	}
-	ratioCPU := percentCPU / totalCPU * 100
+	ratioCPU := percentCPU
 
 	diskUsedHuman := "0B"
 	if diskUsed != 0 {
@@ -1769,4 +1763,13 @@ func (u *Users) HandleCustomMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]string{"message": "No custom message found"})
+}
+
+// cpuCoresUsed works the cores out from the pct and the limit, collect_stats' own usage human is the pct read as cores
+func cpuCoresUsed(stats map[string]interface{}) string {
+	total := statFloat(stats, "cpu", "total", "pct")
+	if total == 0 {
+		return statString(stats, "cpu", "usage", "human")
+	}
+	return fmt.Sprintf("%.1f cores", statFloat(stats, "cpu", "usage", "pct")*total/10000)
 }
