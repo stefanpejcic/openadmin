@@ -239,8 +239,8 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
 
-                    <template x-for="[email, quota, pct, nodeId, server, openLink, infoLink, color, filters, sendBlocked, receiveBlocked] in sortedEmails" :key="email">
-                        <tr x-show="(searchQuery === '' || email.toLowerCase().includes(searchQuery.toLowerCase())) && statusMatches(quota, pct, filters, sendBlocked, receiveBlocked)"
+                    <template x-for="[email, quota, pct, nodeId, server, openLink, infoLink, color, filters, sendBlocked, receiveBlocked, owner] in sortedEmails" :key="email">
+                        <tr x-show="(searchQuery === '' || (email + ' ' + (owner || '')).toLowerCase().includes(searchQuery.toLowerCase())) && statusMatches(quota, pct, filters, sendBlocked, receiveBlocked)"
                             class="group hover:bg-gray-50 dark:hover:bg-gray-900/60 has-[.bulk-select-box:checked]:bg-gray-50 dark:has-[.bulk-select-box:checked]:bg-gray-900 [&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8">
 
                             <td class="w-10 py-2.5 pl-4 align-middle">
@@ -580,7 +580,7 @@
 <script>
 function emailsApp() {
     return {
-        searchQuery: '',
+        searchQuery: new URLSearchParams(window.location.search).get('q') || '',
         getCsrf() {
             return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
         },

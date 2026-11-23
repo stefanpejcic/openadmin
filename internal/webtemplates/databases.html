@@ -42,9 +42,8 @@
                 </div>
                 {{end}}
             </div>
-            {{if or .Stopped .Failed}}
+            {{if .Failed}}
             <div class="mt-4 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                {{if .Stopped}}<p><span class="font-medium text-gray-900 dark:text-gray-50">Not running, start the service to list databases:</span> {{range $i, $u := .Stopped}}{{if $i}}, {{end}}<a href="/users/{{$u.Username}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{$u.Username}}</a>{{end}}</p>{{end}}
                 {{range .Failed}}<p><span class="font-medium text-red-600 dark:text-red-500">Couldn't list databases for <a href="/users/{{.Username}}" class="underline underline-offset-4">{{stripSuspendedPrefix .Username}}</a>:</span> {{.Reason}}</p>{{end}}
             </div>
             {{end}}
@@ -148,7 +147,7 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.data('databasesPage', () => ({
-        searchQuery: '',
+        searchQuery: new URLSearchParams(window.location.search).get('q') || '',
         imp: { open: false, owner: '', database: '', busy: false, progress: 0, error: '' },
         openImport(owner, database) {
             this.imp = { open: true, owner, database, busy: false, progress: 0, error: '' };

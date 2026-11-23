@@ -886,9 +886,10 @@ func (e *Emails) ServeEmailsAccounts(w http.ResponseWriter, r *http.Request) {
 	// slots 3-7 are filled in by the multi-server merge, then filters and the send/receive restrictions
 	filters := e.emailFilterCounts(accounts)
 	sendBlocked, receiveBlocked := emailRestricted(EmailsSendAccessFile), emailRestricted(EmailsReceiveAccessFile)
+	owners := emailDomainOwners(e.MySQL)
 	pairs := make([][]interface{}, 0, len(accounts))
 	for _, a := range accounts {
-		pairs = append(pairs, []interface{}{a.Email, a.Quota, emailQuotaPct(a.Quota), "", "", "", "", "", filters[a.Email], sendBlocked[strings.ToLower(a.Email)], receiveBlocked[strings.ToLower(a.Email)]})
+		pairs = append(pairs, []interface{}{a.Email, a.Quota, emailQuotaPct(a.Quota), "", "", "", "", "", filters[a.Email], sendBlocked[strings.ToLower(a.Email)], receiveBlocked[strings.ToLower(a.Email)], owners[emailDomainOf(a.Email)]})
 	}
 	data := map[string]interface{}{
 		"MailserverStatus": mailserverStatus,
@@ -1357,4 +1358,31 @@ func (e *Emails) ServeEmailsWebmailLink(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	http.Redirect(w, r, webmailURL+"/autologin.php?token="+token, http.StatusSeeOther)
+}
+
+func emailDomainOf(address string) string {
+	if at := strings.LastIndex(address, "@"); at > 0 {
+		return strings.ToLower(address[at+1:])
+	}
+	return ""
+}
+
+// emailDomainOwners maps each domain to its user so the accounts search can match by owner
+func emailDomainOwners(db *sql.DB) map[string]string {
+	out := map[string]string{}
+	if db == nil {
+		return out
+	}
+	rows, err := db.Query(`SELECT d.domain_url, u.username FROM domains d JOIN users u ON d.user_id = u.id`)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var d, u string
+		if rows.Scan(&d, &u) == nil {
+			out[strings.ToLower(d)] = stripSuspendedPrefix(u)
+		}
+	}
+	return out
 }

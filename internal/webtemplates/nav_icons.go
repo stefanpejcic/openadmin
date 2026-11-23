@@ -38,3 +38,18 @@ var ModuleAreas = []ModuleArea{
 	{"server", "Containers & server", serverIcon},
 	{"security", "Security", securityIcon},
 }
+
+// UsageIcon is the menu icon for a plan usage counter on the user page
+func UsageIcon(name string) template.HTML {
+	switch name {
+	case "domains":
+		return domainsIcon
+	case "websites":
+		return websitesIcon
+	case "databases":
+		return databaseIcon
+	case "emails":
+		return emailsIcon
+	}
+	return servicesIcon
+}

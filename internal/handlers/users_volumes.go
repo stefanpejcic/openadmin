@@ -230,6 +230,7 @@ func (u *Users) ServeUserVolumes(w http.ResponseWriter, r *http.Request) {
 		sizes = parseDfVolumeSizes(dfOut)
 	}
 	mounts := userVolumeMounts(context)
+	own := userVolumeSizes(context)
 
 	vols := make([]userVolume, 0, len(raw))
 	for _, v := range raw {
@@ -252,6 +253,9 @@ func (u *Users) ServeUserVolumes(w http.ResponseWriter, r *http.Request) {
 		if s, ok := sizes[v.Name]; ok {
 			vol.Links, vol.Size, vol.SizeKnown = int(s[0]), s[1], true
 			vol.SizeHuman = podmanHumanSize(s[1])
+		}
+		if n, ok := own[v.Name]; ok {
+			vol.Size, vol.SizeKnown, vol.SizeHuman = n, true, podmanHumanSize(n)
 		}
 		vols = append(vols, vol)
 	}

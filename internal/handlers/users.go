@@ -753,6 +753,7 @@ type userDetailPageData struct {
 	Notes             string
 	Stats             map[string]interface{}
 	StatsWidget       detailStatsWidget
+	PlanUsage         []planUsageItem
 	ServerIP          string
 	ServerName        string
 	DockerCtx         string
@@ -927,7 +928,9 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 
 	featureSet := "default"
 	var planCPU, planRAM, planName string
-	if planRow, err := paneldb.GetPlanByID(u.MySQL, strconv.FormatInt(userData.PlanID, 10)); err == nil {
+	var planRow map[string]interface{}
+	if row, err := paneldb.GetPlanByID(u.MySQL, strconv.FormatInt(userData.PlanID, 10)); err == nil {
+		planRow = row
 		if fs, ok := planRow["feature_set"].(string); ok && fs != "" {
 			featureSet = fs
 		}
@@ -946,6 +949,13 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 	chrome := buildChrome(r, "User: "+stripSuspendedPrefix(username))
 	chrome.BulkActions = UserContainersBulkActions()
 	services := composeServicesForUser(u.MySQL, username)
+	planUsage := buildPlanUsage(u.MySQL, userData, planRow, chrome.IsReseller)
+	widget := buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats).withOverLimit()
+	for _, p := range planUsage {
+		if !p.Unlimited() && p.Percent() >= 90 {
+			widget.OverLimit = append(widget.OverLimit, p.Label)
+		}
+	}
 	webtemplates.Render(w, "user_detail.html", userDetailPageData{
 		Chrome:            chrome,
 		Username:          username,
@@ -954,7 +964,8 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Notes:             readUserNotes(userData.Context),
 		Stats:             parsedStats,
 		UsageStale:        userUsageStale(parsedStats, strings.Contains(username, "SUSPENDED_"), time.Now()),
-		StatsWidget:       buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats).withOverLimit(),
+		StatsWidget:       widget,
+		PlanUsage:         planUsage,
 		ServerIP:          serverIP,
 		ServerName:        serverName(),
 		DockerCtx:         userData.Context,
@@ -1563,6 +1574,9 @@ func (u *Users) ServeUserDiskInfo(w http.ResponseWriter, r *http.Request) {
 					line = string(b)
 				}
 			}
+		}
+		if strings.Contains(line, `"Type":"Local Volumes"`) {
+			line = withOwnVolumeSize(line, context)
 		}
 		data = append(data, json.RawMessage(line))
 	}
