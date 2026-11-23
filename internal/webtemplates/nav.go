@@ -234,7 +234,8 @@ var modernAreas = []navArea{
 				tabSpec{true, "/server/swap", "Swap", strings.HasPrefix(path, "/server/swap")},
 				tabSpec{true, "/server/migrate", "Migrate", strings.HasPrefix(path, "/server/migrate")},
 				tabSpec{isEnterprise(c), "/server/cluster", "Multi-server", strings.HasPrefix(path, "/server/cluster")},
-				tabSpec{true, "/server/demo-mode", "Demo mode", strings.HasPrefix(path, "/server/demo-mode")},
+				// rarely used, so only shown when opened from search or a direct link
+				tabSpec{strings.HasPrefix(path, "/server/demo-mode"), "/server/demo-mode", "Demo mode", strings.HasPrefix(path, "/server/demo-mode")},
 			)
 		}},
 
