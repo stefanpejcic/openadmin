@@ -310,3 +310,35 @@ func TestBotRewritePolicyDropsTopLevelLines(t *testing.T) {
 		t.Fatalf("waf + stray: %q, %v", out, err)
 	}
 }
+
+// a 429 for a normal browser comes from the site's per-IP limit, not bot control, so it isn't counted as blocked (#1366)
+func TestBotBrowserDenialsNotCountedAsBlocked(t *testing.T) {
+	tmp := t.TempDir()
+	origDomlogs, origASN := CaddyDomlogsDir, BotASNPrefixesPath
+	t.Cleanup(func() { CaddyDomlogsDir, BotASNPrefixesPath = origDomlogs, origASN })
+	CaddyDomlogsDir = tmp
+	BotASNPrefixesPath = filepath.Join(tmp, "none.tsv")
+	if err := os.MkdirAll(filepath.Join(tmp, "wp.com"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	log := strings.Join([]string{
+		`{"ts":1799999900,"status":429,"request":{"client_ip":"198.51.100.5","uri":"/wp-admin/","headers":{"User-Agent":["Mozilla/5.0 Chrome/131"]}}}`,
+		`{"ts":1799999901,"status":403,"request":{"client_ip":"198.51.100.5","uri":"/wp-admin/x","headers":{"User-Agent":["Mozilla/5.0 Chrome/131"]}}}`,
+		`{"ts":1799999902,"status":429,"request":{"client_ip":"203.0.113.10","uri":"/","headers":{"User-Agent":["GPTBot/1.2"]}}}`,
+	}, "\n")
+	if err := os.WriteFile(filepath.Join(tmp, "wp.com", "access.log"), []byte(log), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	report, counts := botAnalyzeDomains([]string{"wp.com"}, "", "24h", time.Unix(1_800_000_000, 0))
+	if report.BlockedCount != 1 || report.OtherBlocked != 2 {
+		t.Fatalf("blocked=%d other=%d, want 1 and 2", report.BlockedCount, report.OtherBlocked)
+	}
+	if counts["wp.com"][2] != 1 {
+		t.Fatalf("per-domain blocked = %d, want 1", counts["wp.com"][2])
+	}
+	for _, b := range report.TopBots {
+		if b.Name == "Browser / Other" && b.Blocked != 0 {
+			t.Fatalf("browser row shows %d blocked", b.Blocked)
+		}
+	}
+}

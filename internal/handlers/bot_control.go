@@ -443,6 +443,7 @@ type BotTrafficReport struct {
 	TotalRequests int          `json:"total_requests"`
 	AIRequests    int          `json:"ai_requests"`
 	BlockedCount  int          `json:"blocked_count"`
+	OtherBlocked  int          `json:"other_blocked"`
 	TopBots       []BotStatRow `json:"top_bots"`
 	TopNetworks   []NetStatRow `json:"top_networks"`
 	TopURLs       []URLStatRow `json:"top_urls"`
@@ -687,6 +688,7 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 	type domPart struct {
 		tot, ai, blk          int
 		total, aiReqs, blkReq int
+		otherReq              int
 		bots                  map[botKey]*BotStatRow
 		nets                  map[string]*netAcc
 		urls                  map[string]*urlAcc
@@ -730,10 +732,6 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 				continue
 			}
 			p.tot++
-			isBlk := entry.Status == 403 || entry.Status == 429
-			if isBlk {
-				p.blk++
-			}
 			ua := ""
 			if len(entry.Request.Headers.UserAgent) > 0 {
 				ua = entry.Request.Headers.UserAgent[0]
@@ -741,6 +739,12 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 			name, op, cat, isAI := botClassifyUA(ua)
 			if isAI {
 				p.ai++
+			}
+			// bot control only answers AI crawlers, a 403/429 for anyone else came from the site's per-IP limit or the WAF (#1366)
+			denied := entry.Status == 403 || entry.Status == 429
+			isBlk := denied && isAI
+			if isBlk {
+				p.blk++
 			}
 			// per-domain counts always count, the "Who's hitting the server" view only for the picked domain
 			if selectedDomain != "" && dom != selectedDomain {
@@ -752,6 +756,8 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 			}
 			if isBlk {
 				p.blkReq++
+			} else if denied {
+				p.otherReq++
 			}
 			bk := botKey{name: name, op: op, cat: cat}
 			bs, ok := p.bots[bk]
@@ -819,6 +825,7 @@ func botAnalyzeDomains(domains []string, selectedDomain, window string, now time
 		report.TotalRequests += p.total
 		report.AIRequests += p.aiReqs
 		report.BlockedCount += p.blkReq
+		report.OtherBlocked += p.otherReq
 		for k, b := range p.bots {
 			if have, ok := bots[k]; ok {
 				have.Requests += b.Requests
