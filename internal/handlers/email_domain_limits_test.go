@@ -90,6 +90,16 @@ func TestParsePostfwdRules(t *testing.T) {
 	}
 }
 
+func TestParsePostfwdRulesSetRatePairs(t *testing.T) {
+	rules := parsePostfwdRules(buildPostfwdRule("john", 300, "a.com") + testPostfwdRules)
+	if len(rules) != 3 {
+		t.Fatalf("expected 3 rules, got %d: %+v", len(rules), rules)
+	}
+	if rules[0].ID != "limit_john_a_com" || rules[0].Username != "john" || rules[0].Domain != "a.com" || rules[0].Limit != 300 {
+		t.Fatalf("unexpected set+rate rule: %+v", rules[0])
+	}
+}
+
 func TestParsePostfwdRulesEmptyContent(t *testing.T) {
 	if got := parsePostfwdRules(""); got != nil {
 		t.Fatalf("expected nil for empty content, got %+v", got)
@@ -119,7 +129,7 @@ func TestBuildAndWriteDomainRule(t *testing.T) {
 	}
 
 	content := readPostfwdRaw()
-	if !strings.Contains(content, "id=limit_bob_bob_com") || !strings.Contains(content, "bob_ratelimit/25/3600") {
+	if !strings.Contains(content, "id=limit_bob_bob_com") || !strings.Contains(content, "op_account/25/3600") {
 		t.Fatalf("expected the new rule written, got:\n%s", content)
 	}
 
@@ -131,10 +141,10 @@ func TestBuildAndWriteDomainRule(t *testing.T) {
 		t.Fatal("expected the second write to succeed")
 	}
 	content = readPostfwdRaw()
-	if strings.Count(content, "id=limit_bob_bob_com") != 1 {
+	if strings.Count(content, "id=limit_bob_bob_com ") != 1 || strings.Count(content, "id=limit_bob_rate ") != 1 {
 		t.Fatalf("expected exactly one rule for bob.com after re-writing, got:\n%s", content)
 	}
-	if !strings.Contains(content, "bob_ratelimit/75/3600") {
+	if !strings.Contains(content, "op_account/75/3600") || strings.Contains(content, "op_account/25/3600") {
 		t.Fatalf("expected the updated limit, got:\n%s", content)
 	}
 }
@@ -430,4 +440,20 @@ func withScratchPostfwd(t *testing.T) {
 	orig := PostfwdConfigPath
 	PostfwdConfigPath = filepath.Join(t.TempDir(), "postfwd.cf")
 	t.Cleanup(func() { PostfwdConfigPath = orig })
+}
+
+func TestWriteDomainRuleKeepsOtherDomainsOfAccount(t *testing.T) {
+	withScratchPostfwd(t)
+	os.WriteFile(PostfwdConfigPath, []byte(buildPostfwdRule("john", 100, "a.com")+buildPostfwdRule("john", 100, "b.com")), 0644)
+	if ok, msg := writeDomainRuleNoReload("john", 300, "b.com"); !ok {
+		t.Fatal(msg)
+	}
+	content := readPostfwdRaw()
+	if strings.Count(content, "@a.com$") != 2 || strings.Count(content, "@b.com$") != 2 || !strings.Contains(content, "op_account/300/3600") {
+		t.Fatalf("unexpected content:\n%s", content)
+	}
+	rules := parsePostfwdRules(content)
+	if len(rules) != 2 || rules[0].Domain != "a.com" || rules[1].Domain != "b.com" || rules[1].Limit != 300 || rules[1].ID != "limit_john_b_com" {
+		t.Fatalf("unexpected rules: %+v", rules)
+	}
 }

@@ -38,7 +38,7 @@ type postfwdRule struct {
 
 var (
 	postfwdDomainRe = regexp.MustCompile(`sender=~\.\+@([\w.\-]+)`)
-	postfwdLimitRe  = regexp.MustCompile(`_ratelimit/(\d+)/3600`)
+	postfwdLimitRe  = regexp.MustCompile(`rate\(\w+/(\d+)/3600`)
 )
 
 // splitPostfwdBlocks breaks the content into blocks at every newline
@@ -88,6 +88,10 @@ func parsePostfwdRules(content string) []postfwdRule {
 		username := inner
 		if strings.HasSuffix(inner, suffix) {
 			username = strings.TrimSuffix(inner, suffix)
+		} else if strings.HasSuffix(inner, "_rate") {
+			// the shared counting rule of a set+rate pair, the row keeps the domain's id
+			username = strings.TrimSuffix(inner, "_rate")
+			fullID = "limit_" + username + suffix
 		}
 		limit, _ := strconv.Atoi(limitMatch[1])
 		rules = append(rules, postfwdRule{ID: fullID, Username: username, Domain: domain, Limit: limit})
@@ -113,11 +117,14 @@ var hupPostfwdRun = func() {
 	_ = cmd.Start()
 }
 
+// rate() counts per attribute value and per rule id, so the first rule tags the request with the account and every domain of it uses the same limit_<user>_rate id to share one counter
 func buildPostfwdRule(username string, limit int, domain string) string {
-	key := strings.ReplaceAll(domain, ".", "_")
-	return "id=limit_" + username + "_" + key + " ; sender=~.+@" + domain + " ; protocol_state==RCPT\n" +
-		"                action=rate(" + username + "_ratelimit/" + strconv.Itoa(limit) + "/3600/450 4.7.1 sorry, OpenPanel account reached limit of " +
-		strconv.Itoa(limit) + " emails per hour)\n\n"
+	sender := "sender=~.+@" + domain + "$ ; protocol_state==RCPT"
+	n := strconv.Itoa(limit)
+	return "id=limit_" + username + "_" + strings.ReplaceAll(domain, ".", "_") + " ; " + sender + "\n" +
+		"                action=set(op_account=" + username + ")\n" +
+		"id=limit_" + username + "_rate ; " + sender + "\n" +
+		"                action=rate(op_account/" + n + "/3600/450 4.7.1 sorry, OpenPanel account reached limit of " + n + " emails per hour)\n\n"
 }
 
 // writeDomainRule replaces any existing rule block for this exact rule ID,
@@ -131,11 +138,9 @@ func writeDomainRule(username string, limit int, domain string) (bool, string) {
 }
 
 func writeDomainRuleNoReload(username string, limit int, domain string) (bool, string) {
-	key := strings.ReplaceAll(domain, ".", "_")
-	ruleID := "limit_" + username + "_" + key
-
 	content := readPostfwdRaw()
-	existingRuleRe := regexp.MustCompile(`(?m)^id=` + regexp.QuoteMeta(ruleID) + ` [^\n]*\n[ \t]+action=[^\n]*\n\n?`)
+	// by sender, the rate rule id is shared by all domains of the account
+	existingRuleRe := regexp.MustCompile(`(?m)^id=[^\n]* ; sender=~\.\+@` + regexp.QuoteMeta(domain) + `\$? ;[^\n]*\n[ \t]+action=[^\n]*\n\n?`)
 	cleaned := existingRuleRe.ReplaceAllString(content, "")
 
 	newRule := buildPostfwdRule(username, limit, domain)
