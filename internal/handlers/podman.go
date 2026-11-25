@@ -706,8 +706,8 @@ func podmanSystemDiskUsage() []podmanDiskUsageRow {
 	if err != nil {
 		return []podmanDiskUsageRow{}
 	}
-	var raw []map[string]interface{}
-	if err := json.Unmarshal([]byte(out), &raw); err != nil {
+	raw := podmanParseDiskUsageJSON(out)
+	if raw == nil {
 		return []podmanDiskUsageRow{}
 	}
 
@@ -715,11 +715,16 @@ func podmanSystemDiskUsage() []podmanDiskUsageRow {
 	for _, item := range raw {
 		total, _ := item["Total"].(float64)
 		active, _ := item["Active"].(float64)
-		sizeBytes, _ := item["RawSize"].(float64)
-		reclaimableBytes, _ := item["RawReclaimable"].(float64)
 		size := podmanStringField(item, "Size")
 		reclaimable := podmanStringField(item, "Reclaimable")
-		if _, ok := item["RawSize"].(float64); ok {
+		// 4.4+ has RawSize/RawReclaimable next to the formatted strings, 4.3 puts the raw numbers in Size/Reclaimable
+		sizeBytes, okSize := item["RawSize"].(float64)
+		reclaimableBytes, _ := item["RawReclaimable"].(float64)
+		if !okSize {
+			sizeBytes, okSize = item["Size"].(float64)
+			reclaimableBytes, _ = item["Reclaimable"].(float64)
+		}
+		if okSize {
 			size = podmanFormatSize(sizeBytes)
 			reclaimable = podmanFormatReclaimable(reclaimableBytes, sizeBytes)
 		}
@@ -738,6 +743,28 @@ func podmanSystemDiskUsage() []podmanDiskUsageRow {
 		})
 	}
 	return rows
+}
+
+// podmanParseDiskUsageJSON reads `podman system df --format json`: an array on podman 4.4+,
+// one object per line on 4.3 (Debian 12), nil when it's neither
+func podmanParseDiskUsageJSON(out string) []map[string]interface{} {
+	var raw []map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &raw); err == nil {
+		return raw
+	}
+	raw = nil
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var item map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &item); err != nil {
+			return nil
+		}
+		raw = append(raw, item)
+	}
+	return raw
 }
 
 // podmanFormatReclaimable renders e.g. "4.11 GB (59%)", leaving off the percent when there's nothing to reclaim.
