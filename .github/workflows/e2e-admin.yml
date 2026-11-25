@@ -48,8 +48,8 @@ jobs:
   deploy-and-test:
     needs: build
     runs-on: ubuntu-latest
-    # hard cap so a hung spec can't run for hours; the suite normally takes ~90m
-    timeout-minutes: 150
+    # up to 3h waiting for the box lock plus ~90m suite, cap so a hung spec still dies
+    timeout-minutes: 330
     steps:
       - name: Checkout tests
         uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
         # box; GitHub concurrency can't span repos, so serialize via a lock on it
         run: |
           ssh -i ~/.ssh/id "root@${{ secrets.TEST_SSH_HOST }}" '
-            for i in $(seq 1 300); do
+            for i in $(seq 1 720); do
               if mkdir /tmp/e2e-box.lock 2>/dev/null; then
                 echo "${{ github.repository }}#${{ github.run_id }}" > /tmp/e2e-box.lock/owner
                 echo "lock acquired"; exit 0
