@@ -782,6 +782,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /get_custom_message_for_user/{username}", auth.RequireLogin(sessions, authOpts, users.HandleCustomMessage))
 	mux.HandleFunc("POST /containers/{username}/{action}/{container_name}", auth.RequireLogin(sessions, authOpts, users.ServeManageContainer))
 	mux.HandleFunc("POST /users/{username}/account-setting/{field}", auth.RequireLogin(sessions, authOpts, users.ServeUserAccountSetting))
+	mux.HandleFunc("POST /users/{username}/tasks-max", auth.RequireAdmin(sessions, authOpts, users.ServeTasksMax))
+	mux.HandleFunc("POST /users/{username}/slice-limit/{kind}", auth.RequireAdmin(sessions, authOpts, users.ServeSliceLimit))
 	mux.HandleFunc("GET /containers/stats/{username}", auth.RequireLogin(sessions, authOpts, users.ServeContainersStats))
 	mux.HandleFunc("GET /containers/{username}/inspect/{container_name}", auth.RequireLogin(sessions, authOpts, users.ServeContainerInspect))
 	mux.HandleFunc("GET /containers/{username}/config/{service}", auth.RequireLogin(sessions, authOpts, users.ServeServiceConfig))

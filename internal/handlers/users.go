@@ -747,6 +747,7 @@ type userDetailPageData struct {
 	Notes             string
 	Stats             map[string]interface{}
 	StatsWidget       detailStatsWidget
+	Tasks             userTasks
 	PlanUsage         []planUsageItem
 	ServerIP          string
 	ServerName        string
@@ -944,7 +945,18 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 	chrome.BulkActions = UserContainersBulkActions()
 	services := composeServicesForUser(u.MySQL, username)
 	planUsage := buildPlanUsage(u.MySQL, userData, planRow, chrome.IsReseller)
-	widget := buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats).withOverLimit()
+	widget := buildDetailStatsWidget(strings.Contains(username, "SUSPENDED_"), disk, parsedStats)
+	// the cgroup is current and cheap to read, the usage file is up to an hour old and stays the fallback
+	var livePtr *userSliceLive
+	if live, ok := readUserSlice(userData.Context); ok {
+		widget = widget.withLive(live)
+		livePtr = &live
+	}
+	tasks := readUserTasks(userData.Context, planRAM, livePtr, parsedStats).withNow(livePtr, planCPU, planRAM)
+	widget = widget.withOverLimit()
+	if v, err := strconv.ParseFloat(tasks.Pct, 64); err == nil && v >= 90 {
+		widget.OverLimit = append(widget.OverLimit, "Processes")
+	}
 	for _, p := range planUsage {
 		if !p.Unlimited() && p.Percent() >= 90 {
 			widget.OverLimit = append(widget.OverLimit, p.Label)
@@ -959,6 +971,7 @@ func (u *Users) ServeDetail(w http.ResponseWriter, r *http.Request) {
 		Stats:             parsedStats,
 		UsageStale:        userUsageStale(parsedStats, strings.Contains(username, "SUSPENDED_"), time.Now()),
 		StatsWidget:       widget,
+		Tasks:             tasks,
 		PlanUsage:         planUsage,
 		ServerIP:          serverIP,
 		ServerName:        serverName(),
