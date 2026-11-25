@@ -252,7 +252,7 @@ func podmanInfoOverviewFrom(raw string) *podmanInfoOverview {
 			{"Storage", []podmanInfoField{
 				{"Driver", dash(driver)},
 				{"Root", dash(st.GraphRoot)},
-				{"Containers", strconv.Itoa(st.ContainerStore.Number)},
+				{"Rootful containers", strconv.Itoa(st.ContainerStore.Number)},
 				{"Images", strconv.Itoa(st.ImageStore.Number)},
 			}},
 		},
