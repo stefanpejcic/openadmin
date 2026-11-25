@@ -424,3 +424,25 @@ func TestPodmanGroupVulns(t *testing.T) {
 		t.Fatalf("order %v %+v", ids, cves)
 	}
 }
+
+func TestPodmanPullGoesToSharedStore(t *testing.T) {
+	origRun, origFix := podmanRunRun, podmanFixSharedStorePermissionsRun
+	t.Cleanup(func() { podmanRunRun, podmanFixSharedStorePermissionsRun = origRun, origFix })
+	podmanFixSharedStorePermissionsRun = func(string) {}
+	for _, c := range []struct{ info, want string }{
+		{`{"store":{"graphOptions":{"overlay.imagestore":"/shared"}}}`, "--root /shared pull docker.io/x:1"},
+		{`{"store":{"graphOptions":{}}}`, "pull docker.io/x:1"},
+	} {
+		var pulled string
+		podmanRunRun = func(args ...string) (string, error) {
+			if args[0] == "info" {
+				return c.info, nil
+			}
+			pulled = strings.Join(args, " ")
+			return "", nil
+		}
+		if _, err := podmanPullImageRun("docker.io/x:1"); err != nil || pulled != c.want {
+			t.Errorf("pulled %q, want %q", pulled, c.want)
+		}
+	}
+}

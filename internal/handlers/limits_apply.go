@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -299,6 +300,9 @@ func containerDependents(container string) ([]string, error) {
 	return res, nil
 }
 
+// errOutsideDependent is a dependent container another compose file owns, removing it here would lose it
+var errOutsideDependent = errors.New("can't recreate from here")
+
 var limitsComposeRun = func(args ...string) ([]byte, error) {
 	cmd, err := podman.ComposeCommand("default", args...)
 	if err != nil {
@@ -324,7 +328,7 @@ var limitsRecreateRun = func(t limitTarget) (string, []string, error) {
 		svc, ok := services[d]
 		if !ok {
 			// it'd be removed with no way to bring it back from here
-			return "", nil, fmt.Errorf("%s depends on it and isn't in %s, restart it from Services instead", d, LimitsComposePath)
+			return "", nil, fmt.Errorf("%w: %s depends on it and isn't in %s", errOutsideDependent, d, LimitsComposePath)
 		}
 		toUp = append(toUp, svc)
 	}

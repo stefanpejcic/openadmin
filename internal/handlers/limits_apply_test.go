@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -252,5 +253,30 @@ func TestLimitsServiceRows(t *testing.T) {
 	}
 	if rows[1].Container != "" || rows[1].Groups[0] != "ORPHAN" {
 		t.Fatalf("orphan %+v", rows[1])
+	}
+}
+
+func TestRecreateRootService(t *testing.T) {
+	stubLimits(t)
+	var got limitTarget
+	var fail error
+	limitsRecreateRun = func(tg limitTarget) (string, []string, error) {
+		got = tg
+		if fail != nil {
+			return "", nil, fail
+		}
+		return "", []string{"openpanel"}, nil
+	}
+	ok, msg, handled := recreateRootServiceRun("openpanel_dns")
+	if !ok || !handled || got.service != "bind9" || msg != "Recreated openpanel_dns. Also recreated openpanel since they depend on it." {
+		t.Fatalf("ok %v handled %v msg %q target %+v", ok, handled, msg, got)
+	}
+	// mail and other compose files keep their own restart
+	if _, _, handled := recreateRootServiceRun("openadmin_mailserver"); handled {
+		t.Fatal("a container outside /root's compose shouldn't be handled")
+	}
+	fail = fmt.Errorf("%w: postfwd", errOutsideDependent)
+	if _, _, handled := recreateRootServiceRun("caddy"); handled {
+		t.Fatal("a dependent in another compose file falls back to the old restart")
 	}
 }

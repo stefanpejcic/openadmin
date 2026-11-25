@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -45,6 +46,35 @@ var ServicesConfigPath = "/etc/openpanel/openadmin/config/services.json"
 // the tests.
 var controlServiceRun = realControlService
 
+// recreateRootServiceRun recreates a container of /root's compose file together with whatever depends on it, a plain
+// restart kept the old container (rm fails while openpanel requires redis or mysql) and never read the .env again.
+// handled is false for containers that file doesn't have, or whose dependents live in another compose file.
+var recreateRootServiceRun = func(container string) (ok bool, msg string, handled bool) {
+	raw, err := os.ReadFile(LimitsComposePath)
+	if err != nil {
+		return false, "", false
+	}
+	svc, found := composeContainers(string(raw))[container]
+	if !found {
+		return false, "", false
+	}
+	out, deps, err := limitsRecreateRun(limitTarget{svc, container, ""})
+	if errors.Is(err, errOutsideDependent) {
+		return false, "", false
+	}
+	if err != nil {
+		if m := strings.TrimSpace(out); m != "" {
+			return false, m, true
+		}
+		return false, err.Error(), true
+	}
+	msg = "Recreated " + container + "."
+	if len(deps) > 0 {
+		msg += " Also recreated " + strings.Join(deps, ", ") + " since they depend on it."
+	}
+	return true, msg, true
+}
+
 // podmanForceRemoveContainer kills and force-removes a container stuck in
 // an improper/transitional state (e.g. wedged mid-"Stopping" after a
 // crashed conmon/OCI process) that a plain `podman-compose down` can't get
@@ -76,6 +106,12 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 		cmd.Dir = "/root"
 		out, err := cmd.CombinedOutput()
 		return err == nil, string(out)
+	}
+
+	if action == "restart" {
+		if ok, msg, handled := recreateRootServiceRun(serviceName); handled {
+			return ok, msg
+		}
 	}
 
 	dockerServices := map[string]string{
@@ -583,6 +619,11 @@ var manageServiceRun = realManageService
 // docker-services set than realControlService's, plus a generic
 // `service <name> <action>` fallback for anything not in that set.
 func realManageService(serviceName, action string) (bool, string) {
+	if action == "restart" {
+		if ok, msg, handled := recreateRootServiceRun(serviceName); handled {
+			return ok, msg
+		}
+	}
 	dockerServices := map[string]string{
 		"openpanel_mysql": "openpanel_mysql", "caddy": "caddy", "openpanel": "openpanel",
 		"openpanel_dns": "bind9", "openadmin_mailserver": "openadmin_mailserver",

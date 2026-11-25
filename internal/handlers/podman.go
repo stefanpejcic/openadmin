@@ -1000,9 +1000,17 @@ var podmanDeleteImageRun = func(id string) (string, error) {
 	return out, err
 }
 
+// users' rootless podman only sees the shared store, a pull into root's own graphroot never reached their containers
 var podmanPullImageRun = func(ref string) (string, error) {
-	out, err := podmanRunRun("pull", ref)
-	podmanFixSharedStorePermissionsRun(podmanSharedImageStoreRoot())
+	root := podmanSharedImageStoreRoot()
+	var out string
+	var err error
+	if root != "" {
+		out, err = podmanRunRun("--root", root, "pull", ref)
+	} else {
+		out, err = podmanRunRun("pull", ref)
+	}
+	podmanFixSharedStorePermissionsRun(root)
 	return out, err
 }
 
