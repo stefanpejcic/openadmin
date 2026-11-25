@@ -389,6 +389,14 @@ func updateContainerRAMOrCPU(context, containerName, action, value string) (cont
 	if err := os.WriteFile(envPath, []byte(strings.Join(lines, "")), 0644); err != nil {
 		return containerActionResult{IsDict: true, Message: fmt.Sprintf("Failed to update .env: %v", err)}, nil
 	}
+	if lowerAction == "pids" {
+		composePath := filepath.Join(path, "docker-compose.yml")
+		if compose, err := os.ReadFile(composePath); err == nil {
+			if fixed, changed := pidsFromEnv(string(compose), containerName, envVar); changed {
+				writeKeepingOwner(composePath, fixed)
+			}
+		}
+	}
 
 	unlimited := value == "0" || value == "0G"
 	if containerExistsRun(context, containerName) {
