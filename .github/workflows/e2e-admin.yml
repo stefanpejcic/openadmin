@@ -66,7 +66,12 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.TEST_SSH_KEY }}" > ~/.ssh/id
           chmod 600 ~/.ssh/id
-          ssh-keyscan -H "${{ secrets.TEST_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          # retry, one slow connect shouldn't kill the whole run
+          for i in 1 2 3 4 5; do
+            ssh-keyscan -T 15 -H "${{ secrets.TEST_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null && [ -s ~/.ssh/known_hosts ] && exit 0
+            echo "keyscan attempt $i failed, retrying..."; sleep 10
+          done
+          echo "could not reach the test box over ssh"; exit 1
 
       - name: Acquire exclusive box lock
         # admin (this repo) and the user-panel suite (OpenPanel repo) share one
