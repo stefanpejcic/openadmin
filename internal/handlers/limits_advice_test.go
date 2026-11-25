@@ -102,7 +102,7 @@ func TestServeLimitsRendersAdvice(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "Number(v) > 0 && Number(v) < 2") || !strings.Contains(string(body), "on servers with over 4 GB RAM") {
+	if !strings.Contains(string(body), "Number(val) > 0 && Number(val) < 2") || !strings.Contains(string(body), "on servers with over 4 GB RAM") {
 		t.Fatal("expected the OpenPanel recommendation in the page")
 	}
 }

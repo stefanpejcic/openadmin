@@ -26,40 +26,58 @@ func TestPodmanFormatReclaimable(t *testing.T) {
 	}
 }
 
-func TestPodmanInfoSummary(t *testing.T) {
+func TestPodmanInfoOverview(t *testing.T) {
 	raw := `host:
+  arch: amd64
+  cgroupManager: systemd
   cgroupVersion: v2
+  conmon:
+    version: 'conmon version 2.1.13, commit: unknown'
+  cpus: 8
   distribution:
     distribution: almalinux
     version: "10.0"
   kernel: 6.12.0
+  memFree: 2147483648
+  memTotal: 8589934592
+  ociRuntime:
+    name: crun
+    version: |-
+      crun version 1.21
+      commit: abc
+  uptime: 1732h 43m 5.00s (Approximately 72.17 days)
 store:
   containerStore:
     number: 3
+    running: 2
+    stopped: 1
   graphDriverName: overlay
+  graphRootAllocated: 107374182400
+  graphRootUsed: 53687091200
+  graphStatus:
+    Backing Filesystem: extfs
   imageStore:
     number: 12
 version:
   Version: 5.4.0
 `
-	got := podmanInfoSummary(raw)
-	want := []podmanInfoField{
-		{"Podman version", "5.4.0"},
-		{"OS / kernel", "almalinux 10.0 / 6.12.0"},
-		{"Storage driver", "overlay"},
-		{"Cgroup version", "v2"},
-		{"Containers", "3"},
-		{"Images", "12"},
+	got := podmanInfoOverviewFrom(raw)
+	if got == nil {
+		t.Fatal("expected an overview")
 	}
-	if len(got) != len(want) {
-		t.Fatalf("got %d fields, want %d", len(got), len(want))
+	if got.Version != "5.4.0" || got.Runtime != "crun 1.21" || got.Running != 2 || got.Stopped != 1 || got.Images != 12 || got.StoragePct != 50 {
+		t.Fatalf("got %+v", got)
 	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("field %d = %+v, want %+v", i, got[i], want[i])
+	fields := map[string]string{}
+	for _, sec := range got.Sections {
+		for _, f := range sec.Fields {
+			fields[f.Label] = f.Value
 		}
 	}
-	if podmanInfoSummary("Failed to get podman info: boom") != nil {
+	if fields["Uptime"] != "72.17 days" || fields["Conmon"] != "2.1.13" || fields["Driver"] != "overlay on extfs" || fields["OS"] != "almalinux 10.0" {
+		t.Fatalf("fields %v", fields)
+	}
+	if podmanInfoOverviewFrom("Failed to get podman info: boom") != nil {
 		t.Error("expected nil for non-yaml input")
 	}
 }

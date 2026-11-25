@@ -375,3 +375,52 @@ func TestServePodmanImageVulnerabilitiesNotYetChecked(t *testing.T) {
 		t.Fatalf("expected checked:false for an unchecked ref, got %s", body)
 	}
 }
+
+func TestPodmanCheckImageUpdateRunUsesRepoDigests(t *testing.T) {
+	orig := podmanRunRunStdout
+	t.Cleanup(func() { podmanRunRunStdout = orig })
+	remote := `{"manifests":[{"digest":"sha256:amd","platform":{"os":"linux","architecture":"amd64"}}]}`
+	cases := []struct {
+		local string
+		want  bool
+	}{
+		// .Digest is the list's, the platform digest is only in RepoDigests
+		{"sha256:list|linux|amd64|docker.io/x@sha256:list docker.io/x@sha256:amd ", false},
+		{"sha256:amd|linux|amd64|", false},
+		{"sha256:old|linux|amd64|docker.io/x@sha256:old ", true},
+	}
+	for _, c := range cases {
+		podmanRunRunStdout = func(args ...string) (string, error) {
+			if args[0] == "image" {
+				return c.local, nil
+			}
+			return remote, nil
+		}
+		got, err := podmanCheckImageUpdateRun("docker.io/x:latest")
+		if err != nil || got != c.want {
+			t.Errorf("%q: got %v %v, want %v", c.local, got, err, c.want)
+		}
+	}
+}
+
+func TestPodmanGroupVulns(t *testing.T) {
+	details := []podmanVulnDetail{
+		{ID: "CVE-1", Package: "libc6", FixedVersion: "2.0", Severity: "HIGH"},
+		{ID: "CVE-1", Package: "libc-bin", FixedVersion: "2.0", Severity: "HIGH"},
+		{ID: "CVE-2", Package: "openssl", Severity: "CRITICAL", Status: "affected"},
+		{ID: "CVE-3", Package: "zlib", FixedVersion: "1.3", Severity: "CRITICAL"},
+		{ID: "CVE-4", Package: "curl", Severity: "HIGH", Status: "will_not_fix"},
+	}
+	cves, sum := podmanGroupVulns(details)
+	if sum != (podmanVulnSummary{Unique: 4, Fixable: 2, NoFix: 2, CriticalFixable: 1, Findings: 5}) {
+		t.Fatalf("sum %+v", sum)
+	}
+	var ids []string
+	for _, c := range cves {
+		ids = append(ids, c.ID)
+	}
+	// fixable first, critical first inside each half
+	if strings.Join(ids, ",") != "CVE-3,CVE-1,CVE-2,CVE-4" || len(cves[1].Packages) != 2 {
+		t.Fatalf("order %v %+v", ids, cves)
+	}
+}

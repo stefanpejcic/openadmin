@@ -88,11 +88,15 @@ type limitsRow struct {
 	// set for *_TIMEZONE keys so they render as a dropdown like /server/timezone
 	Timezones []string
 	Advice    limitAdvice
+	// docker hub repo whose tag this row picks, the page turns it into a select
+	TagRepo string
 }
 
 type limitsGroup struct {
 	Name string
 	Rows []limitsRow
+	// the container the group's keys feed, for the live usage line
+	Container string
 }
 
 // buildLimitsView renders groups into a deterministically ordered slice for
@@ -141,6 +145,7 @@ func buildLimitsView(groups map[string]map[string]string) []limitsGroup {
 
 // ServeLimits handles GET/POST /services/limits.
 func (l *Limits) ServeLimits(w http.ResponseWriter, r *http.Request) {
+	var recreate []string
 	if r.Method == http.MethodPost {
 		raw, err := os.ReadFile(GlobalEnvPath)
 		if err != nil {
@@ -188,15 +193,13 @@ func (l *Limits) ServeLimits(w http.ResponseWriter, r *http.Request) {
 		if err := os.WriteFile(GlobalEnvPath, []byte(strings.Join(newLines, "")), 0644); err != nil {
 			auth.AddFlash(w, r, l.Sessions, "Failed to update limits: "+err.Error(), "error")
 		} else {
-			msg := "New limits saved successfully!"
-			applied, failed := applyLimitsLive(changed)
-			if len(applied) > 0 {
-				msg += " Applied right away to: " + strings.Join(applied, ", ") + "."
+			res := applyLimitsLive(changed)
+			kind := "success"
+			if len(res.Failed) > 0 {
+				kind = "error"
 			}
-			if len(failed) > 0 {
-				msg += " Not running, applied when it starts: " + strings.Join(failed, ", ") + "."
-			}
-			auth.AddFlash(w, r, l.Sessions, msg, "success")
+			auth.AddFlash(w, r, l.Sessions, limitsMessage(res), kind)
+			recreate = res.Recreate
 		}
 	}
 
@@ -207,9 +210,77 @@ func (l *Limits) ServeLimits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	view := adviseLimits(buildLimitsView(groups), groups, limitsHostRun(l.MySQL))
+	var containers map[string]string
+	if raw, err := os.ReadFile(LimitsComposePath); err == nil {
+		containers = groupContainers(string(raw))
+		repos := composeImageRepos(string(raw))
+		shown := map[string]bool{}
+		for gi := range view {
+			// BIND and BIND9 feed the same container, its usage shows once
+			if c := containers[view[gi].Name]; c != "" && !shown[c] {
+				shown[c] = true
+				view[gi].Container = c
+			}
+			for ri := range view[gi].Rows {
+				if repo, ok := repos[view[gi].Rows[ri].FieldName]; ok {
+					if _, hub := hubRepoPath(repo); hub {
+						view[gi].Rows[ri].TagRepo = repo
+					}
+				}
+			}
+		}
+	}
+
 	webtemplates.Render(w, "services_limits.html", mergeChrome(map[string]interface{}{
-		"Groups":    adviseLimits(buildLimitsView(groups), groups, limitsHostRun(l.MySQL)),
+		"Groups":    view,
+		"Services":  limitsServiceRows(view, containers),
 		"CSRFToken": csrf.Token(r),
+		"Recreate":  recreate,
 		"Flashes":   auth.PopFlashes(w, r, l.Sessions),
 	}, r, "Service limits"))
+}
+
+// limitsSvcRow is one container on the page, its CPU and RAM get the usage rings and the rest goes in the expanded row
+type limitsSvcRow struct {
+	Container string
+	Groups    []string
+	CPU, RAM  *limitsRow
+	Other     []limitsRow
+}
+
+// limitsServiceRows folds the .env groups into one row per container, BIND and BIND9 both belong to openpanel_dns
+func limitsServiceRows(view []limitsGroup, containers map[string]string) []limitsSvcRow {
+	var rows []limitsSvcRow
+	index := map[string]int{}
+	for _, g := range view {
+		key := containers[g.Name]
+		if key == "" {
+			key = "group:" + g.Name
+		}
+		i, ok := index[key]
+		if !ok {
+			row := limitsSvcRow{}
+			if !strings.HasPrefix(key, "group:") {
+				row.Container = key
+			}
+			rows = append(rows, row)
+			i = len(rows) - 1
+			index[key] = i
+		}
+		r := &rows[i]
+		r.Groups = append(r.Groups, g.Name)
+		for _, f := range g.Rows {
+			f := f
+			switch {
+			case r.CPU == nil && (strings.HasSuffix(f.Label, "CPU") || strings.HasSuffix(f.Label, "CPUS")):
+				r.CPU = &f
+			case r.RAM == nil && strings.HasSuffix(f.Label, "RAM"):
+				r.RAM = &f
+			default:
+				r.Other = append(r.Other, f)
+			}
+		}
+	}
+	return rows
 }

@@ -26,7 +26,14 @@ func RunStartupHousekeeping(logger *log.Logger) {
 		makeExecutableIfExists(logger, p)
 	}
 	clearCache(logger, cacheDir)
+	// a scan killed by a restart can't clean up after itself, it'd keep gigabytes of unpacked images
+	if err := os.RemoveAll(trivyTmpDir); err != nil {
+		logger.Printf("Failed to clear %s: %v", trivyTmpDir, err)
+	}
 }
+
+// same dir handlers.PodmanTrivyTmpDir scans in
+var trivyTmpDir = "/var/tmp/openadmin-trivy"
 
 func makeExecutableIfExists(logger *log.Logger, path string) {
 	info, err := os.Stat(path)

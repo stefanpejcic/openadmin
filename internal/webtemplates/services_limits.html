@@ -11,108 +11,244 @@
     <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<form method="POST" data-warn-unsaved>
-<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+{{if .Recreate}}
+<div class="px-4 pt-6 sm:px-6 lg:px-8">
+  <div class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500">
+    <div>
+      <p>Some of the changes (a limit set to 0, a version or another setting) only apply after the service restarts. Restart now? The service is down for a few seconds.</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        {{range .Recreate}}
+        <form method="POST" action="/services/limits/recreate">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+          <input type="hidden" name="container" value="{{.}}">
+          <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Restart {{.}}</button>
+        </form>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
 
-<div x-data="{ searchQuery: '' }">
-    <div x-data="{ showSection: false }" class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
+<div>
+    <div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
         <header>
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div class="grow">
                     <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Service limits</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-500">Edit allocated CPU and memory resources for system services.</p>
-                </div>
-                <div class="flex flex-none items-center gap-2 sm:justify-end">
-                    <button id="tour-save-limits-btn" type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                    <p class="text-sm text-gray-500 dark:text-gray-500">What each system service uses right now and what it's allowed. Click the pencil to change a limit, CPU and memory apply right away.</p>
                 </div>
             </div>
         </header>
     </div>
 
-  <div class="px-4 py-6 sm:px-6 lg:px-8">
-<div class="max-w-7xl">
-
-  <!-- PHP_FPM versioned keys -->
-
-{{$first := true}}
-{{range .Groups}}
-<div {{if $first}}id="tour-first-service-limit"{{end}} class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
-    {{$first = false}}
-    <div>
-        <h2 id="{{lower .Name}}" class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">{{.Name}}</h2>
-        <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Configure limits for {{.Name}} service.
-        </p>
-    </div>
-    <div class="lg:col-span-2">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-
-            <div class="col-span-full">
-                <div class="relative w-full mt-2">
-
-                    <div>
-                        <div class="mt-4 grid grid-cols-1 gap-4">
-
-      <div class="grid grid-cols-2 gap-4">
-        {{range .Rows}}
-
-  {{if or (hasSuffix .Label "CPU") (hasSuffix .Label "CPUS")}}
-        <label class="block" x-data="{ v: $el.querySelector('input').value }">
-          <span class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">CPU</span>
-          <input type="number" min="0" step="0.001" name="{{.FieldName}}" @input="v = $event.target.value" value="{{rstrip .Value "G"}}" required
-                 class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm truncate mt-2" />
-          {{if .Advice.Low}}<span x-show="Number(v) > 0 && Number(v) < {{.Advice.Low}}" x-cloak class="mt-1 block text-xs text-yellow-700 dark:text-yellow-500">{{.Advice.LowText}}</span>{{end}}
-          {{if .Advice.High}}<span x-show="Number(v) > {{.Advice.High}}" x-cloak class="mt-1 block text-xs text-yellow-700 dark:text-yellow-500">{{.Advice.HighText}}</span>{{end}}
-        </label>
-  {{else if hasSuffix .Label "RAM"}}
-        <label class="block" x-data="{ v: $el.querySelector('input').value }">
-          <span class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Memory <span class="font-normal text-gray-500">(GB)</span></span>
-          <input type="number" min="0" step="0.001" name="{{.FieldName}}" @input="v = $event.target.value" value="{{rstrip .Value "gG"}}" required class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm truncate mt-2" />
-          {{if .Advice.Low}}<span x-show="Number(v) > 0 && Number(v) < {{.Advice.Low}}" x-cloak class="mt-1 block text-xs text-yellow-700 dark:text-yellow-500">{{.Advice.LowText}}</span>{{end}}
-          {{if .Advice.High}}<span x-show="Number(v) > {{.Advice.High}}" x-cloak class="mt-1 block text-xs text-yellow-700 dark:text-yellow-500">{{.Advice.HighText}}</span>{{end}}
-        </label>
-  {{else}}
-
-        <label class="block" x-data="{ v: ($el.querySelector('input') || {}).value || '' }">
-          <span class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">{{titleWords .Label}}</span>
-      {{if .Timezones}}
-<select name="{{.FieldName}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full truncate mt-2" required>
-  {{$cur := .Value}}{{range .Timezones}}<option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{.}}</option>
-  {{end}}</select>
-      {{else if or (eq (lower .Value) "true") (eq (lower .Value) "false")}}
-<select name="{{.FieldName}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full truncate mt-2" required>
-   <option value="true" {{if eq (lower .Value) "true"}}selected{{end}}>True</option>
-    <option value="false" {{if eq (lower .Value) "false"}}selected{{end}}>False</option>
-  </select>
-    {{else}}
-          <input type="text" name="{{.FieldName}}" value="{{.Value}}" @input="v = $event.target.value" required
-                 class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm truncate mt-2" />
-          {{if .Advice.Low}}<span x-show="Number(v) > 0 && Number(v) < {{.Advice.Low}}" x-cloak class="mt-1 block text-xs text-yellow-700 dark:text-yellow-500">{{.Advice.LowText}}</span>{{end}}
-          {{if .Advice.High}}<span x-show="Number(v) > {{.Advice.High}}" x-cloak class="mt-1 block text-xs text-yellow-700 dark:text-yellow-500">{{.Advice.HighText}}</span>{{end}}
-  {{end}}
-
-        </label>
-  {{end}}
-
-
-        {{end}}
-      </div>
-
-                        </div>
-                    </div>
+    <div class="overflow-x-auto">
+      <table id="tour-first-service-limit" x-data="limitsSort()" class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+        <thead>
+          <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8">
+            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "name" "Label" "Service")}}</th>
+            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "cpu" "Label" "CPU")}}</th>
+            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "ram" "Label" "Memory")}}</th>
+            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "pids" "Label" "Processes")}}</th>
+          </tr>
+        </thead>
+        {{range $i, $svc := .Services}}
+        <tbody x-data="{ open: false }" class="border-b border-gray-200 dark:border-gray-800" data-limits-row data-sort-name="{{if .Container}}{{.Container}}{{else}}{{join .Groups ", "}}{{end}}" {{if .Container}}data-usage-container="{{.Container}}"{{end}}>
+          <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+            <td class="p-4 text-sm">
+              <button type="button" @click="open = !open" :aria-expanded="open.toString()" class="-mx-1.5 flex items-center gap-1.5 rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" title="{{if .Other}}Show the other settings{{else}}Show details{{end}}">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4 shrink-0 text-gray-400 transition-transform" :style="open ? 'rotate: 90deg' : ''"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
+                <span data-status class="size-2 shrink-0 rounded-full bg-gray-400" aria-hidden="true"></span>
+                <span class="flex flex-col">
+                  <span class="font-medium text-gray-900 dark:text-gray-50">{{if .Container}}{{.Container}}{{else}}{{join .Groups ", "}}{{end}}</span>
+                  <span class="text-xs text-gray-500 dark:text-gray-500">{{if .Container}}{{join .Groups ", "}} · {{end}}<span data-status-text>{{if .Container}}loading…{{else}}not used by a container{{end}}</span></span>
+                </span>
+              </button>
+            </td>
+            <td class="p-4 text-sm"{{if eq $i 0}} id="tour-save-limits-btn"{{end}}>
+                          {{with .CPU}}
+                          <div class="flex items-center gap-3" x-data="{ editing: false, val: {{toJSON (rstrip .Value "gG")}} }">
+                            <div data-ring-for="cpu"><div class="relative shrink-0" role="meter" aria-label="CPU usage" aria-valuemin="0" aria-valuemax="100"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform"><circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-200 dark:stroke-gray-800"></circle><circle data-ring r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 transition-all duration-150"></circle></svg><div class="absolute inset-0 flex items-center justify-center"><span data-ring-pct class="text-[11px] font-semibold tabular-nums text-gray-900 dark:text-gray-50">–</span></div></div></div>
+                            <div class="flex flex-col gap-0.5 text-xs">
+                              <span class="text-gray-500 dark:text-gray-500">Usage: <span data-usage-cpu class="font-medium text-gray-900 dark:text-gray-50">–</span></span>
+                              <span x-show="!editing" class="flex items-center gap-1 text-gray-500 dark:text-gray-500">Allocated: <span class="font-medium text-gray-900 dark:text-gray-50">{{if or (eq .Value "0") (eq .Value "")}}no limit{{else}}{{rstrip .Value "gG"}} cores{{end}}</span>
+                                <button type="button" @click="editing = true" aria-label="Edit {{.FieldName}}" class="inline-flex items-center rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-50"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-3.5 shrink-0"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                              </span>
+                              <form x-show="editing" x-cloak method="POST" action="/services/limits" class="flex flex-wrap items-center gap-1">
+                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                <input type="number" min="0" step="0.001" name="{{.FieldName}}" value="{{rstrip .Value "gG"}}" x-model="val" required aria-label="{{.FieldName}}" title="CPU cores, 0 = no limit" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 w-24 appearance-none px-2 py-1 text-xs">
+                                <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                                <button type="button" @click="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                              </form>
+                              <span data-default="{{.FieldName}}" class="text-gray-500 dark:text-gray-500"></span>
+                              {{if .Advice.Low}}<span x-show="Number(val) > 0 && Number(val) < {{.Advice.Low}}" x-cloak class="text-yellow-700 dark:text-yellow-500">{{.Advice.LowText}}</span>{{end}}
+                              {{if .Advice.High}}<span x-show="Number(val) > {{.Advice.High}}" x-cloak class="text-yellow-700 dark:text-yellow-500">{{.Advice.HighText}}</span>{{end}}
+                            </div>
+                          </div>
+                          {{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}
+            </td>
+            <td class="p-4 text-sm">
+                          {{with .RAM}}
+                          <div class="flex items-center gap-3" x-data="{ editing: false, val: {{toJSON (rstrip .Value "gG")}} }">
+                            <div data-ring-for="ram"><div class="relative shrink-0" role="meter" aria-label="RAM usage" aria-valuemin="0" aria-valuemax="100"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" class="-rotate-90 transform"><circle r="12.5" cx="14" cy="14" stroke-width="3" fill="transparent" class="stroke-gray-200 dark:stroke-gray-800"></circle><circle data-ring r="12.5" cx="14" cy="14" stroke-width="3" stroke-dasharray="78.54" stroke-dashoffset="78.54" fill="transparent" class="stroke-blue-500 transition-all duration-150"></circle></svg><div class="absolute inset-0 flex items-center justify-center"><span data-ring-pct class="text-[11px] font-semibold tabular-nums text-gray-900 dark:text-gray-50">–</span></div></div></div>
+                            <div class="flex flex-col gap-0.5 text-xs">
+                              <span class="text-gray-500 dark:text-gray-500">Usage: <span data-usage-ram class="font-medium text-gray-900 dark:text-gray-50">–</span></span>
+                              <span x-show="!editing" class="flex items-center gap-1 text-gray-500 dark:text-gray-500">Allocated: <span class="font-medium text-gray-900 dark:text-gray-50">{{if or (eq .Value "0") (eq .Value "")}}no limit{{else}}{{rstrip .Value "gG"}} GB{{end}}</span>
+                                <button type="button" @click="editing = true" aria-label="Edit {{.FieldName}}" class="inline-flex items-center rounded p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-50"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-3.5 shrink-0"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                              </span>
+                              <form x-show="editing" x-cloak method="POST" action="/services/limits" class="flex flex-wrap items-center gap-1">
+                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                <input type="number" min="0" step="0.001" name="{{.FieldName}}" value="{{rstrip .Value "gG"}}" x-model="val" required aria-label="{{.FieldName}}" title="Memory in GB, 0 = no limit" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 w-24 appearance-none px-2 py-1 text-xs">
+                                <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                                <button type="button" @click="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                              </form>
+                              <span data-default="{{.FieldName}}" class="text-gray-500 dark:text-gray-500"></span>
+                              {{if .Advice.Low}}<span x-show="Number(val) > 0 && Number(val) < {{.Advice.Low}}" x-cloak class="text-yellow-700 dark:text-yellow-500">{{.Advice.LowText}}</span>{{end}}
+                              {{if .Advice.High}}<span x-show="Number(val) > {{.Advice.High}}" x-cloak class="text-yellow-700 dark:text-yellow-500">{{.Advice.HighText}}</span>{{end}}
+                            </div>
+                          </div>
+                          {{else}}<span class="text-gray-400 dark:text-gray-600">—</span>{{end}}
+            </td>
+            <td class="p-4 text-sm"><span data-usage-pids class="tabular-nums text-gray-900 dark:text-gray-50">{{if .Container}}–{{else}}—{{end}}</span></td>
+          </tr>
+          <tr x-show="open" x-cloak>
+            <td colspan="4" class="bg-gray-50 px-4 py-4 text-sm dark:bg-gray-900/40 sm:px-6 lg:px-8">
+              {{if .Other}}
+              <form method="POST" action="/services/limits" class="max-w-3xl">
+                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {{range .Other}}
+                  <label class="block">
+                    <span class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">{{titleWords .Label}}</span>
+                    {{if .TagRepo}}
+                    <select name="{{.FieldName}}" x-data="hubTagSelect({{toJSON .FieldName}}, {{toJSON .Value}})" x-init="load()" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full truncate mt-2" required>
+                      <option value="{{.Value}}" selected>{{.Value}}</option>
+                      <template x-for="t in tags" :key="t"><option :value="t" x-text="t"></option></template>
+                    </select>
+                    <span class="mt-1 block text-xs text-gray-500 dark:text-gray-500">Tags of {{.TagRepo}} on Docker Hub, the new image is pulled when the service restarts.</span>
+                    {{else if .Timezones}}
+                    <select name="{{.FieldName}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full truncate mt-2" required>
+                      {{$cur := .Value}}{{range .Timezones}}<option value="{{.}}" {{if eq . $cur}}selected{{end}}>{{.}}</option>{{end}}
+                    </select>
+                    {{else if or (eq (lower .Value) "true") (eq (lower .Value) "false")}}
+                    <select name="{{.FieldName}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] w-full truncate mt-2" required>
+                      <option value="true" {{if eq (lower .Value) "true"}}selected{{end}}>True</option>
+                      <option value="false" {{if eq (lower .Value) "false"}}selected{{end}}>False</option>
+                    </select>
+                    {{else}}
+                    <input type="text" name="{{.FieldName}}" value="{{.Value}}" required class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 w-full appearance-none px-2.5 py-2 text-sm truncate mt-2">
+                    {{end}}
+                    {{if .Advice.Low}}<span class="mt-1 block text-xs text-yellow-700 dark:text-yellow-500">{{.Advice.LowText}}</span>{{end}}
+                  </label>
+                {{end}}
                 </div>
-            </div>
-        </div>
+                <p class="mt-3 text-xs text-gray-500 dark:text-gray-500">These apply after the service restarts, you'll be offered to do it right after saving.</p>
+                <button type="submit" class="mt-3 relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+              </form>
+              {{else}}
+              <p class="text-xs text-gray-500 dark:text-gray-500">No other settings for this service.</p>
+              {{end}}
+            </td>
+          </tr>
+        </tbody>
+        {{end}}
+      </table>
     </div>
 </div>
-<div class="mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
-{{end}}
-
-</div>
-</div>
-</div>
-</form>
 
 <script>
+// each service is its own tbody (row plus its settings), sorting moves those, usage columns sort by what the rings show
+function limitsSort() {
+  return {
+    sortKey: '', sortDir: 'asc',
+    sortBy(k) {
+      if (this.sortKey === k) this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+      else { this.sortKey = k; this.sortDir = k === 'name' ? 'asc' : 'desc'; }
+      var key = 'sort' + k[0].toUpperCase() + k.slice(1), f = this.sortDir === 'asc' ? 1 : -1;
+      var rows = Array.prototype.slice.call(this.$root.querySelectorAll('tbody[data-limits-row]'));
+      rows.sort(function (a, b) {
+        if (k === 'name') return (a.dataset[key] || '').localeCompare(b.dataset[key] || '', undefined, { numeric: true }) * f;
+        var x = parseFloat(a.dataset[key]), y = parseFloat(b.dataset[key]);
+        return ((isNaN(x) ? -1 : x) - (isNaN(y) ? -1 : y)) * f;
+      });
+      var table = this.$root;
+      rows.forEach(function (r) { table.appendChild(r); });
+    }
+  };
+}
+
+// tags for a *_VERSION select, cached a day on the server, the current value stays first
+function hubTagSelect(key, current) {
+  return {
+    tags: [],
+    load() {
+      fetch('/services/limits/tags?key=' + encodeURIComponent(key), { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then((d) => { this.tags = (d.tags || []).filter(function (t) { return t !== current; }); })
+        .catch(function () {});
+    }
+  };
+}
+
+// fills the rings like the user services tab, green under 70%, orange under 90%, red above
+document.addEventListener('DOMContentLoaded', function () {
+  var rows = document.querySelectorAll('[data-usage-container]');
+  if (!rows.length) return;
+  function fmtBytes(b) {
+    if (!b) return '0 B';
+    var u = ['B', 'KB', 'MB', 'GB', 'TB'], i = Math.min(Math.floor(Math.log(b) / Math.log(1024)), u.length - 1);
+    return (b / Math.pow(1024, i)).toFixed(i ? 1 : 0) + ' ' + u[i];
+  }
+  function color(p) { return p >= 90 ? 'stroke-red-500' : p >= 70 ? 'stroke-orange-500' : 'stroke-emerald-500'; }
+  function ring(row, kind, pct) {
+    var holder = row.querySelector('[data-ring-for="' + kind + '"]');
+    if (!holder) return;
+    var c = holder.querySelector('[data-ring]');
+    var shown = pct == null ? 0 : Math.min(pct, 100);
+    c.setAttribute('stroke-dashoffset', 78.54 * (1 - shown / 100));
+    c.setAttribute('class', (pct == null ? 'stroke-gray-500' : color(pct)) + ' transition-all duration-150');
+    holder.querySelector('[data-ring-pct]').textContent = pct == null ? '∞' : Math.round(pct);
+  }
+  fetch('/services/limits/usage', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (stats) {
+      rows.forEach(function (row) {
+        var name = row.getAttribute('data-usage-container');
+        var s = stats[name];
+        var dot = row.querySelector('[data-status]');
+        var status = row.querySelector('[data-status-text]');
+        if (!s) {
+          dot.className = 'size-2 shrink-0 rounded-full bg-gray-400';
+          status.textContent = 'not running';
+          return;
+        }
+        var cpuIn = row.querySelector('input[name$="_CPU"], input[name$="_CPUS"]');
+        var ramIn = row.querySelector('input[name$="_RAM"]');
+        var cores = cpuIn ? parseFloat(cpuIn.value) : 0;
+        var gb = ramIn ? parseFloat(ramIn.value) : 0;
+        var used = s.cpu / 100;
+        var cpuPct = cores > 0 ? used / cores * 100 : null;
+        var memPct = gb > 0 && s.mem_limit ? s.mem_usage / s.mem_limit * 100 : null;
+        var cpuText = row.querySelector('[data-usage-cpu]');
+        if (cpuText) cpuText.textContent = used.toFixed(2) + ' cores';
+        var ramText = row.querySelector('[data-usage-ram]');
+        if (ramText) ramText.textContent = fmtBytes(s.mem_usage);
+        ring(row, 'cpu', cpuPct);
+        ring(row, 'ram', memPct);
+        row.querySelector('[data-usage-pids]').textContent = s.pids;
+        row.dataset.sortCpu = cpuPct != null ? cpuPct : used * 100;
+        row.dataset.sortRam = s.mem_usage;
+        row.dataset.sortPids = s.pids;
+        var worst = Math.max(cpuPct || 0, memPct || 0);
+        dot.className = 'size-2 shrink-0 rounded-full ' + (worst >= 90 ? 'bg-red-500' : worst >= 70 ? 'bg-orange-500' : 'bg-emerald-500');
+        status.textContent = worst >= 90 ? 'close to its limit' : 'running';
+      });
+    })
+    .catch(function () {
+      rows.forEach(function (row) { row.querySelector('[data-status-text]').textContent = 'usage unavailable'; });
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function () {
   fetch('https://raw.githubusercontent.com/stefanpejcic/openpanel-configuration/refs/heads/main/docker/compose/.env')
     .then(function (r) { return r.text(); })
@@ -142,6 +278,8 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         }
 
+        var slot = document.querySelector('[data-default="' + key + '"]');
+        if (slot) { slot.textContent = 'Default: ' + defaultValue; return; }
         var hint = document.createElement('span');
         hint.className = 'mt-1.5 block text-xs text-gray-500 dark:text-gray-500';
         hint.textContent = 'Default: ' + defaultValue;

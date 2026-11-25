@@ -100,53 +100,162 @@ type podmanInfoField struct {
 	Value string
 }
 
-// podmanInfoSummary pulls a few headline fields out of the `podman info` yaml; nil if it doesn't parse.
-func podmanInfoSummary(raw string) []podmanInfoField {
+// podmanInfoSection is one card on the Info tab
+type podmanInfoSection struct {
+	Title  string
+	Fields []podmanInfoField
+}
+
+// podmanInfoOverview is the Info tab, a few headline numbers and the rest grouped by host, runtime and storage
+type podmanInfoOverview struct {
+	Version                   string
+	Runtime                   string
+	Running, Paused, Stopped  int
+	Images                    int
+	StorageUsed, StorageTotal string
+	StoragePct                int
+	Network                   string
+	Sections                  []podmanInfoSection
+}
+
+// podmanInfoOverview reads the `podman info` yaml, nil if it doesn't parse
+func podmanInfoOverviewFrom(raw string) *podmanInfoOverview {
 	var doc struct {
 		Host struct {
-			CgroupVersion string `yaml:"cgroupVersion"`
+			Arch          string `yaml:"arch"`
+			CPUs          int    `yaml:"cpus"`
+			Uptime        string `yaml:"uptime"`
+			Hostname      string `yaml:"hostname"`
 			Kernel        string `yaml:"kernel"`
+			CgroupManager string `yaml:"cgroupManager"`
+			CgroupVersion string `yaml:"cgroupVersion"`
+			Network       string `yaml:"networkBackend"`
+			LogDriver     string `yaml:"logDriver"`
 			Distribution  struct {
 				Distribution string `yaml:"distribution"`
 				Version      string `yaml:"version"`
 			} `yaml:"distribution"`
+			OCIRuntime struct {
+				Name    string `yaml:"name"`
+				Version string `yaml:"version"`
+			} `yaml:"ociRuntime"`
+			Conmon struct {
+				Version string `yaml:"version"`
+			} `yaml:"conmon"`
+			Security struct {
+				Rootless bool `yaml:"rootless"`
+				Seccomp  bool `yaml:"seccompEnabled"`
+				AppArmor bool `yaml:"apparmorEnabled"`
+				SELinux  bool `yaml:"selinuxEnabled"`
+			} `yaml:"security"`
 		} `yaml:"host"`
 		Store struct {
-			GraphDriverName string `yaml:"graphDriverName"`
-			ContainerStore  struct {
-				Number int `yaml:"number"`
+			GraphDriverName    string            `yaml:"graphDriverName"`
+			GraphRoot          string            `yaml:"graphRoot"`
+			GraphRootUsed      float64           `yaml:"graphRootUsed"`
+			GraphRootAllocated float64           `yaml:"graphRootAllocated"`
+			GraphStatus        map[string]string `yaml:"graphStatus"`
+			ContainerStore     struct {
+				Number  int `yaml:"number"`
+				Running int `yaml:"running"`
+				Paused  int `yaml:"paused"`
+				Stopped int `yaml:"stopped"`
 			} `yaml:"containerStore"`
 			ImageStore struct {
 				Number int `yaml:"number"`
 			} `yaml:"imageStore"`
 		} `yaml:"store"`
 		Version struct {
-			Version string `yaml:"Version"`
+			Version    string `yaml:"Version"`
+			APIVersion string `yaml:"APIVersion"`
+			GoVersion  string `yaml:"GoVersion"`
+			BuiltTime  string `yaml:"BuiltTime"`
 		} `yaml:"version"`
+		Registries struct {
+			Search []string `yaml:"search"`
+		} `yaml:"registries"`
 	}
 	if err := yaml.Unmarshal([]byte(raw), &doc); err != nil || doc.Version.Version == "" {
 		return nil
 	}
-	osName := strings.TrimSpace(doc.Host.Distribution.Distribution + " " + doc.Host.Distribution.Version)
-	if doc.Host.Kernel != "" {
-		if osName != "" {
-			osName += " / "
-		}
-		osName += doc.Host.Kernel
-	}
+	h, st := doc.Host, doc.Store
 	dash := func(s string) string {
-		if s == "" {
+		if strings.TrimSpace(s) == "" {
 			return "—"
 		}
 		return s
 	}
-	return []podmanInfoField{
-		{"Podman version", doc.Version.Version},
-		{"OS / kernel", dash(osName)},
-		{"Storage driver", dash(doc.Store.GraphDriverName)},
-		{"Cgroup version", dash(doc.Host.CgroupVersion)},
-		{"Containers", strconv.Itoa(doc.Store.ContainerStore.Number)},
-		{"Images", strconv.Itoa(doc.Store.ImageStore.Number)},
+	onOff := func(b bool) string {
+		if b {
+			return "on"
+		}
+		return "off"
+	}
+	pct := func(used, total float64) int {
+		if total <= 0 {
+			return 0
+		}
+		return int(used/total*100 + 0.5)
+	}
+	// crun prints several lines and conmon a commit, the first part is enough
+	firstPart := func(s string) string {
+		s = strings.SplitN(strings.TrimSpace(s), "\n", 2)[0]
+		return strings.TrimSpace(strings.SplitN(s, ",", 2)[0])
+	}
+	uptime := h.Uptime
+	if i := strings.Index(uptime, "(Approximately "); i != -1 {
+		uptime = strings.TrimSuffix(uptime[i+len("(Approximately "):], ")")
+	}
+	runtime := strings.TrimSpace(strings.TrimPrefix(firstPart(h.OCIRuntime.Version), h.OCIRuntime.Name+" version"))
+	if runtime != "" {
+		runtime = h.OCIRuntime.Name + " " + runtime
+	} else {
+		runtime = h.OCIRuntime.Name
+	}
+	osName := strings.TrimSpace(doc.Host.Distribution.Distribution + " " + doc.Host.Distribution.Version)
+	security := "seccomp " + onOff(h.Security.Seccomp) + ", AppArmor " + onOff(h.Security.AppArmor) + ", SELinux " + onOff(h.Security.SELinux)
+	driver := st.GraphDriverName
+	if fs := st.GraphStatus["Backing Filesystem"]; fs != "" && driver != "" {
+		driver += " on " + fs
+	}
+	mode := "rootful"
+	if h.Security.Rootless {
+		mode = "rootless"
+	}
+	return &podmanInfoOverview{
+		Version: doc.Version.Version, Runtime: dash(runtime),
+		Running: st.ContainerStore.Running, Paused: st.ContainerStore.Paused, Stopped: st.ContainerStore.Stopped,
+		Images:      st.ImageStore.Number,
+		StorageUsed: podmanFormatSize(st.GraphRootUsed), StorageTotal: podmanFormatSize(st.GraphRootAllocated),
+		StoragePct: pct(st.GraphRootUsed, st.GraphRootAllocated),
+		Network:    dash(h.Network),
+		Sections: []podmanInfoSection{
+			{"Host", []podmanInfoField{
+				{"Hostname", dash(h.Hostname)},
+				{"OS", dash(osName)},
+				{"Kernel", dash(h.Kernel)},
+				{"Architecture", dash(h.Arch)},
+				{"CPUs", strconv.Itoa(h.CPUs)},
+				{"Uptime", dash(uptime)},
+			}},
+			{"Runtime", []podmanInfoField{
+				{"Podman", doc.Version.Version + " (API " + dash(doc.Version.APIVersion) + ", " + dash(doc.Version.GoVersion) + ")"},
+				{"OCI runtime", dash(runtime)},
+				{"Conmon", dash(strings.TrimPrefix(firstPart(h.Conmon.Version), "conmon version "))},
+				{"Network", dash(h.Network)},
+				{"Cgroups", dash(strings.TrimSpace(h.CgroupVersion + " " + h.CgroupManager))},
+				{"Mode", mode},
+				{"Security", security},
+				{"Log driver", dash(h.LogDriver)},
+				{"Registries", dash(strings.Join(doc.Registries.Search, ", "))},
+			}},
+			{"Storage", []podmanInfoField{
+				{"Driver", dash(driver)},
+				{"Root", dash(st.GraphRoot)},
+				{"Containers", strconv.Itoa(st.ContainerStore.Number)},
+				{"Images", strconv.Itoa(st.ImageStore.Number)},
+			}},
+		},
 	}
 }
 
@@ -176,6 +285,10 @@ type podmanImageRow struct {
 	// action, since a Trivy scan is much slower than a digest comparison.
 	VulnChecked bool
 	VulnCount   int
+	// unique CVEs split by whether a fixed package exists, the raw count above lists one CVE once per package
+	VulnFixable         int
+	VulnNoFix           int
+	VulnCriticalFixable int
 }
 
 type podmanVolumeRow struct {
@@ -569,24 +682,29 @@ func podmanListImages(usage map[string]*podmanImageUsage, stackImages []string) 
 		}
 		var vulnChecked bool
 		var vulnCount int
+		var vulnSum podmanVulnSummary
 		if st, ok := vulnStatus[repo+":"+tag]; ok {
 			vulnChecked, vulnCount = true, st.Count
+			_, vulnSum = podmanGroupVulns(st.Details)
 		}
 		sizeBytes, _ := item["Size"].(float64)
 		rows = append(rows, podmanImageRow{
-			ID:               podmanShortID(fullID),
-			FullID:           fullID,
-			Repository:       repo,
-			Tag:              tag,
-			Size:             podmanFormatSize(item["Size"]),
-			SizeBytes:        sizeBytes,
-			Created:          podmanFormatCreated(item["Created"]),
-			SystemContainers: system,
-			UserContainers:   user,
-			UpdateChecked:    updateChecked,
-			VulnChecked:      vulnChecked,
-			VulnCount:        vulnCount,
-			UpdateAvailable:  updateAvailable,
+			ID:                  podmanShortID(fullID),
+			FullID:              fullID,
+			Repository:          repo,
+			Tag:                 tag,
+			Size:                podmanFormatSize(item["Size"]),
+			SizeBytes:           sizeBytes,
+			Created:             podmanFormatCreated(item["Created"]),
+			SystemContainers:    system,
+			UserContainers:      user,
+			UpdateChecked:       updateChecked,
+			VulnChecked:         vulnChecked,
+			VulnCount:           vulnCount,
+			VulnFixable:         vulnSum.Fixable,
+			VulnNoFix:           vulnSum.NoFix,
+			VulnCriticalFixable: vulnSum.CriticalFixable,
+			UpdateAvailable:     updateAvailable,
 		})
 	}
 
@@ -780,14 +898,14 @@ func podmanFormatReclaimable(reclaimable, size float64) string {
 func (p *Podman) ServePodman(w http.ResponseWriter, r *http.Request) {
 	info := podmanInfoText()
 	webtemplates.Render(w, "server_podman.html", mergeChrome(map[string]interface{}{
-		"Info":        info,
-		"InfoSummary": podmanInfoSummary(info),
-		"Images":      podmanListImages(podmanImageUsageCounts(p.MySQL), podmanStackImages()),
-		"Volumes":     podmanListVolumes(),
-		"Networks":    podmanListNetworks(),
-		"DiskUsage":   podmanSystemDiskUsage(),
-		"CSRFToken":   csrf.Token(r),
-		"Flashes":     auth.PopFlashes(w, r, p.Sessions),
+		"Info":      info,
+		"InfoView":  podmanInfoOverviewFrom(info),
+		"Images":    podmanListImages(podmanImageUsageCounts(p.MySQL), podmanStackImages()),
+		"Volumes":   podmanListVolumes(),
+		"Networks":  podmanListNetworks(),
+		"DiskUsage": podmanSystemDiskUsage(),
+		"CSRFToken": csrf.Token(r),
+		"Flashes":   auth.PopFlashes(w, r, p.Sessions),
 	}, r, "Podman"))
 }
 
@@ -924,9 +1042,82 @@ type podmanVulnDetail struct {
 	Package          string `json:"package"`
 	InstalledVersion string `json:"installed_version"`
 	FixedVersion     string `json:"fixed_version"` // empty if no fix is published yet
+	Status           string `json:"status"`        // trivy's fixed, affected, fix_deferred, will_not_fix...
 	Severity         string `json:"severity"`
 	Title            string `json:"title"`
 	URL              string `json:"url"`
+}
+
+// podmanVulnPkg is one package a CVE was found in
+type podmanVulnPkg struct {
+	Package          string `json:"package"`
+	InstalledVersion string `json:"installed_version"`
+	FixedVersion     string `json:"fixed_version"`
+	Status           string `json:"status"`
+}
+
+// podmanVulnCVE is one CVE with every package it shows up in, fixable when any of them has a fixed version
+type podmanVulnCVE struct {
+	ID       string          `json:"id"`
+	Severity string          `json:"severity"`
+	Title    string          `json:"title"`
+	URL      string          `json:"url"`
+	Fixable  bool            `json:"fixable"`
+	Packages []podmanVulnPkg `json:"packages"`
+}
+
+type podmanVulnSummary struct {
+	Unique          int `json:"unique"`
+	Fixable         int `json:"fixable"`
+	NoFix           int `json:"no_fix"`
+	CriticalFixable int `json:"critical_fixable"`
+	Findings        int `json:"findings"`
+}
+
+// podmanGroupVulns folds trivy's one-row-per-package list into one row per CVE, fixable ones first then critical first
+func podmanGroupVulns(details []podmanVulnDetail) ([]podmanVulnCVE, podmanVulnSummary) {
+	byID := map[string]*podmanVulnCVE{}
+	var order []string
+	for _, d := range details {
+		c, ok := byID[d.ID]
+		if !ok {
+			c = &podmanVulnCVE{ID: d.ID, Severity: d.Severity, Title: d.Title, URL: d.URL}
+			byID[d.ID] = c
+			order = append(order, d.ID)
+		}
+		if d.Severity == "CRITICAL" {
+			c.Severity = "CRITICAL"
+		}
+		if d.FixedVersion != "" {
+			c.Fixable = true
+		}
+		c.Packages = append(c.Packages, podmanVulnPkg{d.Package, d.InstalledVersion, d.FixedVersion, d.Status})
+	}
+	out := make([]podmanVulnCVE, 0, len(order))
+	sum := podmanVulnSummary{Findings: len(details)}
+	for _, id := range order {
+		c := *byID[id]
+		out = append(out, c)
+		sum.Unique++
+		if c.Fixable {
+			sum.Fixable++
+			if c.Severity == "CRITICAL" {
+				sum.CriticalFixable++
+			}
+		} else {
+			sum.NoFix++
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Fixable != out[j].Fixable {
+			return out[i].Fixable
+		}
+		if (out[i].Severity == "CRITICAL") != (out[j].Severity == "CRITICAL") {
+			return out[i].Severity == "CRITICAL"
+		}
+		return out[i].ID > out[j].ID
+	})
+	return out, sum
 }
 
 // podmanVulnStatus is one repository:tag's last-checked vulnerability scan
@@ -1000,16 +1191,37 @@ var podmanEnsureTrivyRun = func() error {
 // REST socket so it finds images already in the shared store without a
 // registry round trip. Injectable so tests never shell out to a real
 // trivy binary.
+// trivy unpacks each image into TMPDIR, /tmp is tmpfs on a lot of servers so a big image filled RAM and a killed scan left it there
+var PodmanTrivyTmpDir = "/var/tmp/openadmin-trivy"
+
 var podmanCheckImageVulnerabilitiesRun = func(ref string) (details []podmanVulnDetail, err error) {
-	cmd := exec.Command("trivy", "image",
+	if err := os.MkdirAll(PodmanTrivyTmpDir, 0700); err != nil {
+		return nil, err
+	}
+	tmp, err := os.MkdirTemp(PodmanTrivyTmpDir, "scan-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmp)
+	args := []string{"trivy", "image",
 		"--scanners", "vuln",
 		"--image-src", "podman",
 		"--podman-host", PodmanTrivySocketPath,
 		"--format", "json",
 		"--severity", "HIGH,CRITICAL",
+		// one image at a time and low priority, a scan all shouldn't starve the sites
+		"--parallel", "1",
 		"--quiet",
 		ref,
-	)
+	}
+	if p, err := exec.LookPath("ionice"); err == nil {
+		args = append([]string{p, "-c2", "-n7"}, args...)
+	}
+	if p, err := exec.LookPath("nice"); err == nil {
+		args = append([]string{p, "-n", "19"}, args...)
+	}
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Env = append(os.Environ(), "TMPDIR="+tmp)
 	// trivy sometimes writes progress/warning lines to stderr even on
 	// success (e.g. DB update progress on first run); stdout alone is
 	// parsed as JSON, mirroring podmanRunRunStdout's reasoning above.
@@ -1034,6 +1246,7 @@ func podmanParseHighCriticalVulns(reportJSON []byte) ([]podmanVulnDetail, error)
 				PkgName          string `json:"PkgName"`
 				InstalledVersion string `json:"InstalledVersion"`
 				FixedVersion     string `json:"FixedVersion"`
+				Status           string `json:"Status"`
 				Severity         string `json:"Severity"`
 				Title            string `json:"Title"`
 				PrimaryURL       string `json:"PrimaryURL"`
@@ -1054,6 +1267,7 @@ func podmanParseHighCriticalVulns(reportJSON []byte) ([]podmanVulnDetail, error)
 				Package:          v.PkgName,
 				InstalledVersion: v.InstalledVersion,
 				FixedVersion:     v.FixedVersion,
+				Status:           v.Status,
 				Severity:         v.Severity,
 				Title:            v.Title,
 				URL:              v.PrimaryURL,
@@ -1109,15 +1323,24 @@ func podmanManifestDigestForPlatform(manifestJSON []byte, os, arch string) (stri
 // "Check all for updates" action) and never automatically on every page
 // load, where doing this for every listed image would add many seconds.
 var podmanCheckImageUpdateRun = func(ref string) (available bool, err error) {
-	localOut, err := podmanRunRunStdout("image", "inspect", ref, "--format", "{{.Digest}}|{{.Os}}|{{.Architecture}}")
+	localOut, err := podmanRunRunStdout("image", "inspect", ref, "--format", "{{.Digest}}|{{.Os}}|{{.Architecture}}|{{range .RepoDigests}}{{.}} {{end}}")
 	if err != nil {
 		return false, err
 	}
-	parts := strings.SplitN(strings.TrimSpace(localOut), "|", 3)
-	if len(parts) != 3 || parts[0] == "" {
+	parts := strings.SplitN(strings.TrimSpace(localOut), "|", 4)
+	if len(parts) < 3 || parts[0] == "" {
 		return false, fmt.Errorf("could not determine local image digest for %s", ref)
 	}
 	localDigest, localOS, localArch := parts[0], parts[1], parts[2]
+	// .Digest can be the whole manifest list's, the platform one we compare against is then only in RepoDigests
+	known := map[string]bool{localDigest: true}
+	if len(parts) == 4 {
+		for _, rd := range strings.Fields(parts[3]) {
+			if i := strings.LastIndex(rd, "@"); i != -1 {
+				known[rd[i+1:]] = true
+			}
+		}
+	}
 
 	remoteOut, err := podmanRunRunStdout("manifest", "inspect", ref)
 	if err != nil {
@@ -1127,7 +1350,7 @@ var podmanCheckImageUpdateRun = func(ref string) (available bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	return remoteDigest != localDigest, nil
+	return !known[remoteDigest], nil
 }
 
 // podmanDeleteImageIfUnused re-checks usage right before actually deleting.
@@ -1468,5 +1691,12 @@ func (p *Podman) ServePodmanImageVulnerabilities(w http.ResponseWriter, r *http.
 		writeJSON(w, map[string]interface{}{"checked": false, "details": []podmanVulnDetail{}})
 		return
 	}
-	writeJSON(w, map[string]interface{}{"checked": true, "details": st.Details})
+	cves, sum := podmanGroupVulns(st.Details)
+	podmanUpdateStatusMu.Lock()
+	upd, updChecked := podmanUpdateStatusCache[ref]
+	podmanUpdateStatusMu.Unlock()
+	writeJSON(w, map[string]interface{}{
+		"checked": true, "details": st.Details, "cves": cves, "summary": sum,
+		"checked_at": st.CheckedAt.UTC().Format(time.RFC3339), "update_available": updChecked && upd.Available,
+	})
 }

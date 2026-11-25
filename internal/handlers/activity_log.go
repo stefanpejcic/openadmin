@@ -319,6 +319,7 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 		return actJoin(titleWord(actPath(r, "action")), "container image", quoted(actPath(r, "id")))
 	},
 	"POST /services/limits":              func(r *http.Request) string { return "Changed service resource limits" },
+	"POST /services/limits/recreate":     func(r *http.Request) string { return "Restarted " + r.FormValue("container") + " to apply its limits" },
 	"POST /services/logs/edit":           func(r *http.Request) string { return "Changed log settings" },
 	"POST /services/logs/raw":            func(r *http.Request) string { return "Edited a log file" },
 	"DELETE /services/logs/raw":          func(r *http.Request) string { return "Emptied a log file" },

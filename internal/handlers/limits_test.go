@@ -22,10 +22,13 @@ func withScratchGlobalEnvPath(t *testing.T) string {
 	GlobalEnvPath = filepath.Join(dir, ".env")
 	t.Cleanup(func() { GlobalEnvPath = orig })
 	// never touch real containers or compose
-	origCompose, origRun := LimitsComposePath, limitsPodmanUpdateRun
+	origCompose, origRun, origRunning := LimitsComposePath, limitsPodmanUpdateRun, limitsContainerRunning
 	LimitsComposePath = filepath.Join(dir, "docker-compose.yml")
 	limitsPodmanUpdateRun = func(string, string) error { return nil }
-	t.Cleanup(func() { LimitsComposePath, limitsPodmanUpdateRun = origCompose, origRun })
+	limitsContainerRunning = func(string) bool { return true }
+	t.Cleanup(func() {
+		LimitsComposePath, limitsPodmanUpdateRun, limitsContainerRunning = origCompose, origRun, origRunning
+	})
 	return GlobalEnvPath
 }
 

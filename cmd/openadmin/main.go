@@ -45,6 +45,9 @@ func main() {
 		fmt.Println(version)
 		return
 	}
+	// podman keeps conmon in the calling unit's cgroup when it sees these, so restarting admin killed every container it had (re)created
+	os.Unsetenv("INVOCATION_ID")
+	os.Unsetenv("NOTIFY_SOCKET")
 	// prints a join code so a server can be added to a cluster from ssh too
 	if len(os.Args) > 1 && os.Args[1] == "cluster-join-code" {
 		code, err := cluster.GenerateJoinCode(adminPortAtStartup())
@@ -780,6 +783,10 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /containers/{username}/{action}/{container_name}", auth.RequireLogin(sessions, authOpts, users.ServeManageContainer))
 	mux.HandleFunc("POST /users/{username}/account-setting/{field}", auth.RequireLogin(sessions, authOpts, users.ServeUserAccountSetting))
 	mux.HandleFunc("GET /containers/stats/{username}", auth.RequireLogin(sessions, authOpts, users.ServeContainersStats))
+	mux.HandleFunc("GET /containers/{username}/inspect/{container_name}", auth.RequireLogin(sessions, authOpts, users.ServeContainerInspect))
+	mux.HandleFunc("GET /containers/{username}/config/{service}", auth.RequireLogin(sessions, authOpts, users.ServeServiceConfig))
+	mux.HandleFunc("POST /containers/{username}/config/{service}", auth.RequireLogin(sessions, authOpts, users.ServeServiceConfig))
+	mux.HandleFunc("GET /containers/{username}/config/{service}/tags", auth.RequireLogin(sessions, authOpts, users.ServeServiceTags))
 
 	mux.HandleFunc("GET /databases", auth.RequireLogin(sessions, authOpts, databases.ServeMySQL))
 	mux.HandleFunc("GET /databases/postgresql", auth.RequireLogin(sessions, authOpts, databases.ServePostgreSQL))
@@ -885,6 +892,9 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /backups/system/action-status", auth.RequireAdmin(sessions, authOpts, backupsHandlers.ServeSystemBackupsActionStatus))
 	mux.HandleFunc("GET /services/limits", auth.RequireAdmin(sessions, authOpts, limits.ServeLimits))
 	mux.HandleFunc("POST /services/limits", auth.RequireAdmin(sessions, authOpts, limits.ServeLimits))
+	mux.HandleFunc("POST /services/limits/recreate", auth.RequireAdmin(sessions, authOpts, limits.ServeRecreate))
+	mux.HandleFunc("GET /services/limits/usage", auth.RequireAdmin(sessions, authOpts, limits.ServeUsage))
+	mux.HandleFunc("GET /services/limits/tags", auth.RequireAdmin(sessions, authOpts, limits.ServeTags))
 	mux.HandleFunc("GET /services/logs", auth.RequireAdmin(sessions, authOpts, logs.ServeIndex))
 	mux.HandleFunc("GET /services/logs/edit", auth.RequireAdmin(sessions, authOpts, logs.ServeEditLogs))
 	mux.HandleFunc("POST /services/logs/edit", auth.RequireAdmin(sessions, authOpts, logs.ServeEditLogs))

@@ -55,6 +55,66 @@ type composeServiceView struct {
 	CPULimit      string // raw "cpus" value (e.g. "0.5" or "0"), "" if unset -- "0" itself is NOT unlimited here, the template's JS decides that, matching the original page
 	MemoryLimitGB string // memory converted to GB and formatted to 2 decimals, "" if unset or zero
 	PIDsLimit     string // raw "pids" value (e.g. "100" or "0"), "" if unset
+	// shown when the row is expanded
+	Restart     string
+	DependsOn   []string
+	Volumes     []string
+	Networks    []string
+	Command     string
+	Healthcheck string
+}
+
+// composeList reads a compose field that can be a list or a map (depends_on, networks) as sorted names
+func composeList(v interface{}) []string {
+	var out []string
+	switch t := v.(type) {
+	case []interface{}:
+		for _, x := range t {
+			out = append(out, composeStringOrEmpty(x))
+		}
+	case map[string]interface{}:
+		for k := range t {
+			out = append(out, k)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// composeCommand joins a command or healthcheck test, which compose allows as a string or a list
+func composeCommand(v interface{}) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case []interface{}:
+		parts := make([]string, 0, len(t))
+		for _, x := range t {
+			parts = append(parts, composeStringOrEmpty(x))
+		}
+		return strings.Join(parts, " ")
+	}
+	return ""
+}
+
+func composeVolumes(v interface{}) []string {
+	list, _ := v.([]interface{})
+	out := make([]string, 0, len(list))
+	for _, x := range list {
+		switch t := x.(type) {
+		case string:
+			out = append(out, t)
+		case map[string]interface{}:
+			line := composeStringOrEmpty(t["source"]) + " → " + composeStringOrEmpty(t["target"])
+			if t["source"] == nil {
+				line = composeStringOrEmpty(t["target"])
+			}
+			if ro, _ := t["read_only"].(bool); ro {
+				line += " (read-only)"
+			}
+			out = append(out, line)
+		}
+	}
+	return out
 }
 
 // composeStringOrEmpty stringifies a decoded JSON value, treating a missing
@@ -159,6 +219,20 @@ func composeServicesForUser(mysqlDB *sql.DB, username string) []composeServiceVi
 				view.Environment = append(view.Environment, composeEnvView{Key: k, Value: composeStringOrEmpty(env[k])})
 			}
 		}
+		view.Restart = composeStringOrEmpty(svc["restart"])
+		view.DependsOn = composeList(svc["depends_on"])
+		view.Networks = composeList(svc["networks"])
+		view.Volumes = composeVolumes(svc["volumes"])
+		view.Command = composeCommand(svc["command"])
+		if hc, ok := svc["healthcheck"].(map[string]interface{}); ok {
+			test := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(composeCommand(hc["test"]), "CMD-SHELL"), "CMD"))
+			if test != "" && test != "NONE" {
+				view.Healthcheck = test
+				if iv := composeStringOrEmpty(hc["interval"]); iv != "" {
+					view.Healthcheck += " (every " + iv + ")"
+				}
+			}
+		}
 		if deploy, ok := svc["deploy"].(map[string]interface{}); ok {
 			if resources, ok := deploy["resources"].(map[string]interface{}); ok {
 				if limits, ok := resources["limits"].(map[string]interface{}); ok {
@@ -236,11 +310,23 @@ var containerPodmanUpdateRun = func(context, dir string, args []string) error {
 // handling of its own -- a failure here is meant to propagate all the way
 // out uncaught.
 func restartContainerCmd(context, containerName string) error {
-	path := "/home/" + context
-	if _, _, err := containerComposeCaptureRun(context, path, "down", containerName); err != nil {
-		return err
+	path := filepath.Join(containerHomeBase, context)
+	if _, stderr, err := containerComposeCaptureRun(context, path, "down", containerName); err != nil {
+		return composeRunError(stderr, err)
 	}
-	_, _, err := containerComposeCaptureRun(context, path, "up", "-d", containerName)
+	_, stderr, err := containerComposeCaptureRun(context, path, "up", "-d", containerName)
+	return composeRunError(stderr, err)
+}
+
+// composeRunError puts the last line podman-compose printed into the error, a bare exit status says nothing
+func composeRunError(stderr string, err error) error {
+	if err == nil {
+		return nil
+	}
+	lines := strings.Split(strings.TrimSpace(stderr), "\n")
+	if last := strings.TrimSpace(lines[len(lines)-1]); last != "" {
+		return fmt.Errorf("%v: %s", err, last)
+	}
 	return err
 }
 
@@ -252,14 +338,20 @@ type containerActionResult struct {
 	IsDict  bool
 	Success bool
 	Message string
+	// cpu or ram set to 0, podman update can't lift those so the service needs a restart
+	RestartNeeded bool
+	Value         string
 }
+
+// containerHomeBase is where user contexts keep their compose project, swapped in tests
+var containerHomeBase = "/home"
 
 // updateContainerRAMOrCPU updates a container's RAM, CPU, or PIDs limit. The
 // returned error is non-nil only for the one case that's genuinely
 // unhandled here (a restart_container() failure while resetting a limit to
 // 0/unlimited) -- callers should treat that as a bare 500, not a flash.
 func updateContainerRAMOrCPU(context, containerName, action, value string) (containerActionResult, error) {
-	path := "/home/" + context
+	path := filepath.Join(containerHomeBase, context)
 	envVar := containerEnvVarSanitizeRe.ReplaceAllString(strings.ToUpper(containerName), "_") + "_" + strings.ToUpper(action)
 
 	lowerAction := strings.ToLower(action)
@@ -279,49 +371,59 @@ func updateContainerRAMOrCPU(context, containerName, action, value string) (cont
 		return containerActionResult{IsDict: true, Message: fmt.Sprintf(".env file not found at %s", envPath)}, nil
 	}
 
-	// If envVar isn't already present in the .env file, this loop simply
-	// never adds it -- there's no fallback append.
 	lines := splitFileLinesPreserving(string(raw))
+	found := false
 	for i, line := range lines {
 		if strings.HasPrefix(line, envVar+"=") {
 			lines[i] = envVar + `="` + value + "\"\n"
+			found = true
 		}
+	}
+	// the compose file can only read it if it's there, saying "set" and dropping it misled admins
+	if !found {
+		if n := len(lines); n > 0 && !strings.HasSuffix(lines[n-1], "\n") {
+			lines[n-1] += "\n"
+		}
+		lines = append(lines, envVar+`="`+value+"\"\n")
 	}
 	if err := os.WriteFile(envPath, []byte(strings.Join(lines, "")), 0644); err != nil {
 		return containerActionResult{IsDict: true, Message: fmt.Sprintf("Failed to update .env: %v", err)}, nil
 	}
 
+	unlimited := value == "0" || value == "0G"
 	if containerExistsRun(context, containerName) {
-		if value == "0" || value == "0G" {
-			if err := restartContainerCmd(context, containerName); err != nil {
-				return containerActionResult{}, err
+		var updateArgs []string
+		switch {
+		case unlimited && lowerAction != "pids":
+			// podman update ignores 0 and rejects -1 for these, the .env is saved and a restart picks it up
+			msg := fmt.Sprintf("%s limit for %s set to unlimited, restart the service to apply it.", strings.ToUpper(action), containerName)
+			return containerActionResult{Message: msg, RestartNeeded: true, Value: value}, nil
+		case lowerAction == "ram":
+			updateArgs = []string{"update", "--memory-swap", value, "--memory", value, containerName}
+		case lowerAction == "pids":
+			pids := value
+			if unlimited {
+				pids = "-1"
 			}
-		} else {
-			var updateArgs []string
-			switch lowerAction {
-			case "ram":
-				updateArgs = []string{"update", "--memory-swap", value, "--memory", value, containerName}
-			case "pids":
-				updateArgs = []string{"update", "--pids-limit", value, containerName}
-			default:
-				updateArgs = []string{"update", "--cpus", value, containerName}
+			updateArgs = []string{"update", "--pids-limit", pids, containerName}
+		default:
+			updateArgs = []string{"update", "--cpus", value, containerName}
+		}
+		if err := containerPodmanUpdateRun(context, path, updateArgs); err != nil {
+			if _, ok := err.(*exec.ExitError); ok {
+				return containerActionResult{IsDict: true, Message: fmt.Sprintf("Podman command failed: %v", err)}, nil
 			}
-			if err := containerPodmanUpdateRun(context, path, updateArgs); err != nil {
-				if _, ok := err.(*exec.ExitError); ok {
-					return containerActionResult{IsDict: true, Message: fmt.Sprintf("Podman command failed: %v", err)}, nil
-				}
-				return containerActionResult{IsDict: true, Message: fmt.Sprintf("Unexpected error: %v", err)}, nil
-			}
+			return containerActionResult{IsDict: true, Message: fmt.Sprintf("Unexpected error: %v", err)}, nil
 		}
 	}
 
 	var message string
-	if value == "0" || value == "0G" {
+	if unlimited {
 		message = fmt.Sprintf("%s limits for container %s removed and set to unlimited", strings.ToUpper(action), containerName)
 	} else {
 		message = fmt.Sprintf("Max %s for container %s set to %s", strings.ToUpper(action), containerName, value)
 	}
-	return containerActionResult{IsDict: false, Message: message}, nil
+	return containerActionResult{IsDict: false, Message: message, Value: value}, nil
 }
 
 // startStopResult is start_or_stop_container's always-a-dict return shape.
@@ -383,11 +485,26 @@ func (u *Users) ServeManageContainer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	context, _ := queryContextByUsername(u.MySQL, username)
+	ajax := r.Header.Get("X-Requested-With") == "XMLHttpRequest"
 
 	switch action {
 	case "cpu", "ram", "pids":
 		value := r.PostFormValue("value")
 		result, err := updateContainerRAMOrCPU(context, containerName, action, value)
+		if ajax {
+			if err != nil {
+				writeJSONStatus(w, http.StatusInternalServerError, map[string]interface{}{"success": false, "error": err.Error()})
+				return
+			}
+			if result.IsDict && !result.Success {
+				writeJSONStatus(w, http.StatusBadRequest, map[string]interface{}{"success": false, "error": result.Message})
+				return
+			}
+			writeJSONStatus(w, http.StatusOK, map[string]interface{}{
+				"success": true, "message": result.Message, "restart_needed": result.RestartNeeded, "value": result.Value,
+			})
+			return
+		}
 		if err != nil {
 			// restart_container() failing while resetting the limit to
 			// 0/unlimited is treated as a bare 500, no flash message.
@@ -407,6 +524,14 @@ func (u *Users) ServeManageContainer(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "restart":
+		if ajax {
+			if err := restartContainerCmd(context, containerName); err != nil {
+				writeJSONStatus(w, http.StatusInternalServerError, map[string]interface{}{"success": false, "error": "Failed to restart " + containerName + ": " + err.Error()})
+				return
+			}
+			writeJSONStatus(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Container '" + containerName + "' restarted successfully."})
+			return
+		}
 		if err := restartContainerCmd(context, containerName); err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -490,4 +615,105 @@ func (u *Users) ServeContainersStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]interface{}{"container_stats": stats})
+}
+
+// containerInspectRun is swapped in tests, it returns podman inspect's json for one container
+var containerInspectRun = func(context, containerName string) ([]byte, error) {
+	cmd, err := podman.Command(context, "inspect", "--type", "container", containerName)
+	if err != nil {
+		return nil, err
+	}
+	return cmd.Output()
+}
+
+// containerRuntimeInfo is what the expanded #services row shows about the running container
+type containerRuntimeInfo struct {
+	Exists       bool              `json:"exists"`
+	Status       string            `json:"status"`
+	Health       string            `json:"health"`
+	StartedAt    string            `json:"started_at"`
+	FinishedAt   string            `json:"finished_at"`
+	ExitCode     int               `json:"exit_code"`
+	RestartCount int               `json:"restart_count"`
+	OOMKilled    bool              `json:"oom_killed"`
+	Created      string            `json:"created"`
+	ImageID      string            `json:"image_id"`
+	ImageName    string            `json:"image_name"`
+	IPs          map[string]string `json:"ips"`
+	Mounts       []string          `json:"mounts"`
+}
+
+func parseContainerInspect(raw []byte) containerRuntimeInfo {
+	var list []struct {
+		Created   string
+		Image     string
+		ImageName string
+		State     struct {
+			Status     string
+			StartedAt  string
+			FinishedAt string
+			ExitCode   int
+			OOMKilled  bool
+			Health     *struct{ Status string }
+		}
+		RestartCount    int
+		NetworkSettings struct {
+			Networks map[string]struct{ IPAddress string }
+		}
+		Mounts []struct {
+			Type        string
+			Name        string
+			Source      string
+			Destination string
+			RW          bool
+		}
+	}
+	if json.Unmarshal(raw, &list) != nil || len(list) == 0 {
+		return containerRuntimeInfo{}
+	}
+	c := list[0]
+	info := containerRuntimeInfo{
+		Exists: true, Status: c.State.Status, StartedAt: c.State.StartedAt, FinishedAt: c.State.FinishedAt,
+		ExitCode: c.State.ExitCode, OOMKilled: c.State.OOMKilled, RestartCount: c.RestartCount,
+		Created: c.Created, ImageName: c.ImageName, IPs: map[string]string{}, Mounts: []string{},
+	}
+	if len(c.Image) > 12 {
+		info.ImageID = c.Image[:12]
+	}
+	if c.State.Health != nil {
+		info.Health = c.State.Health.Status
+	}
+	for name, n := range c.NetworkSettings.Networks {
+		info.IPs[name] = n.IPAddress
+	}
+	for _, m := range c.Mounts {
+		src := m.Source
+		if m.Type == "volume" && m.Name != "" {
+			src = m.Name
+		}
+		line := src + " → " + m.Destination
+		if !m.RW {
+			line += " (read-only)"
+		}
+		info.Mounts = append(info.Mounts, line)
+	}
+	return info
+}
+
+// ServeContainerInspect handles GET /containers/{username}/inspect/{container_name} for the expanded #services row
+func (u *Users) ServeContainerInspect(w http.ResponseWriter, r *http.Request) {
+	username := r.PathValue("username")
+	currentUser := auth.CurrentUser(r)
+	if !paneldb.CheckIfOwnerForUser(u.MySQL, username, currentUser.Username, currentUser.Role) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	context, _ := queryContextByUsername(u.MySQL, username)
+	raw, err := containerInspectRun(context, r.PathValue("container_name"))
+	if err != nil {
+		// not created yet or removed, the row still shows what compose says
+		writeJSON(w, containerRuntimeInfo{})
+		return
+	}
+	writeJSON(w, parseContainerInspect(raw))
 }

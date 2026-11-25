@@ -11,12 +11,11 @@
     <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
         {{template "chrome_flashes" .}}
 
-<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
+<div class="op-page-header px-4 pt-4 sm:px-6 lg:px-8 sm:pt-6 lg:pt-8">
     <header>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div class="grow">
                 <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Podman</h1>
-                <p class="text-sm text-gray-500 dark:text-gray-500">Containers, images, volumes and networks of the server's podman.</p>
             </div>
         </div>
     </header>
@@ -224,6 +223,10 @@ function podmanPollBulkStatus(loadingLabel) {
         vulnModalRef: '',
         vulnModalLoading: false,
         vulnModalDetails: [],
+        vulnModalSummary: null,
+        vulnModalCheckedAt: '',
+        vulnModalUpdate: false,
+        vulnShowNoFix: false,
 
         init() {
             this.$watch('tab', value => { window.location.hash = value; });
@@ -250,10 +253,18 @@ function podmanPollBulkStatus(loadingLabel) {
             this.vulnModalRef = ref;
             this.vulnModalLoading = true;
             this.vulnModalDetails = [];
+            this.vulnModalSummary = null;
+            this.vulnModalUpdate = false;
+            this.vulnShowNoFix = false;
             fetch('/services/podman/images/vulnerabilities?ref=' + encodeURIComponent(ref), { cache: 'no-store' })
                 .then(function (response) { return response.json(); })
                 .then((data) => {
-                    this.vulnModalDetails = data.details || [];
+                    this.vulnModalDetails = data.cves || [];
+                    this.vulnModalSummary = data.summary || null;
+                    this.vulnModalCheckedAt = data.checked_at || '';
+                    this.vulnModalUpdate = !!data.update_available;
+                    // nothing fixable, show what there is instead of an empty table
+                    if (this.vulnModalSummary && !this.vulnModalSummary.fixable) this.vulnShowNoFix = true;
                     this.vulnModalLoading = false;
                 })
                 .catch(() => {
@@ -289,21 +300,52 @@ function podmanPollBulkStatus(loadingLabel) {
 		</div>
 	</nav>
 
-<div class="px-4 py-6 sm:px-6 lg:px-8">
+<div class="pt-4 pb-6">
 
     <!-- INFO -->
-    <div x-show="tab === 'info'" role="tabpanel">
-        {{if .InfoSummary}}
-        <dl class="mb-6 max-w-2xl divide-y divide-gray-200 rounded-md border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
-            {{range .InfoSummary}}
-            <div class="flex items-center justify-between gap-4 px-3 py-2.5">
-                <dt class="text-gray-500 dark:text-gray-500">{{.Label}}</dt>
-                <dd class="truncate text-right font-medium text-gray-900 dark:text-gray-50" title="{{.Value}}">{{.Value}}</dd>
+    <div x-show="tab === 'info'" role="tabpanel" class="px-4 sm:px-6 lg:px-8">
+        {{with .InfoView}}
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+                <p class="text-sm text-gray-500 dark:text-gray-500">Containers</p>
+                <p class="mt-1 text-xl font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Running}} running</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">{{.Paused}} paused · {{.Stopped}} stopped</p>
+            </div>
+            <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+                <p class="text-sm text-gray-500 dark:text-gray-500">Images</p>
+                <p class="mt-1 text-xl font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Images}}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">{{len $.Volumes}} volumes · {{len $.Networks}} networks</p>
+            </div>
+            <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+                <p class="text-sm text-gray-500 dark:text-gray-500">Storage</p>
+                <p class="mt-1 text-xl font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.StorageUsed}}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">of {{.StorageTotal}} on the container storage disk ({{.StoragePct}}%)</p>
+                <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800"><div class="h-1.5 rounded-full {{if ge .StoragePct 90}}bg-red-500{{else if ge .StoragePct 75}}bg-orange-500{{else}}bg-blue-500{{end}}" style="width: {{.StoragePct}}%"></div></div>
+            </div>
+            <div class="rounded-md border border-gray-200 p-4 dark:border-gray-800">
+                <p class="text-sm text-gray-500 dark:text-gray-500">Podman</p>
+                <p class="mt-1 text-xl font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.Version}}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">{{.Runtime}} · {{.Network}}</p>
+            </div>
+        </div>
+        <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {{range .Sections}}
+            <div class="rounded-md border border-gray-200 dark:border-gray-800">
+                <h2 class="border-b border-gray-200 px-4 py-3 text-sm font-semibold text-gray-900 dark:border-gray-800 dark:text-gray-50">{{.Title}}</h2>
+                <dl class="divide-y divide-gray-200 text-sm dark:divide-gray-800">
+                    {{range .Fields}}
+                    <div class="flex items-start justify-between gap-4 px-4 py-2.5">
+                        <dt class="shrink-0 text-gray-500 dark:text-gray-500">{{.Label}}</dt>
+                        <dd class="min-w-0 break-words text-right font-medium text-gray-900 dark:text-gray-50">{{.Value}}</dd>
+                    </div>
+                    {{end}}
+                </dl>
             </div>
             {{end}}
-        </dl>
+        </div>
         {{end}}
-        <details class="group" {{if not .InfoSummary}}open{{end}}>
+        <div class="mt-6"></div>
+        <details class="group" {{if not .InfoView}}open{{end}}>
             <summary class="inline-flex cursor-pointer select-none items-center gap-1 rounded text-sm font-medium text-gray-900 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 dark:text-gray-50"><svg class="size-4 shrink-0 text-gray-500 transition-transform group-open:rotate-90 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>Full podman info</summary>
             <pre class="mt-3 w-full overflow-auto whitespace-pre-wrap rounded-md border border-gray-200 bg-gray-50 p-4 font-mono text-xs leading-5 text-gray-700 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-300 max-h-[70vh]">{{.Info}}</pre>
         </details>
@@ -311,7 +353,7 @@ function podmanPollBulkStatus(loadingLabel) {
 
     <!-- IMAGES -->
     <div x-show="tab === 'images'" x-cloak role="tabpanel">
-        <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+        <div class="flex px-4 sm:px-6 lg:px-8 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
                 <input x-model="searchImages" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-700/30 focus:border-blue-500 dark:focus:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search images…" type="search">
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
@@ -327,25 +369,25 @@ function podmanPollBulkStatus(loadingLabel) {
         </div>
 
         <div class="overflow-x-auto">
-            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+            <div class="w-full overflow-auto whitespace-nowrap">
                 {{if .Images}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead>
-                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                        <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 border-y border-gray-200 dark:border-gray-800">
                             {{template "podman_sort_th" (dict "Label" "Repository" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "repository")}}
                             {{template "podman_sort_th" (dict "Label" "Tag" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "tag")}}
                             {{template "podman_sort_th" (dict "Label" "Image ID" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "id")}}
                             {{template "podman_sort_th" (dict "Label" "Size" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "size")}}
                             {{template "podman_sort_th" (dict "Label" "Containers" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "containers")}}
                             {{template "podman_sort_th" (dict "Label" "Created" "StateVar" "sortImages" "TbodyID" "podman-images-tbody" "Key" "created")}}
-                            <th scope="col" class="whitespace-nowrap border-b px-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Update</th>
-                            <th scope="col" class="whitespace-nowrap border-b px-4 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Vulnerabilities</th>
-                            <th scope="col" class="whitespace-nowrap border-b px-4 text-center text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"><span class="sr-only">Actions</span></th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Update</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Vulnerabilities</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-center text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody id="podman-images-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
                         {{range .Images}}
-                        <tr x-show="searchImages === '' || '{{.Repository | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Tag | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.ID | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Size | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase())" data-sort-repository="{{.Repository}}" data-sort-tag="{{.Tag}}" data-sort-id="{{.ID}}" data-sort-size="{{.SizeBytes}}" data-sort-containers="{{add .SystemContainers .UserContainers}}" data-sort-created="{{.Created}}" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                        <tr x-show="searchImages === '' || '{{.Repository | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Tag | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.ID | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Size | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchImages.toLowerCase())" data-sort-repository="{{.Repository}}" data-sort-tag="{{.Tag}}" data-sort-id="{{.ID}}" data-sort-size="{{.SizeBytes}}" data-sort-containers="{{add .SystemContainers .UserContainers}}" data-sort-created="{{.Created}}" class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60">
                             <td class="p-4 text-sm py-2.5 font-medium text-gray-900 dark:text-gray-50">{{.Repository}}</td>
                             <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Tag}}</td>
                             <td class="p-4 text-sm py-2.5 font-mono text-gray-600 dark:text-gray-400">{{if .NotDownloaded}}—{{else}}{{.ID}}{{end}}</td>
@@ -392,8 +434,10 @@ function podmanPollBulkStatus(loadingLabel) {
                                     <span class="text-gray-400 dark:text-gray-600">—</span>
                                     {{else if not .VulnChecked}}
                                     <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Not checked</span>
-                                    {{else if gt .VulnCount 0}}
-                                    <button type="button" @click="openVulnModal('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 cursor-pointer hover:bg-red-100 dark:hover:bg-red-400/20 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">{{.VulnCount}} high or critical</button>
+                                    {{else if gt .VulnFixable 0}}
+                                    <button type="button" @click="openVulnModal('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" title="Unique CVEs that have a fixed package available{{if gt .VulnNoFix 0}}, plus {{.VulnNoFix}} without a fix yet{{end}}" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset cursor-pointer outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 {{if gt .VulnCriticalFixable 0}}bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20 hover:bg-red-100 dark:hover:bg-red-400/20{{else}}bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20 hover:bg-yellow-100{{end}}">{{.VulnFixable}} fixable{{if gt .VulnNoFix 0}} · {{.VulnNoFix}} no fix yet{{end}}</button>
+                                    {{else if gt .VulnNoFix 0}}
+                                    <button type="button" @click="openVulnModal('{{.Repository | jsStr}}:{{.Tag | jsStr}}')" title="Unique CVEs with no fixed package published yet, updating the image can't remove these" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset cursor-pointer outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 bg-gray-50 text-gray-900 ring-gray-500/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20 hover:bg-gray-100">{{.VulnNoFix}} no fix yet</button>
                                     {{else}}
                                     <span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Clean</span>
                                     {{end}}
@@ -438,7 +482,7 @@ function podmanPollBulkStatus(loadingLabel) {
 
     <!-- VOLUMES -->
     <div x-show="tab === 'volumes'" x-cloak role="tabpanel">
-        <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+        <div class="flex px-4 sm:px-6 lg:px-8 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
                 <input x-model="searchVolumes" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-700/30 focus:border-blue-500 dark:focus:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search volumes…" type="search">
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
@@ -448,11 +492,11 @@ function podmanPollBulkStatus(loadingLabel) {
         </div>
 
         <div class="overflow-x-auto">
-            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+            <div class="w-full overflow-auto whitespace-nowrap">
                 {{if .Volumes}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead>
-                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                        <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 border-y border-gray-200 dark:border-gray-800">
                             {{template "podman_sort_th" (dict "Label" "Name" "StateVar" "sortVolumes" "TbodyID" "podman-volumes-tbody" "Key" "name")}}
                             {{template "podman_sort_th" (dict "Label" "Driver" "StateVar" "sortVolumes" "TbodyID" "podman-volumes-tbody" "Key" "driver")}}
                             {{template "podman_sort_th" (dict "Label" "Mountpoint" "StateVar" "sortVolumes" "TbodyID" "podman-volumes-tbody" "Key" "mountpoint")}}
@@ -461,7 +505,7 @@ function podmanPollBulkStatus(loadingLabel) {
                     </thead>
                     <tbody id="podman-volumes-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
                         {{range .Volumes}}
-                        <tr x-show="searchVolumes === '' || '{{.Name | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Driver | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Mountpoint | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase())" data-sort-name="{{.Name}}" data-sort-driver="{{.Driver}}" data-sort-mountpoint="{{.Mountpoint}}" data-sort-created="{{.Created}}" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                        <tr x-show="searchVolumes === '' || '{{.Name | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Driver | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Mountpoint | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchVolumes.toLowerCase())" data-sort-name="{{.Name}}" data-sort-driver="{{.Driver}}" data-sort-mountpoint="{{.Mountpoint}}" data-sort-created="{{.Created}}" class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60">
                             <td class="p-4 py-2.5 font-mono text-xs text-gray-900 dark:text-gray-50"><span class="block max-w-[16rem] truncate" title="{{.Name}}">{{.Name}}</span></td>
                             <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Driver}}</td>
                             <td class="p-4 py-2.5 font-mono text-xs text-gray-600 dark:text-gray-400"><span class="block max-w-[24rem] truncate" title="{{.Mountpoint}}">{{.Mountpoint}}</span></td>
@@ -479,7 +523,7 @@ function podmanPollBulkStatus(loadingLabel) {
 
     <!-- NETWORKS -->
     <div x-show="tab === 'networks'" x-cloak role="tabpanel">
-        <div class="flex px-0 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
+        <div class="flex px-4 sm:px-6 lg:px-8 pb-4 flex-wrap items-center justify-between gap-2 sm:gap-x-6">
             <div class="relative w-full sm:max-w-[250px] sm:[&amp;>input]:h-[30px]">
                 <input x-model="searchNetworks" class="relative block w-full appearance-none rounded-md border px-2.5 py-1.5 outline-none transition sm:text-sm border-gray-300 dark:border-gray-800 text-gray-900 dark:text-gray-50 placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-950 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-700/30 focus:border-blue-500 dark:focus:border-blue-700 [&amp;::-webkit-search-cancel-button]:hidden [&amp;::-webkit-search-decoration]:hidden pl-8 shadow-xs" placeholder="Search networks…" type="search">
                 <div class="pointer-events-none absolute bottom-0 left-2 flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
@@ -489,11 +533,11 @@ function podmanPollBulkStatus(loadingLabel) {
         </div>
 
         <div class="overflow-x-auto">
-            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+            <div class="w-full overflow-auto whitespace-nowrap">
                 {{if .Networks}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead>
-                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
+                        <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 border-y border-gray-200 dark:border-gray-800">
                             {{template "podman_sort_th" (dict "Label" "Name" "StateVar" "sortNetworks" "TbodyID" "podman-networks-tbody" "Key" "name")}}
                             {{template "podman_sort_th" (dict "Label" "Network ID" "StateVar" "sortNetworks" "TbodyID" "podman-networks-tbody" "Key" "id")}}
                             {{template "podman_sort_th" (dict "Label" "Driver" "StateVar" "sortNetworks" "TbodyID" "podman-networks-tbody" "Key" "driver")}}
@@ -503,7 +547,7 @@ function podmanPollBulkStatus(loadingLabel) {
                     </thead>
                     <tbody id="podman-networks-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
                         {{range .Networks}}
-                        <tr x-show="searchNetworks === '' || '{{.Name | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.ID | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Driver | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Subnet | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase())" data-sort-name="{{.Name}}" data-sort-id="{{.ID}}" data-sort-driver="{{.Driver}}" data-sort-subnet="{{.Subnet}}" data-sort-created="{{.Created}}" class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                        <tr x-show="searchNetworks === '' || '{{.Name | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.ID | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Driver | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Subnet | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase()) || '{{.Created | jsStr}}'.toLowerCase().includes(searchNetworks.toLowerCase())" data-sort-name="{{.Name}}" data-sort-id="{{.ID}}" data-sort-driver="{{.Driver}}" data-sort-subnet="{{.Subnet}}" data-sort-created="{{.Created}}" class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60">
                             <td class="p-4 text-sm py-2.5 font-medium text-gray-900 dark:text-gray-50">{{.Name}}</td>
                             <td class="p-4 text-sm py-2.5 font-mono text-gray-600 dark:text-gray-400">{{.ID}}</td>
                             <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Driver}}</td>
@@ -522,23 +566,23 @@ function podmanPollBulkStatus(loadingLabel) {
 
     <!-- DISK USAGE -->
     <div x-show="tab === 'diskusage'" x-cloak role="tabpanel">
-        <p class="pb-4 text-xs text-gray-500 dark:text-gray-500">Images count every user's images. Containers and volumes are root's only.</p>
+        <p class="px-4 pb-4 text-xs text-gray-500 sm:px-6 lg:px-8 dark:text-gray-500">Images count every user's images. Containers and volumes are root's only.</p>
         <div class="overflow-x-auto">
-            <div class="w-full overflow-auto whitespace-nowrap border-t border-gray-200 dark:border-gray-800">
+            <div class="w-full overflow-auto whitespace-nowrap">
                 {{if .DiskUsage}}
                 <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
                     <thead>
-                        <tr class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 py-3 pl-4 sm:pl-6 dark:bg-gray-900">
-                            <th scope="col" class="whitespace-nowrap border-b px-4 py-2.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Type</th>
-                            <th scope="col" class="whitespace-nowrap border-b px-4 py-2.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Total</th>
-                            <th scope="col" class="whitespace-nowrap border-b px-4 py-2.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Active</th>
-                            <th scope="col" class="whitespace-nowrap border-b px-4 py-2.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
-                            <th scope="col" class="whitespace-nowrap border-b px-4 py-2.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Reclaimable</th>
+                        <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 border-y border-gray-200 dark:border-gray-800">
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Type</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Total</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Active</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Size</th>
+                            <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Reclaimable</th>
                         </tr>
                     </thead>
                     <tbody id="podman-diskusage-tbody" class="divide-y divide-gray-200 dark:divide-gray-800">
                         {{range .DiskUsage}}
-                        <tr class="sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                        <tr class="*:first:pl-4 sm:*:first:pl-6 lg:*:first:pl-8 *:last:pr-4 sm:*:last:pr-6 lg:*:last:pr-8 hover:bg-gray-50 dark:hover:bg-gray-900/60">
                             <td class="p-4 text-sm py-2.5 font-medium text-gray-900 dark:text-gray-50">{{.Type}}</td>
                             <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Total}}</td>
                             <td class="p-4 text-sm py-2.5 text-gray-600 dark:text-gray-400">{{.Active}}</td>
@@ -569,6 +613,14 @@ function podmanPollBulkStatus(loadingLabel) {
                 <p x-show="vulnModalLoading" class="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-4 animate-spin"><path d="M12 2C12.5523 2 13 2.44772 13 3V6C13 6.55228 12.5523 7 12 7C11.4477 7 11 6.55228 11 6V3C11 2.44772 11.4477 2 12 2ZM12 17C12.5523 17 13 17.4477 13 18V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V18C11 17.4477 11.4477 17 12 17ZM22 12C22 12.5523 21.5523 13 21 13H18C17.4477 13 17 12.5523 17 12C17 11.4477 17.4477 11 18 11H21C21.5523 11 22 11.4477 22 12ZM7 12C7 12.5523 6.55228 13 6 13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H6C6.55228 11 7 11.4477 7 12ZM19.0711 19.0711C18.6805 19.4616 18.0474 19.4616 17.6569 19.0711L15.5355 16.9497C15.145 16.5592 15.145 15.9261 15.5355 15.5355C15.9261 15.145 16.5592 15.145 16.9497 15.5355L19.0711 17.6569C19.4616 18.0474 19.4616 18.6805 19.0711 19.0711ZM8.46447 8.46447C8.07394 8.85499 7.44063 8.85499 7.05025 8.46447L4.92893 6.34315C4.53841 5.95262 4.53841 5.31946 4.92893 4.92893C5.31946 4.53841 5.95262 4.53841 6.34315 4.92893L8.46447 7.05025C8.85499 7.44078 8.85499 8.07394 8.46447 8.46447ZM4.92893 19.0711C4.53841 18.6805 4.53841 18.0474 4.92893 17.6569L7.05025 15.5355C7.44078 15.145 8.07394 15.145 8.46447 15.5355C8.85499 15.9261 8.85499 16.5592 8.46447 16.9497L6.34315 19.0711C5.95262 19.4616 5.31946 19.4616 4.92893 19.0711ZM15.5355 8.46447C15.145 8.07394 15.145 7.44078 15.5355 7.05025L17.6569 4.92893C18.0474 4.53841 18.6805 4.53841 19.0711 4.92893C19.4616 5.31946 19.4616 5.95262 19.0711 6.34315L16.9497 8.46447C16.5592 8.85499 15.9261 8.85499 15.5355 8.46447Z"></path></svg>Loading…</p>
                 <p x-show="!vulnModalLoading && vulnModalDetails.length === 0" class="text-sm text-gray-500 dark:text-gray-500">No cached findings for this image. Run "Check all for vulnerabilities" again if this seems stale.</p>
 
+                <template x-if="!vulnModalLoading && vulnModalSummary">
+                    <div class="mb-3 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                        <p><span class="font-medium text-gray-900 dark:text-gray-50" x-text="vulnModalSummary.fixable + ' fixable'"></span> · <span x-text="vulnModalSummary.no_fix + ' without a fix yet'"></span> <span class="text-gray-500 dark:text-gray-500" x-text="'(' + vulnModalSummary.unique + ' unique high or critical CVEs, found ' + vulnModalSummary.findings + ' times across packages' + (vulnModalCheckedAt ? ', scanned ' + new Date(vulnModalCheckedAt).toLocaleString() : '') + ')'"></span></p>
+                        <p x-show="vulnModalUpdate && vulnModalSummary.fixable" class="flex gap-3 rounded-md bg-yellow-50 p-3 text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500">A newer version of this image is available. Most fixable CVEs go away once it's pulled, then the containers using it are recreated. Scan again afterwards.</p>
+                        <p x-show="!vulnModalUpdate && vulnModalSummary.fixable" class="text-gray-500 dark:text-gray-500">Fixable means a patched package exists. Pull the image to check for a newer build, its publisher has to ship the fix.</p>
+                        <p x-show="vulnModalSummary.no_fix" class="text-gray-500 dark:text-gray-500">CVEs without a fix have no patched package from the distribution yet, updating the image can't remove them.</p>
+                    </div>
+                </template>
                 <div x-show="!vulnModalLoading && vulnModalDetails.length > 0" class="-mx-6 overflow-x-auto">
                     <table class="w-full border-b border-gray-200 dark:border-gray-800">
                         <thead class="sticky top-0 bg-white dark:bg-raised">
@@ -582,8 +634,8 @@ function podmanPollBulkStatus(loadingLabel) {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
-                            <template x-for="v in vulnModalDetails" :key="v.id + v.package">
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                            <template x-for="v in vulnModalDetails.filter(c => c.fixable || vulnShowNoFix)" :key="v.id">
+                                <tr class="align-top hover:bg-gray-50 dark:hover:bg-gray-900/60">
                                     <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">
                                         <a :href="v.url || ('https://nvd.nist.gov/vuln/detail/' + v.id)" target="_blank" rel="noopener" class="inline-flex items-center gap-0.5 text-blue-500 hover:underline hover:underline-offset-4"><span x-text="v.id"></span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-3.5 shrink-0 inline"><path d="M16.0037 9.41421L7.39712 18.0208L5.98291 16.6066L14.5895 8H7.00373V6H18.0037V17H16.0037V9.41421Z"></path></svg></a>
                                     </td>
@@ -592,15 +644,16 @@ function podmanPollBulkStatus(loadingLabel) {
                                               :class="v.severity === 'CRITICAL' ? 'bg-red-50 text-red-900 ring-red-600/30 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20' : 'bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-400 dark:ring-yellow-400/20'"
                                               x-text="v.severity"></span>
                                     </td>
-                                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400" x-text="v.package"></td>
-                                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400" x-text="v.installed_version"></td>
-                                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400" x-text="v.fixed_version || '–'"></td>
+                                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"><template x-for="p in v.packages" :key="p.package"><div x-text="p.package"></div></template></td>
+                                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"><template x-for="p in v.packages" :key="p.package"><div x-text="p.installed_version"></div></template></td>
+                                    <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400"><template x-for="p in v.packages" :key="p.package"><div x-text="p.fixed_version || (p.status ? p.status.replace(/_/g, ' ') : 'no fix yet')"></div></template></td>
                                     <td class="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400" x-text="v.title"></td>
                                 </tr>
                             </template>
                         </tbody>
                     </table>
                 </div>
+                <button type="button" x-show="!vulnModalLoading && vulnModalSummary && vulnModalSummary.no_fix && vulnModalSummary.fixable" @click="vulnShowNoFix = !vulnShowNoFix" class="mt-3 text-sm text-blue-500 hover:underline hover:underline-offset-4" x-text="vulnShowNoFix ? 'Hide the ones without a fix' : 'Show ' + (vulnModalSummary ? vulnModalSummary.no_fix : 0) + ' without a fix yet'"></button>
             </div>
 
             <div class="flex shrink-0 flex-col-reverse gap-2 border-t border-gray-200 px-6 py-4 sm:flex-row sm:justify-end dark:border-gray-900">
@@ -631,7 +684,7 @@ function podmanPollBulkStatus(loadingLabel) {
      "sort<Key>" part of each row's data-sort-<Key> attribute, e.g. "size"
      for data-sort-size). */}}
 {{define "podman_sort_th"}}
-<th scope="col" class="whitespace-nowrap border-b px-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
+<th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">
     <button type="button" @click="if ({{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'asc') { sortTable('{{.TbodyID}}', '{{.StateVar}}', '{{.Key}}', 'desc') } else { sortTable('{{.TbodyID}}', '{{.StateVar}}', '{{.Key}}', 'asc') }" class="group -mx-1.5 inline-flex cursor-pointer select-none items-center whitespace-nowrap gap-1.5 rounded px-1.5 py-1 text-gray-900 transition hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">{{.Label}}<svg x-show="{{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'asc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 7.82843V20H11.0001V7.82843L5.63614 13.1924L4.22192 11.7782L12.0001 4L19.7783 11.7782L18.3641 13.1924L13.0001 7.82843Z"/></svg><svg x-show="{{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'desc'" class="remixicon size-3.5 shrink-0 text-gray-900 dark:text-gray-50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.0001 16.1716L18.3641 10.8076L19.7783 12.2218L12.0001 20L4.22192 12.2218L5.63614 10.8076L11.0001 16.1716V4H13.0001V16.1716Z"/></svg><svg x-show="!({{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'asc') && !({{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'desc')" class="remixicon size-3.5 shrink-0 text-gray-400 group-hover:text-gray-600 dark:text-gray-600 dark:group-hover:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9498 7.94975L10.5356 9.36396L8.00079 6.828L8.00004 20H6.00004L6.00079 6.828L3.46451 9.36396L2.05029 7.94975L7.00004 3L11.9498 7.94975ZM21.9498 16.0503L17 21L12.0503 16.0503L13.4645 14.636L16.0008 17.172L16 4H18L18.0008 17.172L20.5356 14.636L21.9498 16.0503Z"/></svg><span class="sr-only" x-text="({{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'asc') ? ', sorted ascending' : ({{.StateVar}}.col === '{{.Key}}' && {{.StateVar}}.dir === 'desc') ? ', sorted descending' : ''"></span></button>
 </th>
 {{end}}

@@ -1017,6 +1017,21 @@
                         </div>
                         </div>
                         {{end}}
+                        <template x-if="restartPending.length">
+                        <div class="px-4 pb-3 sm:px-6">
+                           <div class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500">
+                              <div>
+                                 <p>Changes to <span class="font-medium" x-text="restartPending.join(', ')"></span> are saved and apply on the next restart. Restart now? The service is down for a few seconds.</p>
+                                 <div class="mt-3 flex flex-wrap gap-2">
+                                    <template x-for="svc in restartPending" :key="svc">
+                                       <button type="button" @click="restartSvc(svc)" :disabled="restarting" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600" x-text="'Restart ' + svc"></button>
+                                    </template>
+                                    <button type="button" @click="restartPending = []" :disabled="restarting" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Later</button>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                        </template>
                         <div id="services-limit-warning" class="hidden px-4 py-3 whitespace-normal sm:px-6">
                         <div role="status" class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500">
                         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
@@ -1032,24 +1047,25 @@
                            <thead>
                               <tr class="whitespace-nowrap border-b text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 sm:[&_th:last-child]:pr-6 sm:[&_th:first-child]:pl-6">
 {{template "bulk_head_checkbox" .}}
-                                 <th x-show="columns.name" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Name</th>
-                                 <th x-show="columns.image" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Image</th>
+                                 <th x-show="columns.name" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "name" "Label" "Name")}}</th>
+                                 <th x-show="columns.image" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "image" "Label" "Image")}}</th>
                                  <th x-show="columns.ports" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Ports</th>
                                  <th x-show="columns.env" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Env</th>
-                                 <th x-show="columns.cpu" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">CPU</th>
-                                 <th x-show="columns.ram" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Memory</th>
-                                 <th x-show="columns.pids" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">PIDs</th>
+                                 <th x-show="columns.cpu" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "cpu" "Label" "CPU")}}</th>
+                                 <th x-show="columns.ram" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "ram" "Label" "Memory")}}</th>
+                                 <th x-show="columns.pids" scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">{{template "client_sort_header" (dict "Key" "pids" "Label" "PIDs")}}</th>
                                  <th x-show="columns.actions" scope="col" class="w-10 whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800"><span class="sr-only">Actions</span></th>
                               </tr>
                            </thead>
                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                               {{range .Services}}
-                              <tr data-svc="{{.Name}}" data-cpu-limit="{{.CPULimit}}" data-pids-limit="{{.PIDsLimit}}" x-show="searchQuery === '' || '{{.ContainerName | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Name | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Image | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                              <tr data-svc="{{.Name}}" data-sort-name="{{.ContainerName}}" data-sort-image="{{.Image}}" data-cpu-limit="{{.CPULimit}}" data-pids-limit="{{.PIDsLimit}}" x-show="searchQuery === '' || '{{.ContainerName | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Name | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Image | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
 {{template "bulk_row_checkbox" (dict "Key" .Name "Label" .Name)}}
                                  <td x-show="columns.name">
-                                    <div class="flex flex-col gap-1">
+                                    <button type="button" @click="toggleSvc('{{.Name | jsStr}}', '{{.ContainerName | jsStr}}')" :aria-expanded="(openSvc === '{{.Name | jsStr}}').toString()" class="-mx-1.5 flex items-center gap-1.5 rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" title="Show details">
+                                       <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4 shrink-0 text-gray-400 transition-transform" :style="openSvc === '{{.Name | jsStr}}' ? 'rotate: 90deg' : ''"><path d="M13.1717 12.0007L8.22192 7.05093L9.63614 5.63672L16.0001 12.0007L9.63614 18.3646L8.22192 16.9504L13.1717 12.0007Z"/></svg>
                                        <span class="font-medium text-gray-900 dark:text-gray-50">{{.ContainerName}}</span>
-                                    </div>
+                                    </button>
                                  </td>
                                  <td x-show="columns.image">
                                     <div class="flex flex-col gap-1">
@@ -1126,7 +1142,7 @@
                                              <span x-show="!editing" class="inline-flex items-center"><span class="font-medium text-gray-900 dark:text-gray-50" x-text="value"></span>&nbsp;cores
                                              <button type="button" @click="editing = !editing" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit limit"><span x-show="!editing"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></span></button>
                                              </span>
-                                             <form action="/containers/{{lastSegment $.Username `_`}}/cpu/{{.Name}}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+                                             <form action="/containers/{{lastSegment $.Username `_`}}/cpu/{{.Name}}" method="POST" @submit.prevent="saveLimit($el, '{{.Name | jsStr}}').then(ok => { if (ok) { value = CPUinputValue; editing = false; } })" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
                                                 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
                                                 <input x-model="CPUinputValue" aria-label="CPU limit" title="Max CPUs that this service can use. 0 = unlimited" name="value" type="number" min="0" step=".01" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-20 px-2 py-1 text-xs" />
                                                 <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
@@ -1166,7 +1182,7 @@
                                              <span x-show="!editing" class="inline-flex items-center"><span class="font-medium text-gray-900 dark:text-gray-50" x-text="value"></span>
                                              <button type="button" @click="editing = !editing" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit limit"><span x-show="!editing"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></span></button>
                                              </span>
-                                             <form action="/containers/{{lastSegment $.Username `_`}}/ram/{{.Name}}" method="POST" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
+                                             <form action="/containers/{{lastSegment $.Username `_`}}/ram/{{.Name}}" method="POST" @submit.prevent="saveLimit($el, '{{.Name | jsStr}}').then(ok => { if (ok) { value = RAMinputValue; editing = false; } })" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
                                                 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
                                                 <input x-model="RAMinputValue" aria-label="Memory limit" title="Max memory that this service can use. 0 = unlimited" name="value" type="number" min="0" step=".01" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-20 px-2 py-1 text-xs" />
                                                 <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
@@ -1187,7 +1203,7 @@
                                        <span class="font-medium text-gray-900 dark:text-gray-50" id="pids-usage-{{.Name}}">0</span> / <span x-text="value"></span>
                                        <button type="button" @click="editing = !editing" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit limit"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
                                     </span>
-                                    <form action="/containers/{{lastSegment $.Username `_`}}/pids/{{.Name}}" method="POST" x-show="editing" class="inline-flex items-center gap-1">
+                                    <form action="/containers/{{lastSegment $.Username `_`}}/pids/{{.Name}}" method="POST" @submit.prevent="saveLimit($el, '{{.Name | jsStr}}').then(ok => { if (ok) { value = PIDSinputValue; editing = false; } })" x-show="editing" class="inline-flex items-center gap-1">
                                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
                                        <input x-model="PIDSinputValue" aria-label="Process limit" title="Max number of processes/threads that this service can use. 0 = unlimited" name="value" type="number" min="0" step="1" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-16 px-2 py-1 text-xs" />
                                        <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
@@ -1205,6 +1221,111 @@
                                        </form>
                                        <span class="size-8 shrink-0" aria-hidden="true"></span>
                                     </div>
+                                 </td>
+                              </tr>
+                              <tr data-detail-for="{{.Name}}" x-show="openSvc === '{{.Name | jsStr}}'" x-cloak>
+                                 <td colspan="100" class="bg-gray-50 px-4 py-4 text-sm dark:bg-gray-900/40 sm:pl-6">
+                                    <div class="mb-3 flex items-center justify-between gap-2">
+                                       <span class="text-xs font-medium text-gray-900 dark:text-gray-50" x-text="editSvc === '{{.Name | jsStr}}' ? 'Edit {{.Name | jsStr}} in docker-compose.yml and .env' : 'Details'"></span>
+                                       <button type="button" @click="toggleEditSvc('{{.Name | jsStr}}')" :aria-expanded="(editSvc === '{{.Name | jsStr}}').toString()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-3.5 shrink-0"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg><span x-text="editSvc === '{{.Name | jsStr}}' ? 'Close editor' : 'Edit service'"></span></button>
+                                    </div>
+                                    <div x-show="editSvc === '{{.Name | jsStr}}'" x-cloak>
+                                       <p x-show="svcCfg.loading" class="text-xs text-gray-500 dark:text-gray-500">Loading…</p>
+                                       <div x-show="!svcCfg.loading">
+                                          <div class="flex flex-col gap-2 sm:flex-row">
+                                             <label class="block w-full">
+                                                <span class="mb-1 block text-xs text-gray-500 dark:text-gray-500">docker-compose.yml, only this service</span>
+                                                <textarea x-model="svcCfg.compose" aria-label="docker-compose.yml for {{.Name}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 w-full appearance-none px-2.5 py-2 p-3 font-mono text-xs" rows="16" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off"></textarea>
+                                             </label>
+                                             <div class="block w-full">
+                                                <span class="mb-1 block text-xs text-gray-500 dark:text-gray-500">.env, the variables this service uses</span>
+                                                <p x-show="!svcCfg.env.length" class="text-xs text-gray-500 dark:text-gray-500">This service doesn't read any variables from .env.</p>
+                                                <div class="flex flex-col gap-2">
+                                                   <template x-for="row in svcCfg.env" :key="row.key">
+                                                      <label class="block">
+                                                         <span class="flex items-center gap-1.5 font-mono text-xs text-gray-900 dark:text-gray-50"><span x-text="row.key"></span><span x-show="row.readonly" class="font-sans text-gray-500 dark:text-gray-500">· port, set by OpenPanel</span><span x-show="row.missing && !row.readonly" class="font-sans text-gray-500 dark:text-gray-500">· not in .env yet</span><span x-show="row.repo" class="font-sans text-gray-500 dark:text-gray-500" x-text="'· tags of ' + row.repo + ' on Docker Hub'"></span></span>
+                                                         <template x-if="row.repo">
+                                                            <select x-model="row.value" :aria-label="row.key" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:[color-scheme:dark] w-full px-2.5 py-1.5 font-mono text-xs mt-1">
+                                                               <option :value="row.orig" x-text="row.orig || '(not set)'"></option>
+                                                               <template x-for="t in (row.tags || []).filter(t => t !== row.orig)" :key="t"><option :value="t" x-text="t"></option></template>
+                                                            </select>
+                                                         </template>
+                                                         <template x-if="!row.repo"><input type="text" x-model="row.value" :readonly="row.readonly" :disabled="row.readonly" :aria-label="row.key" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 w-full appearance-none px-2.5 py-1.5 font-mono text-xs mt-1" spellcheck="false" autocomplete="off"></template>
+                                                      </label>
+                                                   </template>
+                                                </div>
+                                             </div>
+                                          </div>
+                                          <p class="mt-2 text-xs text-gray-500 dark:text-gray-500">Checked before saving. Ports are set by OpenPanel and can't be changed here.</p>
+                                          <div class="mt-2 flex gap-2">
+                                             <button type="button" @click="saveSvcCfg('{{.Name | jsStr}}')" :disabled="svcCfg.saving" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                                             <button type="button" @click="editSvc = null" :disabled="svcCfg.saving" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Cancel</button>
+                                          </div>
+                                       </div>
+                                    </div>
+                                    <dl x-show="editSvc !== '{{.Name | jsStr}}'" class="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-3" x-data="{ get info() { return this.svcInfo['{{.ContainerName | jsStr}}'] || null; } }">
+                                       <div>
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Status</dt>
+                                          <dd class="mt-0.5 flex items-center gap-1.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">
+                                             <span x-show="info" class="size-2 shrink-0 rounded-full" :class="statusColor(info)" aria-hidden="true"></span>
+                                             <span x-text="!info ? 'Loading…' : (!info.exists ? 'Not created' : info.status + (info.health ? ' (' + info.health + ')' : '') + (info.status === 'exited' ? ', exit code ' + info.exit_code : '') + (info.oom_killed ? ', killed: out of memory' : ''))"></span>
+                                          </dd>
+                                       </div>
+                                       <div>
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Started</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50" x-text="info && info.exists && info.started_at ? fmtDate(info.started_at) : '—'"></dd>
+                                       </div>
+                                       <div>
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Restarts</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50" x-text="info && info.exists ? info.restart_count : '—'"></dd>
+                                       </div>
+                                       <div class="sm:col-span-2">
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Image</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">{{.Image}}<span x-show="info && info.image_id" x-text="' (' + (info ? info.image_id : '') + ')'"></span></dd>
+                                       </div>
+                                       <div>
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Restart policy</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">{{if .Restart}}{{.Restart}}{{else}}—{{end}}</dd>
+                                       </div>
+                                       <div>
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Depends on</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">{{if .DependsOn}}{{join .DependsOn ", "}}{{else}}—{{end}}</dd>
+                                       </div>
+                                       <div>
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Networks</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">
+                                             <template x-if="info && info.exists && Object.keys(info.ips || {}).length">
+                                                <div><template x-for="[n, ip] in Object.entries(info.ips)" :key="n"><div x-text="n + (ip ? ' · ' + ip : '')"></div></template></div>
+                                             </template>
+                                             <template x-if="!(info && info.exists && Object.keys(info.ips || {}).length)"><span>{{if .Networks}}{{join .Networks ", "}}{{else}}—{{end}}</span></template>
+                                          </dd>
+                                       </div>
+                                       <div>
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Ports</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">{{$p := false}}{{range .Ports}}{{if ne .Published "0"}}{{$p = true}}<div>{{.HostIP}}:{{.Published}} → {{.Target}}</div>{{end}}{{end}}{{if not $p}}—{{end}}</dd>
+                                       </div>
+                                       {{if .Command}}
+                                       <div class="sm:col-span-3">
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Command</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">{{.Command}}</dd>
+                                       </div>
+                                       {{end}}
+                                       {{if .Healthcheck}}
+                                       <div class="sm:col-span-3">
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Healthcheck</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">{{.Healthcheck}}</dd>
+                                       </div>
+                                       {{end}}
+                                       <div class="sm:col-span-3">
+                                          <dt class="text-xs text-gray-500 dark:text-gray-500">Volumes</dt>
+                                          <dd class="mt-0.5 break-all font-mono text-xs text-gray-900 dark:text-gray-50">
+                                             <template x-if="info && info.exists && info.mounts.length">
+                                                <div><template x-for="m in info.mounts" :key="m"><div x-text="m"></div></template></div>
+                                             </template>
+                                             <template x-if="!(info && info.exists && info.mounts.length)"><div>{{range .Volumes}}<div>{{.}}</div>{{else}}—{{end}}</div></template>
+                                          </dd>
+                                       </div>
+                                    </dl>
                                  </td>
                               </tr>
                               {{end}}
@@ -1244,9 +1365,152 @@
     const settingsEditor = (() => {
         const username = "{{lastSegment .Username `_`}}";
 
+        // the rows come from the server, so sorting moves them and their detail row in the dom
+        const sortValue = (row, key) => {
+            if (key === 'name' || key === 'image') return (row.dataset['sort' + key[0].toUpperCase() + key.slice(1)] || '').toLowerCase();
+            const v = parseFloat(row.dataset['sort' + key[0].toUpperCase() + key.slice(1)]);
+            return isNaN(v) ? -1 : v;
+        };
+        const csrf = () => document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
         return {
             searchQuery: '',
             showEditor: false,
+            sortKey: '', sortDir: 'asc',
+            openSvc: null,
+            svcInfo: {},
+            restartPending: [],
+            restarting: false,
+            editSvc: null,
+            svcCfg: { compose: '', env: [], loading: false, saving: false },
+            toggleEditSvc(name) {
+                if (this.editSvc === name) { this.editSvc = null; return; }
+                this.editSvc = name;
+                this.svcCfg = { compose: '', env: [], loading: true, saving: false };
+                fetch(`/containers/${username}/config/${encodeURIComponent(name)}`, { cache: 'no-store' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.success) { showToast(data.error || 'Failed to load the service.', 'error'); this.editSvc = null; return; }
+                        const env = (data.env || []).map(r => ({ ...r, orig: r.value, tags: [] }));
+                        this.svcCfg = { compose: data.compose, env: env, loading: false, saving: false };
+                        // tags are cached a day on the server, one request per image variable
+                        env.filter(r => r.repo).forEach(r => {
+                            fetch(`/containers/${username}/config/${encodeURIComponent(name)}/tags?key=${encodeURIComponent(r.key)}`, { cache: 'no-store' })
+                                .then(res => res.json())
+                                .then(d => { const row = this.svcCfg.env.find(x => x.key === r.key); if (row) row.tags = d.tags || []; })
+                                .catch(() => {});
+                        });
+                    })
+                    .catch(() => { showToast('Failed to reach the server.', 'error'); this.editSvc = null; });
+            },
+            saveSvcCfg(name) {
+                this.svcCfg.saving = true;
+                const body = new FormData();
+                body.append('csrf_token', csrf());
+                body.append('compose', this.svcCfg.compose);
+                body.append('env', JSON.stringify(Object.fromEntries(this.svcCfg.env.map(r => [r.key, r.value]))));
+                fetch(`/containers/${username}/config/${encodeURIComponent(name)}`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body,
+                    credentials: 'same-origin'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) { showToast(data.error || 'Failed to save.', 'error'); return; }
+                    if (!data.changed) { showToast('Nothing changed.', 'info'); this.editSvc = null; return; }
+                    showToast(data.message, 'success');
+                    this.editSvc = null;
+                    if (!this.restartPending.includes(name)) this.restartPending.push(name);
+                })
+                .catch(() => showToast('Failed to reach the server.', 'error'))
+                .finally(() => { this.svcCfg.saving = false; });
+            },
+            sortBy(k) {
+                if (this.sortKey === k) this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+                else { this.sortKey = k; this.sortDir = (k === 'name' || k === 'image') ? 'asc' : 'desc'; }
+                this.applySort();
+            },
+            applySort() {
+                const tbody = document.querySelector('#user_services_table tbody');
+                if (!tbody || !this.sortKey) return;
+                const f = this.sortDir === 'asc' ? 1 : -1;
+                const rows = [...tbody.querySelectorAll('tr[data-svc]')];
+                rows.sort((a, b) => {
+                    const x = sortValue(a, this.sortKey), y = sortValue(b, this.sortKey);
+                    if (typeof x === 'number') return (x - y) * f;
+                    return x.localeCompare(y, undefined, { numeric: true }) * f;
+                });
+                rows.forEach(r => {
+                    const detail = tbody.querySelector('tr[data-detail-for="' + CSS.escape(r.dataset.svc) + '"]');
+                    tbody.appendChild(r);
+                    if (detail) tbody.appendChild(detail);
+                });
+            },
+            // green runs fine, orange is up but not right yet, red is down
+            statusColor(info) {
+                if (!info || !info.exists) return 'bg-red-500';
+                if (info.status === 'running') {
+                    if (info.health === 'unhealthy') return 'bg-red-500';
+                    return info.health === 'starting' ? 'bg-orange-500' : 'bg-emerald-500';
+                }
+                if (['created', 'paused', 'restarting', 'stopping', 'initialized'].includes(info.status)) return 'bg-orange-500';
+                return 'bg-red-500';
+            },
+            toggleSvc(name, container) {
+                this.openSvc = this.openSvc === name ? null : name;
+                if (this.openSvc) this.loadSvcInfo(container);
+            },
+            loadSvcInfo(container) {
+                fetch(`/containers/${username}/inspect/${encodeURIComponent(container)}`, { cache: 'no-store' })
+                    .then(res => res.ok ? res.json() : Promise.reject(res))
+                    .then(data => { this.svcInfo = { ...this.svcInfo, [container]: data }; })
+                    .catch(() => { this.svcInfo = { ...this.svcInfo, [container]: { exists: false } }; });
+            },
+            saveLimit(form, svc) {
+                return fetch(form.getAttribute('action'), {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: new FormData(form),
+                    credentials: 'same-origin'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) { showToast(data.error || 'Failed to save the limit.', 'error'); return false; }
+                    if (data.restart_needed) {
+                        showToast(data.message, 'warning');
+                        if (!this.restartPending.includes(svc)) this.restartPending.push(svc);
+                    } else {
+                        showToast(data.message, 'success');
+                    }
+                    const row = document.querySelector('tr[data-svc="' + CSS.escape(svc) + '"]');
+                    const action = form.getAttribute('action').split('/').slice(-2)[0];
+                    if (row && action === 'cpu') row.dataset.cpuLimit = form.querySelector('[name=value]').value;
+                    if (row && action === 'pids') row.dataset.pidsLimit = form.querySelector('[name=value]').value;
+                    return true;
+                })
+                .catch(() => { showToast('Failed to reach the server.', 'error'); return false; });
+            },
+            restartSvc(svc) {
+                this.restarting = true;
+                showToast('Restarting ' + svc + '…', 'loading', true);
+                const body = new FormData();
+                body.append('csrf_token', csrf());
+                fetch(`/containers/${username}/restart/${encodeURIComponent(svc)}`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body,
+                    credentials: 'same-origin'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) { showToast(data.error || 'Failed to restart ' + svc + '.', 'error'); return; }
+                    showToast(data.message, 'success');
+                    this.restartPending = this.restartPending.filter(s => s !== svc);
+                })
+                .catch(() => showToast('Failed to reach the server.', 'error'))
+                .finally(() => { this.restarting = false; });
+            },
             columns: {
                 name: true,
                 image: false,
@@ -1371,6 +1635,12 @@
                     var cpuUsage = parseFloat(container.CPU) || 0;
                     var memUsage = parseFloat(container.MemPerc) || 0;
                     var pidsUsage = parseInt(container.PIDs !== undefined ? container.PIDs : container.PIDS, 10) || 0;
+                    var statRow = document.querySelector('tr[data-svc="' + CSS.escape(containerName) + '"]');
+                    if (statRow) {
+                        statRow.dataset.sortCpu = cpuUsage;
+                        statRow.dataset.sortRam = parseFloat(container.MemUsage) || 0;
+                        statRow.dataset.sortPids = pidsUsage;
+                    }
 
                     var cpuDashOffset = 78.54 * (1 - cpuUsage / 100);
                     var memDashOffset = 78.54 * (1 - memUsage / 100);
@@ -1568,7 +1838,7 @@
   </ul>
 </div>
 
-        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+        <table class="w-full caption-bottom border-y border-gray-200 dark:border-gray-800">
             <thead>
                 <tr class="sm:[&_td:last-child]:pr-6 sm:[&_th:last-child]:pr-6 sm:[&_td:first-child]:pl-6 sm:[&_th:first-child]:pl-6">
                     <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Type</th>
@@ -1625,7 +1895,7 @@
 
                   <template x-if="!volumesLoading && !volumesError">
                      <div class="overflow-x-auto">
-                        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                        <table class="w-full caption-bottom border-y border-gray-200 dark:border-gray-800">
                            <thead>
                               <tr class="sm:[&_td:last-child]:pr-6 sm:[&_th:last-child]:pr-6 sm:[&_td:first-child]:pl-6 sm:[&_th:first-child]:pl-6">
                                  <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Volume</th>
@@ -1757,7 +2027,7 @@
 
                   <template x-if="!networksLoading && !networksError">
                      <div class="overflow-x-auto">
-                        <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                        <table class="w-full caption-bottom border-y border-gray-200 dark:border-gray-800">
                            <thead>
                               <tr class="sm:[&_td:last-child]:pr-6 sm:[&_th:last-child]:pr-6 sm:[&_td:first-child]:pl-6 sm:[&_th:first-child]:pl-6">
                                  <th scope="col" class="whitespace-nowrap border-b px-4 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800">Network</th>

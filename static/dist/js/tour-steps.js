@@ -499,8 +499,8 @@ window.TOUR_STEPS = [
     {
         path: '/settings/defaults',
         element: '#tour-save-defaults-btn',
-        title: 'Save',
-        description: 'Click Save when done.',
+        title: 'Change a limit',
+        description: 'Click the pencil next to Allocated to change it. CPU and memory apply right away, 0 removes the limit after a restart.',
         side: 'bottom',
         align: 'end'
     },
@@ -780,15 +780,15 @@ window.TOUR_STEPS = [
         path: '/services/limits',
         element: '#tour-first-service-limit',
         title: 'Service Limits',
-        description: 'Configure CPU, RAM and environment variables for system containers. Stop and start the service for new values to apply. Defaults are shown below each field if you want to restore them.',
+        description: 'Every system service with what it uses right now against its CPU and memory limit. Click a service to see and change its other settings, like the version or timezone.',
         side: 'right',
         align: 'start'
     },
     {
         path: '/services/limits',
         element: '#tour-save-limits-btn',
-        title: 'Save',
-        description: 'Click Save when done.',
+        title: 'Change a limit',
+        description: 'Click the pencil next to Allocated to change it. CPU and memory apply right away, 0 removes the limit after a restart.',
         side: 'bottom',
         align: 'end'
     },
