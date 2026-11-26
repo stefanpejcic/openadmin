@@ -965,6 +965,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /account", auth.RequireLogin(sessions, authOpts, resellers.ServeAccount))
 	mux.HandleFunc("GET /settings/open-panel", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeOpenpanelSettings))
 	mux.HandleFunc("POST /settings/open-panel", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeOpenpanelSettings))
+	mux.HandleFunc("GET /brand/{file}", auth.RequireAdmin(sessions, authOpts, handlers.ServeBrandFile))
 	mux.HandleFunc("GET /settings/open-panel/theme-screenshot/{theme}", auth.RequireAdmin(sessions, authOpts, handlers.ServeThemeScreenshot))
 	mux.HandleFunc("POST /settings/open-panel/themes/install", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeInstallTheme))
 	mux.HandleFunc("POST /settings/open-panel/themes/uninstall", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeUninstallTheme))

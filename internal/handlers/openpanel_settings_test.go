@@ -596,7 +596,8 @@ func TestOpenpanelSettingsFormFieldsMatchHandler(t *testing.T) {
 	for _, m := range regexp.MustCompile(`\bname="([^"]+)"`).FindAllStringSubmatch(string(raw), -1) {
 		// install_theme and theme (update, uninstall) go to their own endpoints through formaction
 		// wp profile rows are saved by saveWPProfilesForm
-		if m[1] != "csrf_token" && m[1] != "install_theme" && m[1] != "theme" && !strings.Contains(m[1], "wp_profile_") {
+		// logo_file and logo_dark_file are uploads, saveBrandUpload turns them into the logo urls
+		if m[1] != "csrf_token" && m[1] != "install_theme" && m[1] != "theme" && !strings.Contains(m[1], "wp_profile_") && !strings.HasSuffix(m[1], "_file") {
 			posted = append(posted, m[1])
 		}
 	}
