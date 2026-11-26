@@ -53,6 +53,8 @@ var funcMap = template.FuncMap{
 	// a literal quote (e.g. a notification title like "User account
 	// 'bob' created") breaks the embedded JS expression unless escaped here.
 	"jsStr":      template.JSEscapeString,
+	// jsStr for any type, so a non-string value interpolated into a JS string (an id, a path) is escaped too
+	"jsq":        func(v interface{}) string { return template.JSEscapeString(fmt.Sprint(v)) },
 	"add":        func(a, b int) int { return a + b },
 	"sub":        func(a, b int) int { return a - b },
 	"mul":        func(a, b int) int { return a * b },

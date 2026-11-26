@@ -204,7 +204,7 @@ function submitServiceAction(form, loadingMessage, onSettled) {
 
 {{if .Statuses}}
 {{range .Statuses}}{{$name := .Name}}{{$svc := .}}
-                        <tr x-show="searchQuery === '' || '{{$name}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                        <tr x-show="searchQuery === '' || $el.textContent.toLowerCase().includes(searchQuery.toLowerCase())" class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 group hover:bg-gray-50 dark:hover:bg-gray-900/60">
 {{if and (eq $.LicenseType "Community") (or (hasPrefix $svc.RealName "openadmin_") (eq $svc.RealName "clamav"))}}{{template "bulk_row_empty"}}{{else}}{{$skip := ""}}{{if eq $svc.Label "up"}}{{$skip = "start"}}{{else if eq $svc.Label "down"}}{{$skip = "stop"}}{{end}}{{if eq $svc.RealName "admin"}}{{$skip = "stop,restart"}}{{end}}
 {{template "bulk_row_checkbox" (dict "Key" (printf "%s:%s" $svc.Type $svc.RealName) "Label" $name "Skip" $skip)}}{{end}}
 
@@ -256,14 +256,14 @@ function submitServiceAction(form, loadingMessage, onSettled) {
     monitoredMsg: 'This service is being monitored and will be restarted on failure.'
   }"
   class="relative p-4 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 text-left"
-  x-bind:title="isMonitored('{{$svc.RealName}}') ? monitoredMsg : ''"
+  x-bind:title="isMonitored('{{jsq $svc.RealName}}') ? monitoredMsg : ''"
 >
-  <template x-if="isMonitored('{{$svc.RealName}}')">
+  <template x-if="isMonitored('{{jsq $svc.RealName}}')">
     <a href="/settings/notifications#services" class="text-blue-500 hover:underline hover:underline-offset-4">
       Monitored
     </a>
   </template>
-  <template x-if="!isMonitored('{{$svc.RealName}}')">
+  <template x-if="!isMonitored('{{jsq $svc.RealName}}')">
     <span class="text-gray-400 dark:text-gray-600" aria-label="Not monitored">—</span>
   </template>
 </td>
@@ -296,10 +296,10 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                     :class="{ 'opacity-50 cursor-not-allowed': $store.actions.locked }"
                     @click="
                         const form = $el.closest('form');
-                        opConfirm('Stop {{$svc.RealName}}? It stays down until you start it again.').then(ok => {
+                        opConfirm('Stop {{jsq $svc.RealName}}? It stays down until you start it again.').then(ok => {
                             if (!ok) return;
                             $store.actions.locked = true;
-                            submitServiceAction(form, 'Stopping {{$svc.RealName}}…');
+                            submitServiceAction(form, 'Stopping {{jsq $svc.RealName}}…');
                         });
                     "
                 >
@@ -320,7 +320,7 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                     :class="{ 'opacity-50 cursor-not-allowed': $store.actions.locked }"
                     @click="
                         $store.actions.locked = true;
-                        submitServiceAction($el.closest('form'), 'Starting {{$svc.RealName}}…');
+                        submitServiceAction($el.closest('form'), 'Starting {{jsq $svc.RealName}}…');
                     "
                 >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
@@ -351,7 +351,7 @@ function submitServiceAction(form, loadingMessage, onSettled) {
 {{if eq $svc.RealName "admin"}}
                     @click="
                         const form = $el.closest('form');
-                        opConfirm('Restart {{$svc.RealName}}? It will be unavailable for a few seconds.').then(ok => {
+                        opConfirm('Restart {{jsq $svc.RealName}}? It will be unavailable for a few seconds.').then(ok => {
                             if (!ok) return;
                             spinning = true;
                             $store.actions.locked = true;
@@ -361,11 +361,11 @@ function submitServiceAction(form, loadingMessage, onSettled) {
 {{else}}
                     @click="
                         const form = $el.closest('form');
-                        opConfirm('Restart {{$svc.RealName}}? It will be unavailable for a few seconds.').then(ok => {
+                        opConfirm('Restart {{jsq $svc.RealName}}? It will be unavailable for a few seconds.').then(ok => {
                             if (!ok) return;
                             spinning = true;
                             $store.actions.locked = true;
-                            submitServiceAction(form, 'Restarting {{$svc.RealName}}…', function () { spinning = false; });
+                            submitServiceAction(form, 'Restarting {{jsq $svc.RealName}}…', function () { spinning = false; });
                         });
                     "
 {{end}}
