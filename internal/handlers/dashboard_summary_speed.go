@@ -24,11 +24,19 @@ type summarySpeed struct {
 // Favicon is the website's icon, same source as the websites table
 func (s summarySpeed) Favicon() string { return faviconBase() + s.Name }
 
-// RingColor is the desktop score ring, same as the websites table
-func (s summarySpeed) RingColor() string { return speedRingColor(s.Desktop) }
+// DesktopColor and MobileColor use the websites table's thresholds
+func (s summarySpeed) DesktopColor() string { return speedTextColor(s.Desktop) }
+func (s summarySpeed) MobileColor() string  { return speedTextColor(s.Mobile) }
 
-// DashOffset draws the ring up to the desktop score
-func (s summarySpeed) DashOffset() int { return 100 - s.Desktop }
+func speedTextColor(score int) string {
+	switch {
+	case score < 50:
+		return "text-red-600 dark:text-red-400"
+	case score < 90:
+		return "text-yellow-600 dark:text-yellow-400"
+	}
+	return "text-emerald-600 dark:text-emerald-400"
+}
 
 // summarySpeedsFor is every PageSpeed check that ran on day, from the per-day copies websites-pagespeed keeps, or the current report while it's still from that day
 func summarySpeedsFor(db *sql.DB, day string) []summarySpeed {
