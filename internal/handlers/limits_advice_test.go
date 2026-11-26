@@ -33,16 +33,16 @@ func TestAdviseLimits(t *testing.T) {
 		"FTP":        {"RAM": "0.5g", "CPUS": "0.5"},
 		"PHPMYADMIN": {"RAM": "1.0G", "CPU": "1.0", "MEMORY_LIMIT": "2048M", "UPLOAD_LIMIT": "3G"},
 	}
-	big := limitsHost{Cores: 18, RAMGB: 94, Modules: []string{"dns", "phpmyadmin"}, Users: 22, Domains: 22}
+	big := limitsHost{Cores: 18, RAMGB: 94, Modules: []string{"dns", "phpmyadmin"}, Users: 22, Domains: 32}
 	g := adviseLimits(buildLimitsView(raw), raw, big)
 
-	if a := adviceFor(g, "OPENPANEL", "RAM"); a.Low != 2 {
+	if a := adviceFor(g, "OPENPANEL", "RAM"); a.Low != 0.25 {
 		t.Fatalf("openpanel ram = %+v", a)
 	}
 	if a := adviceFor(g, "BIND9", "CPUS"); a.Low != 0.1 {
 		t.Fatalf("bind9 cpu = %+v", a)
 	}
-	if a := adviceFor(g, "CADDY", "RAM"); a.Low != 2 || a.High != 8 || !strings.Contains(a.LowText, "22 domains") {
+	if a := adviceFor(g, "CADDY", "RAM"); a.Low != 2 || a.High != 8 || !strings.Contains(a.LowText, "32 domains") {
 		t.Fatalf("caddy ram on a big server should scale by domains, got %+v", a)
 	}
 	if a := adviceFor(g, "CADDY", "CPUS"); a.High != 6 {
@@ -68,7 +68,7 @@ func TestAdviseLimits(t *testing.T) {
 
 	small := limitsHost{Cores: 3, RAMGB: 4, Modules: []string{"malware_scan", "ftp"}, Users: 35, Domains: 5}
 	g = adviseLimits(buildLimitsView(raw), raw, small)
-	if a := adviceFor(g, "OPENPANEL", "CPUS"); a.Low != 1 {
+	if a := adviceFor(g, "OPENPANEL", "CPUS"); a.Low != 0.25 {
 		t.Fatalf("openpanel on a 4 GB server = %+v", a)
 	}
 	if a := adviceFor(g, "CADDY", "RAM"); a.Low != 1.4 || !strings.Contains(a.LowText, "a third of the server") {
@@ -102,7 +102,7 @@ func TestServeLimitsRendersAdvice(t *testing.T) {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "Number(val) > 0 && Number(val) < 2") || !strings.Contains(string(body), "on servers with over 4 GB RAM") {
+	if !strings.Contains(string(body), "Number(val) > 0 && Number(val) < 0.25") || !strings.Contains(string(body), "Recommended: at least 0.25.") {
 		t.Fatal("expected the OpenPanel recommendation in the page")
 	}
 }
