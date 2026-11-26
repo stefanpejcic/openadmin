@@ -87,11 +87,7 @@ func adviseLimits(groups []limitsGroup, raw map[string]map[string]string, h limi
 			}
 			switch g.Name {
 			case "OPENPANEL":
-				if h.RAMGB > 4 {
-					r.Advice = limitAdvice{Low: 2, LowText: "Recommended: at least 2 on servers with over 4 GB RAM (1 is the minimum)."}
-				} else {
-					r.Advice = limitAdvice{Low: 1, LowText: "Recommended: at least 1."}
-				}
+				r.Advice = limitAdvice{Low: 0.25, LowText: "Recommended: at least 0.25."}
 			case "BIND9":
 				if hasModule(h.Modules, "dns") {
 					r.Advice = limitAdvice{Low: 0.1, LowText: "Recommended: at least 0.1, the DNS module is enabled so BIND9 serves every domain's zone."}
@@ -101,8 +97,8 @@ func adviseLimits(groups []limitsGroup, raw map[string]map[string]string, h limi
 				if isCPU {
 					max = 6
 				}
-				rec := math.Ceil(float64(h.Domains) / 20)
-				why := fmt.Sprintf("1 per 20 domains (%d domains) for SSL issuing and renewals", h.Domains)
+				rec := math.Ceil(float64(h.Domains) / 30)
+				why := fmt.Sprintf("1 per 30 domains (%d domains) for SSL issuing and renewals", h.Domains)
 				if h.RAMGB < 10 && ceil1(server/3) > rec {
 					rec = ceil1(server / 3)
 					why = "a third of the server's " + unit(isCPU) + " on servers under 10 GB RAM"

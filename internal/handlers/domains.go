@@ -291,7 +291,7 @@ func (d *Domains) HandleAdd(w http.ResponseWriter, r *http.Request) {
 
 	args := []string{"opencli", "domains-add", domain, username}
 	// custom docroot is an Enterprise feature, Community always gets /var/www/html/<domain>
-	if docroot := strings.TrimSpace(r.FormValue("docroot")); docroot != "" && chromeSite.LicenseType == "Enterprise" {
+	if docroot := strings.TrimSpace(r.FormValue("docroot")); docroot != "" && licenseType() == "Enterprise" {
 		if errMsg := validateDocroot(docroot); errMsg != "" {
 			activity.Fail(r.Context())
 			auth.AddFlash(w, r, d.Sessions, errMsg, "error")

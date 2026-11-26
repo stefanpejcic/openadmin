@@ -101,6 +101,17 @@ var ChromeSummaryAttention func(r *http.Request) bool
 // ChromeClusterCount is how many servers the dashboard shows, a standalone server is one
 var ChromeClusterCount = func() int { return 1 }
 
+// ChromeLicenseValid says whether the Enterprise key actually checked out, nil on Community
+var ChromeLicenseValid func() bool
+
+// licenseType is what the key looks like, except an Enterprise key that failed the check counts as Community
+func licenseType() string {
+	if chromeSite.LicenseType == "Enterprise" && ChromeLicenseValid != nil && !ChromeLicenseValid() {
+		return "Community"
+	}
+	return chromeSite.LicenseType
+}
+
 // InitChromeSiteInfo records the server-wide values computed once at
 // startup. modulesConfigPath is the openpanel.config path passed to
 // modulesEnabledList() on each request -- the enabled-modules list is read
@@ -181,7 +192,7 @@ func buildChrome(r *http.Request, title string) webtemplates.Chrome {
 		PublicIP:            chromeSite.PublicIP,
 		ServerHostname:      chromeSite.ServerHostname,
 		ForceDomainValue:    chromeSite.ForceDomainValue,
-		LicenseType:         chromeSite.LicenseType,
+		LicenseType:         licenseType(),
 		DevMode:             chromeSite.DevMode,
 		EnabledModules:      modulesEnabledList(chromeSite.ModulesConfig),
 		UnreadNotifications: unread,

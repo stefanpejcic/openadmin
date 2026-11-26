@@ -499,3 +499,15 @@ func TestSortWebsitesByGitKeepsSitesWithoutRepoLast(t *testing.T) {
 		t.Fatalf("desc: %s", got)
 	}
 }
+
+func TestParseVulnerabilitiesCoreTitleFromSource(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a.com.json")
+	os.WriteFile(path, []byte(`{"timestamp":"t","core_7.0.7":{"data":{"core":"7.0.7","vulnerability":[{"name":"7.0.7","source":[{"name":"WordPress Core 6.6.0 - 7.1.3 - Stored XSS","link":"https://www.wordfence.com/x"}]}]}}}`), 0644)
+	r := parseVulnerabilities(path)
+	if r == nil || len(r.Components) != 1 || r.Components[0].Name != "WordPress 7.0.7" {
+		t.Fatalf("bad report: %+v", r)
+	}
+	if got := r.Components[0].Issues[0].Name; got != "WordPress Core 6.6.0 - 7.1.3 - Stored XSS" {
+		t.Fatalf("issue name = %q", got)
+	}
+}

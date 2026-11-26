@@ -557,6 +557,18 @@ func TestServeOpenpanelSettingsAISectionSavesAndRenders(t *testing.T) {
 			t.Errorf("page missing %q", want)
 		}
 	}
+
+	// without a key nobody is trying to use it yet, so no nagging about the module
+	form.Set("ai_api_key", "")
+	resp, err = client.PostForm(srv.URL+"/settings/open-panel", form)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if strings.Contains(string(body), "The AI Assistant module is disabled") {
+		t.Error("the module notice should only show once an API key is set")
+	}
 }
 
 func TestValidateDNSRecordTypes(t *testing.T) {
@@ -582,10 +594,10 @@ func TestOpenpanelSettingsFormFieldsMatchHandler(t *testing.T) {
 	}
 	var posted []string
 	for _, m := range regexp.MustCompile(`\bname="([^"]+)"`).FindAllStringSubmatch(string(raw), -1) {
-		// install_theme goes to its own endpoint through formaction
+		// install_theme and theme (update, uninstall) go to their own endpoints through formaction
 		// wp profile rows are saved by saveWPProfilesForm
 		// logo_file and logo_dark_file are uploads, saveBrandUpload turns them into the logo urls
-		if m[1] != "csrf_token" && m[1] != "install_theme" && !strings.Contains(m[1], "wp_profile_") && !strings.HasSuffix(m[1], "_file") {
+		if m[1] != "csrf_token" && m[1] != "install_theme" && m[1] != "theme" && !strings.Contains(m[1], "wp_profile_") && !strings.HasSuffix(m[1], "_file") {
 			posted = append(posted, m[1])
 		}
 	}

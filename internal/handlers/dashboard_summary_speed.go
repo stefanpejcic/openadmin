@@ -16,21 +16,21 @@ import (
 type summarySpeed struct {
 	Name, Username, Link, Server string
 	Desktop, Mobile              int
-	// first contentful paint and time to interactive on mobile, like "2.3 s"
-	MobileFCP, MobileInteractive string
+	// first contentful paint and time to interactive, like "2.3 s"
+	MobileFCP, MobileInteractive, DesktopFCP string
 	Checked                      string
 }
 
 // Favicon is the website's icon, same source as the websites table
 func (s summarySpeed) Favicon() string { return faviconBase() + s.Name }
 
-// DesktopColor and MobileColor use the websites table's thresholds
+// DesktopColor and MobileColor, red under 70, yellow under 90
 func (s summarySpeed) DesktopColor() string { return speedTextColor(s.Desktop) }
 func (s summarySpeed) MobileColor() string  { return speedTextColor(s.Mobile) }
 
 func speedTextColor(score int) string {
 	switch {
-	case score < 50:
+	case score < 70:
 		return "text-red-600 dark:text-red-400"
 	case score < 90:
 		return "text-yellow-600 dark:text-yellow-400"
@@ -76,7 +76,7 @@ func summarySpeedsFor(db *sql.DB, day string) []summarySpeed {
 		name := strings.TrimPrefix(strings.TrimPrefix(meta.Website, "https://"), "http://")
 		domain, _, _ := strings.Cut(name, "/")
 		s := summarySpeed{Name: name, Username: owners[domain], Desktop: p.Desktop.Score, Mobile: p.Mobile.Score,
-			MobileFCP: p.Mobile.FCP, MobileInteractive: p.Mobile.Interactive, Checked: p.Checked}
+			MobileFCP: p.Mobile.FCP, MobileInteractive: p.Mobile.Interactive, DesktopFCP: p.Desktop.FCP, Checked: p.Checked}
 		if s.Username != "" {
 			s.Link = "/users/" + s.Username
 		}

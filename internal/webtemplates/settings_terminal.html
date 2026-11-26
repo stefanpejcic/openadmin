@@ -65,15 +65,15 @@
 
   <!-- console: brandbook console card inside the page padding, the status bar is its header -->
   <div class="px-4 py-6 sm:px-6 lg:px-8">
-  <div class="overflow-hidden rounded-md bg-gray-950 ring-1 ring-gray-800">
+  <div class="overflow-hidden rounded-md bg-white ring-1 ring-gray-200 dark:bg-gray-950 dark:ring-gray-800">
   <div id="term-status" role="status" aria-live="polite"
-       class="flex items-center gap-2 border-b border-gray-800 bg-gray-900 px-4 py-1.5 text-xs text-gray-400">
+       class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-1.5 text-xs text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
     <span class="relative flex size-2"><span id="status-ping" class="absolute hidden size-full animate-ping rounded-full bg-emerald-500 opacity-60 motion-reduce:hidden"></span><span id="status-dot" class="relative inline-flex size-2 rounded-full bg-yellow-500"></span></span>
     <span id="status-text">Connecting…</span>
   </div>
 
   <div class="p-3">
-    <div id="terminal" class="h-[calc(100svh-18rem)] min-h-80 w-full bg-gray-950"></div>
+    <div id="terminal" class="h-[calc(100svh-18rem)] min-h-80 w-full bg-white dark:bg-gray-950"></div>
   </div>
   </div>
   </div>
@@ -90,34 +90,69 @@
     let pendingCommand = {{.InitialCommand}};
     const AUTO_RUN = {{if .AutoRun}}true{{else}}false{{end}};
 
+    // the web terminal is a root shell, so opening it needs a fresh password (see ServeTerminalAuthorize)
+    let terminalToken = null;
+    function csrfToken() { const m = document.querySelector('meta[name="csrf-token"]'); return m ? m.content : ''; }
+    function showAuthPrompt(message) {
+      let ov = document.getElementById('term-auth');
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'term-auth';
+        ov.className = 'absolute inset-0 z-20 flex items-center justify-center bg-white/85 p-4 dark:bg-gray-950/85';
+        ov.innerHTML = `<form class="w-full max-w-xs rounded-md border border-gray-200 bg-white p-4 text-left shadow-xl dark:border-gray-800 dark:bg-gray-950">
+            <p class="text-sm font-medium text-gray-900 dark:text-gray-50">Confirm your password</p>
+            <p class="mt-1 text-xs text-gray-600 dark:text-gray-400">The web terminal runs as root. Re-enter your password to open it.</p>
+            <input id="term-auth-pw" type="password" autocomplete="current-password" class="mt-3 w-full rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-50" placeholder="Password">
+            <p id="term-auth-err" class="mt-1 hidden text-xs text-red-600 dark:text-red-400"></p>
+            <button type="submit" class="mt-3 w-full rounded-md bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-500">Open terminal</button>
+          </form>`;
+        terminalEl.parentElement.style.position = 'relative';
+        terminalEl.parentElement.appendChild(ov);
+        ov.querySelector('form').addEventListener('submit', (e) => { e.preventDefault(); submitAuth(); });
+      }
+      const err = ov.querySelector('#term-auth-err');
+      if (message) { err.textContent = message; err.classList.remove('hidden'); } else { err.classList.add('hidden'); }
+      ov.style.display = 'flex';
+      ov.querySelector('#term-auth-pw').focus();
+    }
+    function hideAuthPrompt() { const ov = document.getElementById('term-auth'); if (ov) ov.style.display = 'none'; }
+    async function submitAuth() {
+      const pw = document.getElementById('term-auth-pw');
+      const body = new URLSearchParams(); body.set('password', pw.value);
+      let r;
+      try { r = await fetch('/terminal/authorize', { method: 'POST', headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/x-www-form-urlencoded' }, body }); }
+      catch (_) { showAuthPrompt('Network error, try again.'); return; }
+      if (!r.ok) { let m = 'Wrong password.'; try { m = (await r.json()).error || m; } catch (_) {} pw.value = ''; showAuthPrompt(m); return; }
+      let d = {}; try { d = await r.json(); } catch (_) {}
+      terminalToken = d.token || null; pw.value = ''; hideAuthPrompt();
+      if (terminalToken) connectTerminal();
+    }
+
+    // ── theme ───────────────────────────────────────────────────────────────
+    function isDark() { return document.documentElement.classList.contains('dark'); }
+    function xtermTheme() {
+      return isDark() ? {
+        background: '#030712', foreground: '#e5e7eb', cursor: '#3b82f6', selectionBackground: '#1e3a8a',
+        black: '#1f2937', red: '#ef4444', green: '#10b981', yellow: '#eab308', blue: '#3b82f6',
+        magenta: '#8b5cf6', cyan: '#06b6d4', white: '#e5e7eb',
+        brightBlack: '#6b7280', brightRed: '#f87171', brightGreen: '#34d399', brightYellow: '#facc15',
+        brightBlue: '#60a5fa', brightMagenta: '#a78bfa', brightCyan: '#22d3ee', brightWhite: '#f9fafb',
+      } : {
+        background: '#ffffff', foreground: '#1f2937', cursor: '#2563eb', selectionBackground: '#bfdbfe',
+        black: '#1f2937', red: '#dc2626', green: '#059669', yellow: '#b45309', blue: '#2563eb',
+        magenta: '#7c3aed', cyan: '#0891b2', white: '#e5e7eb',
+        brightBlack: '#6b7280', brightRed: '#ef4444', brightGreen: '#10b981', brightYellow: '#d97706',
+        brightBlue: '#3b82f6', brightMagenta: '#8b5cf6', brightCyan: '#06b6d4', brightWhite: '#111827',
+      };
+    }
+
     // ── xterm setup ─────────────────────────────────────────────────────────
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 12,
       lineHeight: 20 / 12,
       fontFamily: '"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
-      theme: {
-        selectionBackground: '#1e3a8a',
-        background:   '#030712',
-        foreground:   '#e5e7eb',
-        cursor:       '#3b82f6',
-        black:        '#1f2937',
-        red:          '#ef4444',
-        green:        '#10b981',
-        yellow:       '#eab308',
-        blue:         '#3b82f6',
-        magenta:      '#8b5cf6',
-        cyan:         '#06b6d4',
-        white:        '#e5e7eb',
-        brightBlack:  '#6b7280',
-        brightRed:    '#f87171',
-        brightGreen:  '#34d399',
-        brightYellow: '#facc15',
-        brightBlue:   '#60a5fa',
-        brightMagenta:'#a78bfa',
-        brightCyan:   '#22d3ee',
-        brightWhite:  '#f9fafb',
-      },
+      theme: xtermTheme(),
       scrollback: 5000,
       allowTransparency: false,
     });
@@ -128,6 +163,9 @@
 
     const terminalEl = document.getElementById('terminal');
     term.open(terminalEl);
+
+    // follow the panel's light/dark toggle (it flips the `dark` class on <html>)
+    new MutationObserver(() => { term.options.theme = xtermTheme(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
     // ── fit helpers ─────────────────────────────────────────────────────────
     function fitAndReport() {
@@ -162,12 +200,14 @@
     let onDataDispose = null;   // track the xterm onData listener so we can remove it on reconnect
 
     function connectTerminal() {
+      if (!terminalToken) { showAuthPrompt(); return; }
       if (ws) { try { ws.close(); } catch (_) {} }
       if (onDataDispose) { onDataDispose.dispose(); onDataDispose = null; }
 
+      let everOpened = false;
       const shell = document.getElementById('shell').value || 'bash';
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      const url   = `${proto}://${location.host}${WS_PATH}`;
+      const url   = `${proto}://${location.host}${WS_PATH}?token=${encodeURIComponent(terminalToken)}`;
 
       setStatus('connecting');
       term.reset();
@@ -188,6 +228,7 @@
           cols:  term.cols,
         }));
 
+        everOpened = true;
         setStatus('open');
         term.focus();
       };
@@ -218,6 +259,7 @@
       ws.onclose = (evt) => {
         term.write(`\r\n\x1b[33m[Connection closed${evt.reason ? ': ' + evt.reason : ''}]\x1b[0m\r\n`);
         setStatus('closed');
+        if (!everOpened && terminalToken) { terminalToken = null; showAuthPrompt('Your terminal session expired, confirm your password.'); }
       };
 
       onDataDispose = term.onData(data => {

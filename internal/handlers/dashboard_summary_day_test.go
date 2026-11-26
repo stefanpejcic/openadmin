@@ -223,7 +223,7 @@ func TestMainAttentionProblem(t *testing.T) {
 	}
 	list = append(list, summaryFinding{Username: "a", Title: "1 known security hole", Detail: plugin, Domain: "a2.com"}, summaryFinding{Username: "e", Title: "Disk almost full"})
 	got := mainAttentionProblem(groupAttention(list))
-	if got != "The main problem is All-in-One WP Migration Unlimited Extension: it has known security holes on 4 of the 5 accounts that need attention (80%), updating it clears most of the list." {
+	if got != "The main problem is All-in-One WP Migration Unlimited Extension, with known security holes on 4 of the 5 accounts that need attention (80%). Updating that clears most of the list." {
 		t.Fatalf("got %q", got)
 	}
 	if got := mainAttentionProblem(groupAttention([]summaryFinding{{Username: "a", Title: "x"}, {Username: "b", Title: "y"}, {Username: "c", Title: "z"}})); got != "" {

@@ -1278,6 +1278,10 @@ func EnsureMasterUser(masterPass string) bool {
 
 	action := "add"
 	if strings.Contains(string(out), emailsMasterUser) {
+		// every update writes a new salt, the mailserver then regenerates all accounts and chown -Rs every mailbox, so skip it when the password already matches
+		if masterPassMatches(masterPass) {
+			return true
+		}
 		action = "update"
 	}
 
@@ -1286,6 +1290,16 @@ func EnsureMasterUser(masterPass string) bool {
 		return false
 	}
 	return setCmd.Run() == nil
+}
+
+// masterPassMatches checks the stored master hash with doveadm, which only reads
+func masterPassMatches(masterPass string) bool {
+	script := `h=$(grep "^` + emailsMasterUser + `|" /tmp/docker-mailserver/dovecot-masters.cf | cut -d"|" -f2-); [ -n "$h" ] && doveadm pw -t "$h" -p "$1" >/dev/null 2>&1`
+	cmd, err := podman.Command("default", "exec", emailsMailserverContainerName, "sh", "-c", script, "sh", masterPass)
+	if err != nil {
+		return false
+	}
+	return cmd.Run() == nil
 }
 
 // webmailToken generates 32 cryptographically random bytes, base64url-

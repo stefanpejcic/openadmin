@@ -63,6 +63,11 @@ func newTerminalTestServer(t *testing.T, term *Terminal, role string) (*httptest
 	mux.HandleFunc("GET /terminal/{username}/{container_name}", auth.RequireAdmin(sessions, authOpts, term.ServeUserTerminalPage))
 	mux.HandleFunc("GET /ws/terminal", auth.RequireAdmin(sessions, authOpts, term.ServeHostTerminalWS))
 	mux.HandleFunc("GET /ws/terminal/{username}/{container_name}", auth.RequireAdmin(sessions, authOpts, term.ServeUserTerminalWS))
+	mux.HandleFunc("POST /terminal/authorize", auth.RequireAdmin(sessions, authOpts, term.ServeTerminalAuthorize))
+	mux.HandleFunc("GET /test-mint", auth.RequireAdmin(sessions, authOpts, func(w http.ResponseWriter, r *http.Request) {
+		tok, _ := mintTerminalGrant(auth.CurrentUser(r).ID)
+		_, _ = w.Write([]byte(tok))
+	}))
 	mux.HandleFunc("/login-as", func(w http.ResponseWriter, r *http.Request) {
 		auth.LoginUser(w, r, sessions, caller, "203.0.113.1")
 	})
@@ -239,7 +244,7 @@ func TestWSHostTerminalRealPTYSession(t *testing.T) {
 	term := &Terminal{}
 	srv, client := newTerminalTestServer(t, term, "admin")
 
-	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/terminal"
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/terminal" + termTokenQS(t, srv, client)
 	dialer := websocket.Dialer{Jar: client.Jar}
 	conn, resp, err := dialer.Dial(wsURL, nil)
 	if err != nil {
@@ -281,7 +286,7 @@ func TestWSTerminalResizeMessageDoesNotReachShell(t *testing.T) {
 	term := &Terminal{}
 	srv, client := newTerminalTestServer(t, term, "admin")
 
-	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/terminal"
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/terminal" + termTokenQS(t, srv, client)
 	dialer := websocket.Dialer{Jar: client.Jar}
 	conn, _, err := dialer.Dial(wsURL, nil)
 	if err != nil {
@@ -327,7 +332,7 @@ func TestWSTerminalResizeMessageDoesNotReachShell(t *testing.T) {
 // dialHostTerminal opens an authenticated /ws/terminal websocket and sends the init message
 func dialHostTerminal(t *testing.T, srv *httptest.Server, client *http.Client, shell string) *websocket.Conn {
 	t.Helper()
-	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/terminal"
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/ws/terminal" + termTokenQS(t, srv, client)
 	conn, resp, err := (&websocket.Dialer{Jar: client.Jar}).Dial(wsURL, nil)
 	if err != nil {
 		t.Fatalf("dial failed: %v (status %v)", err, resp)
@@ -530,4 +535,19 @@ func TestRunPTYSessionIdleTimeoutStillCloses(t *testing.T) {
 	if elapsed := time.Since(start); elapsed > 5*time.Second {
 		t.Fatalf("idle session was not closed promptly, still open after %s", elapsed.Round(time.Millisecond))
 	}
+}
+
+// termTokenQS mints a terminal grant for the logged-in admin and returns it as a ?token= query string
+func termTokenQS(t *testing.T, srv *httptest.Server, client *http.Client) string {
+	t.Helper()
+	resp, err := client.Get(srv.URL + "/test-mint")
+	if err != nil {
+		t.Fatalf("mint token: %v", err)
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	if len(b) == 0 {
+		t.Fatalf("mint token: empty (status %d)", resp.StatusCode)
+	}
+	return "?token=" + string(b)
 }

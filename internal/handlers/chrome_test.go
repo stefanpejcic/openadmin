@@ -151,3 +151,22 @@ func TestReadNotificationsPicksUpLogChanges(t *testing.T) {
 		t.Fatalf("expected the rewritten log, got %+v", entries)
 	}
 }
+
+func TestLicenseTypeFollowsTheCheck(t *testing.T) {
+	origType, origValid := chromeSite.LicenseType, ChromeLicenseValid
+	t.Cleanup(func() { chromeSite.LicenseType, ChromeLicenseValid = origType, origValid })
+
+	chromeSite.LicenseType = "Enterprise"
+	ChromeLicenseValid = func() bool { return false }
+	if got := licenseType(); got != "Community" {
+		t.Fatalf("invalid enterprise key should show as Community, got %q", got)
+	}
+	ChromeLicenseValid = func() bool { return true }
+	if got := licenseType(); got != "Enterprise" {
+		t.Fatalf("valid key should stay Enterprise, got %q", got)
+	}
+	chromeSite.LicenseType, ChromeLicenseValid = "Community", nil
+	if got := licenseType(); got != "Community" {
+		t.Fatalf("got %q", got)
+	}
+}

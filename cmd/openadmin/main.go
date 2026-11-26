@@ -296,6 +296,10 @@ type appDeps struct {
 
 func newHandler(d appDeps) (http.Handler, error) {
 	handlers.InitChromeSiteInfo(d.PublicIP, d.ServerHostname, d.ForceDomainValue, d.PanelVersion, d.LicenseType, d.DevMode, handlers.ModulesConfigFilePath)
+	// the topbar, login page and enterprise menus follow the check, not just the key's prefix
+	if d.LicenseChecker != nil {
+		handlers.ChromeLicenseValid = d.LicenseChecker.Valid
+	}
 
 	sessions := auth.NewManager(d.SecretKey, d.UseTLS)
 	loginRateLimiter := auth.NewPerIPLimiter(d.LoginRatePerMin, 5)
@@ -782,6 +786,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /get_custom_message_for_user/{username}", auth.RequireLogin(sessions, authOpts, users.HandleCustomMessage))
 	mux.HandleFunc("POST /containers/{username}/{action}/{container_name}", auth.RequireLogin(sessions, authOpts, users.ServeManageContainer))
 	mux.HandleFunc("POST /users/{username}/account-setting/{field}", auth.RequireLogin(sessions, authOpts, users.ServeUserAccountSetting))
+	mux.HandleFunc("POST /users/{username}/tasks-max", auth.RequireAdmin(sessions, authOpts, users.ServeTasksMax))
+	mux.HandleFunc("POST /users/{username}/slice-limit/{kind}", auth.RequireAdmin(sessions, authOpts, users.ServeSliceLimit))
 	mux.HandleFunc("GET /containers/stats/{username}", auth.RequireLogin(sessions, authOpts, users.ServeContainersStats))
 	mux.HandleFunc("GET /containers/{username}/inspect/{container_name}", auth.RequireLogin(sessions, authOpts, users.ServeContainerInspect))
 	mux.HandleFunc("GET /containers/{username}/config/{service}", auth.RequireLogin(sessions, authOpts, users.ServeServiceConfig))
@@ -962,6 +968,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("GET /brand/{file}", auth.RequireAdmin(sessions, authOpts, handlers.ServeBrandFile))
 	mux.HandleFunc("GET /settings/open-panel/theme-screenshot/{theme}", auth.RequireAdmin(sessions, authOpts, handlers.ServeThemeScreenshot))
 	mux.HandleFunc("POST /settings/open-panel/themes/install", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeInstallTheme))
+	mux.HandleFunc("POST /settings/open-panel/themes/uninstall", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeUninstallTheme))
+	mux.HandleFunc("POST /settings/open-panel/themes/update", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeUpdateTheme))
 	mux.HandleFunc("GET /settings/open-panel/themes/{theme}/customize", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeThemeSettings))
 	mux.HandleFunc("POST /settings/open-panel/themes/{theme}/customize", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeThemeSettings))
 	mux.HandleFunc("GET /settings/defaults", auth.RequireAdmin(sessions, authOpts, defaultsSettings.ServeDefaults))
@@ -1070,6 +1078,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /emails/domain-limits/api", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimitsAPI))
 	mux.HandleFunc("GET /terminal", auth.RequireAdmin(sessions, authOpts, terminal.ServeHostTerminalPage))
 	mux.HandleFunc("GET /terminal/{username}/{container_name}", auth.RequireAdmin(sessions, authOpts, terminal.ServeUserTerminalPage))
+	mux.HandleFunc("POST /terminal/authorize", auth.RequireAdmin(sessions, authOpts, terminal.ServeTerminalAuthorize))
 	mux.HandleFunc("GET /ws/terminal", auth.RequireAdmin(sessions, authOpts, terminal.ServeHostTerminalWS))
 	mux.HandleFunc("GET /ws/terminal/{username}/{container_name}", auth.RequireAdmin(sessions, authOpts, terminal.ServeUserTerminalWS))
 	mux.HandleFunc("GET /user/import", auth.RequireLogin(sessions, authOpts, importer.ServeImportUser))

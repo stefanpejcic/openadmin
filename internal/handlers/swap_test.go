@@ -7,6 +7,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -158,7 +159,7 @@ func TestServeSwapGetRoundsTotalGBToTwoDecimalsTrimmed(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
 
-		want := `id="swap_size_gb" type="number" min="0.125" step="0.125" value="` + c.wantGB + `"`
+		want := `step="0.125" value="` + c.wantGB + `" data-max-mb=`
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("totalMB=%d: expected %q in body, got %s", c.totalMB, want, truncate(string(body)))
 		}
@@ -193,7 +194,7 @@ func TestServeSwapGetRendersHTML(t *testing.T) {
 	// The "Change allocation" field is labeled in GB -- its prefilled
 	// value must be the MB total converted to GB (1024 MB -> 1), not the
 	// raw MB number sitting next to a "GB" label.
-	if !strings.Contains(got, `id="swap_size_gb" type="number" min="0.125" step="0.125" value="1"`) {
+	if !strings.Contains(got, `step="0.125" value="1" data-max-mb=`) {
 		t.Fatalf("expected swap_size_gb prefilled with GB value \"1\" (converted from 1024 MB), got %s", truncate(got))
 	}
 }
@@ -346,5 +347,61 @@ func TestServeSwapWarnsWhenAlmostFull(t *testing.T) {
 	resp.Body.Close()
 	if !strings.Contains(string(body), "Swap is 95% used, so the server is short on memory") {
 		t.Fatal("expected the swap usage warning above 90%")
+	}
+}
+
+func TestSwapResizeCheck(t *testing.T) {
+	st := swapStatus{ManagedMB: 2048, ManagedUsedMB: 1500, AvailRAMMB: 1000, DiskFreeMB: 3072, MaxMB: 4096}
+	if msg := swapResizeCheck(st, 3072); !strings.Contains(msg, "free RAM") {
+		t.Fatalf("growing still turns the file off, 1.5 GB swapped with 1 GB RAM should be refused, got %q", msg)
+	}
+	if msg := swapResizeCheck(st, 5120); !strings.Contains(msg, "disk space") {
+		t.Fatalf("over max should be refused for disk, got %q", msg)
+	}
+	if msg := swapResizeCheck(st, 1024); !strings.Contains(msg, "free RAM") {
+		t.Fatalf("shrinking with 1.5 GB swapped and 1 GB RAM should be refused, got %q", msg)
+	}
+	st.AvailRAMMB = 4096
+	if msg := swapResizeCheck(st, 1024); msg != "" {
+		t.Fatalf("shrinking with enough RAM should pass, got %q", msg)
+	}
+	if msg := swapResizeCheck(st, 3072); msg != "" {
+		t.Fatalf("growing with enough RAM should pass, got %q", msg)
+	}
+}
+
+func TestServeSwapActionDropRefusedWithoutRAM(t *testing.T) {
+	origFree, origShow, origRoom := swapFreeRun, swapShowRun, swapRoomRun
+	swapFreeRun = func() (string, error) { return "Swap:           4096        3000        1096\n", nil }
+	swapShowRun = func() (string, error) { return "", nil }
+	swapRoomRun = func() (int64, int64) { return 1000, 50000 }
+	t.Cleanup(func() { swapFreeRun, swapShowRun, swapRoomRun = origFree, origShow, origRoom })
+
+	called := false
+	origDrop := swapDropRun
+	swapDropRun = func() error { called = true; return nil }
+	t.Cleanup(func() { swapDropRun = origDrop })
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", "/server/swap/action/drop", nil)
+	req.SetPathValue("action", "drop")
+	(&Swap{}).ServeSwapAction(rec, req)
+	if rec.Code != 400 || !strings.Contains(rec.Body.String(), "free RAM") || called {
+		t.Fatalf("expected 400 about free RAM and no drop, got %d %s called=%v", rec.Code, rec.Body.String(), called)
+	}
+}
+
+func TestTopSwapProcs(t *testing.T) {
+	dir := t.TempDir()
+	orig := swapProcDir
+	swapProcDir = dir
+	t.Cleanup(func() { swapProcDir = orig })
+	for pid, swap := range map[string]string{"10": "2048", "11": "0", "12": "512000"} {
+		os.MkdirAll(filepath.Join(dir, pid), 0755)
+		os.WriteFile(filepath.Join(dir, pid, "status"), []byte("Name:\tproc"+pid+"\nUid:\t0\t0\t0\t0\nVmSwap:\t"+swap+" kB\n"), 0644)
+	}
+	got := topSwapProcs(10)
+	if len(got) != 2 || got[0].PID != 12 || got[0].SwapMB != 500 || got[1].Name != "proc10" || got[0].Owner != "root" {
+		t.Fatalf("unexpected %+v", got)
 	}
 }

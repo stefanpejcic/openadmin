@@ -1000,9 +1000,17 @@ var podmanDeleteImageRun = func(id string) (string, error) {
 	return out, err
 }
 
+// users' rootless podman only sees the shared store, a pull into root's own graphroot never reached their containers
 var podmanPullImageRun = func(ref string) (string, error) {
-	out, err := podmanRunRun("pull", ref)
-	podmanFixSharedStorePermissionsRun(podmanSharedImageStoreRoot())
+	root := podmanSharedImageStoreRoot()
+	var out string
+	var err error
+	if root != "" {
+		out, err = podmanRunRun("--root", root, "pull", ref)
+	} else {
+		out, err = podmanRunRun("pull", ref)
+	}
+	podmanFixSharedStorePermissionsRun(root)
 	return out, err
 }
 
@@ -1214,13 +1222,8 @@ var podmanCheckImageVulnerabilitiesRun = func(ref string) (details []podmanVulnD
 		"--quiet",
 		ref,
 	}
-	if p, err := exec.LookPath("ionice"); err == nil {
-		args = append([]string{p, "-c2", "-n7"}, args...)
-	}
-	if p, err := exec.LookPath("nice"); err == nil {
-		args = append([]string{p, "-n", "19"}, args...)
-	}
-	cmd := exec.Command(args[0], args[1:]...)
+	name, lowArgs := lowPrio(true, args[0], args[1:]...)
+	cmd := exec.Command(name, lowArgs...)
 	cmd.Env = append(os.Environ(), "TMPDIR="+tmp)
 	// trivy sometimes writes progress/warning lines to stderr even on
 	// success (e.g. DB update progress on first run); stdout alone is

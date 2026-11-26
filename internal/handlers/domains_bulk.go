@@ -164,7 +164,7 @@ var bulkDomainsRun = func(args ...string) (bool, string) {
 
 // HandleBulkAdd handles POST /domains/bulk-add, validates every line first and then adds the domains one by one in the background
 func (d *Domains) HandleBulkAdd(w http.ResponseWriter, r *http.Request) {
-	lines, errs := parseBulkDomains(r.FormValue("domains"), chromeSite.LicenseType == "Enterprise")
+	lines, errs := parseBulkDomains(r.FormValue("domains"), licenseType() == "Enterprise")
 	if len(errs) == 0 {
 		for _, u := range d.missingBulkUsers(lines) {
 			errs = append(errs, fmt.Sprintf("User %q does not exist.", u))

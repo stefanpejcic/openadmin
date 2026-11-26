@@ -74,7 +74,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 	fail := func(action, output string) {
 		activity.Fail(r.Context())
 		auth.AddFlash(w, r, u.Sessions, "Error "+action+" for user "+username+": "+output, "error")
-		http.Redirect(w, r, "/users/"+username+"#edit", http.StatusSeeOther)
+		http.Redirect(w, r, "/users/"+username+"#stats", http.StatusSeeOther)
 	}
 
 	var changes []string
@@ -93,7 +93,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 	if _, sent := r.PostForm["reseller"]; sent && newReseller != oldReseller {
 		if ok, errMsg := u.updateUserReseller(username, newReseller); !ok {
 			auth.AddFlash(w, r, u.Sessions, "Error: "+errMsg, "error")
-			http.Redirect(w, r, "/users/"+username+"#edit", http.StatusSeeOther)
+			http.Redirect(w, r, "/users/"+username+"#stats", http.StatusSeeOther)
 			return
 		}
 		if newReseller == "" || newReseller == "root" {
@@ -152,7 +152,7 @@ func (u *Users) handleEditUser(w http.ResponseWriter, r *http.Request, username 
 	} else {
 		auth.AddFlash(w, r, u.Sessions, "User '"+username+"' updated successfully: "+strings.Join(changes, ", "), "success")
 	}
-	http.Redirect(w, r, "/users/"+username+"#edit", http.StatusSeeOther)
+	http.Redirect(w, r, "/users/"+username+"#stats", http.StatusSeeOther)
 }
 
 // updateUserReseller reassigns username's owner directly in MySQL (there is

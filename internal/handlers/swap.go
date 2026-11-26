@@ -9,10 +9,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/gorilla/csrf"
 
@@ -46,6 +50,101 @@ type swapStatus struct {
 	Devices           []swapDeviceInfo
 	ThresholdPercent  int
 	ManagedFileExists bool
+	// size and usage of /swapfile itself
+	ManagedMB     int64
+	ManagedUsedMB int64
+	AvailRAMMB    int64
+	DiskFreeMB    int64
+	// biggest size the form takes, what's managed now plus free disk minus a reserve
+	MaxMB int64
+	Top   []swapProc
+}
+
+const (
+	swapDiskReserveMB = 1024
+	swapRAMReserveMB  = 256
+)
+
+func (s swapStatus) MaxGB() string {
+	return strings.TrimRight(strings.TrimRight(strconv.FormatFloat(float64(s.MaxMB)/1024, 'f', 2, 64), "0"), ".")
+}
+func (s swapStatus) AvailRAMGB() string { return mbToGB(s.AvailRAMMB) }
+func (s swapStatus) DiskFreeGB() string { return mbToGB(s.DiskFreeMB) }
+
+// CanDrop is false when the swapped out pages wouldn't fit in free RAM
+func (s swapStatus) CanDrop() bool { return s.UsedMB+swapRAMReserveMB <= s.AvailRAMMB }
+
+// swapRoomRun returns available RAM and free disk where the swap file lives, injectable for tests
+var swapRoomRun = func() (ramMB, diskMB int64) {
+	ramMB = int64(readMemInfo()["MemAvailable"] >> 20)
+	var st syscall.Statfs_t
+	if syscall.Statfs(filepath.Dir(SwapFilePath), &st) == nil {
+		diskMB = int64(st.Bavail * uint64(st.Bsize) >> 20)
+	}
+	return
+}
+
+type swapProc struct {
+	PID       int
+	Name      string
+	Owner     string
+	PanelUser string
+	SwapMB    int64
+}
+
+func (p swapProc) SwapGB() string { return mbToGB(p.SwapMB) }
+
+var swapProcDir = "/proc"
+
+// topSwapProcs reads VmSwap from every /proc/<pid>/status, one small read per process so it's cheap enough for page load
+func topSwapProcs(limit int) []swapProc {
+	dirs, _ := os.ReadDir(swapProcDir)
+	var out []swapProc
+	for _, d := range dirs {
+		pid, err := strconv.Atoi(d.Name())
+		if err != nil {
+			continue
+		}
+		raw, err := os.ReadFile(filepath.Join(swapProcDir, d.Name(), "status"))
+		if err != nil {
+			continue
+		}
+		p := swapProc{PID: pid}
+		for _, line := range strings.Split(string(raw), "\n") {
+			k, v, ok := strings.Cut(line, ":")
+			if !ok {
+				continue
+			}
+			f := strings.Fields(v)
+			if len(f) == 0 {
+				continue
+			}
+			switch k {
+			case "Name":
+				p.Name = f[0]
+			case "Uid":
+				p.Owner = f[0]
+			case "VmSwap":
+				kb, _ := strconv.ParseInt(f[0], 10, 64)
+				p.SwapMB = kb >> 10
+			}
+		}
+		if p.SwapMB > 0 {
+			out = append(out, p)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].SwapMB > out[j].SwapMB })
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	ranges := readSubuidRanges(SubuidPath)
+	for i := range out {
+		if u, err := user.LookupId(out[i].Owner); err == nil {
+			out[i].Owner = u.Username
+		}
+		out[i].PanelUser = panelUserFor(out[i].Owner, LocalesUsersDir, ranges)
+	}
+	return out
 }
 
 // mbToGB formats MB as GB with 2 decimals, matching the GB resize input
@@ -128,15 +227,41 @@ func getSwapStatus() swapStatus {
 
 	_, statErr := os.Stat(SwapFilePath)
 
-	return swapStatus{
+	devs := parseSwapDevices()
+	st := swapStatus{
 		TotalMB:           total,
 		UsedMB:            used,
 		FreeMB:            total - used,
 		UsedPercent:       percent,
-		Devices:           parseSwapDevices(),
+		Devices:           devs,
 		ThresholdPercent:  threshold,
 		ManagedFileExists: statErr == nil,
 	}
+	if info, err := os.Stat(SwapFilePath); err == nil {
+		st.ManagedMB = info.Size() >> 20
+	}
+	for _, d := range devs {
+		if d.Name == SwapFilePath {
+			st.ManagedUsedMB = d.UsedMB
+		}
+	}
+	st.AvailRAMMB, st.DiskFreeMB = swapRoomRun()
+	st.MaxMB = max(st.ManagedMB+st.DiskFreeMB-swapDiskReserveMB, st.ManagedMB)
+	return st
+}
+
+// swapResizeCheck says why a resize can't run, or "" when it can
+func swapResizeCheck(st swapStatus, sizeMB int64) string {
+	if sizeMB > st.MaxMB {
+		return fmt.Sprintf("Not enough disk space: %s GB needs %s more, only %s is free (1 GB is kept in reserve).",
+			strconv.FormatFloat(float64(sizeMB)/1024, 'f', 2, 64), mbToGB(sizeMB-st.ManagedMB), mbToGB(st.DiskFreeMB))
+	}
+	// the swap file is turned off to recreate it, so what's in it has to fit in RAM
+	if st.ManagedUsedMB+swapRAMReserveMB > st.AvailRAMMB {
+		return fmt.Sprintf("Not enough free RAM: %s is in the swap file and only %s RAM is available, it has to move back into RAM first.",
+			mbToGB(st.ManagedUsedMB), mbToGB(st.AvailRAMMB))
+	}
+	return ""
 }
 
 // ServeSwap handles GET /server/swap.
@@ -157,6 +282,7 @@ func (s *Swap) ServeSwap(w http.ResponseWriter, r *http.Request) {
 		"SwapFilePath":  SwapFilePath,
 		"TotalGB":       totalGB,
 		"RecommendedGB": recommendedSwapGB(float64(readMemInfo()["MemTotal"]) / (1024 * 1024 * 1024)),
+		"SwapTop":       topSwapProcs(10),
 		"CSRFToken":     csrf.Token(r),
 		"Flashes":       auth.PopFlashes(w, r, s.Sessions),
 	}, r, "Swap"))
@@ -176,21 +302,20 @@ var (
 	pendingSwapAction   *swapActionResult
 )
 
-// swapResizeRun creates or resizes the managed swap file to sizeMB and
-// activates it, updating /etc/fstab so it persists across reboots.
+// swapResizeRun recreates the managed swap file at sizeMB and activates it, updating /etc/fstab so it persists across reboots.
 // Injectable for tests.
 var swapResizeRun = func(sizeMB int64) error {
 	_ = exec.Command("swapoff", SwapFilePath).Run() // no-op if not active
+	// fallocate never shrinks an existing file, so start from scratch
+	_ = os.Remove(SwapFilePath)
 
 	if err := exec.Command("fallocate", "-l", fmt.Sprintf("%dM", sizeMB), SwapFilePath).Run(); err != nil {
-		// Some filesystems (e.g. some btrfs/overlay setups) don't support
-		// fallocate for swap files -- dd is slower but always works.
-		ddCmd := exec.Command("dd", "if=/dev/zero", "of="+SwapFilePath, "bs=1M", fmt.Sprintf("count=%d", sizeMB))
-		if ddErr := ddCmd.Run(); ddErr != nil {
+		// some filesystems (btrfs, overlay) can't fallocate a swap file, dd is slower but always works
+		name, args := lowPrio(false, "dd", "if=/dev/zero", "of="+SwapFilePath, "bs=1M", fmt.Sprintf("count=%d", sizeMB))
+		if ddErr := exec.Command(name, args...).Run(); ddErr != nil {
 			return fmt.Errorf("failed to allocate swap file: %w", ddErr)
 		}
 	}
-
 	if err := os.Chmod(SwapFilePath, 0600); err != nil {
 		return fmt.Errorf("failed to chmod swap file: %w", err)
 	}
@@ -212,8 +337,10 @@ func ensureSwapFstabEntry() {
 	if err != nil {
 		return
 	}
-	if strings.Contains(string(raw), SwapFilePath) {
-		return
+	for _, l := range strings.Split(string(raw), "\n") {
+		if f := strings.Fields(l); len(f) > 0 && f[0] == SwapFilePath {
+			return
+		}
 	}
 	entry := SwapFilePath + " none swap sw 0 0\n"
 	content := string(raw)
@@ -251,7 +378,16 @@ func (s *Swap) ServeSwapAction(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusBadRequest, "Invalid swap size. Minimum is 128 MB.")
 			return
 		}
-	} else if action != "drop" {
+		if msg := swapResizeCheck(getSwapStatus(), sizeMB); msg != "" {
+			writeJSONError(w, http.StatusBadRequest, msg)
+			return
+		}
+	} else if action == "drop" {
+		if st := getSwapStatus(); !st.CanDrop() {
+			writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("Not enough free RAM: %s is in swap and only %s RAM is available.", st.UsedGB(), st.AvailRAMGB()))
+			return
+		}
+	} else {
 		writeJSONError(w, http.StatusBadRequest, "Invalid action. Use resize or drop.")
 		return
 	}
@@ -267,7 +403,7 @@ func (s *Swap) ServeSwapAction(w http.ResponseWriter, r *http.Request) {
 		switch action {
 		case "resize":
 			err = swapResizeRun(sizeMB)
-			successMsg = fmt.Sprintf("Swap resized to %d MB.", sizeMB)
+			successMsg = fmt.Sprintf("Swap set to %s.", mbToGB(sizeMB))
 		case "drop":
 			err = swapDropRun()
 			successMsg = "Swap cleared successfully."

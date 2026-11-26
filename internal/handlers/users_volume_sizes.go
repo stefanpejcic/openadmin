@@ -32,7 +32,9 @@ func volumeDirsFor(userContext string) map[string]string {
 var volumeSizesRun = func(dirs []string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "du", append([]string{"-sx", "-B1", "--"}, dirs...)...).Output()
+	// every volume of the account in one go, kept off the sites' disk time
+	name, args := lowPrio(true, "du", append([]string{"-sx", "-B1", "--"}, dirs...)...)
+	out, err := exec.CommandContext(ctx, name, args...).Output()
 	// du exits 1 on an unreadable file but still prints the totals
 	if len(out) > 0 {
 		return string(out), nil

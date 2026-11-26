@@ -310,6 +310,9 @@ func (t *Terminal) ServeHostTerminalWS(w http.ResponseWriter, r *http.Request) {
 	if t.terminalDisabled(w, r) {
 		return
 	}
+	if !t.terminalGrantOK(w, r) {
+		return
+	}
 
 	conn, err := terminalUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -346,6 +349,9 @@ func (t *Terminal) ServeUserTerminalWS(w http.ResponseWriter, r *http.Request) {
 	podmanContext, err := queryContextByUsername(t.MySQL, username)
 	if err != nil {
 		http.Error(w, "Unknown user.", http.StatusNotFound)
+		return
+	}
+	if !t.terminalGrantOK(w, r) {
 		return
 	}
 

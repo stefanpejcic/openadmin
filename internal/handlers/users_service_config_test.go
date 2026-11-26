@@ -105,3 +105,15 @@ func TestApplyServiceConfigRejects(t *testing.T) {
 		}
 	}
 }
+
+func TestPidsFromEnv(t *testing.T) {
+	compose := "services:\n  apache:\n    image: httpd\n    deploy:\n      resources:\n        limits:\n          pids: 100\n  cron:\n    deploy:\n      resources:\n        limits:\n          pids: 200\n"
+	got, changed := pidsFromEnv(compose, "apache", "APACHE_PIDS")
+	if !changed || !strings.Contains(got, `          pids: "${APACHE_PIDS:-100}"`) || !strings.Contains(got, "          pids: 200\n") {
+		t.Fatalf("got\n%s", got)
+	}
+	// already read from .env, nothing to do
+	if _, changed := pidsFromEnv(got, "apache", "APACHE_PIDS"); changed {
+		t.Fatal("expected no change the second time")
+	}
+}

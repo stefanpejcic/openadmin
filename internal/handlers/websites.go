@@ -280,6 +280,15 @@ func parseVulnerabilities(path string) *vulnReport {
 		}
 		for _, v := range item.Data.Vulnerability {
 			issue := vulnIssue{Name: html.UnescapeString(v.Name), Sources: v.Source}
+			// core entries carry the wp version as name, the real title sits on the source
+			if kind == "core" && (issue.Name == "" || issue.Name == strings.TrimPrefix(slug, "version_")) {
+				for _, s := range v.Source {
+					if s.Name != "" {
+						issue.Name = html.UnescapeString(s.Name)
+						break
+					}
+				}
+			}
 			// "lt" means the max version is the first fixed one
 			if v.Operator.MaxOperator == "lt" {
 				issue.FixedIn = v.Operator.MaxVersion

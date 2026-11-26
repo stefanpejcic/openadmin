@@ -452,3 +452,26 @@ func (u *Users) ServeServiceTags(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, map[string]interface{}{"tags": tags, "repo": hubRepo})
 }
+
+var composePidsLineRe = regexp.MustCompile(`^(\s*)pids:\s*"?(\d+)"?\s*$`)
+
+// pidsFromEnv points a service's hardcoded pids at its .env variable, compose files from before the template read
+// it from .env kept the number, so a limit saved in .env came back as the old one after a recreate
+func pidsFromEnv(compose, service, envVar string) (string, bool) {
+	lines := splitLines(compose)
+	start, end, _, ok := composeServiceBlock(lines, service)
+	if !ok {
+		return compose, false
+	}
+	changed := false
+	for i := start; i < end; i++ {
+		if m := composePidsLineRe.FindStringSubmatch(lines[i]); m != nil {
+			lines[i] = m[1] + `pids: "${` + envVar + `:-` + m[2] + `}"`
+			changed = true
+		}
+	}
+	if !changed {
+		return compose, false
+	}
+	return strings.Join(lines, "\n") + "\n", true
+}

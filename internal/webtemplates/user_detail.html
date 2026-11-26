@@ -130,6 +130,7 @@
               success: function(response) {
                   $('#custom_message_for_this_user').val(response.custom_message || '');
                   window.renderCustomMessagePreview?.();
+                  window.dispatchEvent(new CustomEvent('custom-message', { detail: response.custom_message || '' }));
               },
               error: function(xhr) {
                   if (xhr.status === 404) {
@@ -154,7 +155,6 @@
           else if (hash === '#storage') this.activeTab = 'storage';
           else if (hash === '#volumes') this.activeTab = 'volumes';
           else if (hash === '#networks') this.activeTab = 'networks';
-          else if (hash === '#edit') this.activeTab = 'edit';
           else if (hash === '#permissions') this.activeTab = 'permissions';
           else if (hash === '#delete') this.activeTab = 'delete';
           else if (hash === '#overview') this.activeTab = 'stats';
@@ -166,11 +166,10 @@
               else if (this.activeTab === 'networks') this.loadNetworks();
               else if (this.activeTab === 'activity') $store?.activityStore?.fetchLogs();
               else if (this.activeTab === 'logins') $store?.loginsStore?.fetchloginLogs();
-              else if (this.activeTab === 'edit' || this.activeTab === 'delete') {
+              else if (this.activeTab === 'delete') {
                   $store?.ipStore?.fetchIPs();
                   $store?.planStore?.fetchPlans();
                   $store?.resellerStore?.fetchResellers();
-                  if (this.activeTab === 'edit') this.fetchCustomMessage();
               }
               else if (this.activeTab === 'stats') this.fetchCustomMessage();
           });
@@ -194,6 +193,15 @@
                     </p>
                </div>
                 <div class="flex flex-none items-center gap-2">
+                <div x-data="userNote({{toJSON .Notes}}, {{toJSON .Username}})" class="relative">
+                    <template x-if="!editing && note.trim()">
+                        <div class="group flex max-w-sm items-start gap-1.5 rounded-md bg-yellow-50 px-2.5 py-1.5 text-xs text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500" title="Private note, only admins and resellers see it">
+                            <span class="line-clamp-2 whitespace-pre-wrap" x-text="note"></span>
+                            <button type="button" @click="open()" class="inline-flex size-5 shrink-0 items-center justify-center rounded opacity-0 transition hover:bg-yellow-100 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit private note"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                        </div>
+                    </template>
+                    <textarea x-show="editing || !note.trim()" x-model="draft" @focus="editing = true" @blur="save()" @keydown.escape.prevent="draft = note; $el.blur()" @input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 96) + 'px'" rows="1" placeholder="Add a private note…" aria-label="Private note" title="Only admins and resellers see this, never the user. Saved when you leave the field." style="resize: none" class="block w-56 rounded-md border border-dashed border-gray-300 bg-transparent px-2.5 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 outline-hidden transition hover:bg-gray-50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-700 dark:text-gray-50 dark:placeholder:text-gray-500 dark:hover:bg-gray-900/60 dark:focus:border-blue-700 dark:focus:ring-blue-700/30"></textarea>
+                </div>
 
                     {{if not (contains .Username "SUSPENDED_")}}
 
@@ -272,9 +280,6 @@
                     <button type="button" role="tab" :aria-selected="(activeTab === 'permissions').toString()" @click="activeTab = 'permissions'" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Permissions</button>
                 </li>
 {{else}}
-                <li class="flex" role="presentation">
-                    <button type="button" role="tab" :aria-selected="(activeTab === 'edit').toString()" @click="$store.ipStore.fetchIPs(); $store.planStore.fetchPlans(); activeTab = 'edit'" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Edit</button>
-                </li>
 
                 <li class="flex" role="presentation">
                     <button type="button" role="tab" :aria-selected="(activeTab === 'permissions').toString()" @click="activeTab = 'permissions'" class="-mb-px inline-flex items-center whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm font-medium text-gray-500 transition hover:border-gray-300 hover:text-gray-700 aria-selected:border-blue-500 aria-selected:text-blue-500 dark:hover:border-gray-400 dark:hover:text-gray-400 dark:aria-selected:border-blue-500 dark:aria-selected:text-blue-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Permissions</button>
@@ -511,45 +516,57 @@
    <div class="relative w-full text-left">
       <div class="min-h-[70vh] grid-cols-12 divide-y divide-gray-200 dark:divide-gray-800 md:grid md:divide-x md:divide-y-0">
 
-         <div class="hidden sm:flex divide-y divide-gray-200 px-4 py-6 dark:divide-gray-800 md:col-span-2">
+<style>
+/* on tablets the account menu is icons only, the name shows on hover */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .op-usernav .op-nav-label, .op-usernav .op-nav-heading { display: none; }
+  .op-usernav a { justify-content: center; }
+  .op-usernav { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .op-usernav { grid-column: span 1 / span 1; }
+  .op-usercontent { grid-column: span 11 / span 11; }
+}
+</style>
+         <div class="op-usernav hidden sm:flex divide-y divide-gray-200 px-4 py-6 dark:divide-gray-800 md:col-span-2">
             <nav aria-label="core navigation links" class="flex flex-1 flex-col space-y-4">
                <div>
-                  <span class="block px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-500">Containers</span>
+                  <span class="op-nav-heading block px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-500">Containers</span>
                   <ul class="mt-1 space-y-0.5">
                      <li>
-                        <a href="#stats" @click.prevent="activeTab = 'stats'; window.location.hash = 'stats'" :aria-current="activeTab === 'stats' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Overview" href="#stats" @click.prevent="activeTab = 'stats'; window.location.hash = 'stats'" :aria-current="activeTab === 'stats' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12H5V21H3V12ZM19 8H21V21H19V8ZM11 2H13V21H11V2Z"/></svg>
-                           Overview
+                           <span class="op-nav-label">Overview</span>
                         </a>
                      </li>
                      <li>
-                        <a href="#services" @click.prevent="activeTab = 'services'; window.location.hash = 'services'" :aria-current="activeTab === 'services' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Services" href="#services" @click.prevent="activeTab = 'services'; window.location.hash = 'services'" :aria-current="activeTab === 'services' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM16.5 7.5L14 14L7.5 16.5L10 10L16.5 7.5ZM12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z"/></svg>
-                           Services
+                           <span class="op-nav-label">Services</span>
                         </a>
                      </li>
                      <li>
-                        <a href="#storage" @click.prevent="activeTab = 'storage'; loadDiskUsage(); window.location.hash = 'storage'" :aria-current="activeTab === 'storage' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Storage" href="#storage" @click.prevent="activeTab = 'storage'; loadDiskUsage(); window.location.hash = 'storage'" :aria-current="activeTab === 'storage' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M4 8H20V5H4V8ZM14 19V10H10V19H14ZM16 19H20V10H16V19ZM8 19V10H4V19H8ZM3 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3Z"/></svg>
-                           Storage
+                           <span class="op-nav-label">Storage</span>
                         </a>
                      </li>
                      <li>
-                        <a href="#volumes" @click.prevent="activeTab = 'volumes'; loadVolumes(); window.location.hash = 'volumes'" :aria-current="activeTab === 'volumes' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Volumes" href="#volumes" @click.prevent="activeTab = 'volumes'; loadVolumes(); window.location.hash = 'volumes'" :aria-current="activeTab === 'volumes' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3H19C19.5523 3 20 3.44772 20 4V20C20 20.5523 19.5523 21 19 21H5C4.44772 21 4 20.5523 4 20V4C4 3.44772 4.44772 3 5 3ZM6 5V19H18V5H6ZM7 15H17V17H7V15ZM8 7H16V9H8V7Z"/></svg>
-                           Volumes
+                           <span class="op-nav-label">Volumes</span>
                         </a>
                      </li>
                      <li>
-                        <a href="#networks" @click.prevent="activeTab = 'networks'; loadNetworks(); window.location.hash = 'networks'" :aria-current="activeTab === 'networks' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Networks" href="#networks" @click.prevent="activeTab = 'networks'; loadNetworks(); window.location.hash = 'networks'" :aria-current="activeTab === 'networks' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13 18V20H17V22H7V20H11V18H5C4.44772 18 4 17.5523 4 17V3C4 2.44772 4.44772 2 5 2H19C19.5523 2 20 2.44772 20 3V17C20 17.5523 19.5523 18 19 18H13ZM6 4V16H18V4H6ZM8 6H16V8H8V6ZM8 10H16V12H8V10Z"/></svg>
-                           Networks
+                           <span class="op-nav-label">Networks</span>
                         </a>
                      </li>
                   </ul>
                </div>
                <div>
-                  <span class="block px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-500">Account</span>
+                  <span class="op-nav-heading block px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-500">Account</span>
                   <ul class="mt-1 space-y-0.5">
                      {{if contains .Username "SUSPENDED_"}}
                      <li>
@@ -559,43 +576,37 @@
                         </form>
                      </li>
                      <li>
-                        <a href="#permissions" @click.prevent="activeTab = 'permissions'; window.location.hash = 'permissions'" :aria-current="activeTab === 'permissions' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Permissions" href="#permissions" @click.prevent="activeTab = 'permissions'; window.location.hash = 'permissions'" :aria-current="activeTab === 'permissions' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M19 10H20C20.5523 10 21 10.4477 21 11V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V11C3 10.4477 3.44772 10 4 10H5V9C5 5.13401 8.13401 2 12 2C15.866 2 19 5.13401 19 9V10ZM5 12V20H19V12H5ZM11 14H13V18H11V14ZM17 10V9C17 6.23858 14.7614 4 12 4C9.23858 4 7 6.23858 7 9V10H17Z"/></svg>
-                           Permissions
+                           <span class="op-nav-label">Permissions</span>
                         </a>
                      </li>
                      {{else}}
                      <li>
-                        <a href="#edit" @click.prevent="$store.ipStore.fetchIPs(); $store.planStore.fetchPlans(); activeTab = 'edit'; window.location.hash = 'edit'" :aria-current="activeTab === 'edit' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
-                           <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"/></svg>
-                           Edit
-                        </a>
-                     </li>
-                     <li>
-                        <a href="#permissions" @click.prevent="activeTab = 'permissions'; window.location.hash = 'permissions'" :aria-current="activeTab === 'permissions' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Permissions" href="#permissions" @click.prevent="activeTab = 'permissions'; window.location.hash = 'permissions'" :aria-current="activeTab === 'permissions' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M19 10H20C20.5523 10 21 10.4477 21 11V21C21 21.5523 20.5523 22 20 22H4C3.44772 22 3 21.5523 3 21V11C3 10.4477 3.44772 10 4 10H5V9C5 5.13401 8.13401 2 12 2C15.866 2 19 5.13401 19 9V10ZM5 12V20H19V12H5ZM11 14H13V18H11V14ZM17 10V9C17 6.23858 14.7614 4 12 4C9.23858 4 7 6.23858 7 9V10H17Z"/></svg>
-                           Permissions
+                           <span class="op-nav-label">Permissions</span>
                         </a>
                      </li>
                      {{if eq .LicenseType "Enterprise"}}
                      <li>
-                        <a href="#export" @click.prevent="activeTab = 'export'; window.location.hash = 'export'" :aria-current="activeTab === 'export' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Export" href="#export" @click.prevent="activeTab = 'export'; window.location.hash = 'export'" :aria-current="activeTab === 'export' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M13 10H18L12 16L6 10H11V3H13V10ZM4 19H20V12H22V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V12H4V19Z"/></svg>
-                           Export
+                           <span class="op-nav-label">Export</span>
                         </a>
                      </li>
                      {{end}}
                      <li>
-                        <a href="#suspend" @click.prevent="activeTab = 'suspend'; window.location.hash = 'suspend'" :aria-current="activeTab === 'suspend' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Suspend" href="#suspend" @click.prevent="activeTab = 'suspend'; window.location.hash = 'suspend'" :aria-current="activeTab === 'suspend' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5H8V19H6V5ZM16 5H18V19H16V5Z"/></svg>
-                           Suspend
+                           <span class="op-nav-label">Suspend</span>
                         </a>
                      </li>
                      {{end}}
                      <li>
-                        <a href="#delete" @click.prevent="activeTab = 'delete'; window.location.hash = 'delete'" :aria-current="activeTab === 'delete' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-red-600 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-red-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Delete" href="#delete" @click.prevent="activeTab = 'delete'; window.location.hash = 'delete'" :aria-current="activeTab === 'delete' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-red-600 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-red-500 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM9 11H11V17H9V11ZM13 11H15V17H13V11ZM9 4V6H15V4H9Z"/></svg>
-                           Delete
+                           <span class="op-nav-label">Delete</span>
                         </a>
                      </li>
                   </ul>
@@ -603,26 +614,26 @@
 
 
                <div>
-                  <span class="block px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-500">Statistics</span>
+                  <span class="op-nav-heading block px-2 pb-1 text-xs font-medium text-gray-500 dark:text-gray-500">Statistics</span>
                   <ul class="mt-1 space-y-0.5">
                      <li>
-                        <a href="#usage" @click.prevent="activeTab = 'usage'; window.location.hash = 'usage'" :aria-current="activeTab === 'usage' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Resource usage" href="#usage" @click.prevent="activeTab = 'usage'; window.location.hash = 'usage'" :aria-current="activeTab === 'usage' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3V19H21V21H3V3H5ZM20.2929 6.29289L21.7071 7.70711L16 13.4142L13 10.415L8.70711 14.7071L7.29289 13.2929L13 7.58579L16 10.585L20.2929 6.29289Z"/></svg>
-                           Resource usage
+                           <span class="op-nav-label">Resource usage</span>
                         </a>
                      </li>
 
                      <li>
-                        <a href="#activity" @click.prevent="$store.activityStore.fetchLogs(); activeTab = 'activity'; window.location.hash = 'activity'" :aria-current="activeTab === 'activity' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Activity Log" href="#activity" @click.prevent="$store.activityStore.fetchLogs(); activeTab = 'activity'; window.location.hash = 'activity'" :aria-current="activeTab === 'activity' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M19 22H5C3.34315 22 2 20.6569 2 19V3C2 2.44772 2.44772 2 3 2H17C17.5523 2 18 2.44772 18 3V15H22V19C22 20.6569 20.6569 22 19 22ZM18 17V19C18 19.5523 18.4477 20 19 20C19.5523 20 20 19.5523 20 19V17H18ZM16 20V4H4V19C4 19.5523 4.44772 20 5 20H16ZM6 7H14V9H6V7ZM6 11H14V13H6V11ZM6 15H11V17H6V15Z"/></svg>
-                           Activity Log
+                           <span class="op-nav-label">Activity Log</span>
                         </a>
                      </li>
 
                      <li>
-                        <a href="#logins" @click.prevent="$store.loginsStore.fetchloginLogs(); activeTab = 'logins'; window.location.hash = 'logins'" :aria-current="activeTab === 'logins' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
+                        <a title="Login Log" href="#logins" @click.prevent="$store.loginsStore.fetchloginLogs(); activeTab = 'logins'; window.location.hash = 'logins'" :aria-current="activeTab === 'logins' ? 'page' : null" class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 aria-[current=page]:bg-gray-100 aria-[current=page]:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-50 dark:aria-[current=page]:bg-gray-900 dark:aria-[current=page]:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">
                            <svg xmlns="http://www.w3.org/2000/svg" class="remixicon size-4 shrink-0 text-gray-400" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M4 15H6V20H18V4H6V9H4V3C4 2.44772 4.44772 2 5 2H19C19.5523 2 20 2.44772 20 3V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V15ZM10 11V8L15 12L10 16V13H2V11H10Z"/></svg>
-                           Login Log
+                           <span class="op-nav-label">Login Log</span>
                         </a>
                      </li>
                   </ul>
@@ -630,142 +641,134 @@
             </nav>
          </div>
 
-         <div class="md:col-span-10 h-auto">
+         <div class="op-usercontent md:col-span-10 h-auto">
             <div class="relative h-full rounded-md">
 
                <!-- DOCKER STATS -->
                <div x-show="activeTab === 'stats'">
                   <div class="relative w-full overflow-hidden text-left">
-                     <div class="p-6">
+                     <div class="p-4">
                         {{if .StatsWidget.OverLimit}}<div class="flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg><div>{{range $i, $n := .StatsWidget.OverLimit}}{{if $i}}, {{end}}{{$n}}{{end}} {{if eq (len .StatsWidget.OverLimit) 1}}is{{else}}are{{end}} at 90% or more of the plan limit. Check the <a href="#usage" class="font-medium underline underline-offset-4">usage history</a> below{{if .PlanID}}, or <a href="/plans/{{.PlanID}}" class="font-medium underline underline-offset-4">edit the {{.PlanName}} plan limits</a>{{end}}.</div></div>{{end}}
-                        <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-<div
-  x-data="{ hovered: false }"
-  class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5"
->
-  <div class="relative">
-    <div
-      @mouseenter="hovered = true"
-      @mouseleave="hovered = false"
-    >
-      <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="meter" aria-label="Storage used" aria-valuenow="{{.StatsWidget.DiskUsageRounded}}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{.StatsWidget.DiskUsageRounded}}">
-        <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="stroke-gray-200 dark:stroke-gray-800"></circle>
-        <circle
-          r="29"
-          cx="32"
-          cy="32"
-          stroke-width="6"
-          stroke-dasharray="182.212373908208 182.212373908208"
-          stroke-dashoffset="{{.StatsWidget.DiskOffset}}"
-          fill="transparent"
-          stroke="currentColor"
-          stroke-linecap="round"
-          class="{{.StatsWidget.DiskColorClass}} transform-gpu transition-all duration-150 ease-out"
-        ></circle>
-      </svg>
-      <div class="absolute inset-0 flex items-center justify-center">
-        <template x-if="!hovered">
-          <span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.DiskUsageRounded}}%</span>
-        </template>
-        <template x-if="hovered">
-            <button type="button" tabindex="-1" aria-hidden="true" class="hidden relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-transparent text-gray-900 hover:bg-gray-100 disabled:text-gray-400 dark:text-gray-50 dark:hover:bg-gray-800/80 dark:disabled:text-gray-600 sm:inline-flex" @click="activeTab = 'storage'; loadDiskUsage()">Explore</button>
-        </template>
-      </div>
-    </div>
-  </div>
-  <div class="mt-0 text-left sm:mt-2 sm:text-center">
-    <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
-      {{.StatsWidget.DiskUsedHuman}} / {{.StatsWidget.DiskHardHuman}}
-    </p>
-    <button type="button" @click="activeTab = 'storage'; loadDiskUsage()" class="rounded text-sm text-gray-500 hover:text-gray-900 hover:underline hover:underline-offset-4 dark:text-gray-500 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2">Storage used</button>
-  </div>
-</div>
-                           <div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
-                              <div class="relative">
-                                <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="meter" aria-label="Inodes used" aria-valuenow="{{.StatsWidget.InodesUsageRounded}}" aria-valuemin="0" aria-valuemax="100" data-max="100" data-value="{{.StatsWidget.InodesUsageRounded}}">
-                                <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="stroke-gray-200 dark:stroke-gray-800"></circle>
-                                <circle
-                                    r="29"
-                                    cx="32"
-                                    cy="32"
-                                    stroke-width="6"
-                                    stroke-dasharray="182.212373908208 182.212373908208"
-                                    stroke-dashoffset="{{.StatsWidget.InodesOffset}}"
-                                    fill="transparent"
-                                    stroke="currentColor"
-                                    stroke-linecap="round"
-                                    class="{{.StatsWidget.InodesColorClass}} transform-gpu transition-all duration-150 ease-out"
-                                ></circle>
-                                </svg>
-                                 <div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.InodesUsageRounded}}%</span></div>
-                              </div>
-                              <div class="mt-0 text-left sm:mt-2 sm:text-center">
-                                <p class="text-sm font-medium text-gray-900 dark:text-gray-50">
-                                {{.StatsWidget.InodesUsedHuman}} / {{.StatsWidget.InodesHardHuman}}
-                                </p>
-                                 <p class="text-sm text-gray-500 dark:text-gray-500">Inodes used</p>
-                              </div>
-                           </div>
-<div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
-    <div class="relative">
-        <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="meter" aria-label="CPU usage" aria-valuenow="{{.StatsWidget.CPURatioRounded}}" aria-valuemin="0" aria-valuemax="100">
-            <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="stroke-gray-200 dark:stroke-gray-800"></circle>
-            <circle
-                r="29"
-                cx="32"
-                cy="32"
-                stroke-width="6"
-                stroke-dasharray="182.212373908208 182.212373908208"
-                stroke-dashoffset="{{.StatsWidget.CPUOffset}}"
-                fill="transparent"
-                stroke="currentColor"
-                stroke-linecap="round"
-                class="{{.StatsWidget.CPUColor}} transform-gpu transition-all duration-150 ease-out"
-            ></circle>
-        </svg>
-        <div class="absolute inset-0 flex items-center justify-center">
-            <span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.CPURatioRounded}}%</span>
-        </div>
-    </div>
-    <div class="mt-0 text-left sm:mt-2 sm:text-center">
-        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.CPUHumanUsage}} / {{.StatsWidget.CPUHumanTotal}}</p>
-        <p class="text-sm text-gray-500 dark:text-gray-500">CPU usage</p>
-    </div>
-</div>
-<div class="flex items-center gap-4 sm:flex-col sm:justify-center sm:gap-1.5">
-    <div class="relative">
-        <svg width="86" height="86" viewBox="0 0 64 64" class="-rotate-90 transform" role="meter" aria-label="Memory usage" aria-valuenow="{{.StatsWidget.RAMPercentRounded}}" aria-valuemin="0" aria-valuemax="100">
-            <circle r="29" cx="32" cy="32" stroke-width="6" fill="transparent" stroke="currentColor" stroke-linecap="round" class="stroke-gray-200 dark:stroke-gray-800"></circle>
-            <circle
-                r="29"
-                cx="32"
-                cy="32"
-                stroke-width="6"
-                stroke-dasharray="182.212373908208 182.212373908208"
-                stroke-dashoffset="{{.StatsWidget.RAMOffset}}"
-                fill="transparent"
-                stroke="currentColor"
-                stroke-linecap="round"
-                class="{{.StatsWidget.RAMColor}} transform-gpu transition-all duration-150 ease-out"
-            ></circle>
-        </svg>
-        <div class="absolute inset-0 flex items-center justify-center">
-            <span class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.RAMPercentRounded}}%</span>
-        </div>
-    </div>
-    <div class="mt-0 text-left sm:mt-2 sm:text-center">
-        <p class="text-sm font-medium text-gray-900 dark:text-gray-50">{{.StatsWidget.RAMHumanUsage}} / {{.StatsWidget.RAMHumanTotal}}</p>
-        <p class="text-sm text-gray-500 dark:text-gray-500">Memory usage</p>
-    </div>
-</div>
-                        </div>
-                        {{if .PlanUsage}}
-                        <div class="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-5">
-                           {{range .PlanUsage}}
-                           <a {{if .Href}}href="{{.Href}}"{{end}} class="flex min-w-0 items-center gap-3 rounded-md bg-gray-50 p-2.5 transition dark:bg-gray-900{{if .Href}} hover:bg-gray-100 dark:hover:bg-gray-800/80{{end}}">
+                        <style>
+/* light mode only, the empty part of a ring is the same gray as a hovered card */
+html:not(.dark) .op-ring-card:hover .op-ring-track { stroke: #fff; }
+</style>
+                        <div x-data="{ edit: '' }">
+                        <div class="{{if .StatsWidget.OverLimit}}mt-4 {{end}}grid grid-cols-1 gap-2 sm:grid-cols-5">
+                           <button type="button" @click="activeTab = 'storage'; loadDiskUsage()" class="op-ring-card flex min-w-0 items-center gap-3 rounded-md bg-gray-100 p-2.5 text-left dark:bg-gray-900 transition hover:bg-gray-200 dark:hover:bg-gray-800/80" title="Explore what uses the space">
                               <span class="relative inline-grid size-10 shrink-0 place-items-center">
                                  <svg viewBox="0 0 36 36" class="size-10 -rotate-90" aria-hidden="true">
-                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" class="stroke-gray-200 dark:stroke-gray-800"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" class="op-ring-track stroke-gray-200 dark:stroke-gray-800"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" stroke-dasharray="{{.StatsWidget.DiskUsageRounded}} 100" class="{{.StatsWidget.DiskColorClass}}"></circle>
+                                 </svg>
+                                 <span class="absolute text-gray-500 dark:text-gray-400"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4"><path d="M5 2.88Q5.06 2.5 5.34 2.25Q5.62 2 6 2H19Q19.38 2 19.66 2.25Q19.94 2.5 20 2.88L21.5 14.88V15V21Q21.5 21.42 21.21 21.71Q20.92 22 20.5 22H4.5Q4.08 22 3.79 21.71Q3.5 21.42 3.5 21V15V14.88ZM6.88 4 5.64 14H19.36L18.12 4ZM19.5 16H5.5V20H19.5ZM15.5 17H17.5V19H15.5ZM13.5 17H11.5V19H13.5Z"/></svg></span>
+                              </span>
+                              <span class="min-w-0 flex-1">
+                                 <span class="flex items-baseline justify-between gap-3 text-sm"><span class="truncate text-gray-600 dark:text-gray-400">Storage</span><span class="font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.StatsWidget.IntPct .StatsWidget.DiskUsageRounded}}%</span></span>
+                                 <span class="mt-0.5 block truncate text-xs tabular-nums text-gray-500">{{.StatsWidget.DiskUsedHuman}} of {{.StatsWidget.DiskHardHuman}}</span>
+                              </span>
+                           </button>
+                           <div class="op-ring-card flex min-w-0 items-center gap-3 rounded-md bg-gray-100 p-2.5 text-left dark:bg-gray-900">
+                              <span class="relative inline-grid size-10 shrink-0 place-items-center">
+                                 <svg viewBox="0 0 36 36" class="size-10 -rotate-90" aria-hidden="true">
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" class="op-ring-track stroke-gray-200 dark:stroke-gray-800"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" stroke-dasharray="{{.StatsWidget.InodesUsageRounded}} 100" class="{{.StatsWidget.InodesColorClass}}"></circle>
+                                 </svg>
+                                 <span class="absolute text-gray-500 dark:text-gray-400"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4"><path d="M20.08 15.52 21.28 16.24Q21.46 16.36 21.51 16.56Q21.56 16.76 21.46 16.94Q21.4 17.04 21.28 17.1L12.52 22.36Q12.28 22.5 12 22.5Q11.72 22.5 11.48 22.36L2.72 17.1Q2.54 17 2.49 16.8Q2.44 16.6 2.54 16.42Q2.6 16.32 2.72 16.24L3.92 15.52L12 20.38ZM20.08 10.82 21.28 11.54Q21.46 11.66 21.51 11.86Q21.56 12.06 21.46 12.24Q21.4 12.34 21.28 12.4L12 17.98L2.72 12.4Q2.54 12.3 2.49 12.1Q2.44 11.9 2.54 11.72Q2.6 11.62 2.72 11.54L3.92 10.82L12 15.68ZM12.52 1.64 21.28 6.9Q21.46 7 21.51 7.2Q21.56 7.4 21.46 7.58Q21.4 7.68 21.28 7.76L12 13.32L2.72 7.76Q2.54 7.64 2.49 7.44Q2.44 7.24 2.54 7.06Q2.6 6.96 2.72 6.9L11.48 1.64Q11.72 1.5 12 1.5Q12.28 1.5 12.52 1.64ZM12 3.66 5.88 7.32 12 11 18.12 7.32Z"/></svg></span>
+                              </span>
+                              <span class="min-w-0 flex-1">
+                                 <span class="flex items-baseline justify-between gap-3 text-sm"><span class="truncate text-gray-600 dark:text-gray-400">Inodes</span><span class="font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.StatsWidget.IntPct .StatsWidget.InodesUsageRounded}}%</span></span>
+                                 <span class="mt-0.5 block truncate text-xs tabular-nums text-gray-500">{{.StatsWidget.InodesUsedHuman}} of {{.StatsWidget.InodesHardHuman}}</span>
+                              </span>
+                           </div>
+                           <div class="op-ring-card group relative flex min-w-0 items-center gap-3 rounded-md bg-gray-100 p-2.5 text-left dark:bg-gray-900">
+                              <span class="relative inline-grid size-10 shrink-0 place-items-center">
+                                 <svg viewBox="0 0 36 36" class="size-10 -rotate-90" aria-hidden="true">
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" class="op-ring-track stroke-gray-200 dark:stroke-gray-800"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" stroke-dasharray="{{.StatsWidget.CPURatioRounded}} 100" class="{{.StatsWidget.CPUColor}}"></circle>
+                                 </svg>
+                                 <span class="absolute text-gray-500 dark:text-gray-400"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4"><path d="M6 18H18V6H6ZM14 20H10V22H8V20H5Q4.58 20 4.29 19.71Q4 19.42 4 19V16H2V14H4V10H2V8H4V5Q4 4.58 4.29 4.29Q4.58 4 5 4H8V2H10V4H14V2H16V4H19Q19.42 4 19.71 4.29Q20 4.58 20 5V8H22V10H20V14H22V16H20V19Q20 19.42 19.71 19.71Q19.42 20 19 20H16V22H14ZM8 8H16V16H8Z"/></svg></span>
+                              </span>
+                              {{if not .IsReseller}}<button type="button" @click="edit = edit === 'cpu' ? '' : 'cpu'" style="bottom: 0.25rem" class="absolute right-1 inline-flex size-6 items-center justify-center rounded-md text-gray-500 opacity-0 transition hover:bg-gray-100 hover:text-gray-900 group-hover:opacity-100 focus-visible:opacity-100 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 [@media(hover:none)]:opacity-100" aria-label="Edit the CPU limit"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>{{end}}
+                              <span class="min-w-0 flex-1">
+                                 <span class="flex items-baseline justify-between gap-3 text-sm"><span class="truncate text-gray-600 dark:text-gray-400">CPU</span><span class="font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.StatsWidget.IntPct .StatsWidget.CPURatioRounded}}%</span></span>
+                                 <span class="mt-0.5 block truncate text-xs tabular-nums text-gray-500">{{.StatsWidget.CPUShort}}</span>
+                              </span>
+                           </div>
+                           <div class="op-ring-card group relative flex min-w-0 items-center gap-3 rounded-md bg-gray-100 p-2.5 text-left dark:bg-gray-900">
+                              <span class="relative inline-grid size-10 shrink-0 place-items-center">
+                                 <svg viewBox="0 0 36 36" class="size-10 -rotate-90" aria-hidden="true">
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" class="op-ring-track stroke-gray-200 dark:stroke-gray-800"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" stroke-dasharray="{{.StatsWidget.RAMPercentRounded}} 100" class="{{.StatsWidget.RAMColor}}"></circle>
+                                 </svg>
+                                 <span class="absolute text-gray-500 dark:text-gray-400"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4"><path d="M3 7H21V17H19V15H17V17H15V15H13V17H11V15H9V17H7V15H5V17H3ZM2 5Q1.58 5 1.29 5.29Q1 5.58 1 6V18Q1 18.42 1.29 18.71Q1.58 19 2 19H22Q22.42 19 22.71 18.71Q23 18.42 23 18V6Q23 5.58 22.71 5.29Q22.42 5 22 5ZM11 9H5V12H11ZM13 9H19V12H13Z"/></svg></span>
+                              </span>
+                              {{if not .IsReseller}}<button type="button" @click="edit = edit === 'ram' ? '' : 'ram'" style="bottom: 0.25rem" class="absolute right-1 inline-flex size-6 items-center justify-center rounded-md text-gray-500 opacity-0 transition hover:bg-gray-100 hover:text-gray-900 group-hover:opacity-100 focus-visible:opacity-100 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 [@media(hover:none)]:opacity-100" aria-label="Edit the memory limit"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>{{end}}
+                              <span class="min-w-0 flex-1">
+                                 <span class="flex items-baseline justify-between gap-3 text-sm"><span class="truncate text-gray-600 dark:text-gray-400">Memory</span><span class="font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{.StatsWidget.IntPct .StatsWidget.RAMPercentRounded}}%</span></span>
+                                 <span class="mt-0.5 block truncate text-xs tabular-nums text-gray-500">{{.StatsWidget.RAMHumanUsage}} of {{.StatsWidget.RAMHumanTotal}}</span>
+                              </span>
+                           </div>
+                           <div class="op-ring-card group relative flex min-w-0 items-center gap-3 rounded-md bg-gray-100 p-2.5 text-left dark:bg-gray-900">
+                              <span class="relative inline-grid size-10 shrink-0 place-items-center">
+                                 <svg viewBox="0 0 36 36" class="size-10 -rotate-90" aria-hidden="true">
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" class="op-ring-track stroke-gray-200 dark:stroke-gray-800"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" stroke-dasharray="{{if .Tasks.Known}}{{.Tasks.Pct}}{{else}}0{{end}} 100" class="{{.Tasks.Color}}"></circle>
+                                 </svg>
+                                 <span class="absolute text-gray-500 dark:text-gray-400"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4"><path d="M3 4H21V6H3V4ZM3 11H21V13H3V11ZM3 18H21V20H3V18Z"/></svg></span>
+                              </span>
+                              {{if not .IsReseller}}<button type="button" @click="edit = edit === 'tasks' ? '' : 'tasks'" style="bottom: 0.25rem" class="absolute right-1 inline-flex size-6 items-center justify-center rounded-md text-gray-500 opacity-0 transition hover:bg-gray-100 hover:text-gray-900 group-hover:opacity-100 focus-visible:opacity-100 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 [@media(hover:none)]:opacity-100" aria-label="Edit the process limit"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>{{end}}
+                              <span class="min-w-0 flex-1">
+                                 <span class="flex items-baseline justify-between gap-3 text-sm"><span class="truncate text-gray-600 dark:text-gray-400">Processes</span><span class="font-semibold tabular-nums text-gray-900 dark:text-gray-50">{{if .Tasks.Known}}{{.Tasks.Pct}}{{else}}–{{end}}%</span></span>
+                                 <span class="mt-0.5 block truncate text-xs tabular-nums text-gray-500">{{if .Tasks.Known}}{{.Tasks.Current}} of {{.Tasks.MaxHuman}}{{else}}unknown{{end}}{{if .Tasks.Override}} · custom{{end}}</span>
+                              </span>
+                              
+                           </div>
+                        </div>
+                        {{if not .IsReseller}}
+                        <form x-show="edit === 'cpu'" x-cloak method="POST" action="/users/{{.Username}}/slice-limit/cpu" class="mt-2 rounded-md bg-gray-100 p-3 text-sm dark:bg-gray-900">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <label class="block font-medium text-gray-900 dark:text-gray-50" for="cpu-limit-value">CPU limit for the whole account</label>
+                           <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">Sets this account's total CPU in cores outside its plan ({{.PlanCPU}} on the plan, {{.StatsWidget.CPUHumanTotal}} now). Changing the plan later puts the plan's value back. The limits of the user's own services aren't changed, scale them on the Services tab if they need more.</p>
+                           <div class="mt-2 flex flex-wrap items-center gap-2">
+                              <input id="cpu-limit-value" type="number" min="0" step="0.01" name="value" value="{{.Tasks.CPUNow}}" placeholder="{{.PlanCPU}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 w-32 appearance-none px-2.5 py-1.5 text-sm">
+                              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Save</button>
+                              <button type="button" @click="edit = ''" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                           </div>
+                        </form>
+                        {{end}}
+                        {{if not .IsReseller}}
+                        <form x-show="edit === 'ram'" x-cloak method="POST" action="/users/{{.Username}}/slice-limit/ram" class="mt-2 rounded-md bg-gray-100 p-3 text-sm dark:bg-gray-900">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <label class="block font-medium text-gray-900 dark:text-gray-50" for="ram-limit-value">Memory limit for the whole account</label>
+                           <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">Sets this account's total memory in GB outside its plan ({{.PlanRAM}} on the plan, {{.StatsWidget.RAMHumanTotal}} now). Changing the plan later puts the plan's value back. The limits of the user's own services aren't changed, scale them on the Services tab if they need more.</p>
+                           <div class="mt-2 flex flex-wrap items-center gap-2">
+                              <input id="ram-limit-value" type="number" min="0" step="0.01" name="value" value="{{.Tasks.RAMNow}}" placeholder="{{.PlanRAM}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 w-32 appearance-none px-2.5 py-1.5 text-sm">
+                              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Save</button>
+                              <button type="button" @click="edit = ''" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                           </div>
+                        </form>
+                        {{end}}
+                        {{if not .IsReseller}}
+                        <form x-show="edit === 'tasks'" x-cloak method="POST" action="/users/{{.Username}}/tasks-max" class="mt-2 rounded-md bg-gray-100 p-3 text-sm dark:bg-gray-900">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <label class="block font-medium text-gray-900 dark:text-gray-50" for="tasks-max-value">Process limit for the whole account</label>
+                           <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">By default it follows the plan's RAM, 1000 processes per GB and at least 1000, so this plan gives {{.Tasks.Default}} ({{.Tasks.DefaultGB}}). A number set here overrides that and is kept in /home/{{.DockerCtx}}/TasksMax.</p>
+                           <div class="mt-2 flex flex-wrap items-center gap-2">
+                              <input id="tasks-max-value" type="number" min="0" max="4194304" step="1" name="value" value="{{if .Tasks.Override}}{{.Tasks.Override}}{{else if .Tasks.Max}}{{.Tasks.Max}}{{end}}" placeholder="{{.Tasks.Default}}" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 w-32 appearance-none px-2.5 py-1.5 text-sm">
+                              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Save</button>
+                              <button type="button" @click="edit = ''" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                           </div>
+                        </form>
+                        {{end}}
+                        </div>
+                        {{if .PlanUsage}}
+                        <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-5">
+                           {{range .PlanUsage}}
+                           <a {{if .Href}}href="{{.Href}}"{{end}} class="op-ring-card flex min-w-0 items-center gap-3 rounded-md bg-gray-100 p-2.5 transition dark:bg-gray-900{{if .Href}} hover:bg-gray-200 dark:hover:bg-gray-800/80{{end}}">
+                              <span class="relative inline-grid size-10 shrink-0 place-items-center">
+                                 <svg viewBox="0 0 36 36" class="size-10 -rotate-90" aria-hidden="true">
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" class="op-ring-track stroke-gray-200 dark:stroke-gray-800"></circle>
                                     {{if not .Unlimited}}<circle cx="18" cy="18" r="15.9155" fill="none" stroke-width="3.5" stroke-dasharray="{{.Percent}} 100" class="{{.RingColor}}"></circle>{{end}}
                                  </svg>
                                  <span class="absolute text-gray-500 dark:text-gray-400">{{.Icon}}</span>
@@ -783,91 +786,129 @@
 
                <div class="border-t border-gray-200 p-4 dark:border-gray-800">
                   <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Username</span><span class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{lastSegment .Username "_"}}
-                        <a href="#edit" @click="activeTab='edit'; window.location.hash='edit'" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit username"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></a>
-                        </span></div>
-                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Email address</span><span class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{.User.Email}}
-                        <a href="#edit" @click="activeTab='edit'; window.location.hash='edit'" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Edit email address"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></a>
-                        </span></div>
-                     <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Plan</span><span class="font-medium text-gray-900 dark:text-gray-50">{{if .PlanName}}<a href="/plans/{{.PlanID}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{.PlanName}}</a>{{else}}-{{end}}</span></div>
-                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="text-gray-600 dark:text-gray-400">Locale</span>
-                        <span x-show="!editing" class="flex items-center font-medium text-gray-900 dark:text-gray-50">
-                        {{if .Locale}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{localeFlag .Locale}}.svg" alt="Locale: {{.Locale}}"></img> {{upper .Locale}}{{else}}default{{end}}
-                        <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 ml-1" aria-label="Change locale"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Username</span>{{template "info_tip" (dict "Hover" true "ID" "info-username" "Label" "Username" "Description" "The name the user logs in with and sees in the user panel. On the server the account goes by its Docker context instead.")}}</span>
+                        <span x-show="!editing" class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50">{{lastSegment .Username "_"}}
+                        <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change username"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
                         </span>
-                        <form x-show="editing" @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/locale" class="flex items-center gap-2">
+                        <form x-show="editing" x-cloak @keydown.escape="editing = false" method="POST" action="/user/edit/{{lastSegment .Username "_"}}" class="flex items-center gap-2">
                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                           <select name="value" aria-label="Locale" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]">
-                              {{range .InstalledLocales}}<option value="{{.}}" {{if eq . $.Locale}}selected{{end}}>{{upper .}}</option>{{end}}
-                           </select>
+                           <input type="text" name="new_username" value="{{lastSegment .Username "_"}}" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9]{3,20}" title="Letters and numbers only, 3 to 20 characters" aria-label="New username" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs w-36">
                            <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                           <button type="button" @click="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
                         </form>
                      </div>
 
-                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="text-gray-600 dark:text-gray-400">2FA status</span><span x-show="!editing" class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{if .User.TwoFAEnabled}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span><button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Disable 2FA"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{{end}}</span>
-                        {{if .User.TwoFAEnabled}}
-                        <form x-show="editing" @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/twofa" data-confirm="Disable two-factor authentication for this user?">
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false, pw: '', show: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Password</span>{{template "info_tip" (dict "Hover" true "ID" "info-password" "Label" "Password" "Description" "The password for the user panel, it is never shown. Set a new one here, the user can also change it in their panel.")}}</span>
+                        <span x-show="!editing" class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50"><span class="tracking-widest text-gray-400 dark:text-gray-600">••••••••</span>
+                        <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change password"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                        </span>
+                        <form x-show="editing" x-cloak @keydown.escape="editing = false" method="POST" action="/user/edit/{{lastSegment .Username "_"}}" class="flex items-center gap-2">
                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                           <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400">Disable 2FA</button>
+                           <input :type="show ? 'text' : 'password'" x-model="pw" name="new_password" required minlength="6" maxlength="30" autocomplete="new-password" aria-label="New password" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs w-36"><button type="button" @click="pw = Array.from(crypto.getRandomValues(new Uint32Array(16)), n => 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#%^*_+'[n % 62]).join(''); show = true" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Generate</button>
+                           <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                           <button type="button" @click="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                        </form>
+                     </div>
+
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Email address</span>{{template "info_tip" (dict "Hover" true "ID" "info-email-address" "Label" "Email address" "Description" "Where the account gets password resets and notifications.")}}</span>
+                        <span x-show="!editing" class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50">{{.User.Email}}
+                        <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change email address"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                        </span>
+                        <form x-show="editing" x-cloak @keydown.escape="editing = false" method="POST" action="/user/edit/{{lastSegment .Username "_"}}" class="flex items-center gap-2">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <input type="email" name="new_email" value="{{.User.Email}}" required aria-label="New email address" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs w-56">
+                           <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                           <button type="button" @click="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                        </form>
+                     </div>
+
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>2FA status</span>{{template "info_tip" (dict "Hover" true "ID" "info-2fa-status" "Label" "2FA status" "Description" "Whether the user signs in with a second factor. The user turns it on in their panel, OpenAdmin can only turn it off.")}}</span><span x-show="!editing" class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{if .User.TwoFAEnabled}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">Active</span><button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Disable 2FA"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>{{else}}<span class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-yellow-50 text-yellow-900 ring-yellow-600/30 dark:bg-yellow-400/10 dark:text-yellow-500 dark:ring-yellow-400/20">Inactive</span>{{end}}</span>
+                        {{if .User.TwoFAEnabled}}
+                        <form x-show="editing" x-cloak @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/twofa" data-confirm="Disable two-factor authentication for this user?">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-red-600 text-white shadow-xs hover:bg-red-700 disabled:bg-red-300 dark:bg-red-700 dark:hover:bg-red-600 dark:disabled:bg-red-950 dark:disabled:text-red-400">Disable 2FA</button><button type="button" @click.stop="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
                         </form>
                         {{end}}
                      </div>
 
-        {{if index .EnvData "USER_ID"}}
-        <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">User ID (UID)</span><span class="font-medium text-gray-900 dark:text-gray-50">{{index .EnvData "USER_ID"}}</span></div>
-        {{else}}
-        <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">User ID (in database)</span><span class="font-medium text-gray-900 dark:text-gray-50">{{.User.ID}}</span></div>
-        {{end}}
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Plan</span>{{template "info_tip" (dict "Hover" true "ID" "info-plan" "Label" "Plan" "Description" "Decides the account's limits and features. Changing it puts the plan's CPU, memory and process limits back on the account.")}}</span>
+                        <span x-show="!editing" class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50">{{if .PlanName}}<a href="/plans/{{.PlanID}}" class="text-blue-500 hover:underline hover:underline-offset-4">{{.PlanName}}</a>{{else}}-{{end}}
+                        <button type="button" @click="editing = true; $store.planStore.fetchPlans()" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change plan"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                        </span>
+                        <form x-show="editing" x-cloak @keydown.escape="editing = false" method="POST" action="/user/edit/{{lastSegment .Username "_"}}" class="flex items-center gap-2">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <select name="plan_id" aria-label="Plan" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]"><option value="{{.User.PlanID}}" selected>{{.PlanName}}</option><template x-for="p in $store.planStore.plans.filter(p => p.id != {{.User.PlanID}})" :key="p.id"><option :value="p.id" x-text="p.name"></option></template></select>
+                           <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                           <button type="button" @click="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                        </form>
+                     </div>
 
-                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">IP address</span><span class="font-medium text-gray-900 dark:text-gray-50 flex items-center"> {{.ServerIP}}<span class="ml-1 hidden sm:inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">{{.IPType}}</span>
-                        <a href="#edit" @click="activeTab='edit'; window.location.hash='edit'" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 ml-1" aria-label="Change IP address"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></a>
-                        </span></div>
-                     <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Geo location</span><span class="flex items-center font-medium text-gray-900 dark:text-gray-50">
-                        {{if .CountryCode}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{lower .CountryCode}}.svg" alt="IP address location: {{.CountryCode}}"></img>{{end}} {{.CountryCode}}</span></div>
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Reseller</span>{{template "info_tip" (dict "Hover" true "ID" "info-reseller" "Label" "Reseller" "Description" "The reseller this account belongs to, they can manage it within their own limits.")}}</span>
+                        <span x-show="!editing" class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50">{{if .User.Owner.Valid}}{{if and (ne .User.Owner.String "") (ne .User.Owner.String "root")}}{{.User.Owner.String}}{{else}}None{{end}}{{else}}None{{end}}
+                        {{if not .IsReseller}}<button type="button" @click="editing = true; $store.resellerStore.fetchResellers()" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change reseller"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>{{end}}
+                        </span>
+                        <form x-show="editing" x-cloak @keydown.escape="editing = false" method="POST" action="/user/edit/{{lastSegment .Username "_"}}" class="flex items-center gap-2">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <select id="resellerSelect" name="reseller" aria-label="Reseller" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]"><option value="">No reseller</option>{{if .User.Owner.Valid}}{{if and (ne .User.Owner.String "") (ne .User.Owner.String "root")}}<option value="{{.User.Owner.String}}" selected>{{.User.Owner.String}}</option>{{end}}{{end}}</select>
+                           <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                           <button type="button" @click="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                        </form>
+                     </div>
 
-                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Server</span><span class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{.ServerName}}
-                        {{if eq .LicenseType "Enterprise"}}<a href="#export" @click="activeTab='export'; exportMode='transfer'; window.location.hash='export'" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Transfer to another server"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></a>{{end}}
-                        </span></div>
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Locale</span>{{template "info_tip" (dict "Hover" true "ID" "info-locale" "Label" "Locale" "Description" "Language of the user panel for this account.")}}</span>
+                        <span x-show="!editing" class="flex items-center font-medium text-gray-900 dark:text-gray-50">
+                        {{if .Locale}}<img class="w-4 h-4 rounded mr-1" src="/static/dist/img/flags/{{localeFlag .Locale}}.svg" alt="Locale: {{.Locale}}"></img> {{upper .Locale}}{{else}}default{{end}}
+                        <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 ml-1" aria-label="Change locale"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                        </span>
+                        <form x-show="editing" x-cloak @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/locale" class="flex items-center gap-2">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <select name="value" aria-label="Locale" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]">
+                              {{range .InstalledLocales}}<option value="{{.}}" {{if eq . $.Locale}}selected{{end}}>{{upper .}}</option>{{end}}
+                           </select>
+                           <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button><button type="button" @click.stop="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                        </form>
+                     </div>
 
-                     <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Docker context</span><span class="font-medium text-gray-900 dark:text-gray-50">{{.DockerCtx}}</span></div>
-                     <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Home dir</span><span class="font-medium text-gray-900 dark:text-gray-50">/home/{{.DockerCtx}}/</span></div>
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Setup time</span>{{template "info_tip" (dict "Hover" true "ID" "info-setup-time" "Label" "Setup time" "Description" "When the account was created.")}}</span><span class="font-medium text-gray-900 dark:text-gray-50">{{formatDateTime .User.RegisteredDate.String}}</span></div>
 
-        {{if index .EnvData "WEB_SERVER"}}
-        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="text-gray-600 dark:text-gray-400">Web server</span>
+                     {{if contains .Username "SUSPENDED_"}}
+  <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Suspended on</span>{{template "info_tip" (dict "Hover" true "ID" "info-suspended-on" "Label" "Suspended on" "Description" "When the account was suspended, its websites and services are stopped until it's unsuspended.")}}</span><span class="font-medium text-gray-900 dark:text-gray-50">{{replace (suspendedLabel .Username) "on: " ""}}</span></div>
+{{end}}
+
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>IP address</span>{{template "info_tip" (dict "Hover" true "ID" "info-ip-address" "Label" "IP address" "Description" "The IP the account's websites answer on, the shared server IP or a dedicated one assigned to the user.")}}</span>
+                        <span x-show="!editing" class="flex items-center gap-1 font-medium text-gray-900 dark:text-gray-50">{{.ServerIP}}<span class="ml-1 hidden sm:inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">{{.IPType}}</span>
+                        <button type="button" @click="editing = true; $store.ipStore.fetchIPs()" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change IP address"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                        </span>
+                        <form x-show="editing" x-cloak @keydown.escape="editing = false" method="POST" action="/user/edit/{{lastSegment .Username "_"}}" class="flex items-center gap-2">
+                           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                           <select id="ipSelect" name="new_ip" aria-label="IP address" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]"><option value="{{.ServerIP}}" selected>{{.ServerIP}}</option></select>
+                           <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                           <button type="button" @click="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                        </form>
+                     </div>
+
+                     {{if index .EnvData "WEB_SERVER"}}
+        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Web server</span>{{template "info_tip" (dict "Hover" true "ID" "info-web-server" "Label" "Web server" "Description" "The web server in front of the account's websites. It can only be changed while the account has no domains.")}}</span>
            <span x-show="!editing" class="font-medium text-gray-900 dark:text-gray-50 flex gap-1 items-center">{{index .EnvData "WEB_SERVER"}}
               <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change web server"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
            </span>
-           <form x-show="editing" @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/webserver" class="flex items-center gap-2">
+           <form x-show="editing" x-cloak @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/webserver" class="flex items-center gap-2">
               <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
               <select name="value" aria-label="Web server" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]">
                  {{$currentWS := index .EnvData "WEB_SERVER"}}
                  {{range .WebserverOptions}}<option value="{{.}}" {{if eq . $currentWS}}selected{{end}}>{{.}}</option>{{end}}
               </select>
-              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button><button type="button" @click.stop="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
            </form>
         </div>
         {{end}}
 
-        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false, varnishOn: {{if index .EnvData `PROXY_HTTP_PORT`}}true{{else}}false{{end}} }"><span class="text-gray-600 dark:text-gray-400">Varnish caching</span>
-           <span x-show="!editing" class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1"><span :class="varnishOn ? 'inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20' : 'inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20'" x-text="varnishOn ? 'Enabled' : 'Disabled'"></span>
-              <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change Varnish caching"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
-           </span>
-           <form x-show="editing" @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/varnish" class="flex items-center gap-2">
-              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-              <select name="value" aria-label="Varnish caching" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]">
-                 <option value="enable" {{if index .EnvData "PROXY_HTTP_PORT"}}selected{{end}}>Enabled</option>
-                 <option value="disable" {{if not (index .EnvData "PROXY_HTTP_PORT")}}selected{{end}}>Disabled</option>
-              </select>
-              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
-           </form>
-        </div>
-
-        {{if .DefaultPHPVersion}}
-        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="phpDefaultVersionEditor('{{lastSegment .Username `_`}}', '{{.DefaultPHPVersion}}')"><span class="text-gray-600 dark:text-gray-400">Default PHP version</span>
+                     {{if .DefaultPHPVersion}}
+        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="phpDefaultVersionEditor('{{jsq (lastSegment .Username `_`)}}', '{{jsq .DefaultPHPVersion}}')"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Default PHP version</span>{{template "info_tip" (dict "Hover" true "ID" "info-default-php-version" "Label" "Default PHP version" "Description" "The PHP version new websites of this account start with, each website can still pick its own.")}}</span>
            <span x-show="!editing" class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1"><span x-text="current"></span>
               <button type="button" @click="startEdit()" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change default PHP version"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
            </span>
-           <div x-show="editing" @keydown.escape="editing = false" class="flex items-center gap-2">
+           <div x-show="editing" x-cloak @keydown.escape="editing = false" class="flex items-center gap-2">
               <select x-model="selected" aria-label="Default PHP version" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]">
                  <template x-if="loading"><option>Loading…</option></template>
                  <template x-for="v in versions" :key="v"><option :value="v" x-text="v"></option></template>
@@ -933,34 +974,166 @@
         </script>
         {{end}}
 
-        {{if index .EnvData "MYSQL_TYPE"}}
-        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="text-gray-600 dark:text-gray-400">Database type</span>
+                     {{if index .EnvData "MYSQL_TYPE"}}
+        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Database type</span>{{template "info_tip" (dict "Hover" true "ID" "info-database-type" "Label" "Database type" "Description" "MySQL or MariaDB, the database server running in the account's containers.")}}</span>
            <span x-show="!editing" class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{if eq (index .EnvData "MYSQL_TYPE") "mysql"}}MySQL{{else if eq (index .EnvData "MYSQL_TYPE") "mariadb"}}MariaDB{{end}}
               <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change database type"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
            </span>
-           <form x-show="editing" @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/database_type" class="flex items-center gap-2">
+           <form x-show="editing" x-cloak @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/database_type" class="flex items-center gap-2">
               <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
               <select name="value" aria-label="Database type" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]">
                  <option value="mysql" {{if eq (index .EnvData "MYSQL_TYPE") "mysql"}}selected{{end}}>MySQL</option>
                  <option value="mariadb" {{if eq (index .EnvData "MYSQL_TYPE") "mariadb"}}selected{{end}}>MariaDB</option>
               </select>
-              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button><button type="button" @click.stop="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
            </form>
         </div>
         {{end}}
 
-                     {{if .User.Owner.Valid}}
-                     <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Reseller</span><span class="font-medium text-gray-900 dark:text-gray-50"><a href="/resellers" class="text-blue-500 hover:underline hover:underline-offset-4">{{.User.Owner.String}}</a></span></div>
-                     {{end}}
-                     <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Setup time</span><span class="font-medium text-gray-900 dark:text-gray-50">{{formatDateTime .User.RegisteredDate.String}}</span></div>
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900" x-data="{ editing: false, varnishOn: {{if index .EnvData `PROXY_HTTP_PORT`}}true{{else}}false{{end}} }"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Varnish caching</span>{{template "info_tip" (dict "Hover" true "ID" "info-varnish-caching" "Label" "Varnish caching" "Description" "Whether Varnish caches the account's websites in front of the web server.")}}</span>
+           <span x-show="!editing" class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1"><span :class="varnishOn ? 'inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-emerald-50 text-emerald-900 ring-emerald-600/30 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20' : 'inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20'" x-text="varnishOn ? 'Enabled' : 'Disabled'"></span>
+              <button type="button" @click="editing = true" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change Varnish caching"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+           </span>
+           <form x-show="editing" x-cloak @click.stop="editing = true" @keydown.escape="editing = false" method="POST" action="/users/{{lastSegment .Username `_`}}/account-setting/varnish" class="flex items-center gap-2">
+              <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+              <select name="value" aria-label="Varnish caching" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-2 py-1 text-xs dark:[color-scheme:dark]">
+                 <option value="enable" {{if index .EnvData "PROXY_HTTP_PORT"}}selected{{end}}>Enabled</option>
+                 <option value="disable" {{if not (index .EnvData "PROXY_HTTP_PORT")}}selected{{end}}>Disabled</option>
+              </select>
+              <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button><button type="button" @click.stop="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+           </form>
+        </div>
 
-{{if contains .Username "SUSPENDED_"}}
-  <div class="relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="text-gray-600 dark:text-gray-400">Suspended on</span><span class="font-medium text-gray-900 dark:text-gray-50">{{replace (suspendedLabel .Username) "on: " ""}}</span></div>
-{{end}}
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Docker context</span>{{template "info_tip" (dict "Hover" true "ID" "info-docker-context" "Label" "Docker context" "Description" "The account's name on the server: its Linux user, its home folder and the rootless Podman that runs all its containers.")}}</span><span class="font-medium text-gray-900 dark:text-gray-50">{{.DockerCtx}}</span></div>
+
+                     {{if index .EnvData "USER_ID"}}
+        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>User ID (UID)</span>{{template "info_tip" (dict "Hover" true "ID" "info-user-id-uid" "Label" "User ID (UID)" "Description" "The Linux user the account's files and containers run as.")}}</span><span class="font-medium text-gray-900 dark:text-gray-50">{{index .EnvData "USER_ID"}}</span></div>
+        {{else}}
+        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>User ID (in database)</span>{{template "info_tip" (dict "Hover" true "ID" "info-user-id-in-database" "Label" "User ID (in database)" "Description" "The account's id in the OpenPanel database, the API and logs refer to it.")}}</span><span class="font-medium text-gray-900 dark:text-gray-50">{{.User.ID}}</span></div>
+        {{end}}
+
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Home dir</span>{{template "info_tip" (dict "Hover" true "ID" "info-home-dir" "Label" "Home dir" "Description" "Where the account's files, docker-compose.yml and .env are on the server.")}}</span><span class="font-medium text-gray-900 dark:text-gray-50">/home/{{.DockerCtx}}/</span></div>
+
+                     <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900"><span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Server</span>{{template "info_tip" (dict "Hover" true "ID" "info-server" "Label" "Server" "Description" "The server this account lives on.")}}</span><span class="font-medium text-gray-900 dark:text-gray-50 flex items-center gap-1">{{.ServerName}}
+                        {{if eq .LicenseType "Enterprise"}}<a href="#export" @click="activeTab='export'; exportMode='transfer'; window.location.hash='export'" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Transfer to another server"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></a>{{end}}
+                        </span></div>
+
+                     <div class="rounded-md bg-gray-50 text-sm dark:bg-gray-900" :class="editing ? 'sm:col-span-2' : ''" x-data="{ editing: false, msg: '' }" @custom-message.window="msg = $event.detail; editing = false">
+                        <div class="group relative flex items-center justify-between gap-3 rounded-md bg-gray-50 py-2.5 pl-3 pr-10 text-sm dark:bg-gray-900">
+                           <span class="flex items-center gap-1 text-gray-600 dark:text-gray-400"><span>Custom message</span>{{template "info_tip" (dict "Hover" true "ID" "info-custom-message" "Label" "Custom message" "Description" "Shown to the user at the top of their OpenPanel dashboard, plain text or HTML.")}}</span>
+                           <span x-show="!editing" class="flex min-w-0 items-center gap-1 font-medium text-gray-900 dark:text-gray-50">
+                              <span class="truncate" :class="msg.trim() ? '' : 'font-normal text-gray-500 dark:text-gray-500'" x-text="msg.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || 'None'" :title="msg.replace(/<[^>]*>/g, ' ').trim()"></span>
+                              <button type="button" @click="editing = true; $nextTick(() => { document.getElementById('custom_message_for_this_user').focus(); window.renderCustomMessagePreview?.() })" class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100" aria-label="Change custom message"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="remixicon size-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z"/></svg></button>
+                           </span>
+                        </div>
+                        <div x-show="editing" x-cloak class="px-3 pb-3" @keydown.escape="editing = false">
+                           <label for="custom_message_for_this_user" class="sr-only">Custom message for user</label>
+                           <textarea id="custom_message_for_this_user" data-username="{{lastSegment .Username `_`}}" placeholder="Plain text or HTML" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm min-h-24" rows="5"></textarea>
+                           <p class="mt-4 text-xs font-medium text-gray-500 dark:text-gray-500">Preview on the user's dashboard</p>
+                           <iframe id="custom_message_preview" title="Custom message preview" sandbox="allow-same-origin" class="mt-1.5 hidden w-full" style="border:0;height:0"></iframe>
+                           <p id="custom_message_preview_empty" class="mt-1.5 rounded-md border border-dashed border-gray-300 px-3 py-4 text-center text-xs text-gray-500 dark:border-gray-800 dark:text-gray-500">Nothing is shown while the message is empty.</p>
+                           <div class="mt-3 flex justify-end gap-2">
+                              <button type="button" @click="editing = false; document.getElementById('custom_message_for_this_user').value = msg; window.renderCustomMessagePreview?.()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
+                              <button type="button" class="save_custom_message_btn relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save</button>
+                           </div>
+                        </div>
+                     </div>
 
                   </div>
                </div>
 
+               <div>
+<script>
+  const textarea = document.getElementById('custom_message_for_this_user');
+  const saveBtns = document.querySelectorAll('.save_custom_message_btn');
+  var csrf_token = $('meta[name="csrf-token"]').attr('content');
+
+  async function saveCustomMessage() {
+    const message = textarea.value;
+
+    try {
+      const response = await fetch(`/get_custom_message_for_user/${encodeURIComponent(textarea.dataset.username)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrf_token,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ custom_message: message }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showToast(data.message || 'Saved successfully.', 'info');
+        window.dispatchEvent(new CustomEvent('custom-message', { detail: message }));
+      } else {
+        const errorData = await response.json();
+        showToast(errorData.error || `Save failed (${response.status})`, 'error');
+      }
+    } catch (err) {
+      showToast('Error saving custom message for user.', 'error');
+    }
+  }
+
+  saveBtns.forEach(btn => btn.addEventListener('click', () => {
+    saveCustomMessage();
+  }));
+
+  // same blue box the user panel draws, inside a sandbox with scripts off
+  const preview = document.getElementById('custom_message_preview');
+  const previewEmpty = document.getElementById('custom_message_preview_empty');
+  const previewCSS = {{asset "/static/dist/output.css"}};
+  function renderCustomMessagePreview() {
+    const html = textarea.value.trim();
+    preview.classList.toggle('hidden', !html);
+    previewEmpty.classList.toggle('hidden', !!html);
+    if (!html) return;
+    preview.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="' + previewCSS + '"></head>'
+      + '<body class="bg-transparent"><div class="flex gap-3 rounded-md bg-blue-50 p-4 text-sm text-blue-900">'
+      + '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z"/></svg>'
+      + '<div class="min-w-0">' + html + '</div></div></body></html>';
+  }
+  preview.addEventListener('load', () => {
+    try { preview.style.height = preview.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) {}
+  });
+  let previewTimer;
+  textarea.addEventListener('input', () => { clearTimeout(previewTimer); previewTimer = setTimeout(renderCustomMessagePreview, 200); });
+  window.renderCustomMessagePreview = renderCustomMessagePreview;
+</script>
+
+
+<script>
+  // the private note next to the header buttons, saved to the same notes endpoint as before
+  function userNote(initial, username) {
+    return {
+      note: initial || '', draft: initial || '', editing: false, saving: false,
+      open() {
+        this.draft = this.note; this.editing = true;
+        this.$nextTick(() => { const t = document.querySelector('textarea[aria-label="Private note"]'); t.focus(); t.dispatchEvent(new Event('input')); });
+      },
+      save() {
+        if (this.saving) return;
+        if (this.draft === this.note) { this.editing = false; return; }
+        this.saving = true;
+        fetch('/get_user_notes/' + encodeURIComponent(username), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+          body: JSON.stringify({ notes: this.draft }),
+        })
+        .then(r => r.json().then(d => ({ ok: r.ok, d })))
+        .then(({ ok, d }) => {
+          if (!ok) { showToast(d.error || 'Failed to save the note.', 'error'); return; }
+          this.note = this.draft; this.editing = false;
+          showToast(this.note.trim() ? 'Note saved.' : 'Note removed.', 'success');
+        })
+        .catch(() => showToast('Failed to reach the server.', 'error'))
+        .finally(() => { this.saving = false; });
+      }
+    };
+  }
+
+</script>
+               </div>
                </div>
                <!-- END DOCKER STATS -->
 
@@ -1059,7 +1232,7 @@
                            </thead>
                            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                               {{range .Services}}
-                              <tr data-svc="{{.Name}}" data-sort-name="{{.ContainerName}}" data-sort-image="{{.Image}}" data-cpu-limit="{{.CPULimit}}" data-pids-limit="{{.PIDsLimit}}" x-show="searchQuery === '' || '{{.ContainerName | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Name | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase()) || '{{.Image | jsStr}}'.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                              <tr data-svc="{{.Name}}" data-sort-name="{{.ContainerName}}" data-sort-image="{{.Image}}" data-cpu-limit="{{.CPULimit}}" data-pids-limit="{{.PIDsLimit}}" x-show="searchQuery === '' || $el.textContent.toLowerCase().includes(searchQuery.toLowerCase())" class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
 {{template "bulk_row_checkbox" (dict "Key" .Name "Label" .Name)}}
                                  <td x-show="columns.name">
                                     <button type="button" @click="toggleSvc('{{.Name | jsStr}}', '{{.ContainerName | jsStr}}')" :aria-expanded="(openSvc === '{{.Name | jsStr}}').toString()" class="-mx-1.5 flex items-center gap-1.5 rounded px-1.5 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-900 outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2" title="Show details">
@@ -1145,7 +1318,7 @@
                                              <form action="/containers/{{lastSegment $.Username `_`}}/cpu/{{.Name}}" method="POST" @submit.prevent="saveLimit($el, '{{.Name | jsStr}}').then(ok => { if (ok) { value = CPUinputValue; editing = false; } })" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
                                                 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
                                                 <input x-model="CPUinputValue" aria-label="CPU limit" title="Max CPUs that this service can use. 0 = unlimited" name="value" type="number" min="0" step=".01" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-20 px-2 py-1 text-xs" />
-                                                <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                                                <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button><button type="button" @click.stop="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
                                              </form>
                                           </span>
                                        </div>
@@ -1185,7 +1358,7 @@
                                              <form action="/containers/{{lastSegment $.Username `_`}}/ram/{{.Name}}" method="POST" @submit.prevent="saveLimit($el, '{{.Name | jsStr}}').then(ok => { if (ok) { value = RAMinputValue; editing = false; } })" x-show="editing" @click.stop="editing = true" class="flex items-center gap-2">
                                                 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
                                                 <input x-model="RAMinputValue" aria-label="Memory limit" title="Max memory that this service can use. 0 = unlimited" name="value" type="number" min="0" step=".01" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-20 px-2 py-1 text-xs" />
-                                                <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                                                <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button><button type="button" @click.stop="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
                                              </form>
                                           </span>
                                        </div>
@@ -1206,7 +1379,7 @@
                                     <form action="/containers/{{lastSegment $.Username `_`}}/pids/{{.Name}}" method="POST" @submit.prevent="saveLimit($el, '{{.Name | jsStr}}').then(ok => { if (ok) { value = PIDSinputValue; editing = false; } })" x-show="editing" class="inline-flex items-center gap-1">
                                        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"/>
                                        <input x-model="PIDSinputValue" aria-label="Process limit" title="Max number of processes/threads that this service can use. 0 = unlimited" name="value" type="number" min="0" step="1" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-16 px-2 py-1 text-xs" />
-                                       <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
+                                       <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button><button type="button" @click.stop="editing = false" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Cancel</button>
                                     </form>
                                  </td>
                                  <td x-show="columns.actions" id="actions-{{.Name}}" class="py-1">
@@ -2120,267 +2293,6 @@
                </div>
                <!-- END NETWORKS -->
 
-               <!-- EDIT -->
-               <div x-show="activeTab === 'edit'" class="p-4 sm:p-6" x-cloak>
-                  <form action="/user/edit/{{lastSegment .Username "_"}}" method="POST">
-                     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                     <div id="collapseAddNewUser">
-                        <div id="create_user_form" class="max-w-4xl">
-                  <div class="grid grid-cols-1 gap-4 sm:grid-cols-6">
-                  <div class="col-span-full sm:col-span-3">
-                    {{template "macro_tooltip" (dict "ID" "new_username" "Label" "Username" "Description" "Letters and numbers only, 3 to 20 characters." "Required" true)}}
-                  <div class="relative w-full mt-2">
-                  <input type="text" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" minlength="3" maxlength="20" pattern="[a-zA-Z0-9]{3,20}" name="new_username" id="new_username" value="{{lastSegment .Username "_"}}"/>
-                  </div>
-                  </div>
-                  <div class="col-span-full sm:col-span-3">
-                    {{template "macro_tooltip" (dict "ID" "new_email" "Label" "Email" "Description" "Email address is used to receive important account related notifications and password reset emails." "Required" true)}}
-                  <div class="relative w-full mt-2">
-                  <input type="email" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" autocomplete="off" name="new_email" id="new_email" placeholder="name@example.com" value="{{.User.Email}}"/>
-                  </div>
-                  </div>
-                  </div>
-<div x-data="passwordManager()" class="col-span-full mt-4">
-  {{template "macro_tooltip" (dict "ID" "new_password" "Label" "Password" "Description" "6 to 30 characters, no apostrophes. Leave empty to keep the current password." "Required" false)}}
-  <div class="mt-2 flex gap-2">
-    <div class="relative w-full">
-    <input x-ref="passwordInput" x-bind:type="passwordVisible ? 'text' : 'password'" x-model="password" @input="checkStrength()" id="new_password" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm pr-10" autocomplete="new-password" name="new_password" minlength="6" maxlength="30" pattern="[^']{6,30}">
-      <button @click="togglePasswordVisibility()" type="button" id="togglePassword" :aria-label="passwordVisible ? 'Hide password' : 'Show password'" :aria-pressed="passwordVisible.toString()" class="inline-flex shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/80 dark:hover:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 size-8 absolute right-1 top-1/2 -translate-y-1/2"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4"><path d="M12.0003 3C17.3924 3 21.8784 6.87976 22.8189 12C21.8784 17.1202 17.3924 21 12.0003 21C6.60812 21 2.12215 17.1202 1.18164 12C2.12215 6.87976 6.60812 3 12.0003 3ZM12.0003 19C16.2359 19 19.8603 16.052 20.7777 12C19.8603 7.94803 16.2359 5 12.0003 5C7.7646 5 4.14022 7.94803 3.22278 12C4.14022 16.052 7.7646 19 12.0003 19ZM12.0003 16.5C9.51498 16.5 7.50026 14.4853 7.50026 12C7.50026 9.51472 9.51498 7.5 12.0003 7.5C14.4855 7.5 16.5003 9.51472 16.5003 12C16.5003 14.4853 14.4855 16.5 12.0003 16.5ZM12.0003 14.5C13.381 14.5 14.5003 13.3807 14.5003 12C14.5003 10.6193 13.381 9.5 12.0003 9.5C10.6196 9.5 9.50026 10.6193 9.50026 12C9.50026 13.3807 10.6196 14.5 12.0003 14.5Z"/></svg></button>
-    </div>
-    <button @click="generatePassword()" type="button" id="generatePassword" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Generate</button>
-  </div>
-  <div class="mt-2 w-full">
-    <div class="h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-      <div class="h-2 transition-all duration-150 ease-out" :class="{ 'bg-gray-300 w-0': strength === '', 'bg-red-500 w-1/4': strength === 'weak', 'bg-yellow-400 w-2/4': strength === 'medium', 'bg-emerald-500 w-full': strength === 'strong' }"></div>
-    </div>
-    <p class="mt-1.5 text-xs font-medium transition-colors duration-150" :class="{ 'text-gray-400 dark:text-gray-600': strength === '', 'text-red-600 dark:text-red-500': strength === 'weak', 'text-yellow-600 dark:text-yellow-400': strength === 'medium', 'text-emerald-600 dark:text-emerald-400': strength === 'strong' }" x-text="strengthText"></p>
-  </div>
-</div>
-
-<script>
-  function passwordManager() {
-    return {
-      password: '', passwordVisible: false, strength: '', strengthText: '',
-      generatePassword() {
-        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
-        let result = "";
-        for (let i = 0; i < 16; i++) result += charset.charAt(Math.floor(Math.random() * charset.length));
-        this.password = result;
-        this.passwordVisible = true;
-        this.checkStrength();
-        this.$nextTick(() => this.$refs.passwordInput.focus());
-      },
-      togglePasswordVisibility() { this.passwordVisible = !this.passwordVisible; },
-      checkStrength() {
-        const pwd = this.password;
-        if (!pwd) { this.strength = ''; this.strengthText = ''; return; }
-        let score = 0;
-        if (pwd.length >= 8) score++;
-        if (pwd.length >= 12) score++;
-        if (/[A-Z]/.test(pwd)) score++;
-        if (/[a-z]/.test(pwd)) score++;
-        if (/\d/.test(pwd)) score++;
-        if (/[^A-Za-z0-9]/.test(pwd)) score++;
-        if (score <= 2) { this.strength = 'weak'; this.strengthText = 'Weak password'; }
-        else if (score <= 4) { this.strength = 'medium'; this.strengthText = 'Medium strength'; }
-        else { this.strength = 'strong'; this.strengthText = 'Strong password'; }
-      }
-    };
-  }
-</script>
-
-                  <div class="col-span-full my-6 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-                  {{/* ip and reseller side by side, both full width of their column */}}
-                  <div class="col-span-full grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                                        {{template "macro_tooltip" (dict "ID" "ipSelect" "Label" "IP address" "Description" "The IP address used for this user's services and domains." "Required" false)}}
-                    <div class="relative w-full mt-2">
-                      <select class="block w-full rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] mt-2" id="ipSelect" name="new_ip">
-                      <option disabled value="">Change IP address</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                      {{template "macro_tooltip" (dict "ID" "resellerSelect" "Label" "Reseller" "Description" "The reseller that owns this user." "Required" false)}}
-                      <div class="relative w-full mt-2">
-                          <select class="block w-full rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-950/50 dark:[color-scheme:dark] mt-2" id="resellerSelect" name="reseller">
-                              <option value="">No reseller</option>
-                          </select>
-                      </div>
-                  </div>
-                  </div>
-
-                  <div class="col-span-full my-6 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
-
-<div class="col-span-full mt-4">
-  {{template "macro_tooltip" (dict "ID" "plan-choices" "Label" "Package" "Description" "Change the user's hosting plan to adjust account limits or available features." "Required" false)}}
-
-  <div id="plan-choices" x-show="$store.planStore.plansLoaded" role="radiogroup" aria-label="Package" class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-    <template x-for="plan in $store.planStore.plans" :key="plan.id">
-      <label class="relative flex cursor-pointer items-start gap-3 rounded-md border border-gray-300 bg-white p-4 shadow-xs transition hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:ring-2 has-[:checked]:ring-blue-200 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:hover:bg-gray-900/60 dark:has-[:checked]:border-blue-500 dark:has-[:checked]:ring-blue-700/30">
-        <input type="radio" name="plan_choice" :value="plan.id" :checked="$store.planStore.selectedPlan === plan.id" @change="$store.planStore.selectPlan(plan.id)" class="size-4 shrink-0 cursor-pointer appearance-none rounded-full border border-gray-300 bg-white shadow-xs transition checked:border-[5px] checked:border-blue-500 checked:bg-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-100 disabled:shadow-none dark:border-gray-800 dark:bg-gray-950 dark:checked:border-blue-500 dark:checked:bg-white dark:disabled:border-gray-700 dark:disabled:bg-gray-800 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 mt-0.5">
-        <div class="flex w-full min-w-0 flex-col justify-between">
-          <div>
-            <div class="flex items-start justify-between gap-2">
-              <span class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" x-text="plan.name"></span>
-              <span x-show="plan.id === parseInt('{{.User.PlanID}}')" class="inline-flex items-center gap-x-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset bg-gray-50 text-gray-900 ring-gray-600/30 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20">Current</span>
-            </div>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-500" x-text="plan.description"></p>
-          </div>
-          <div class="mt-4">
-            <button type="button" @click="plan.showDetails = !plan.showDetails" :aria-expanded="plan.showDetails.toString()" class="flex items-center gap-1 rounded text-sm font-medium text-gray-900 dark:text-gray-50 outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" :class="plan.showDetails ? '' : '-rotate-90'" class="remixicon size-5 text-gray-400 transition-transform duration-150 dark:text-gray-600" viewBox="0 0 24 24" fill="currentColor"><path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.05021 8.22168L11.9999 13.1714Z"/></svg>Limits</button>
-            <div x-show="plan.showDetails">
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.cpu == 0 ? '∞ cores' : plan.cpu + ' cores'"></p>
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.ram.toLowerCase() === '0g' ? '∞ memory' : plan.ram + ' memory'"></p>
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.disk_limit === '0 GB' ? '∞ storage' : plan.disk_limit + ' storage'"></p>
-              <p class="mt-1 text-xs text-gray-500 dark:text-gray-500" x-text="plan.inodes_limit === 0 ? '∞ inodes' : plan.inodes_limit + ' inodes'"></p>
-            </div>
-          </div>
-        </div>
-      </label>
-    </template>
-  </div>
-  <input type="hidden" name="plan_id" :value="$store.planStore.selectedPlan">
-</div>
-
-                  </div>
-                  <div class="mt-6 flex flex-col-reverse gap-2 border-t border-gray-200 pt-6 sm:flex-row dark:border-gray-800">
-                  <button type="submit" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save</button>
-                  </div>
-                        </div>
-                  </form>
-                  <div class="my-8 h-px w-full max-w-4xl bg-gray-200 dark:bg-gray-800"></div>
-                  <div class="grid max-w-4xl grid-cols-1 gap-4 lg:grid-cols-2">
-                     <section class="rounded-md border border-gray-200 dark:border-gray-800">
-                        <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
-                           <div>
-                              <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Custom message</h3>
-                              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-500">Shown to the user at the top of their OpenPanel dashboard.</p>
-                           </div>
-                           <button type="button" class="save_custom_message_btn relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save</button>
-                        </div>
-                        <div class="p-4">
-                           <label for="custom_message_for_this_user" class="sr-only">Custom message for user</label>
-                           <textarea id="custom_message_for_this_user" data-username="{{lastSegment .Username `_`}}" placeholder="Plain text or HTML" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm min-h-24" rows="5"></textarea>
-                           <p class="mt-4 text-xs font-medium text-gray-500 dark:text-gray-500">Preview on the user's dashboard</p>
-                           <iframe id="custom_message_preview" title="Custom message preview" sandbox="allow-same-origin" class="mt-1.5 hidden w-full" style="border:0;height:0"></iframe>
-                           <p id="custom_message_preview_empty" class="mt-1.5 rounded-md border border-dashed border-gray-300 px-3 py-4 text-center text-xs text-gray-500 dark:border-gray-800 dark:text-gray-500">Nothing is shown while the message is empty.</p>
-                        </div>
-                     </section>
-                     <section class="rounded-md border border-gray-200 dark:border-gray-800">
-                        <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
-                           <div>
-                              <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-50">Private notes</h3>
-                              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-500">Only admins and resellers see these, never the user.</p>
-                           </div>
-                           <button type="button" class="save_private_notes_btn relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-2.5 py-1.5 text-xs border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Save</button>
-                        </div>
-                        <div class="p-4">
-                           <label for="private_notes_for_this_user" class="sr-only">Private notes</label>
-                           <textarea id="private_notes_for_this_user" data-username="{{.Username}}" placeholder="Anything worth remembering about this account" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm min-h-24" rows="9">{{.Notes}}</textarea>
-                        </div>
-                     </section>
-                  </div>
-
-<script>
-  const textarea = document.getElementById('custom_message_for_this_user');
-  const saveBtns = document.querySelectorAll('.save_custom_message_btn');
-  var csrf_token = $('meta[name="csrf-token"]').attr('content');
-
-  async function saveCustomMessage() {
-    const message = textarea.value;
-
-    try {
-      const response = await fetch(`/get_custom_message_for_user/${encodeURIComponent(textarea.dataset.username)}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrf_token,
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ custom_message: message }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showToast(data.message || 'Saved successfully.', 'info');
-      } else {
-        const errorData = await response.json();
-        showToast(errorData.error || `Save failed (${response.status})`, 'error');
-      }
-    } catch (err) {
-      showToast('Error saving custom message for user.', 'error');
-    }
-  }
-
-  saveBtns.forEach(btn => btn.addEventListener('click', () => {
-    saveCustomMessage();
-  }));
-
-  // same blue box the user panel draws, inside a sandbox with scripts off
-  const preview = document.getElementById('custom_message_preview');
-  const previewEmpty = document.getElementById('custom_message_preview_empty');
-  const previewCSS = {{asset "/static/dist/output.css"}};
-  function renderCustomMessagePreview() {
-    const html = textarea.value.trim();
-    preview.classList.toggle('hidden', !html);
-    previewEmpty.classList.toggle('hidden', !!html);
-    if (!html) return;
-    preview.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="' + previewCSS + '"></head>'
-      + '<body class="bg-transparent"><div class="flex gap-3 rounded-md bg-blue-50 p-4 text-sm text-blue-900">'
-      + '<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 11V17H13V11H11ZM11 7V9H13V7H11Z"/></svg>'
-      + '<div class="min-w-0">' + html + '</div></div></body></html>';
-  }
-  preview.addEventListener('load', () => {
-    try { preview.style.height = preview.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) {}
-  });
-  let previewTimer;
-  textarea.addEventListener('input', () => { clearTimeout(previewTimer); previewTimer = setTimeout(renderCustomMessagePreview, 200); });
-  window.renderCustomMessagePreview = renderCustomMessagePreview;
-</script>
-
-
-<script>
-  const notesTextarea = document.getElementById('private_notes_for_this_user');
-  const saveNotesBtns = document.querySelectorAll('.save_private_notes_btn');
-  var csrf_token_notes = $('meta[name="csrf-token"]').attr('content');
-
-  async function savePrivateNotes() {
-    const notes = notesTextarea.value;
-    const notesUsername = notesTextarea.dataset.username;
-
-    try {
-      const response = await fetch(`/get_user_notes/${notesUsername}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrf_token_notes,
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ notes: notes }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showToast(data.message || 'Saved successfully.', 'info');
-      } else {
-        const errorData = await response.json();
-        showToast(errorData.error || `Save failed (${response.status})`, 'error');
-      }
-    } catch (err) {
-      showToast('Error saving private notes for user.', 'error');
-    }
-  }
-
-  saveNotesBtns.forEach(function (btn) {
-    btn.addEventListener('click', () => {
-      savePrivateNotes();
-    });
-  });
-</script>
-               </div>
-               <!-- END EDIT -->
 
                <!-- PERMISSIONS -->
                <div x-show="activeTab === 'permissions'" x-cloak>
@@ -2501,7 +2413,7 @@
                               }), sortKey, sortDir)" :key="activity.timestamp + '-' + index">
                               <tr class="domain_row sm:[&_td:last-child]:pr-6 sm:[&_td:first-child]:pl-6 hover:bg-gray-50 dark:hover:bg-gray-900/60">
                                  <td class="relative group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left" x-text="activity.date"></td>
-                                 <td class="flex items-center relative group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left truncate max-w-[500px]" x-html="activity.action"></td>
+                                 <td class="flex items-center relative group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-left truncate max-w-[500px]" x-text="activity.action"></td>
                                  <td class="relative group p-4 text-sm whitespace-nowrap py-2.5 text-gray-600 dark:text-gray-400 text-end" x-text="activity.ip"></td>
                               </tr>
                            </template>
@@ -2813,7 +2725,7 @@ function userUsageHistory(username) {
                         <div class="col-span-full">
                         <div class="flex gap-4">
                             <div class="flex-1">
-                            <label class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50" for="username">Username <span class="text-red-600 dark:text-red-500" aria-hidden="true">*</span></label>
+{{template "macro_tooltip" (dict "ID" "username" "Label" "Username" "Description" "SSH user on the remote server, usually root." "Required" true)}}
                             <div class="relative w-full mt-2"><input type="text" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full appearance-none px-2.5 py-2 text-sm" minlength="3" maxlength="25" name="username" placeholder="root" id="username" required></div>
                             </div>
                             <div class="flex-1">
