@@ -14,7 +14,7 @@ import (
 
 func secDialWS(t *testing.T, srv *httptest.Server, client *http.Client, path string, hdr http.Header) (*websocket.Conn, *http.Response, error) {
 	t.Helper()
-	url := "ws" + strings.TrimPrefix(srv.URL, "http") + path
+	url := "ws" + strings.TrimPrefix(srv.URL, "http") + path + termTokenQS(t, srv, client)
 	return (&websocket.Dialer{Jar: client.Jar}).Dial(url, hdr)
 }
 

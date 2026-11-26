@@ -1069,6 +1069,7 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /emails/domain-limits/api", auth.RequireAdmin(sessions, authOpts, emails.ServeDomainLimitsAPI))
 	mux.HandleFunc("GET /terminal", auth.RequireAdmin(sessions, authOpts, terminal.ServeHostTerminalPage))
 	mux.HandleFunc("GET /terminal/{username}/{container_name}", auth.RequireAdmin(sessions, authOpts, terminal.ServeUserTerminalPage))
+	mux.HandleFunc("POST /terminal/authorize", auth.RequireAdmin(sessions, authOpts, terminal.ServeTerminalAuthorize))
 	mux.HandleFunc("GET /ws/terminal", auth.RequireAdmin(sessions, authOpts, terminal.ServeHostTerminalWS))
 	mux.HandleFunc("GET /ws/terminal/{username}/{container_name}", auth.RequireAdmin(sessions, authOpts, terminal.ServeUserTerminalWS))
 	mux.HandleFunc("GET /user/import", auth.RequireLogin(sessions, authOpts, importer.ServeImportUser))
