@@ -76,6 +76,7 @@ var openpanelStringFields = []string{
 	"captcha_provider", "recaptcha_site_key", "recaptcha_secret_key",
 	"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key",
 	"applications_dashboard_items",
+	"hidden_docker_apps",
 	"dns_record_types",
 	"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_name", "ai_instructions",
 	"ai_monthly_limit", "ai_max_tokens", "ai_actions",
@@ -121,6 +122,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"mysql_restricted_databases":      {kind: openpanelSpaceSeparatedList},
 	"mysql_enforce_username_prefix":   {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"applications_dashboard_items":    {kind: openpanelSpaceSeparatedList},
+	"hidden_docker_apps":              {kind: openpanelSpaceSeparatedList},
 	"dns_record_types":                {kind: openpanelOptionList, options: []string{"A", "AAAA", "CAA", "CNAME", "MX", "SRV", "TLSA", "TXT", "HTTPS", "SVCB", "NS", "SSHFP", "URI", "DMARC"}},
 	"filemanager_buttons_style":       {kind: openpanelEnum, options: []string{"classic", "modern"}},
 	"filemanager_files_per_page":      {kind: openpanelNonNegativeInt},
@@ -262,7 +264,7 @@ func openpanelSectionForKey(key string) string {
 	if strings.HasPrefix(key, "filemanager_") || key == "autopurge_trash" {
 		return "FILES"
 	}
-	if key == "terminal_timeout" || key == "menu_style" || key == "template" || key == "allow_user_theme" || key == "applications_dashboard_items" {
+	if key == "terminal_timeout" || key == "menu_style" || key == "template" || key == "allow_user_theme" || key == "applications_dashboard_items" || key == "hidden_docker_apps" {
 		return "PANEL"
 	}
 	switch key {
@@ -471,6 +473,8 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 		"SiteCount":          totalSites(defaultsSiteTypesRun(o.MySQL)),
 		"ConfigData":         configData,
 		"PanelThemes":        panelThemes,
+		"DockerApps":         loadDockerAppChoices(),
+		"DockerAppsPath":     DockerAppsTemplatePath,
 		"AvailableThemes":    availableThemes(r.Context(), panelThemes),
 		"PanelThemeInvalid":  configData.Get("PANEL", "template", "") != "" && !validPanelThemeFolder(configData.Get("PANEL", "template", "")),
 		"PanelThemesDir":     PanelThemesDir,
