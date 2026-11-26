@@ -92,7 +92,7 @@ func (l *Login) renderLoginPage(w http.ResponseWriter, r *http.Request, status i
 		ServerHostname:   l.ServerHostname,
 		PublicIP:         l.PublicIP,
 		PanelVersion:     l.PanelVersion,
-		LicenseType:      l.LicenseType,
+		LicenseType:      licenseType(),
 		CSRFToken:        csrf.Token(r),
 		Next:             r.URL.Query().Get("next"),
 		Flashes:          auth.PopFlashes(w, r, l.Sessions),

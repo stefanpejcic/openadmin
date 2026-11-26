@@ -296,6 +296,10 @@ type appDeps struct {
 
 func newHandler(d appDeps) (http.Handler, error) {
 	handlers.InitChromeSiteInfo(d.PublicIP, d.ServerHostname, d.ForceDomainValue, d.PanelVersion, d.LicenseType, d.DevMode, handlers.ModulesConfigFilePath)
+	// the topbar, login page and enterprise menus follow the check, not just the key's prefix
+	if d.LicenseChecker != nil {
+		handlers.ChromeLicenseValid = d.LicenseChecker.Valid
+	}
 
 	sessions := auth.NewManager(d.SecretKey, d.UseTLS)
 	loginRateLimiter := auth.NewPerIPLimiter(d.LoginRatePerMin, 5)
