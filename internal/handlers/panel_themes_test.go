@@ -9,7 +9,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"openadmin/internal/auth"
+	"openadmin/internal/config"
 )
 
 // tests never fetch the real theme list from github
@@ -198,5 +202,94 @@ func TestInstallTheme(t *testing.T) {
 	entries, _ := os.ReadDir(dir)
 	if len(entries) != 1 {
 		t.Fatalf("leftovers after a failed install: %v", entries)
+	}
+}
+
+func TestNewerVersion(t *testing.T) {
+	for _, c := range []struct {
+		remote, local string
+		want          bool
+	}{{"1.2.0", "1.0.0", true}, {"1.10.0", "1.9.2", true}, {"1.0", "1.0.0", false}, {"1.0.0", "1.2.0", false}, {"v2", "1.9", true}, {"", "1.0", false}} {
+		if got := newerVersion(c.remote, c.local); got != c.want {
+			t.Errorf("newerVersion(%q, %q) = %v", c.remote, c.local, got)
+		}
+	}
+}
+
+func postThemeForm(t *testing.T, h http.HandlerFunc, folder string) {
+	t.Helper()
+	req := httptest.NewRequest("POST", "/", strings.NewReader("theme="+folder))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	h(httptest.NewRecorder(), req)
+}
+
+func TestUninstallThemeResetsServerAndUsers(t *testing.T) {
+	dir := withPanelThemes(t)
+	withScratchOpenpanelSettingsPaths(t)
+	home := t.TempDir()
+	orig := PanelUserThemeGlob
+	PanelUserThemeGlob = filepath.Join(home, "*", "theme")
+	t.Cleanup(func() { PanelUserThemeGlob = orig })
+
+	for _, f := range []string{"modern", "saturn"} {
+		os.MkdirAll(filepath.Join(dir, f), 0o755)
+		os.WriteFile(filepath.Join(dir, f, "readme.txt"), []byte("Theme Name: "+f), 0o644)
+	}
+	for user, theme := range map[string]string{"alice": "modern\n", "bob": "saturn\n"} {
+		os.MkdirAll(filepath.Join(home, user), 0o755)
+		os.WriteFile(filepath.Join(home, user, "theme"), []byte(theme), 0o644)
+	}
+	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[PANEL]\ntemplate=modern\n"), 0o644)
+
+	o := &OpenpanelSettings{Sessions: auth.NewManager("test-secret", false)}
+	postThemeForm(t, o.ServeUninstallTheme, "modern")
+
+	if _, err := os.Stat(filepath.Join(dir, "modern")); !os.IsNotExist(err) {
+		t.Fatal("theme folder should be gone")
+	}
+	if _, err := os.Stat(filepath.Join(home, "alice", "theme")); !os.IsNotExist(err) {
+		t.Fatal("alice picked modern, her choice should be cleared")
+	}
+	if b, _ := os.ReadFile(filepath.Join(home, "bob", "theme")); string(b) != "saturn\n" {
+		t.Fatalf("bob's choice shouldn't change, got %q", b)
+	}
+	if got := config.Load(OpenpanelSettingsConfigPath).Get("PANEL", "template", "x"); got != "" {
+		t.Fatalf("template should go back to Default, got %q", got)
+	}
+	if _, err := os.Stat(OpenpanelSettingsRestartFlagPath); err != nil {
+		t.Fatal("restart flag should be set")
+	}
+
+	postThemeForm(t, o.ServeUninstallTheme, "../etc")
+	if _, err := os.Stat(filepath.Join(dir, "saturn")); err != nil {
+		t.Fatal("a bad folder name must not delete anything")
+	}
+}
+
+func TestUpdateThemeSwapsFolder(t *testing.T) {
+	archive := themeTarGz(t, map[string]string{"modern/readme.txt": "Theme Name: Modern\nVersion: 1.2.0", "modern/base.html": "new"})
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(archive) }))
+	defer srv.Close()
+	origClient := http.DefaultClient
+	http.DefaultClient = srv.Client()
+	t.Cleanup(func() { http.DefaultClient = origClient })
+
+	dir := withPanelThemes(t)
+	os.MkdirAll(filepath.Join(dir, "modern"), 0o755)
+	os.WriteFile(filepath.Join(dir, "modern", "readme.txt"), []byte("Theme Name: Modern\nVersion: 1.0.0"), 0o644)
+	os.WriteFile(filepath.Join(dir, "modern", "old.html"), []byte("old"), 0o644)
+
+	if err := updateTheme(t.Context(), RemoteTheme{Folder: "modern", Download: srv.URL + "/m.tar.gz"}, dir); err != nil {
+		t.Fatal(err)
+	}
+	if th, _ := readPanelTheme("modern"); th.Version != "1.2.0" {
+		t.Fatalf("version after update = %q", th.Version)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "modern", "old.html")); !os.IsNotExist(err) {
+		t.Fatal("files from the old version should be gone")
+	}
+	entries, _ := os.ReadDir(dir)
+	if len(entries) != 1 {
+		t.Fatalf("leftovers after update: %v", entries)
 	}
 }

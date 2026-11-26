@@ -429,6 +429,10 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 	}
 
 	panelThemes := listPanelThemes()
+	updates := themeUpdates(r.Context(), panelThemes)
+	for i := range panelThemes {
+		panelThemes[i].UpdateVersion = updates[panelThemes[i].Folder]
+	}
 
 	// the file manager works inside the openpanel container, so its size limits are compared to that container's RAM
 	openpanelRAMGB := parseRAMLimitGB(readEnvGroups()["OPENPANEL"]["RAM"])

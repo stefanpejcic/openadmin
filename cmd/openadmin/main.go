@@ -967,6 +967,8 @@ func newHandler(d appDeps) (http.Handler, error) {
 	mux.HandleFunc("POST /settings/open-panel", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeOpenpanelSettings))
 	mux.HandleFunc("GET /settings/open-panel/theme-screenshot/{theme}", auth.RequireAdmin(sessions, authOpts, handlers.ServeThemeScreenshot))
 	mux.HandleFunc("POST /settings/open-panel/themes/install", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeInstallTheme))
+	mux.HandleFunc("POST /settings/open-panel/themes/uninstall", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeUninstallTheme))
+	mux.HandleFunc("POST /settings/open-panel/themes/update", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeUpdateTheme))
 	mux.HandleFunc("GET /settings/open-panel/themes/{theme}/customize", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeThemeSettings))
 	mux.HandleFunc("POST /settings/open-panel/themes/{theme}/customize", auth.RequireAdmin(sessions, authOpts, openpanelSettings.ServeThemeSettings))
 	mux.HandleFunc("GET /settings/defaults", auth.RequireAdmin(sessions, authOpts, defaultsSettings.ServeDefaults))

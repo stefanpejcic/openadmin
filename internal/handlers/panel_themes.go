@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"openadmin/internal/auth"
+	"openadmin/internal/config"
 )
 
 // PanelThemesDir holds one folder per user panel theme, template= in openpanel.config names one of them
@@ -43,6 +45,8 @@ type PanelTheme struct {
 	Description string
 	// HasSettings: the theme ships settings.json, so it gets a Customize page
 	HasSettings bool
+	// UpdateVersion is the newer version themes.yml lists, "" when it's up to date
+	UpdateVersion string
 }
 
 var themeReadmeHeaders = map[string]func(*PanelTheme, string){
@@ -97,7 +101,8 @@ func listPanelThemes() []PanelTheme {
 	}
 	var themes []PanelTheme
 	for _, e := range entries {
-		if !e.IsDir() {
+		// .update- and .old- are half done updates
+		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
 		if t, ok := readPanelTheme(e.Name()); ok {
@@ -110,7 +115,7 @@ func listPanelThemes() []PanelTheme {
 
 // validPanelThemeFolder reports whether name is a plain folder name of an existing theme
 func validPanelThemeFolder(name string) bool {
-	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
+	if name == "" || strings.HasPrefix(name, ".") || strings.ContainsAny(name, `/\`) {
 		return false
 	}
 	_, ok := readPanelTheme(name)
@@ -447,4 +452,135 @@ func unpackTheme(data []byte, dest string) error {
 			return err
 		}
 	}
+}
+
+// PanelUserThemeGlob finds the theme files users saved when allow_user_theme=yes, /home/<context>/theme holds a folder name
+var PanelUserThemeGlob = "/home/*/theme"
+
+// themeUpdates maps an installed theme folder to the newer version themes.yml lists for it
+func themeUpdates(ctx context.Context, installed []PanelTheme) map[string]string {
+	out := map[string]string{}
+	have := map[string]string{}
+	for _, t := range installed {
+		have[t.Folder] = t.Version
+	}
+	for _, t := range loadThemesList(ctx) {
+		if v, ok := have[t.Folder]; ok && newerVersion(t.Version, v) {
+			out[t.Folder] = t.Version
+		}
+	}
+	return out
+}
+
+// newerVersion compares dotted numbers like 1.10.0 > 1.9.2, anything that isn't a number counts as 0
+func newerVersion(remote, local string) bool {
+	r, l := strings.Split(strings.TrimPrefix(strings.TrimSpace(remote), "v"), "."), strings.Split(strings.TrimPrefix(strings.TrimSpace(local), "v"), ".")
+	for i := 0; i < len(r) || i < len(l); i++ {
+		var a, b int
+		if i < len(r) {
+			a, _ = strconv.Atoi(r[i])
+		}
+		if i < len(l) {
+			b, _ = strconv.Atoi(l[i])
+		}
+		if a != b {
+			return a > b
+		}
+	}
+	return false
+}
+
+// ServeUninstallTheme handles POST /settings/open-panel/themes/uninstall, deletes the theme folder,
+// users who picked it go back to the server theme and if it was the server theme that goes back to Default
+func (o *OpenpanelSettings) ServeUninstallTheme(w http.ResponseWriter, r *http.Request) {
+	folder := r.PostFormValue("theme")
+	t, ok := readPanelTheme(folder)
+	if !ok || !validPanelThemeFolder(folder) {
+		_ = auth.AddFlash(w, r, o.Sessions, "Error: theme not found.", "error")
+		http.Redirect(w, r, "/settings/open-panel#display", http.StatusSeeOther)
+		return
+	}
+	if err := os.RemoveAll(filepath.Join(PanelThemesDir, folder)); err != nil {
+		_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Error removing theme %s: %v", t.Name, err), "error")
+		http.Redirect(w, r, "/settings/open-panel#display", http.StatusSeeOther)
+		return
+	}
+
+	users := 0
+	files, _ := filepath.Glob(PanelUserThemeGlob)
+	for _, f := range files {
+		if b, err := os.ReadFile(f); err == nil && strings.TrimSpace(string(b)) == folder && os.Remove(f) == nil {
+			users++
+		}
+	}
+
+	msg := fmt.Sprintf("Theme %s uninstalled.", t.Name)
+	cfg := config.Load(OpenpanelSettingsConfigPath)
+	if cfg.Get("PANEL", "template", "") == folder {
+		cfg.Set("PANEL", "template", "")
+		if err := config.Save(OpenpanelSettingsConfigPath, cfg); err != nil {
+			_ = auth.AddFlash(w, r, o.Sessions, "Error: the theme was removed but template= still points at it, select Default and save.", "error")
+		} else {
+			msg += " It was the server theme, OpenPanel now uses Default."
+		}
+	}
+	if users > 0 {
+		msg += fmt.Sprintf(" %d user(s) who picked it now use the server theme.", users)
+	}
+	_ = os.WriteFile(OpenpanelSettingsRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0o644)
+	_ = auth.AddFlash(w, r, o.Sessions, msg, "success")
+	http.Redirect(w, r, "/settings/open-panel#display", http.StatusSeeOther)
+}
+
+// ServeUpdateTheme handles POST /settings/open-panel/themes/update, swaps the folder for the version themes.yml lists
+func (o *OpenpanelSettings) ServeUpdateTheme(w http.ResponseWriter, r *http.Request) {
+	folder := r.PostFormValue("theme")
+	defer http.Redirect(w, r, "/settings/open-panel#display", http.StatusSeeOther)
+	installed, ok := readPanelTheme(folder)
+	if !ok || !validPanelThemeFolder(folder) {
+		_ = auth.AddFlash(w, r, o.Sessions, "Error: theme not found.", "error")
+		return
+	}
+	var remote *RemoteTheme
+	for _, t := range loadThemesList(r.Context()) {
+		if t.Folder == folder {
+			remote = &t
+			break
+		}
+	}
+	if remote == nil || !newerVersion(remote.Version, installed.Version) {
+		_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Theme %s is up to date.", installed.Name), "info")
+		return
+	}
+	if err := updateTheme(r.Context(), *remote, PanelThemesDir); err != nil {
+		log.Printf("themes: updating %s from %s: %v", folder, remote.Download, err)
+		_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Error updating theme %s: %v", installed.Name, err), "error")
+		return
+	}
+	reapplyThemeSettings(folder)
+	_ = os.WriteFile(OpenpanelSettingsRestartFlagPath, []byte("Restart needed for OpenPanel service."), 0o644)
+	_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Theme %s updated to %s.", installed.Name, remote.Version), "success")
+}
+
+// updateTheme unpacks the new version next to the old one and swaps them, the old folder stays if anything fails
+func updateTheme(ctx context.Context, t RemoteTheme, dir string) error {
+	staged := t
+	staged.Folder = ".update-" + t.Folder
+	_ = os.RemoveAll(filepath.Join(dir, staged.Folder))
+	if err := installTheme(ctx, staged, dir); err != nil {
+		return err
+	}
+	cur, next := filepath.Join(dir, t.Folder), filepath.Join(dir, staged.Folder)
+	old := filepath.Join(dir, ".old-"+t.Folder)
+	_ = os.RemoveAll(old)
+	if err := os.Rename(cur, old); err != nil {
+		_ = os.RemoveAll(next)
+		return err
+	}
+	if err := os.Rename(next, cur); err != nil {
+		_ = os.Rename(old, cur)
+		_ = os.RemoveAll(next)
+		return err
+	}
+	return os.RemoveAll(old)
 }
