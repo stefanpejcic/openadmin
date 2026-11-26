@@ -165,3 +165,29 @@ func TestServeBrandFile(t *testing.T) {
 		}
 	}
 }
+
+// a new light logo only replaces logo.*, never logo_dark.*, and the other way round
+func TestLogoUploadsKeepTheOtherLogo(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	dir := withScratchBrandDir(t)
+	srv, client := newOpenpanelSettingsTestServer(t, &OpenpanelSettings{})
+	target := srv.URL + "/settings/open-panel"
+	form := validOpenpanelForm()
+
+	postOpenpanelMultipart(t, client, target, form, map[string][]byte{"logo_file": testPNG, "logo_dark_file": testPNG})
+	postOpenpanelMultipart(t, client, target, form, map[string][]byte{"logo_file": []byte(testSVG)})
+	if _, err := os.Stat(filepath.Join(dir, "logo_dark.png")); err != nil {
+		t.Fatal("a new light logo removed the dark one")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "logo.png")); !os.IsNotExist(err) {
+		t.Fatal("the old light logo should be gone")
+	}
+
+	postOpenpanelMultipart(t, client, target, form, map[string][]byte{"logo_dark_file": []byte(testSVG)})
+	if _, err := os.Stat(filepath.Join(dir, "logo.svg")); err != nil {
+		t.Fatal("a new dark logo removed the light one")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "logo_dark.png")); !os.IsNotExist(err) {
+		t.Fatal("the old dark logo should be gone")
+	}
+}
