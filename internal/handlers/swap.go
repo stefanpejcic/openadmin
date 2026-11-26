@@ -223,7 +223,7 @@ func getSwapStatus() swapStatus {
 	if total > 0 {
 		percent = int(used * 100 / total)
 	}
-	threshold, _ := strconv.Atoi(config.Load(NotificationsConfigPath).Get("DEFAULT", "swap", "85"))
+	threshold, _ := strconv.Atoi(config.Load(NotificationsConfigPath).Get("DEFAULT", "swap", "80"))
 
 	_, statErr := os.Stat(SwapFilePath)
 
