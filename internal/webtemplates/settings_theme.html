@@ -46,14 +46,19 @@
                 <div class="lg:col-span-2">
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         {{range $g.Fields}}{{$k := .Key}}
-                        <div x-data="{ v: '{{.Value}}', d: '{{.Default}}' }">
+                        <div x-data="{ v: '{{.Value}}', d: '{{if .Auto}}{{.Auto}}{{else}}{{.Default}}{{end}}' }">
                             <label for="ts-{{.Key}}" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">{{.Label}}</label>
                             <div class="mt-2 flex items-center gap-2">
-                                <input type="color" :value="/^#[0-9a-fA-F]{6}$/.test(v) ? v : d" @input="v = $event.target.value" aria-label="Pick {{.Label}}" class="h-9 w-12 shrink-0 cursor-pointer rounded-md border border-gray-300 bg-white p-1 dark:border-gray-800 dark:bg-gray-950">
-                                <input type="text" id="ts-{{.Key}}" name="{{.Key}}" x-model="v" maxlength="7" spellcheck="false" autocomplete="off" {{if .Error}}aria-invalid="true" aria-describedby="ts-{{.Key}}-error"{{end}} class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-2 text-sm font-mono">
+                                <input type="color" :value="/^#?[0-9a-fA-F]{6}$/.test(v) ? (v[0] === '#' ? v : '#' + v) : d" @input="v = $event.target.value" aria-label="Pick {{.Label}}" class="h-9 w-12 shrink-0 cursor-pointer rounded-md border border-gray-300 bg-white p-1 dark:border-gray-800 dark:bg-gray-950">
+                                <input type="text" id="ts-{{.Key}}" name="{{.Key}}" x-model="v" maxlength="7" spellcheck="false" autocomplete="off" {{if .Auto}}placeholder="Automatic"{{end}} {{if .Error}}aria-invalid="true" aria-describedby="ts-{{.Key}}-error"{{end}} class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-2 text-sm font-mono">
                             </div>
                             {{with .Error}}<p id="ts-{{$k}}-error" class="mt-1.5 text-xs text-red-600 dark:text-red-400">{{.}}</p>{{end}}
+                            {{if .Auto}}
+                            <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">{{with .Description}}{{.}} {{end}}<span x-show="v === ''">Automatic <span class="font-mono">{{.Auto}}</span>, readable on the {{.AgainstLab | lower}}. Worked out again when you save.</span><span x-show="v !== ''" x-cloak>Your colour is used as it is, <button type="button" @click="v = ''" class="text-blue-600 hover:underline dark:text-blue-500">make it automatic</button></span></p>
+                            {{with .Warning}}<p class="mt-1.5 text-xs text-amber-700 dark:text-amber-400">{{.}}</p>{{end}}
+                            {{else}}
                             <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">{{with .Description}}{{.}} {{end}}Default <span class="font-mono">{{.Default}}</span><template x-if="v.toLowerCase() !== d"><span>, <button type="button" @click="v = d" class="text-blue-600 hover:underline dark:text-blue-500">use default</button></span></template></p>
+                            {{end}}
                         </div>
                         {{end}}
                     </div>

@@ -37,6 +37,11 @@ import (
 //
 // In css, {{key}} is that field's value, {{key.on}} is #ffffff or #14141f, whichever reads better on it,
 // and {{key.tone}} is light or dark.
+//
+// A field with "readable_on": "<other key>" is worked out from that other field while the admin leaves it
+// empty: its default is pushed toward #ffffff or #14141f until it reaches "min_contrast" (4.5 when unset)
+// against the other field's value. Sidebar text set this way stays readable when only the background
+// changes. A colour the admin types in is used as it is, with a warning when it's hard to read.
 
 // PanelThemeSettingsDir holds the saved values, one <theme folder>.json each
 var PanelThemeSettingsDir = "/etc/openpanel/openpanel/conf/themes"
@@ -65,9 +70,15 @@ type ThemeSettingsField struct {
 	Type        string `json:"type"`
 	Default     string `json:"default"`
 	CSS         string `json:"css"`
+	// ReadableOn makes the field automatic, see the comment at the top
+	ReadableOn  string  `json:"readable_on"`
+	MinContrast float64 `json:"min_contrast"`
 	// set for the form
-	Value string `json:"-"`
-	Error string `json:"-"`
+	Value      string `json:"-"`
+	Error      string `json:"-"`
+	Auto       string `json:"-"` // the colour used while Value is empty
+	AgainstLab string `json:"-"` // label of the ReadableOn field
+	Warning    string `json:"-"`
 }
 
 var (
@@ -121,9 +132,31 @@ func loadThemeSettingsSchema(folder string) (*ThemeSettingsSchema, error) {
 			}
 		}
 	}
-	// a placeholder for a key the theme doesn't define would end up as an empty css value
+	auto := map[string]bool{}
 	for _, g := range s.Groups {
 		for _, f := range g.Fields {
+			auto[f.Key] = f.ReadableOn != ""
+		}
+	}
+	// a placeholder for a key the theme doesn't define would end up as an empty css value
+	for gi := range s.Groups {
+		for fi := range s.Groups[gi].Fields {
+			f := &s.Groups[gi].Fields[fi]
+			if f.ReadableOn != "" {
+				if !seen[f.ReadableOn] || f.ReadableOn == f.Key {
+					return nil, fmt.Errorf("settings.json: %s is readable_on %q, which isn't another field", f.Key, f.ReadableOn)
+				}
+				// one level only, so the order fields are worked out in doesn't matter
+				if auto[f.ReadableOn] {
+					return nil, fmt.Errorf("settings.json: %s is readable_on %s, which is automatic itself", f.Key, f.ReadableOn)
+				}
+				if f.MinContrast == 0 {
+					f.MinContrast = 4.5
+				}
+				if f.MinContrast < 1 || f.MinContrast > 21 {
+					return nil, fmt.Errorf("settings.json: min_contrast for %s must be between 1 and 21", f.Key)
+				}
+			}
 			for _, m := range themeCSSVariable.FindAllStringSubmatch(f.CSS, -1) {
 				if !seen[m[1]] {
 					return nil, fmt.Errorf("settings.json: the css for %s uses {{%s}}, which isn't a field", f.Key, m[1])
@@ -160,19 +193,40 @@ func loadThemeSettingsValues(folder string) map[string]string {
 	return values
 }
 
-// themeColourTone is dark when white text reads better on c than near-black text
-func themeColourTone(c string) string {
-	r, _ := strconv.ParseUint(c[1:3], 16, 8)
-	g, _ := strconv.ParseUint(c[3:5], 16, 8)
-	b, _ := strconv.ParseUint(c[5:7], 16, 8)
-	lin := func(v uint64) float64 {
-		f := float64(v) / 255
+func themeRGB(c string) [3]float64 {
+	var rgb [3]float64
+	for i := range rgb {
+		v, _ := strconv.ParseUint(c[1+2*i:3+2*i], 16, 8)
+		rgb[i] = float64(v)
+	}
+	return rgb
+}
+
+// themeLuminance is the WCAG relative luminance of a #rrggbb colour
+func themeLuminance(c string) float64 {
+	rgb := themeRGB(c)
+	lin := func(v float64) float64 {
+		f := v / 255
 		if f <= 0.04045 {
 			return f / 12.92
 		}
 		return math.Pow((f+0.055)/1.055, 2.4)
 	}
-	l := 0.2126*lin(r) + 0.7152*lin(g) + 0.0722*lin(b)
+	return 0.2126*lin(rgb[0]) + 0.7152*lin(rgb[1]) + 0.0722*lin(rgb[2])
+}
+
+// themeContrast is the WCAG contrast ratio of two colours, 1 to 21
+func themeContrast(a, b string) float64 {
+	la, lb := themeLuminance(a), themeLuminance(b)
+	if la < lb {
+		la, lb = lb, la
+	}
+	return (la + 0.05) / (lb + 0.05)
+}
+
+// themeColourTone is dark when white text reads better on c than near-black text
+func themeColourTone(c string) string {
+	l := themeLuminance(c)
 	// contrast against white (1.0) vs against #14141f (~0.007)
 	if (1.05)/(l+0.05) >= (l+0.05)/(0.007+0.05) {
 		return "dark"
@@ -180,8 +234,37 @@ func themeColourTone(c string) string {
 	return "light"
 }
 
-// buildThemeSettingsCSS renders the css of every field whose value differs from its default
-func buildThemeSettingsCSS(s *ThemeSettingsSchema, values map[string]string) string {
+// themeColourOn is #ffffff or #14141f, whichever reads better on c
+func themeColourOn(c string) string {
+	if themeColourTone(c) == "dark" {
+		return "#ffffff"
+	}
+	return "#14141f"
+}
+
+// themeReadableOn returns c, or c mixed toward white or near-black just enough to reach min contrast on bg
+func themeReadableOn(c, bg string, min float64) string {
+	if themeContrast(c, bg) >= min {
+		return c
+	}
+	on := themeColourOn(bg)
+	from, to := themeRGB(c), themeRGB(on)
+	for step := 1; step < 40; step++ {
+		t := float64(step) / 40
+		m := fmt.Sprintf("#%02x%02x%02x",
+			int(math.Round(from[0]+(to[0]-from[0])*t)),
+			int(math.Round(from[1]+(to[1]-from[1])*t)),
+			int(math.Round(from[2]+(to[2]-from[2])*t)))
+		if themeContrast(m, bg) >= min {
+			return m
+		}
+	}
+	return on
+}
+
+// themeSettingsResolve returns the colour every field ends up with: the saved value, else the default,
+// with automatic fields made readable on the field they follow
+func themeSettingsResolve(s *ThemeSettingsSchema, values map[string]string) map[string]string {
 	all := map[string]string{}
 	for _, g := range s.Groups {
 		for _, f := range g.Fields {
@@ -191,6 +274,19 @@ func buildThemeSettingsCSS(s *ThemeSettingsSchema, values map[string]string) str
 			}
 		}
 	}
+	for _, g := range s.Groups {
+		for _, f := range g.Fields {
+			if _, set := values[f.Key]; !set && f.ReadableOn != "" {
+				all[f.Key] = themeReadableOn(f.Default, all[f.ReadableOn], f.MinContrast)
+			}
+		}
+	}
+	return all
+}
+
+// buildThemeSettingsCSS renders the css of every field whose value differs from its default
+func buildThemeSettingsCSS(s *ThemeSettingsSchema, values map[string]string) string {
+	all := themeSettingsResolve(s, values)
 	var out strings.Builder
 	out.WriteString("/* written by OpenAdmin > Settings > OpenPanel > Customize colours, changes here are overwritten on the next save */\n")
 	for _, g := range s.Groups {
@@ -203,10 +299,7 @@ func buildThemeSettingsCSS(s *ThemeSettingsSchema, values map[string]string) str
 				v := all[p[1]]
 				switch p[2] {
 				case "on":
-					if themeColourTone(v) == "dark" {
-						return "#ffffff"
-					}
-					return "#14141f"
+					return themeColourOn(v)
 				case "tone":
 					return themeColourTone(v)
 				}
@@ -313,7 +406,11 @@ func (o *OpenpanelSettings) ServeThemeSettings(w http.ResponseWriter, r *http.Re
 				}
 				v := strings.TrimSpace(r.PostFormValue(f.Key))
 				if v == "" {
-					v = f.Default
+					// empty keeps an automatic field automatic, and any other field at its default
+					if f.ReadableOn == "" {
+						f.Value = f.Default
+					}
+					continue
 				}
 				if !strings.HasPrefix(v, "#") {
 					v = "#" + v
@@ -326,12 +423,32 @@ func (o *OpenpanelSettings) ServeThemeSettings(w http.ResponseWriter, r *http.Re
 				}
 				v = strings.ToLower(v)
 				f.Value = v
-				if v != f.Default {
+				// a colour typed into an automatic field is kept even when it equals the default,
+				// otherwise it would be adjusted again
+				if v != f.Default || f.ReadableOn != "" {
 					next[f.Key] = v
 				}
 			}
 		}
 		if invalid {
+			// show what the automatic fields would get from the colours the admin just typed
+			typed := map[string]string{}
+			for _, g := range schema.Groups {
+				for _, f := range g.Fields {
+					if f.Error == "" && f.Value != "" {
+						typed[f.Key] = f.Value
+					}
+				}
+			}
+			all := themeSettingsResolve(schema, typed)
+			for gi := range schema.Groups {
+				for fi := range schema.Groups[gi].Fields {
+					if f := &schema.Groups[gi].Fields[fi]; f.ReadableOn != "" {
+						f.Auto = themeReadableOn(f.Default, all[f.ReadableOn], f.MinContrast)
+						f.AgainstLab = themeSettingsLabel(schema, f.ReadableOn)
+					}
+				}
+			}
 			data.Groups = schema.Groups
 			data.Error = "Some colours aren't valid, nothing was saved."
 			o.renderThemeSettings(w, data, http.StatusBadRequest)
@@ -353,29 +470,48 @@ func (o *OpenpanelSettings) ServeThemeSettings(w http.ResponseWriter, r *http.Re
 	}
 
 	data.Groups = fillThemeSettingsForm(schema, values)
-	for _, g := range data.Groups {
-		for _, f := range g.Fields {
-			if f.Value != f.Default {
-				data.Changed++
-			}
-		}
-	}
+	data.Changed = len(values)
 	data.Flashes = auth.PopFlashes(w, r, o.Sessions)
 	o.renderThemeSettings(w, data, http.StatusOK)
 }
 
-// fillThemeSettingsForm sets each field's Value from the saved values
+// fillThemeSettingsForm sets each field's Value from the saved values. An automatic field without a
+// saved value stays empty and shows the colour it gets in Auto.
 func fillThemeSettingsForm(s *ThemeSettingsSchema, values map[string]string) []ThemeSettingsGroup {
+	all := themeSettingsResolve(s, values)
 	for gi := range s.Groups {
 		for fi := range s.Groups[gi].Fields {
 			f := &s.Groups[gi].Fields[fi]
-			f.Value = f.Default
-			if v, ok := values[f.Key]; ok {
+			v, set := values[f.Key]
+			switch {
+			case set:
 				f.Value = v
+			case f.ReadableOn == "":
+				f.Value = f.Default
+			}
+			if f.ReadableOn == "" {
+				continue
+			}
+			f.Auto = themeReadableOn(f.Default, all[f.ReadableOn], f.MinContrast)
+			f.AgainstLab = themeSettingsLabel(s, f.ReadableOn)
+			if c := themeContrast(all[f.Key], all[f.ReadableOn]); set && c < f.MinContrast {
+				f.Warning = fmt.Sprintf("Hard to read on the %s (contrast %.1f:1, aim for %.1f:1). Clear the field to get a readable colour automatically.",
+					strings.ToLower(f.AgainstLab), c, f.MinContrast)
 			}
 		}
 	}
 	return s.Groups
+}
+
+func themeSettingsLabel(s *ThemeSettingsSchema, key string) string {
+	for _, g := range s.Groups {
+		for _, f := range g.Fields {
+			if f.Key == key {
+				return f.Label
+			}
+		}
+	}
+	return key
 }
 
 func (o *OpenpanelSettings) renderThemeSettings(w http.ResponseWriter, data themeSettingsPageData, status int) {
