@@ -71,13 +71,32 @@ func TestServeLocalesShowsSuggestions(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	for _, want := range []string{
-		"<b>2 users</b> last logged in from RS. Recommended: install <b>sr-rs</b>",
+		"<b>2 users</b> last logged in from RS, <b>sr-rs</b>",
 		"(ana, bob)",
-		"User <b>cid</b> last logged in from FR",
-		`name="locale" value="fr-fr"`,
+		"User <b>cid</b> last logged in from FR, <b>fr-fr</b>",
+		"Recommended: install them so OpenPanel can be shown in their language.",
+		`name="locale" value="sr-rs fr-fr"`,
+		">Install sr-rs and fr-fr</button>",
 	} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("expected %q in the page", want)
 		}
+	}
+}
+
+func TestRunLocaleActionInstallsSeveral(t *testing.T) {
+	withScratchLocalesPaths(t)
+	var got []string
+	origAll, origFlush := localesInstallAllRun, localesFlushCacheRun
+	localesInstallAllRun = func(l []string) error { got = l; return nil }
+	localesFlushCacheRun = func() {}
+	t.Cleanup(func() { localesInstallAllRun, localesFlushCacheRun = origAll, origFlush })
+
+	res := runLocaleAction("nl-nl sr-rs", "", "", "")
+	if !res.OK || strings.Join(got, ",") != "nl-nl,sr-rs" {
+		t.Fatalf("expected one opencli call for both, got %v %+v", got, res)
+	}
+	if res := runLocaleAction("nl-nl ../x", "", "", ""); res.OK || res.Status != http.StatusBadRequest {
+		t.Fatalf("a bad name in the list should be refused, got %+v", res)
 	}
 }

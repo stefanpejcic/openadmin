@@ -247,6 +247,19 @@ func runLocaleAction(install, update, del, setDefault string) localeActionResult
 		})
 	case install == "all":
 		return batchLocales("Installed", "No locales found on GitHub.", false, func(localeRow) bool { return true })
+	case len(strings.Fields(strings.ReplaceAll(install, ",", " "))) > 1:
+		// the suggestions box installs every suggested locale in one go
+		list := strings.Fields(strings.ReplaceAll(install, ",", " "))
+		for _, l := range list {
+			if !localeFormatRe.MatchString(l) {
+				return localeFail(http.StatusBadRequest, "Invalid locale format.")
+			}
+		}
+		if err := localesInstallAllRun(list); err != nil {
+			return localeFail(http.StatusInternalServerError, fmt.Sprintf("Failed to install locales: %s", err))
+		}
+		localesFlushCacheRun()
+		return localeOK(fmt.Sprintf("Locales %s installed successfully.", strings.Join(list, ", ")))
 	case install != "":
 		if !localeFormatRe.MatchString(install) {
 			return localeFail(http.StatusBadRequest, "Invalid locale format.")
