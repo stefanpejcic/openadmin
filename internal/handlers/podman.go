@@ -1222,13 +1222,8 @@ var podmanCheckImageVulnerabilitiesRun = func(ref string) (details []podmanVulnD
 		"--quiet",
 		ref,
 	}
-	if p, err := exec.LookPath("ionice"); err == nil {
-		args = append([]string{p, "-c2", "-n7"}, args...)
-	}
-	if p, err := exec.LookPath("nice"); err == nil {
-		args = append([]string{p, "-n", "19"}, args...)
-	}
-	cmd := exec.Command(args[0], args[1:]...)
+	name, lowArgs := lowPrio(true, args[0], args[1:]...)
+	cmd := exec.Command(name, lowArgs...)
 	cmd.Env = append(os.Environ(), "TMPDIR="+tmp)
 	// trivy sometimes writes progress/warning lines to stderr even on
 	// success (e.g. DB update progress on first run); stdout alone is

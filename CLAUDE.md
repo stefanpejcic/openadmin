@@ -9,3 +9,7 @@ Write comments like a human dev jotting a quick note, not like documentation.
 # Git
 
 - After making changes, `git add` them and stop there. Don't `git commit` - the user commits themselves.
+
+# Heavy commands
+
+Anything new that's disk or CPU heavy (du over volumes, scans, dumps, archive work) runs through `lowPrio(idle, name, args...)` in `internal/handlers/lowprio.go`: `idle` true adds `ionice -c3` for whole-tree scans and background work, false gives only `nice -n19` for quick things the admin is waiting on. Don't hand-roll nice/ionice or use `ionice -c2 -n7`, mq-deadline ignores best-effort levels. Heavy work that's really an opencli command belongs in opencli, which has its own `sh.LowPrio`.

@@ -24,13 +24,13 @@ type summarySpeed struct {
 // Favicon is the website's icon, same source as the websites table
 func (s summarySpeed) Favicon() string { return faviconBase() + s.Name }
 
-// DesktopColor and MobileColor use the websites table's thresholds
+// DesktopColor and MobileColor, red under 70, yellow under 90
 func (s summarySpeed) DesktopColor() string { return speedTextColor(s.Desktop) }
 func (s summarySpeed) MobileColor() string  { return speedTextColor(s.Mobile) }
 
 func speedTextColor(score int) string {
 	switch {
-	case score < 50:
+	case score < 70:
 		return "text-red-600 dark:text-red-400"
 	case score < 90:
 		return "text-yellow-600 dark:text-yellow-400"
