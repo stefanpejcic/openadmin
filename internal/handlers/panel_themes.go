@@ -41,6 +41,8 @@ type PanelTheme struct {
 	License     string
 	LicenseURI  string
 	Description string
+	// HasSettings: the theme ships settings.json, so it gets a Customize page
+	HasSettings bool
 }
 
 var themeReadmeHeaders = map[string]func(*PanelTheme, string){
@@ -77,6 +79,7 @@ func readPanelTheme(folder string) (PanelTheme, bool) {
 	if t.Name == "" {
 		t.Name = folder
 	}
+	t.HasSettings = themeHasSettings(folder)
 	// links end up in href, only allow http(s)
 	for _, u := range []*string{&t.URI, &t.AuthorURI, &t.LicenseURI} {
 		if !strings.HasPrefix(*u, "https://") && !strings.HasPrefix(*u, "http://") {
@@ -285,6 +288,8 @@ func (o *OpenpanelSettings) ServeInstallTheme(w http.ResponseWriter, r *http.Req
 			log.Printf("themes: installing %s from %s: %v", theme.Folder, theme.Download, err)
 			_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Error installing theme %s: %v", theme.Name, err), "error")
 		} else {
+			// colours saved before the theme was removed come back with it
+			reapplyThemeSettings(theme.Folder)
 			_ = auth.AddFlash(w, r, o.Sessions, fmt.Sprintf("Theme %s installed, select it and save to use it.", theme.Name), "success")
 		}
 	}

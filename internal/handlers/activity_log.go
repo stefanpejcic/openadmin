@@ -398,6 +398,12 @@ var activityDescriptions = map[string]func(r *http.Request) string{
 	"POST /settings/open-panel/themes/install": func(r *http.Request) string {
 		return "Installed OpenPanel theme " + r.PostFormValue("install_theme")
 	},
+	"POST /settings/open-panel/themes/{theme}/customize": func(r *http.Request) string {
+		if r.PostFormValue("reset") == "1" {
+			return "Reset the colours of OpenPanel theme " + actPath(r, "theme")
+		}
+		return "Changed the colours of OpenPanel theme " + actPath(r, "theme")
+	},
 	"POST /settings/defaults":         func(r *http.Request) string { return "Changed default settings for new users" },
 	"POST /settings/defaults/files":   func(r *http.Request) string { return "Added a default file for new users" },
 	"PUT /settings/defaults/files":    func(r *http.Request) string { return "Edited a default file for new users" },

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" class="h-full" style="color-scheme: ">
+{{template "chrome_head" .}}
+<body class="bg-white h-full antialiased dark:bg-gray-950">
+
+<div class="flex min-h-svh w-full">
+    {{template "chrome_sidebar" .}}
+    <div class="w-full overflow-hidden">
+        {{template "chrome_topbar" .}}
+
+    <main id="no_margin_for_iframe" class="bg-white antialiased dark:bg-gray-950 text-gray-900 dark:text-gray-50 min-h-[90vh]">
+        {{template "chrome_flashes" .}}
+
+<div class="op-page-header border-b border-gray-200 p-4 dark:border-gray-800 sm:p-6 lg:p-8">
+    <header>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="grow">
+                <h1 class="mb-1 text-lg font-semibold text-gray-900 dark:text-gray-50">Customize {{.Theme.Name}}</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-500">Colours for the {{.Theme.Name}} theme in the user panel. A colour left at its default keeps the theme's own look.</p>
+            </div>
+            <div class="flex flex-none items-center gap-2">
+                <a href="/settings/open-panel#display" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-4 shrink-0"><path d="M7.82843 10.9999H20V12.9999H7.82843L13.1924 18.3638L11.7782 19.778L4 11.9999L11.7782 4.22168L13.1924 5.63589L7.82843 10.9999Z"/></svg>OpenPanel settings</a>
+            </div>
+        </div>
+    </header>
+</div>
+
+<div class="px-4 py-6 sm:px-6 lg:px-8">
+    <div class="max-w-7xl">
+        {{if .Error}}
+        <div role="alert" class="mb-6 flex gap-3 rounded-md bg-red-50 p-4 text-sm text-red-900 dark:bg-red-950/70 dark:text-red-500">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"/></svg>
+            <p class="min-w-0">{{.Error}}</p>
+        </div>
+        {{end}}
+        {{if .Groups}}
+        <form method="POST" id="theme-settings">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            {{range $i, $g := .Groups}}
+            {{if $i}}<hr class="my-10 border-gray-200 dark:border-gray-800">{{end}}
+            <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+                <div>
+                    <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">{{$g.Title}}</h2>
+                    {{with $g.Description}}<p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">{{.}}</p>{{end}}
+                </div>
+                <div class="lg:col-span-2">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        {{range $g.Fields}}{{$k := .Key}}
+                        <div x-data="{ v: '{{.Value}}', d: '{{if .Auto}}{{.Auto}}{{else}}{{.Default}}{{end}}' }">
+                            <label for="ts-{{.Key}}" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">{{.Label}}</label>
+                            <div class="mt-2 flex items-center gap-2">
+                                <input type="color" :value="/^#?[0-9a-fA-F]{6}$/.test(v) ? (v[0] === '#' ? v : '#' + v) : d" @input="v = $event.target.value" aria-label="Pick {{.Label}}" class="h-9 w-12 shrink-0 cursor-pointer rounded-md border border-gray-300 bg-white p-1 dark:border-gray-800 dark:bg-gray-950">
+                                <input type="text" id="ts-{{.Key}}" name="{{.Key}}" x-model="v" maxlength="7" spellcheck="false" autocomplete="off" {{if .Auto}}placeholder="Automatic"{{end}} {{if .Error}}aria-invalid="true" aria-describedby="ts-{{.Key}}-error"{{end}} class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 w-full px-2.5 py-2 text-sm font-mono">
+                            </div>
+                            {{with .Error}}<p id="ts-{{$k}}-error" class="mt-1.5 text-xs text-red-600 dark:text-red-400">{{.}}</p>{{end}}
+                            {{if .Auto}}
+                            <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">{{with .Description}}{{.}} {{end}}<span x-show="v === ''">Automatic <span class="font-mono">{{.Auto}}</span>, readable on the {{.AgainstLab | lower}}. Worked out again when you save.</span><span x-show="v !== ''" x-cloak>Your colour is used as it is, <button type="button" @click="v = ''" class="text-blue-600 hover:underline dark:text-blue-500">make it automatic</button></span></p>
+                            {{with .Warning}}<p class="mt-1.5 text-xs text-amber-700 dark:text-amber-400">{{.}}</p>{{end}}
+                            {{else}}
+                            <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-500">{{with .Description}}{{.}} {{end}}Default <span class="font-mono">{{.Default}}</span><template x-if="v.toLowerCase() !== d"><span>, <button type="button" @click="v = d" class="text-blue-600 hover:underline dark:text-blue-500">use default</button></span></template></p>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </form>
+        <div class="mt-10 flex flex-col-reverse gap-2 border-t border-gray-200 pt-6 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
+            <form method="POST" data-confirm="Reset every {{.Theme.Name}} colour to the theme's default?">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <input type="hidden" name="reset" value="1">
+                <button type="submit" {{if not .Changed}}disabled{{end}} class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Reset to defaults</button>
+            </form>
+            <div class="flex items-center gap-3">
+                <p class="text-xs text-gray-500 dark:text-gray-500">Saved colours apply after OpenPanel restarts.</p>
+                <button type="submit" form="theme-settings" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Save colours</button>
+            </div>
+        </div>
+        {{end}}
+    </div>
+</div>
+    </main>
+
+    {{template "chrome_after_main" .}}
+    </div>
+</div>
+{{template "chrome_scripts_bottom" .}}
+</body>
+</html>
