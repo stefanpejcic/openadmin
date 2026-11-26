@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -141,7 +142,8 @@ func (p *PHP) ServePHP(w http.ResponseWriter, r *http.Request) {
 
 	type versionFile struct{ Key, Label, Content string }
 	versions := make([]versionFile, 0, len(versionLabels))
-	for _, label := range versionLabels {
+	// newest PHP first on this page
+	for _, label := range slices.Backward(versionLabels) {
 		key := phpVersionKey(label)
 		path := filepath.Join(phpIniDir, label+".ini")
 		content, err := readFileOrEmpty(path)
