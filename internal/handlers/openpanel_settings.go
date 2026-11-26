@@ -407,6 +407,12 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 		} else {
 			restartNeeded = true
 			successMessages = append(successMessages, "Configuration saved successfully.")
+			// a logo switched to a link or cleared leaves its old upload unused, the other logo keeps its own
+			for _, key := range brandUploadKeys {
+				if !strings.HasPrefix(configData.Get(openpanelSectionForKey(key), key, ""), "/brand/"+key+".") {
+					removeBrandUploads(key)
+				}
+			}
 			// menu_style also switches OpenAdmin's own menu, apply it right away
 			SetMenuStyleFromConfig(OpenpanelSettingsConfigPath)
 		}

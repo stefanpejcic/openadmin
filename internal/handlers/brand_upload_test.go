@@ -191,3 +191,26 @@ func TestLogoUploadsKeepTheOtherLogo(t *testing.T) {
 		t.Fatal("the old dark logo should be gone")
 	}
 }
+
+// switching one logo to a link drops its upload, the other logo's upload stays
+func TestLogoSwitchedToLinkRemovesItsUpload(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	dir := withScratchBrandDir(t)
+	srv, client := newOpenpanelSettingsTestServer(t, &OpenpanelSettings{})
+	target := srv.URL + "/settings/open-panel"
+
+	form := validOpenpanelForm()
+	postOpenpanelMultipart(t, client, target, form, map[string][]byte{"logo_file": testPNG, "logo_dark_file": testPNG})
+	saved, _ := os.ReadFile(OpenpanelSettingsConfigPath)
+	darkURL := regexp.MustCompile(`logo_dark=(\S+)`).FindStringSubmatch(string(saved))[1]
+
+	form.Set("logo", "https://example.com/logo.png")
+	form.Set("logo_dark", darkURL)
+	postOpenpanelMultipart(t, client, target, form, nil)
+	if _, err := os.Stat(filepath.Join(dir, "logo.png")); !os.IsNotExist(err) {
+		t.Fatal("logo.png should go once the logo is a link")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "logo_dark.png")); err != nil {
+		t.Fatal("the dark logo is still uploaded and must stay")
+	}
+}

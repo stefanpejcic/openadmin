@@ -143,4 +143,11 @@ func ServeBrandFile(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, name, info.ModTime(), f)
 }
 
+// removeBrandUploads deletes every uploaded file of one logo, logo never matches logo_dark.*
+func removeBrandUploads(key string) {
+	for _, e := range brandExts {
+		_ = os.Remove(filepath.Join(BrandDir, key+e))
+	}
+}
+
 var brandUploadLabels = map[string]string{"logo": "Logo", "logo_dark": "Logo for dark backgrounds"}
