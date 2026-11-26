@@ -825,14 +825,6 @@ window.TOUR_STEPS = [
         align: 'start'
     },
     {
-        path: '/services/logs',
-        element: '#tour-log-settings-link',
-        title: 'Settings',
-        description: 'Set paths to custom logs that you want to view from this page.',
-        side: 'bottom',
-        align: 'start'
-    },
-    {
         path: '/security/firewall',
         element: '#myiframe',
         title: 'Sentinel Firewall',
