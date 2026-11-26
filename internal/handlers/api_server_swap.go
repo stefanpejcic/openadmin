@@ -24,6 +24,11 @@ func (a *APIServerSwap) ServeSwap(w http.ResponseWriter, r *http.Request) {
 		"threshold_percent":   status.ThresholdPercent,
 		"managed_file_exists": status.ManagedFileExists,
 		"managed_file_path":   SwapFilePath,
+		"managed_mb":          status.ManagedMB,
+		"available_ram_mb":    status.AvailRAMMB,
+		"disk_free_mb":        status.DiskFreeMB,
+		"max_mb":              status.MaxMB,
+		"can_drop":            status.CanDrop(),
 	})
 }
 

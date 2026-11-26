@@ -85,13 +85,29 @@ function swapDrop() {
 }
 
 function swapResize() {
-    const gb = document.getElementById('swap_size_gb').value;
+    const input = document.getElementById('swap_size_gb');
+    const gb = input.value;
     const mb = Math.round(parseFloat(gb) * 1024);
+    const d = input.dataset;
+    const managed = Number(d.managedMb), managedUsed = Number(d.managedUsedMb), ram = Number(d.availRamMb);
     if (!mb || mb < 128) {
         showToast('Enter a swap size of at least 0.125 GB.', 'error');
         return;
     }
-    swapAction('resize', 'size_mb=' + encodeURIComponent(mb), 'Resizing swap to ' + gb + ' GB…', 'This will briefly disable swap while the file is recreated at the new size. Continue?');
+    if (mb > Number(d.maxMb)) {
+        showToast('Not enough disk space, the most this server can take is ' + input.max + ' GB.', 'error');
+        return;
+    }
+    if (mb === managed) {
+        showToast('Swap is already ' + gb + ' GB.', 'info');
+        return;
+    }
+    // the swap file is turned off to recreate it, so what's in it has to fit in RAM
+    if (managedUsed + 256 > ram) {
+        showToast('Not enough free RAM to rebuild the swap file, what is in it has to fit back into RAM first.', 'error');
+        return;
+    }
+    swapAction('resize', 'size_mb=' + encodeURIComponent(mb), 'Resizing swap to ' + gb + ' GB…', 'Turns the swap file off and recreates it at the new size. What is in swap moves back into RAM first, which can take a while. Continue?');
 }
 </script>
 
@@ -154,21 +170,58 @@ function swapResize() {
         </div>
     </div>
 
+    {{if .SwapTop}}
+    <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
+
+    <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
+        <div>
+            <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">What's in swap</h2>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Processes with the most memory swapped out.</p>
+        </div>
+        <div class="lg:col-span-2">
+            <div class="relative overflow-x-auto">
+                <table class="w-full caption-bottom border-b border-gray-200 dark:border-gray-800">
+                    <thead>
+                        <tr class="[&_td:last-child]:pr-4 sm:[&_td:last-child]:pr-6 lg:[&_td:last-child]:pr-8 [&_th:last-child]:pr-4 sm:[&_th:last-child]:pr-6 lg:[&_th:last-child]:pr-8 [&_td:first-child]:pl-4 sm:[&_td:first-child]:pl-6 lg:[&_td:first-child]:pl-8 [&_th:first-child]:pl-4 sm:[&_th:first-child]:pl-6 lg:[&_th:first-child]:pl-8 border-y border-gray-200 dark:border-gray-800">
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Process</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">PID</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">Owner</th>
+                            <th scope="col" class="border-b px-4 font-semibold text-gray-900 dark:text-gray-50 border-gray-200 dark:border-gray-800 whitespace-nowrap py-2.5 text-xs text-left">In swap</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                        {{range .SwapTop}}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/60">
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap font-medium text-gray-900 dark:text-gray-50">{{.Name}}</td>
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.PID}}</td>
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400">{{if .PanelUser}}<a href="/users/{{.PanelUser}}" class="font-medium underline hover:no-underline">{{.PanelUser}}</a>{{else}}{{.Owner}}{{end}}</td>
+                            <td class="px-4 py-2.5 text-sm whitespace-nowrap text-gray-600 dark:text-gray-400 tabular-nums">{{.SwapGB}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {{end}}
+
     <div class="mx-auto flex w-full items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-500"><div class="h-[1px] w-full bg-gray-200 dark:bg-gray-800"></div></div>
 
     <div class="grid grid-cols-1 gap-x-14 gap-y-8 lg:grid-cols-3">
         <div>
             <h2 class="scroll-mt-10 text-sm font-semibold text-gray-900 dark:text-gray-50">Change allocation</h2>
-            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Recreates the swap file at <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">{{.SwapFilePath}}</code> with the new size and re-enables it. {{if .Swap.ManagedFileExists}}A managed swap file already exists.{{else}}No managed swap file exists yet -- this will create one.{{end}}</p>
+            <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Recreates the swap file at <code class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[0.8125em] text-gray-900 dark:bg-gray-800 dark:text-gray-50">{{.SwapFilePath}}</code> with the new size and re-enables it. {{if not .Swap.ManagedFileExists}}No managed swap file exists yet, this will create one.{{end}}</p>
         </div>
         <div class="lg:col-span-2" x-data="{ v: '{{.TotalGB}}' }">
             <div class="flex flex-wrap items-end gap-3">
                 <div>
                     <label for="swap_size_gb" class="block text-sm font-medium leading-none text-gray-900 dark:text-gray-50">Swap size <span class="font-normal text-gray-500">(GB)</span></label>
-                    <input id="swap_size_gb" type="number" min="0.125" step="0.125" value="{{.TotalGB}}" @input="v = $event.target.value" autocomplete="off" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 appearance-none px-2.5 py-2 text-sm w-40 mt-2">
+                    <input id="swap_size_gb" type="number" min="0.125" max="{{.Swap.MaxGB}}" step="0.125" value="{{.TotalGB}}" data-max-mb="{{.Swap.MaxMB}}" data-managed-mb="{{.Swap.ManagedMB}}" data-managed-used-mb="{{.Swap.ManagedUsedMB}}" data-avail-ram-mb="{{.Swap.AvailRAMMB}}" :aria-invalid="Number(v) > {{.Swap.MaxGB}}" @input="v = $event.target.value" autocomplete="off" class="block rounded-md border border-gray-300 bg-white text-gray-900 shadow-xs outline-hidden transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 aria-[invalid=true]:border-red-500 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-red-200 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:placeholder:text-gray-500 dark:focus:border-blue-700 dark:focus:ring-blue-700/30 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 dark:aria-[invalid=true]:border-red-700 dark:aria-[invalid=true]:ring-red-700/30 appearance-none px-2.5 py-2 text-sm w-40 mt-2">
                 </div>
                 <button type="button" onclick="swapResize()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-transparent bg-black text-white shadow-xs hover:bg-gray-800 disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:bg-gray-800 dark:disabled:text-gray-500">Apply</button>
             </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-500">Up to {{.Swap.MaxGB}} GB, {{.Swap.DiskFreeGB}} of disk is free and 1 GB of it stays free.</p>
+            <p x-show="Number(v) > {{.Swap.MaxGB}}" x-cloak class="mt-1 text-xs text-red-600 dark:text-red-500">Not enough disk space for that size.</p>
             {{if .RecommendedGB}}<div x-show="{{if eq .Swap.TotalMB 0}}true{{else}}Number(v) < {{.RecommendedGB}}{{end}}" x-cloak class="mt-3 flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg><p>{{if eq .Swap.TotalMB 0}}No swap is set up. {{end}}Recommended: at least {{.RecommendedGB}} GB of swap for this server's RAM, so it has room to swap instead of killing processes when memory runs out.</p></div>{{end}}
         </div>
     </div>
@@ -181,7 +234,9 @@ function swapResize() {
             <p class="mt-1 text-sm/6 text-gray-500 dark:text-gray-500">Moves swapped memory back into RAM, then turns swap on again. Needs enough free RAM.</p>
         </div>
         <div class="lg:col-span-2">
-            <button type="button" onclick="swapDrop()" class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Drop Swap</button>
+            <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">{{.Swap.UsedGB}} in swap, {{.Swap.AvailRAMGB}} RAM available.</p>
+            {{if not .Swap.CanDrop}}<div class="mb-3 flex gap-3 rounded-md bg-yellow-50 p-4 text-sm text-yellow-900 dark:bg-yellow-950/70 dark:text-yellow-500"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="remixicon size-5 shrink-0"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg><p>Not enough free RAM to take back what's in swap. Free some memory first, see <a href="/server/processes" class="font-medium underline hover:no-underline">Processes</a>.</p></div>{{end}}
+            <button type="button" onclick="swapDrop()" {{if not .Swap.CanDrop}}disabled{{end}} class="relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border text-center font-medium transition-all duration-100 ease-in-out disabled:pointer-events-none disabled:shadow-none outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 px-3 py-2 text-sm border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50 disabled:text-gray-400 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60 dark:disabled:text-gray-600">Drop Swap</button>
         </div>
     </div>
 
