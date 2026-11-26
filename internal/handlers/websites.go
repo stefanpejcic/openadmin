@@ -148,8 +148,10 @@ type pageSpeed struct {
 }
 
 // RingColor uses the same thresholds as the user panel's /sites
-func (p *pageSpeed) RingColor() string {
-	switch d := p.Desktop.Score; {
+func (p *pageSpeed) RingColor() string { return speedRingColor(p.Desktop.Score) }
+
+func speedRingColor(d int) string {
+	switch {
 	case d < 60:
 		return "stroke-red-500"
 	case d < 80:
