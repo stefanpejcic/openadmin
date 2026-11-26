@@ -310,6 +310,11 @@ func loadOpenpanelConfigStripped(path string) config.Data {
 // ServeOpenpanelSettings handles GET/POST /settings/open-panel.
 func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
+		// the logo uploads make this a multipart form, ParseForm alone would leave every field empty
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			// a broken body leaves the form empty, the field checks below report it
+			_ = r.ParseMultipartForm(4 * brandUploadMax)
+		}
 		r.ParseForm()
 
 		configData := config.Load(OpenpanelSettingsConfigPath)
@@ -359,6 +364,18 @@ func (o *OpenpanelSettings) ServeOpenpanelSettings(w http.ResponseWriter, r *htt
 				value = ""
 			}
 			configData.Set(openpanelSectionForKey(key), key, value)
+		}
+
+		// an uploaded logo wins over whatever url is in the text field
+		for _, key := range brandUploadKeys {
+			url, err := saveBrandUpload(r, key)
+			if err != nil {
+				errorMessages = append(errorMessages, fmt.Sprintf("Error: %s not uploaded, %s.", brandUploadLabels[key], err))
+				continue
+			}
+			if url != "" {
+				configData.Set(openpanelSectionForKey(key), key, url)
+			}
 		}
 
 		// Custom-code-backed fields shown on this page (see
