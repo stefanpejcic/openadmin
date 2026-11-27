@@ -216,6 +216,7 @@ var apiManageServiceDockerNames = map[string]string{
 	"openpanel_dns":   "openpanel_dns",
 	"mailserver":      "openadmin_mailserver",
 	"roundcube":       "openadmin_roundcube",
+	"golub":           "openadmin_golub",
 }
 
 // HandleManageService handles POST /api/service/{action}/{service_name}.

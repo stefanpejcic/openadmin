@@ -152,12 +152,37 @@ var emailsPodmanPsRun = func(filterArgs ...string) (string, error) {
 	return string(out), err
 }
 
-// roundcube depends on the mailserver so it goes down too, otherwise podman keeps the old container and env changes never apply
+// the webmail depends on the mailserver so it goes down too, otherwise podman keeps the old container and env changes never apply
 const emailsRestartMailserverScript = `cd /usr/local/mail/openmail/ || exit 1
 rc=$(podman ps --format '{{.Names}}' | grep -qx openadmin_roundcube && echo 1)
-podman-compose down roundcube mailserver
+gl=$(podman ps --format '{{.Names}}' | grep -qx openadmin_golub && echo 1)
+podman-compose down roundcube golub mailserver
 podman-compose up -d mailserver
-if [ -n "$rc" ]; then podman-compose up -d roundcube; fi`
+if [ -n "$rc" ]; then podman-compose up -d roundcube; fi
+if [ -n "$gl" ]; then podman-compose up -d golub; fi`
+
+// webmail clients the admin can pick, only one runs since both use port 8080
+var (
+	webmailClients     = map[string]bool{"roundcube": true, "golub": true}
+	webmailClientNames = map[string]string{"roundcube": "Roundcube", "golub": "Golub"}
+)
+
+// emailsWebmailSwitchRun swaps only the webmail container, a few seconds unless the image has to be pulled first
+var emailsWebmailSwitchRun = func(client string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "opencli", "email-webmail", "client", client).CombinedOutput()
+	return string(out), err
+}
+
+// lastLine is the part of opencli output worth showing, its final message
+func lastLine(out string) string {
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if l := strings.TrimSpace(lines[len(lines)-1]); l != "" {
+		return l
+	}
+	return "unknown error"
+}
 
 var emailsRestartMailserverRun = func() {
 	cmd := exec.Command("/bin/bash", "-c", emailsRestartMailserverScript)
@@ -210,14 +235,18 @@ func checkWebmailStatus() (string, []string) {
 	if _, err := os.Stat(EmailsMailComposeFile); err != nil {
 		return "not_installed", nil
 	}
-	services := []string{"sogo", "roundcube", "snappymail"}
+	services := []string{"sogo", "roundcube", "snappymail", "golub"}
 	out, err := emailsPodmanPsRun("--filter", "status=running", "--format", "{{.Names}}")
 	if err != nil {
 		return "unknown", nil
 	}
+	names := map[string]bool{}
+	for _, n := range strings.Split(out, "\n") {
+		names[strings.TrimSpace(n)] = true
+	}
 	var running []string
 	for _, s := range services {
-		if strings.Contains(out, s) {
+		if names["openadmin_"+s] || (s != "golub" && s != "roundcube" && strings.Contains(out, s)) {
 			running = append(running, s)
 		}
 	}
@@ -572,11 +601,13 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 			return
 
 		case webmailSoftware != "":
-			if webmailSoftware == "roundcube" {
-				if err := exec.Command("opencli", "email-webmail", webmailSoftware).Run(); err != nil {
-					auth.AddFlash(w, r, e.Sessions, "Failed to restart webmail service.", "danger")
+			if webmailClients[webmailSoftware] {
+				// the first switch to golub pulls its image, which can outlast the 30s write timeout
+				longStream(w, 5*time.Minute)
+				if out, err := emailsWebmailSwitchRun(webmailSoftware); err != nil {
+					auth.AddFlash(w, r, e.Sessions, "Failed to switch the webmail client to "+webmailClientNames[webmailSoftware]+": "+lastLine(out), "danger")
 				} else {
-					auth.AddFlash(w, r, e.Sessions, "Configuration updated successfully! Webmail service will be restarted in the background.", "success")
+					auth.AddFlash(w, r, e.Sessions, "Webmail client is now "+webmailClientNames[webmailSoftware]+".", "success")
 				}
 			} else {
 				auth.AddFlash(w, r, e.Sessions, "Invalid webmail client selected.", "danger")

@@ -163,15 +163,15 @@ func (a *APIEmails) ServeSettings(w http.ResponseWriter, r *http.Request) {
 
 		webmailSoftware := apiEmailsStringField(data, "webmail_software")
 		if webmailSoftware != "" {
-			if webmailSoftware != "roundcube" {
+			if !webmailClients[webmailSoftware] {
 				writeJSONError(w, http.StatusBadRequest, "Invalid webmail client selected.")
 				return
 			}
-			if err := emailsAPIOpencliRun("opencli", "email-webmail", webmailSoftware); err != nil {
-				writeJSONError2(w, http.StatusInternalServerError, "Failed to restart webmail service.")
+			if err := emailsAPIOpencliRun("opencli", "email-webmail", "client", webmailSoftware); err != nil {
+				writeJSONError2(w, http.StatusInternalServerError, "Failed to switch the webmail client.")
 				return
 			}
-			writeJSON(w, map[string]interface{}{"success": true, "message": "Configuration updated successfully! Webmail service will be restarted in the background."})
+			writeJSON(w, map[string]interface{}{"success": true, "message": "Webmail client is now " + webmailClientNames[webmailSoftware] + "."})
 			return
 		}
 

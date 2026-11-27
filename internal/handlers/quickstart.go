@@ -384,7 +384,7 @@ func onboardingServiceItems(licenseType string, userCount int) []onboardingServi
 				{RealName: "openadmin_mailserver", ServiceType: "docker"},
 				{RealName: "openadmin_roundcube", ServiceType: "docker"},
 			},
-			Active: active("openadmin_mailserver", "docker") && active("openadmin_roundcube", "docker"),
+			Active: active("openadmin_mailserver", "docker") && (active("openadmin_roundcube", "docker") || active("openadmin_golub", "docker")),
 		},
 		onboardingServiceItem{
 			Label:       "FTP",

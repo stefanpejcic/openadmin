@@ -118,7 +118,7 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 		"openpanel_mysql": "openpanel_mysql", "caddy": "caddy", "openpanel": "openpanel",
 		"openpanel_dns": "bind9", "openadmin_mailserver": "openadmin_mailserver",
 		"openadmin_ftp": "openadmin_ftp", "clamav": "clamav",
-		"openadmin_roundcube": "roundcube", "phpmyadmin": "phpmyadmin",
+		"openadmin_roundcube": "roundcube", "openadmin_golub": "golub", "phpmyadmin": "phpmyadmin",
 	}
 
 	svc, known := dockerServices[serviceName]
@@ -133,7 +133,7 @@ func realControlService(serviceName, serviceType, action string) (bool, string) 
 	}
 
 	workingDir := "/root"
-	if serviceName == "openadmin_mailserver" || serviceName == "openadmin_roundcube" {
+	if serviceName == "openadmin_mailserver" || serviceName == "openadmin_roundcube" || serviceName == "openadmin_golub" {
 		workingDir = "/usr/local/mail/openmail"
 		if _, err := os.Stat(workingDir); err != nil {
 			return false, "Error: Mail server is not installed! Emails are only available on OpenPanel Enterprise version and can be enabled from Emails page."
@@ -301,7 +301,7 @@ func getServiceStatusFromCache(service map[string]interface{}, dockerCache, syst
 	if serviceType == "docker" {
 		coreDocker := map[string]bool{
 			"openpanel_mysql": true, "caddy": true, "openpanel": true, "openpanel_dns": true,
-			"openadmin_mailserver": true, "openadmin_ftp": true, "clamav": true, "openadmin_roundcube": true,
+			"openadmin_mailserver": true, "openadmin_ftp": true, "clamav": true, "openadmin_roundcube": true, "openadmin_golub": true,
 		}
 		up, exists := dockerCache[realName]
 		if !exists {
@@ -627,7 +627,7 @@ func realManageService(serviceName, action string) (bool, string) {
 	dockerServices := map[string]string{
 		"openpanel_mysql": "openpanel_mysql", "caddy": "caddy", "openpanel": "openpanel",
 		"openpanel_dns": "bind9", "openadmin_mailserver": "openadmin_mailserver",
-		"openadmin_ftp": "openadmin_ftp", "openadmin_roundcube": "roundcube",
+		"openadmin_ftp": "openadmin_ftp", "openadmin_roundcube": "roundcube", "openadmin_golub": "golub",
 	}
 
 	svc, known := dockerServices[serviceName]
@@ -642,7 +642,7 @@ func realManageService(serviceName, action string) (bool, string) {
 	}
 
 	workingDir := "/root"
-	if serviceName == "openadmin_mailserver" || serviceName == "openadmin_roundcube" {
+	if serviceName == "openadmin_mailserver" || serviceName == "openadmin_roundcube" || serviceName == "openadmin_golub" {
 		workingDir = "/usr/local/mail/openmail"
 		if _, err := os.Stat(workingDir); err != nil {
 			return false, "Error: Mail server is not installed! Emails are only available on OpenPanel Enterprise version and can be enabled from Emails page."
