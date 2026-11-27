@@ -24,12 +24,17 @@ type aiUsageReport struct {
 	Month  string
 	Rows   []aiUsageRow
 	Totals aiUsageRow
+	// the newest question the provider failed to answer, so the admin sees why without the panel's container logs
+	LastError     string
+	LastErrorUser string
+	LastErrorAt   string
 }
 
 // loadAIUsage reads this month's AI Assistant usage for every user, busiest first
 func loadAIUsage() aiUsageReport {
 	month := time.Now().UTC().Format("2006-01")
 	report := aiUsageReport{Month: month}
+	var newestError time.Time
 	paths, _ := filepath.Glob(filepath.Join(AIUsageUsersDir, "*", "ai_usage.json"))
 	for _, p := range paths {
 		raw, err := os.ReadFile(p)
@@ -43,7 +48,9 @@ func loadAIUsage() aiUsageReport {
 				InputTokens  int64 `json:"input_tokens"`
 				OutputTokens int64 `json:"output_tokens"`
 			} `json:"months"`
-			LastUsed string `json:"last_used"`
+			LastUsed    string `json:"last_used"`
+			LastError   string `json:"last_error"`
+			LastErrorAt string `json:"last_error_at"`
 			// files written before per-month history
 			Month    string `json:"month"`
 			Requests int    `json:"requests"`
@@ -52,6 +59,12 @@ func loadAIUsage() aiUsageReport {
 			continue
 		}
 		row := aiUsageRow{Username: filepath.Base(filepath.Dir(p))}
+		if f.LastError != "" {
+			if t, err := time.Parse(time.RFC3339, f.LastErrorAt); err == nil && t.After(newestError) {
+				newestError = t
+				report.LastError, report.LastErrorUser, report.LastErrorAt = f.LastError, row.Username, t.Local().Format("2006-01-02 15:04")
+			}
+		}
 		if m, ok := f.Months[month]; ok {
 			row.Requests, row.Actions, row.InputTokens, row.OutputTokens = m.Requests, m.Actions, m.InputTokens, m.OutputTokens
 		} else if f.Month == month {
