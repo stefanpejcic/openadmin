@@ -210,10 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.showToast !== 'function' || !document.getElementById('toast-container')) { box.hidden = false; return; }
     const tone = { danger: 'error', error: 'error', warning: 'warning', success: 'success' };
     box.querySelectorAll('[data-category]').forEach(el => {
-        // textContent then re-escape so flash text is never parsed as HTML
-        const safe = document.createElement('div');
-        safe.textContent = el.textContent.trim();
-        window.showToast(safe.innerHTML, tone[el.dataset.category] || 'info');
+        // showToast puts the message in as text, so the flash is never parsed as HTML
+        window.showToast(el.textContent.trim(), tone[el.dataset.category] || 'info');
     });
     box.remove();
 });

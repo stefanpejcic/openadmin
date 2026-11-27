@@ -122,7 +122,8 @@ function submitServiceAction(form, loadingMessage, onSettled) {
                     return;
                 }
                 opStop(timer);
-                showToast(data.message, data.success ? 'success' : 'error');
+                // a failure's raw podman/systemctl output goes under "Show details" with a Copy button
+                showToast(data.message, data.success ? 'success' : 'error', false, false, data.details || '');
                 onSettled();
                 if (data.success) {
                     setTimeout(function () { window.location.reload(); }, 1000);
@@ -433,7 +434,7 @@ function restartAndWait(form) {
                     .then(function (data) {
                         if (data.done) {
                             opStop(timer);
-                            resolve({ success: data.success, message: label + data.message });
+                            resolve({ success: data.success, message: label + data.message, details: data.details ? label + data.details : '' });
                         } else if (++attempts >= 90) {
                             opStop(timer);
                             resolve({ success: false, message: label + 'still restarting, refresh the page later.' });
@@ -474,7 +475,11 @@ document.addEventListener('DOMContentLoaded', function () {
             Promise.all(forms.map(restartAndWait)).then(function (results) {
                 var failed = results.filter(function (r) { return !r.success; });
                 if (failed.length) {
-                    showToast(failed.map(function (r) { return r.message; }).join(' '), 'error');
+                    showToast(failed.map(function (r) { return r.message; }).join('
+'), 'error', false, false,
+                        failed.map(function (r) { return r.details; }).filter(Boolean).join('
+
+'));
                     btn.disabled = false;
                     btn.textContent = 'Restart on all ' + forms.length + ' servers';
                     return;
