@@ -102,3 +102,40 @@ func TestServicesAsyncActionReturnsDetails(t *testing.T) {
 		t.Errorf("message/details not split: %+v", res)
 	}
 }
+
+// the IPAM error from the 2026-11-27 reboot: a preview container started first and took mysql's pinned address
+const podmanIPAMHeldByOther = `Error: no container with name or ID "openpanel_mysql" found: no such container
+4b3a8cf67402a5f90bc448ead54444a100de367ba045568c9d8d7f61d703194d
+Error: unable to start container "4b3a8cf67402a5f90bc448ead54444a100de367ba045568c9d8d7f61d703194d": IPAM error: requested ip address 172.20.0.3 is already allocated to container ID 50d7163f24f1d76f70d39be5c3ac5c4d3a42014f619db40979ed8d92f71143a1`
+
+func TestServiceActionMessageNamesIPHolder(t *testing.T) {
+	orig := containerNameByID
+	t.Cleanup(func() { containerNameByID = orig })
+	names := map[string]string{
+		"50d7163f24f1d76f70d39be5c3ac5c4d3a42014f619db40979ed8d92f71143a1": "openpanel_classic_40085",
+	}
+	var asked []string
+	containerNameByID = func(id string) string { asked = append(asked, id); return names[id] }
+
+	msg, _, _ := serviceActionMessage("openpanel_mysql", "docker", "start", false, podmanIPAMHeldByOther)
+	for _, want := range []string{"172.20.0.3 is used by another container, openpanel_classic_40085", "podman stop openpanel_classic_40085 && cd /root && podman-compose up -d"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("message %q is missing %q", msg, want)
+		}
+	}
+	if strings.Contains(msg, "--depend") {
+		t.Errorf("removing openpanel_mysql doesn't free the address, message %q", msg)
+	}
+	if len(asked) != 1 || asked[0] != "50d7163f24f1d76f70d39be5c3ac5c4d3a42014f619db40979ed8d92f71143a1" {
+		t.Errorf("looked up %v", asked)
+	}
+
+	// holder podman doesn't know any more, or the service's own old container: the remove-and-recreate fix
+	for _, name := range []string{"", "openpanel_mysql"} {
+		names["50d7163f24f1d76f70d39be5c3ac5c4d3a42014f619db40979ed8d92f71143a1"] = name
+		msg, _, _ = serviceActionMessage("openpanel_mysql", "docker", "start", false, podmanIPAMHeldByOther)
+		if !strings.Contains(msg, "IP address is still held") || !strings.Contains(msg, "podman rm -f --depend openpanel_mysql") {
+			t.Errorf("holder %q: message %q", name, msg)
+		}
+	}
+}

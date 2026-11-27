@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -432,6 +433,18 @@ func serviceActionMessage(realName, container, action string, success bool, rawM
 	}
 }
 
+// podman's IPAM error names the address and the container holding it
+var ipamHolderRe = regexp.MustCompile(`requested ip address (\S+) is already allocated to container ID ([0-9a-f]{12,64})`)
+
+// containerNameByID is the name of a root container, "" when podman doesn't know the ID
+var containerNameByID = func(id string) string {
+	out, err := podmanRunRunStdout("inspect", "--format", "{{.Name}}", id)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
 // podmanFailureHint turns the podman errors that come up most into a sentence that says what is wrong,
 // or "" when the output isn't one of them
 func podmanFailureHint(realName, out string) string {
@@ -444,6 +457,12 @@ func podmanFailureHint(realName, out string) string {
 	case strings.Contains(low, "is already in use") && strings.Contains(low, "name"):
 		return "An old " + realName + " container is still there, so podman can't create a new one with the same name. " + fix
 	case strings.Contains(low, "ipam") && strings.Contains(low, "already"):
+		// a different running container took the pinned address, removing this service's container won't free it
+		if m := ipamHolderRe.FindStringSubmatch(out); m != nil {
+			if holder := containerNameByID(m[2]); holder != "" && holder != realName {
+				return "Its IP address " + m[1] + " is used by another container, " + holder + ". Stop that container (or remove it if you don't need it) and start this service again from the terminal:\npodman stop " + holder + " && cd " + composeDirFor(realName) + " && podman-compose up -d"
+			}
+		}
 		return "Its IP address is still held by an old container. " + fix
 	case strings.Contains(low, "no such container"):
 		return "The container doesn't exist yet, start it instead."
