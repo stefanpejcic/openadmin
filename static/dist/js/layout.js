@@ -309,8 +309,36 @@ function toggleSidebar(){const root=document.documentElement;const isOpen=root.c
 // on phones the sidebar is an overlay, a tap outside it or Escape closes it
 document.addEventListener('click',e=>{if(window.innerWidth<768&&document.documentElement.classList.contains('sidebar-open')&&!e.target.closest('#sidebar,#sidebar_toggle_button')){document.documentElement.classList.remove('sidebar-open');}});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&window.innerWidth<768){document.documentElement.classList.remove('sidebar-open');}});window.addEventListener('resize',()=>{if(window.innerWidth<768){document.documentElement.classList.remove('sidebar-open');}});
 
-// ask before leaving a settings form with unsaved changes
-(function(){let dirty=false;window.opClearUnsaved=()=>{dirty=false;};const mark=e=>{if(e.target.closest&&e.target.closest('form[data-warn-unsaved]'))dirty=true;};document.addEventListener('input',mark);document.addEventListener('change',mark);document.addEventListener('submit',()=>{dirty=false;},true);window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});})();
+// forms with data-warn-unsaved get the "unsaved changes" bar and a prompt before leaving
+(function(){
+    const UNSAVED_BTN='relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-2 text-center text-sm font-medium transition-all duration-100 ease-in-out outline outline-0 outline-offset-2 outline-blue-500 focus-visible:outline-2 border-transparent ';
+    let form=null,bar=null;
+    const ignored=t=>t.closest('[data-filter]')||(t.getAttribute('x-model')||'').includes('searchQuery');
+    const show=f=>{
+        form=f;
+        if(!bar){
+            bar=document.createElement('div');
+            bar.setAttribute('role','status');
+            bar.className='fixed right-4 bottom-4 z-40 flex items-center gap-3 rounded-md border border-gray-200 bg-white py-2 pr-2 pl-4 shadow-lg sm:right-6 sm:bottom-6 dark:border-gray-800 dark:bg-gray-950';
+            bar.innerHTML='<span class="text-sm text-gray-500 dark:text-gray-500">You have unsaved changes.</span>'+
+                '<button type="button" data-act="discard" class="'+UNSAVED_BTN+'bg-transparent text-gray-900 hover:bg-gray-100 dark:text-gray-50 dark:hover:bg-gray-800/80">Discard</button>'+
+                '<button type="button" data-act="save" class="'+UNSAVED_BTN+'bg-black text-white shadow-xs hover:bg-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-50 dark:hover:bg-gray-900/60">Save changes</button>';
+            bar.querySelector('[data-act=discard]').onclick=()=>{form=null;location.reload();};
+            bar.querySelector('[data-act=save]').onclick=()=>{if(form)form.requestSubmit();};
+            document.body.appendChild(bar);
+        }
+        bar.style.display='';
+    };
+    const clear=()=>{form=null;if(bar)bar.style.display='none';};
+    window.opClearUnsaved=clear;
+    const mark=e=>{const t=e.target;if(!t.closest)return;const f=t.form||t.closest('form');if(f&&f.matches('[data-warn-unsaved]')&&!ignored(t))show(f);};
+    document.addEventListener('input',mark);
+    document.addEventListener('change',mark);
+    // for toggles that change state without an input event
+    document.addEventListener('op-unsaved',mark);
+    document.addEventListener('submit',e=>{if(!e.defaultPrevented)clear();});
+    window.addEventListener('beforeunload',e=>{if(form){e.preventDefault();e.returnValue='';}});
+})();
 
 // dark mode toggle
 // dark mode switch in the user menu, transitions pause for a frame so colors don't animate on the flip
