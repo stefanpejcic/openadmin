@@ -499,6 +499,14 @@ func TestValidateOpenpanelValueAI(t *testing.T) {
 	if _, ok, _ := validateOpenpanelValue("ai_max_tokens", "64001"); ok {
 		t.Error("ai_max_tokens over 64000 accepted")
 	}
+	for _, v := range []string{"", "none", "xhigh"} {
+		if _, ok, _ := validateOpenpanelValue("ai_reasoning_effort", v); !ok {
+			t.Errorf("ai_reasoning_effort %q rejected", v)
+		}
+	}
+	if _, ok, _ := validateOpenpanelValue("ai_reasoning_effort", "max"); ok {
+		t.Error("ai_reasoning_effort max accepted")
+	}
 	if got, ok, _ := validateOpenpanelValue("ai_instructions", "line one\r\nline  two\n"); !ok || got != "line one line two" {
 		t.Errorf("ai_instructions = %q, want it flattened to one line", got)
 	}
@@ -530,6 +538,7 @@ func TestServeOpenpanelSettingsAISectionSavesAndRenders(t *testing.T) {
 	form.Set("ai_model", "claude-opus-5-5")
 	form.Set("ai_monthly_limit", "50")
 	form.Set("ai_max_tokens", "4096")
+	form.Set("ai_reasoning_effort", "none")
 	form.Set("ai_instructions", "Support: help@example.com\nBe nice")
 
 	o := &OpenpanelSettings{}
@@ -547,12 +556,12 @@ func TestServeOpenpanelSettingsAISectionSavesAndRenders(t *testing.T) {
 	}
 
 	saved, _ := os.ReadFile(OpenpanelSettingsConfigPath)
-	for _, want := range []string{"[AI]", "ai_provider=anthropic", "ai_api_key=sk-test", "ai_monthly_limit=50", "ai_max_tokens=4096", "ai_actions=all", "ai_instructions=Support: help@example.com Be nice"} {
+	for _, want := range []string{"[AI]", "ai_provider=anthropic", "ai_api_key=sk-test", "ai_monthly_limit=50", "ai_max_tokens=4096", "ai_reasoning_effort=none", "ai_actions=all", "ai_instructions=Support: help@example.com Be nice"} {
 		if !strings.Contains(string(saved), want) {
 			t.Errorf("saved config missing %q:\n%s", want, saved)
 		}
 	}
-	for _, want := range []string{`id="ai_assistant"`, `name="ai_provider"`, `name="ai_actions"`, `value="sk-test"`, "The AI Assistant module is disabled", `href="/users/alice"`, `href="/users/bob"`, ">12000<", ">9<"} {
+	for _, want := range []string{`id="ai_assistant"`, `name="ai_provider"`, `name="ai_actions"`, `<option value="none" selected>`, `value="sk-test"`, "The AI Assistant module is disabled", `href="/users/alice"`, `href="/users/bob"`, ">12000<", ">9<"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("page missing %q", want)
 		}

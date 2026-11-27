@@ -79,7 +79,7 @@ var openpanelStringFields = []string{
 	"hidden_docker_apps",
 	"dns_record_types",
 	"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_name", "ai_instructions",
-	"ai_monthly_limit", "ai_max_tokens", "ai_actions",
+	"ai_monthly_limit", "ai_max_tokens", "ai_reasoning_effort", "ai_actions",
 }
 
 type openpanelValidationKind int
@@ -152,6 +152,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"ai_monthly_limit":                {kind: openpanelNonNegativeInt},
 	"ai_actions":                      {kind: openpanelEnum, options: []string{"off", "read", "all"}},
 	"ai_max_tokens":                   {kind: openpanelOneToMax, options: []string{"64000"}},
+	"ai_reasoning_effort":             {kind: openpanelEnum, options: []string{"", "none", "minimal", "low", "medium", "high", "xhigh"}},
 	"ai_name":                         {kind: openpanelSingleLine},
 	"ai_instructions":                 {kind: openpanelSingleLine},
 	"ai_model":                        {kind: openpanelSingleLine},
