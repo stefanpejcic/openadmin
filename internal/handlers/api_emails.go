@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -61,21 +62,44 @@ func apiEmailsStringField(data map[string]interface{}, key string) string {
 }
 
 // webmailDomainAlreadyConfigured walks the Caddy config tree looking for
-// any file that already mentions domain, the same check the admin page
-// performs before calling opencli to register a new webmail domain.
+// any file that already uses domain as a hostname, the same check the admin
+// page performs before calling opencli to register a new webmail domain.
+// The webmail block in the Caddyfile and the /webmail redirect are skipped:
+// the installer already writes webmail.<hostname> there, so setting it again
+// must not be rejected as a duplicate (#1391).
 func webmailDomainAlreadyConfigured(domain string) bool {
+	re := regexp.MustCompile(`(^|[^A-Za-z0-9.-])` + regexp.QuoteMeta(domain) + `($|[^A-Za-z0-9.-])`)
 	found := false
 	_ = filepath.Walk(EmailsCaddyConfigDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info == nil || info.IsDir() || found {
 			return nil
 		}
 		content, rerr := os.ReadFile(path)
-		if rerr == nil && strings.Contains(string(content), domain) {
+		if rerr == nil && re.MatchString(stripWebmailConfig(string(content))) {
 			found = true
 		}
 		return nil
 	})
 	return found
+}
+
+// stripWebmailConfig drops the # START/END WEBMAIL DOMAIN # block and the
+// redir @webmail line, the places that hold the current webmail domain.
+func stripWebmailConfig(content string) string {
+	var b strings.Builder
+	in := false
+	for _, line := range strings.SplitAfter(content, "\n") {
+		switch {
+		case strings.Contains(line, "# START WEBMAIL DOMAIN #"):
+			in = true
+		case strings.Contains(line, "# END WEBMAIL DOMAIN #"):
+			in = false
+		case in, strings.HasPrefix(strings.TrimSpace(line), "redir @webmail"):
+		default:
+			b.WriteString(line)
+		}
+	}
+	return b.String()
 }
 
 // ServeSettings handles GET/POST /api/emails/settings.

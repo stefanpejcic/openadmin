@@ -561,19 +561,7 @@ func (e *Emails) ServeEmailsSettings(w http.ResponseWriter, r *http.Request) {
 			webmailDomain = strings.TrimPrefix(webmailDomain, "https://")
 			webmailDomain = strings.TrimSuffix(webmailDomain, "/")
 
-			domainExists := false
-			_ = filepath.Walk(EmailsCaddyConfigDir, func(path string, info os.FileInfo, err error) error {
-				if err != nil || info == nil || info.IsDir() || domainExists {
-					return nil
-				}
-				content, rerr := os.ReadFile(path)
-				if rerr == nil && strings.Contains(string(content), webmailDomain) {
-					domainExists = true
-				}
-				return nil
-			})
-
-			if domainExists {
+			if webmailDomainAlreadyConfigured(webmailDomain) {
 				auth.AddFlash(w, r, e.Sessions, fmt.Sprintf("Error setting webmail domain: '%s' already exists in Caddy configuration.", webmailDomain), "error")
 			} else if err := exec.Command("opencli", "email-webmail", "domain", webmailDomain).Run(); err != nil {
 				auth.AddFlash(w, r, e.Sessions, "Failed to update webmail domain.", "error")

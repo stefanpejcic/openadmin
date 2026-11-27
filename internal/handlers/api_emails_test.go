@@ -692,3 +692,27 @@ func TestAPIServeDomainLimitsPOSTInvalidActionReturns400(t *testing.T) {
 		t.Fatalf("unexpected body: %s", body)
 	}
 }
+
+// #1391: the installer's own webmail.<hostname> block and /webmail redirect
+// must not count as a duplicate, other hostnames must, by whole name only.
+func TestWebmailDomainAlreadyConfiguredSkipsWebmailBlock(t *testing.T) {
+	dir := t.TempDir()
+	orig := EmailsCaddyConfigDir
+	EmailsCaddyConfigDir = dir + string(os.PathSeparator)
+	t.Cleanup(func() { EmailsCaddyConfigDir = orig })
+
+	caddyfile := "example.com {\n    reverse_proxy localhost:2087\n}\n# START WEBMAIL DOMAIN #\nwebmail.example.com {\n    reverse_proxy localhost:8080\n}\n# END WEBMAIL DOMAIN #\n"
+	redirects := "@webmail path /webmail*\nredir @webmail https://webmail.example.com/ 301\n"
+	os.WriteFile(filepath.Join(dir, "Caddyfile"), []byte(caddyfile), 0o644)
+	os.WriteFile(filepath.Join(dir, "redirects.conf"), []byte(redirects), 0o644)
+
+	for domain, want := range map[string]bool{
+		"webmail.example.com": false,
+		"mail.example.com":    false,
+		"example.com":         true,
+	} {
+		if got := webmailDomainAlreadyConfigured(domain); got != want {
+			t.Errorf("%s: got %v, want %v", domain, got, want)
+		}
+	}
+}
