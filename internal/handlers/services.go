@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -398,11 +399,16 @@ func (s *Services) ServeStatus(w http.ResponseWriter, r *http.Request) {
 // shown on failure. Shared by the synchronous (form-post) and async
 // (fetch-polled) paths through handleStatusPost so both report identical
 // wording.
-func serviceActionMessage(realName, container, action string, success bool, rawMessage string) (message, category string) {
+//
+// The message is a short sentence for the toast, details is the raw command
+// output (container IDs, IPAM errors) that the toast keeps under "Show
+// details" with a Copy button.
+func serviceActionMessage(realName, container, action string, success bool, rawMessage string) (message, details, category string) {
 	if success {
-		return "Successfully " + action + "ed service '" + realName + "'.", "success"
+		return "Successfully " + action + "ed service '" + realName + "'.", "", "success"
 	}
-	reason := strings.TrimSpace(rawMessage)
+	details = strings.TrimSpace(rawMessage)
+	msg := "Failed to " + action + " service '" + realName + "'."
 	switch {
 	case realName == "openpanel":
 		cmdMap := map[string]string{
@@ -410,20 +416,73 @@ func serviceActionMessage(realName, container, action string, success bool, rawM
 			"stop":    "cd /root && podman-compose down openpanel",
 			"restart": "cd /root && podman-compose down openpanel && podman-compose up -d openpanel",
 		}
-		msg := "Failed to " + action + " service '" + realName + "'."
-		if reason != "" {
-			msg += " Reason: " + reason
+		// a known podman failure brings its own fix, one terminal command is enough
+		if hint := podmanFailureHint(realName, details); hint != "" {
+			return msg + " " + hint, details, "error"
 		}
-		return msg + " Try from terminal: '" + cmdMap[action] + "'", "error"
+		return msg + " Try from terminal: '" + cmdMap[action] + "'", details, "error"
 	case container == "system":
-		msg := "Failed to " + action + " service '" + realName + "'."
-		if reason != "" {
-			msg += " Reason: " + reason
-		}
-		return msg + " Try from terminal: 'systemctl " + action + " " + realName + "'", "error"
+		return msg + " Try from terminal: 'systemctl " + action + " " + realName + "'", details, "error"
 	default:
-		return "Failed to " + action + " service '" + realName + "': " + rawMessage, "error"
+		if hint := podmanFailureHint(realName, details); hint != "" {
+			msg += " " + hint
+		} else if details != "" {
+			msg += " Podman returned an error, see the details."
+		}
+		return msg, details, "error"
 	}
+}
+
+// podman's IPAM error names the address and the container holding it
+var ipamHolderRe = regexp.MustCompile(`requested ip address (\S+) is already allocated to container ID ([0-9a-f]{12,64})`)
+
+// containerNameByID is the name of a root container, "" when podman doesn't know the ID
+var containerNameByID = func(id string) string {
+	out, err := podmanRunRunStdout("inspect", "--format", "{{.Name}}", id)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// podmanFailureHint turns the podman errors that come up most into a sentence that says what is wrong,
+// or "" when the output isn't one of them
+func podmanFailureHint(realName, out string) string {
+	low := strings.ToLower(out)
+	// the command on its own line, the toast keeps line breaks
+	fix := "To fix it, remove it and the containers that use it and start them again from the terminal:\npodman rm -f --depend " + realName + " && cd " + composeDirFor(realName) + " && podman-compose up -d"
+	switch {
+	case strings.Contains(low, "has dependent containers"):
+		return "An old " + realName + " container is still there and other containers depend on it, so podman can't replace it. " + fix
+	case strings.Contains(low, "is already in use") && strings.Contains(low, "name"):
+		return "An old " + realName + " container is still there, so podman can't create a new one with the same name. " + fix
+	case strings.Contains(low, "ipam") && strings.Contains(low, "already"):
+		// a different running container took the pinned address, removing this service's container won't free it
+		if m := ipamHolderRe.FindStringSubmatch(out); m != nil {
+			if holder := containerNameByID(m[2]); holder != "" && holder != realName {
+				return "Its IP address " + m[1] + " is used by another container, " + holder + ". Stop that container (or remove it if you don't need it) and start this service again from the terminal:\npodman stop " + holder + " && cd " + composeDirFor(realName) + " && podman-compose up -d"
+			}
+		}
+		return "Its IP address is still held by an old container. " + fix
+	case strings.Contains(low, "no such container"):
+		return "The container doesn't exist yet, start it instead."
+	case strings.Contains(low, "address already in use") || strings.Contains(low, "port is already allocated"):
+		return "A port it needs is already used by another program or container."
+	case strings.Contains(low, "no space left on device"):
+		return "The disk is full."
+	case strings.Contains(low, "pull access denied") || strings.Contains(low, "manifest unknown") || strings.Contains(low, "initializing source"):
+		return "Its image couldn't be downloaded."
+	}
+	return ""
+}
+
+// composeDirFor is the folder whose compose file defines the service, the same split realControlService makes
+func composeDirFor(realName string) string {
+	switch realName {
+	case "openadmin_mailserver", "openadmin_roundcube", "openadmin_golub":
+		return "/usr/local/mail/openmail"
+	}
+	return "/root"
 }
 
 // pendingServiceActions tracks in-flight async start/stop/restart actions
@@ -441,6 +500,8 @@ type serviceActionResult struct {
 	Done    bool   `json:"done"`
 	Success bool   `json:"success"`
 	Message string `json:"message"`
+	// raw command output behind a failure, the toast shows it under "Show details"
+	Details string `json:"details,omitempty"`
 }
 
 func (s *Services) handleStatusPost(w http.ResponseWriter, r *http.Request) {
@@ -471,12 +532,13 @@ func (s *Services) handleStatusPost(w http.ResponseWriter, r *http.Request) {
 		go func() {
 			success, rawMessage := controlServiceRun(realName, container, action)
 			resetMailserverStatus()
-			message, _ := serviceActionMessage(realName, container, action, success, rawMessage)
+			message, details, _ := serviceActionMessage(realName, container, action, success, rawMessage)
 
 			pendingServiceActionsMu.Lock()
 			result.Done = true
 			result.Success = success
 			result.Message = message
+			result.Details = details
 			pendingServiceActionsMu.Unlock()
 		}()
 
@@ -491,7 +553,11 @@ func (s *Services) handleStatusPost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		success, rawMessage := controlServiceRun(realName, container, action)
 		resetMailserverStatus()
-		message, category := serviceActionMessage(realName, container, action, success, rawMessage)
+		message, details, category := serviceActionMessage(realName, container, action, success, rawMessage)
+		// a flash has no details box, so the output goes after the sentence
+		if details != "" {
+			message += " Details: " + details
+		}
 		auth.AddFlash(w, r, s.Sessions, message, category)
 	}
 

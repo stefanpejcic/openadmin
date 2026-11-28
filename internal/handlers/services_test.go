@@ -55,6 +55,7 @@ func newServicesTestServer(t *testing.T, s *Services) (*httptest.Server, *http.C
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /services", s.ServeStatus)
 	mux.HandleFunc("POST /services", s.ServeStatus)
+	mux.HandleFunc("GET /services/action-status", s.ServeActionStatus)
 	mux.HandleFunc("GET /services/admin/status", s.ServeAdminStatus)
 	mux.HandleFunc("GET /services/monitored", s.ServeMonitored)
 	mux.HandleFunc("GET /services/edit", s.ServeEdit)
