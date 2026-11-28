@@ -76,7 +76,7 @@ var openpanelStringFields = []string{
 	"captcha_provider", "recaptcha_site_key", "recaptcha_secret_key",
 	"turnstile_site_key", "turnstile_secret_key", "custom_captcha_site_key",
 	"applications_dashboard_items",
-	"hidden_docker_apps",
+	"hidden_docker_apps", "docker_socket",
 	"dns_record_types",
 	"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_name", "ai_instructions",
 	"ai_monthly_limit", "ai_max_tokens", "ai_reasoning_effort", "ai_actions",
@@ -123,6 +123,7 @@ var openpanelValidValues = map[string]openpanelRule{
 	"mysql_enforce_username_prefix":   {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"applications_dashboard_items":    {kind: openpanelSpaceSeparatedList},
 	"hidden_docker_apps":              {kind: openpanelSpaceSeparatedList},
+	"docker_socket":                   {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"dns_record_types":                {kind: openpanelOptionList, options: []string{"A", "AAAA", "CAA", "CNAME", "MX", "SRV", "TLSA", "TXT", "HTTPS", "SVCB", "NS", "SSHFP", "URI", "DMARC"}},
 	"filemanager_buttons_style":       {kind: openpanelEnum, options: []string{"classic", "modern"}},
 	"filemanager_files_per_page":      {kind: openpanelNonNegativeInt},
@@ -274,6 +275,8 @@ func openpanelSectionForKey(key string) string {
 		return "CAPTCHA"
 	case "validate_ip_address_cookie":
 		return "SECURITY"
+	case "docker_socket":
+		return "DOCKER"
 	}
 	if strings.HasPrefix(key, "ai_") {
 		return "AI"
