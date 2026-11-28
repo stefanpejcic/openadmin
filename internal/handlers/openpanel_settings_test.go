@@ -268,6 +268,53 @@ func TestServeOpenpanelSettingsPostValidSavesConfig(t *testing.T) {
 	}
 }
 
+func TestServeOpenpanelSettingsWordPressUpdateDefaults(t *testing.T) {
+	withScratchOpenpanelSettingsPaths(t)
+	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[USERS]\nwp_auto_update_core=minor\n"), 0644)
+
+	o := &OpenpanelSettings{}
+	srv, client := newOpenpanelSettingsTestServer(t, o)
+	post := func(extra url.Values) string {
+		form := validOpenpanelForm()
+		for k, v := range extra {
+			form[k] = v
+		}
+		resp, err := client.PostForm(srv.URL+"/settings/open-panel", form)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+		return string(body)
+	}
+
+	body := post(url.Values{
+		"wp_auto_update_core": {"true"}, "wp_auto_update_plugins": {"true"},
+		"wp_auto_update_themes": {"false"}, "wp_auto_update_lock": {"yes"},
+	})
+	saved, _ := os.ReadFile(OpenpanelSettingsConfigPath)
+	for _, want := range []string{"wp_auto_update_core=true", "wp_auto_update_plugins=true", "wp_auto_update_themes=false", "wp_auto_update_lock=yes"} {
+		if !strings.Contains(string(saved), want) {
+			t.Fatalf("expected %s in the config, got %q", want, saved)
+		}
+	}
+	// the page comes back with the saved choices selected
+	for _, want := range []string{`<option value="true" selected>`, `name="wp_auto_update_lock"`, `id="wp_auto_update_plugins_switch"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("expected %s on the page, got %s", want, truncate(body))
+		}
+	}
+
+	body = post(url.Values{"wp_auto_update_core": {"beta"}})
+	if !strings.Contains(body, "not a valid value") {
+		t.Fatalf("expected a validation error for an unknown core value, got %s", truncate(body))
+	}
+	saved, _ = os.ReadFile(OpenpanelSettingsConfigPath)
+	if !strings.Contains(string(saved), "wp_auto_update_core=true") {
+		t.Fatalf("expected the old core value kept after a rejected one, got %q", saved)
+	}
+}
+
 func TestServeOpenpanelSettingsPostWeakpassNowSaves(t *testing.T) {
 	withScratchOpenpanelSettingsPaths(t)
 	os.WriteFile(OpenpanelSettingsConfigPath, []byte("[USERS]\n"), 0644)

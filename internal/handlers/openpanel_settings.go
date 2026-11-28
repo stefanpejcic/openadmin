@@ -80,6 +80,7 @@ var openpanelStringFields = []string{
 	"dns_record_types",
 	"ai_provider", "ai_api_key", "ai_model", "ai_base_url", "ai_name", "ai_instructions",
 	"ai_monthly_limit", "ai_max_tokens", "ai_reasoning_effort", "ai_actions",
+	"wp_auto_update_core", "wp_auto_update_plugins", "wp_auto_update_themes", "wp_auto_update_lock",
 }
 
 type openpanelValidationKind int
@@ -138,6 +139,10 @@ var openpanelValidValues = map[string]openpanelRule{
 	"filemanager_archives_extensions": {kind: openpanelSpaceSeparatedExtensions},
 	"how_to_guides":                   {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"onboarding":                      {kind: openpanelEnum, options: []string{"yes", "no"}},
+	"wp_auto_update_core":             {kind: openpanelEnum, options: []string{"false", "minor", "true"}},
+	"wp_auto_update_plugins":          {kind: openpanelEnum, options: []string{"true", "false"}},
+	"wp_auto_update_themes":           {kind: openpanelEnum, options: []string{"true", "false"}},
+	"wp_auto_update_lock":             {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"twofa_nag":                       {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"twofa_enforce":                   {kind: openpanelEnum, options: []string{"yes", "no"}},
 	"found_a_bug_link":                {kind: openpanelEnum, options: []string{"yes", "no"}},
