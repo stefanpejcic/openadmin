@@ -698,3 +698,17 @@ func TestServeOpenpanelSettingsWordPressSetsAndProfiles(t *testing.T) {
 		t.Fatalf("unexpected profiles after adding two: %+v", ps)
 	}
 }
+
+func TestDockerSocketSetting(t *testing.T) {
+	for _, v := range []string{"yes", "no"} {
+		if _, ok, _ := validateOpenpanelValue("docker_socket", v); !ok {
+			t.Fatalf("%q should be valid", v)
+		}
+	}
+	if _, ok, _ := validateOpenpanelValue("docker_socket", "1"); ok {
+		t.Fatal("only yes or no")
+	}
+	if s := openpanelSectionForKey("docker_socket"); s != "DOCKER" {
+		t.Fatalf("docker_socket goes in [DOCKER], got %s", s)
+	}
+}
